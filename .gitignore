@@ -10,5 +10,5 @@ output_test
 output_tests
 
 .krsnvim/theme.json
-
+PROMPT.md
 *.log

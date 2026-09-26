@@ -278,36 +278,74 @@ local function identifier(name)
 	return keywords[name] and ("@" .. name) or name
 end
 
---- Infer the namespace from the closest project, never from the editor's CWD.
+M.identifier = identifier
+
+--- Infer the namespace following Visual Studio standards (.csproj or Program.cs upward).
 function M.file_namespace(filename)
 	local dir = vim.fs.dirname(filename)
 	local project = vim.fs.find(function(name)
 		return name:match("%.csproj$") ~= nil
 	end, { path = dir, upward = true, type = "file" })[1]
-	if not project then
+
+	local base_namespace = nil
+	local base_dir = nil
+
+	if project then
+		base_dir = vim.fs.dirname(project)
+		local project_name = vim.fn.fnamemodify(project, ":t:r")
+		local ok, lines = pcall(vim.fn.readfile, project)
+		local xml = ok and table.concat(lines, "\n"):gsub("<!%-%-.-%-%->", "") or ""
+		-- ponytail: literal RootNamespace and MSBuildProjectName only; use MSBuild
+		-- evaluation if imported/conditional properties need to be resolved.
+		local namespace = xml:match("<RootNamespace>%s*(.-)%s*</RootNamespace>") or project_name
+		namespace = namespace:gsub("%$%(MSBuildProjectName%)", function()
+			return project_name
+		end)
+		if namespace:find("%$%(") then
+			namespace = project_name
+		end
+		base_namespace = namespace
+	else
+		-- Search upward for Program.cs or other .cs files with a namespace declaration
+		local current_base = vim.fn.fnamemodify(filename, ":t")
+		local candidate = vim.fs.find(function(name)
+			return name == "Program.cs" or (name:match("%.cs$") and name ~= current_base)
+		end, { path = dir, upward = true, type = "file" })[1]
+
+		if candidate then
+			base_dir = vim.fs.dirname(candidate)
+			local ok, lines = pcall(vim.fn.readfile, candidate)
+			if ok then
+				local content = table.concat(lines, "\n"):gsub("<!%-%-.-%-%->", "")
+				local ns = content:match("namespace%s+([%w_%.]+)")
+				if ns then
+					base_namespace = ns
+				end
+			end
+		end
+	end
+
+	if not base_namespace then
 		return nil
 	end
-	local project_name = vim.fn.fnamemodify(project, ":t:r")
-	local ok, lines = pcall(vim.fn.readfile, project)
-	local xml = ok and table.concat(lines, "\n"):gsub("<!%-%-.-%-%->", "") or ""
-	-- ponytail: literal RootNamespace and MSBuildProjectName only; use MSBuild
-	-- evaluation if imported/conditional properties need to be resolved.
-	local namespace = xml:match("<RootNamespace>%s*(.-)%s*</RootNamespace>") or project_name
-	namespace = namespace:gsub("%$%(MSBuildProjectName%)", function()
-		return project_name
-	end)
-	if namespace:find("%$%(") then
-		namespace = project_name
-	end
-	local relative = require("krs.core.path").relative_to(dir, vim.fs.dirname(project))
+
+	local relative = require("krs.core.path").relative_to(dir, base_dir)
 	if relative and relative ~= "" then
-		namespace = namespace .. (namespace ~= "" and "." or "") .. relative:gsub("/", ".")
+		base_namespace = base_namespace .. (base_namespace ~= "" and "." or "") .. relative:gsub("[/\\]+", ".")
 	end
 	local parts = {}
-	for part in namespace:gmatch("[^.]+") do
+	for part in base_namespace:gmatch("[^.]+") do
 		parts[#parts + 1] = identifier(part:gsub("^@", ""))
 	end
 	return #parts > 0 and table.concat(parts, ".") or nil
+end
+
+--- Return C#-specific variables for the template engine.
+function M.template_variables(filename)
+	return {
+		csharp_namespace = M.file_namespace(filename),
+		csharp_identifier = identifier(vim.fn.fnamemodify(filename, ":t:r")),
+	}
 end
 
 --- Generate a type named after the file. Block namespaces also work before C# 10.
@@ -346,10 +384,23 @@ function M.new_type(buf)
 	if not empty_csharp_buffer(buf) or vim.b[buf].csharp_template_pending then
 		return
 	end
+	local tmpl_mod = require("krs.core.templates")
+	local available = tmpl_mod.get_templates("cs")
+	if #available == 0 then
+		return
+	end
+	local options = {}
+	for _, template in ipairs(available) do
+		options[#options + 1] = {
+			name = template.name,
+			label = template.description and (template.name .. "  (" .. template.description .. ")") or template.name,
+			template = template,
+		}
+	end
 	vim.b[buf].csharp_template_pending = true
 	local filename = vim.api.nvim_buf_get_name(buf)
 	local tick = vim.api.nvim_buf_get_changedtick(buf)
-	require("krs.lib.krsnvim.cli").menu("C# Type", M.type_templates, function(choice)
+	require("krs.lib.krsnvim.cli").menu("C# Type", options, function(choice)
 		if not vim.api.nvim_buf_is_valid(buf) then
 			return
 		end
@@ -360,10 +411,22 @@ function M.new_type(buf)
 			and vim.api.nvim_buf_get_name(buf) == filename
 			and vim.api.nvim_buf_get_changedtick(buf) == tick
 		then
-			vim.api.nvim_buf_set_lines(buf, 0, -1, false, M.type_lines(filename, choice))
+			local choice_name = type(choice) == "table" and (choice.name or choice[1] or choice.label) or tostring(choice)
+			local matched = nil
+			for _, t in ipairs(available) do
+				if t.name:lower() == choice_name:lower() then
+					matched = t
+					break
+				end
+			end
+			if matched then
+				tmpl_mod.apply_template_to_buffer(buf, matched, filename)
+			end
 		end
 	end)
 end
+
+local recent_created = {}
 
 --- Initialize C# language configuration autocmds.
 function M.setup()
@@ -388,19 +451,39 @@ function M.setup()
 		group = group,
 		pattern = "KrsFileCreated",
 		callback = function(args)
-			local filename = args.data.path
-			if not filename:match("%.cs$") then
+			local filename = args.data and args.data.path
+			if not filename or not filename:match("%.cs$") then
 				return
 			end
+			if recent_created[filename] then
+				return
+			end
+			recent_created[filename] = true
+			vim.defer_fn(function()
+				recent_created[filename] = nil
+			end, 2000)
+
 			vim.schedule(function()
 				if vim.fn.getfsize(filename) ~= 0 then
 					return
 				end
-				vim.cmd("edit " .. vim.fn.fnameescape(filename))
-				local buf = vim.api.nvim_get_current_buf()
-				if not vim.b[buf].csharp_template_offered then
-					vim.b[buf].csharp_template_offered = true
-					M.new_type(buf)
+				local bufnr = vim.fn.bufnr(filename)
+				if bufnr == -1 or not vim.api.nvim_buf_is_loaded(bufnr) then
+					local current_win = vim.api.nvim_get_current_win()
+					if vim.api.nvim_win_get_config(current_win).relative ~= "" then
+						for _, w in ipairs(vim.api.nvim_list_wins()) do
+							if vim.api.nvim_win_get_config(w).relative == "" then
+								vim.api.nvim_set_current_win(w)
+								break
+							end
+						end
+					end
+					vim.cmd("edit " .. vim.fn.fnameescape(filename))
+					bufnr = vim.api.nvim_get_current_buf()
+				end
+				if not vim.b[bufnr].csharp_template_offered then
+					vim.b[bufnr].csharp_template_offered = true
+					M.new_type(bufnr)
 				end
 			end)
 		end,

@@ -32,6 +32,9 @@ require("krs.core.aliases").setup()
 -- 5. Mobile & low-power performance overrides
 require("krs.core.performance").setup()
 
+-- 6. Generic file creation template system per programming language
+require("krs.core.templates").setup()
+
 -- ============================================================================
 -- CONFIGURATION
 -- ============================================================================

@@ -51,6 +51,7 @@ If you have just installed or launched KrsVim for the first time, follow these s
 | 🎓 [**How-To & Customization Guide**](how-to-customize-editor.md) | Step-by-step guide for adding plugins, local modules, new languages, themes, and terminals |
 | 🛠️ [**Languages, LSP & Formatting**](languages.md) | Mason servers, Conform formatters, Treesitter parsers & completion tuning |
 | 🌐 [**Adding a Language / LSP**](adding-language.md) | Step-by-step guide for adding new language servers, formatters & debuggers |
+| 📄 [**File Creation Templates**](file-templates.md) | Add Markdown templates for any Neovim filetype without Lua changes |
 | 📦 [**Plugin Inventory**](plugins.md) | Comprehensive listing of third-party plugins and custom `krs` modules |
 
 ### ⌨️ Daily Driving & Workflow

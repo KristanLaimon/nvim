@@ -545,8 +545,7 @@ function M.build_topic_cheatsheet(topic, all_maps)
 			end
 		end
 
-		local display_chord = #key_labels > 0 and table.concat(key_labels, " / ")
-			or "(No shortcut bound)"
+		local display_chord = #key_labels > 0 and table.concat(key_labels, " / ") or "(No shortcut bound)"
 
 		table.insert(items, {
 			name = action.name,
@@ -629,7 +628,10 @@ local function render_cheatsheet(topic)
 
 	-- Primary Shortcuts Section
 	add_line(" ⚡ Active Runtime Shortcuts (Introspected Live)", "Title")
-	add_line(" ───────────────────────────────────────────────────────────────────", "Comment")
+	add_line(
+		" ───────────────────────────────────────────────────────────────────",
+		"Comment"
+	)
 
 	local primary_count = 0
 	for _, it in ipairs(items) do
@@ -642,8 +644,14 @@ local function render_cheatsheet(topic)
 			-- Highlight key chord pill in DiagnosticInfo / Special
 			local line_idx = #lines - 1
 			table.insert(highlights, { line = line_idx, col_start = 2, col_end = #key_pill, hl_group = "Special" })
-			table.insert(highlights, { line = line_idx, col_start = #key_pill + 2, col_end = #key_pill + 32, hl_group = "Normal" })
-			table.insert(highlights, { line = line_idx, col_start = #key_pill + 35, col_end = -1, hl_group = "DiagnosticHint" })
+			table.insert(
+				highlights,
+				{ line = line_idx, col_start = #key_pill + 2, col_end = #key_pill + 32, hl_group = "Normal" }
+			)
+			table.insert(
+				highlights,
+				{ line = line_idx, col_start = #key_pill + 35, col_end = -1, hl_group = "DiagnosticHint" }
+			)
 
 			if it.desc and it.desc ~= "" then
 				add_line(string.format("      ↳ %s [%s]", it.desc, it.modes), "Comment")
@@ -667,7 +675,10 @@ local function render_cheatsheet(topic)
 
 	if #extra_items > 0 then
 		add_line(" 🔍 Additional Context & Mode Mappings", "Title")
-		add_line(" ───────────────────────────────────────────────────────────────────", "Comment")
+		add_line(
+			" ───────────────────────────────────────────────────────────────────",
+			"Comment"
+		)
 		for _, it in ipairs(extra_items) do
 			local key_pill = string.format("  [%-18s]", it.chord)
 			local line_txt = string.format("%s  %-30s [%s]", key_pill, it.name, it.modes)
@@ -675,7 +686,10 @@ local function render_cheatsheet(topic)
 
 			local line_idx = #lines - 1
 			table.insert(highlights, { line = line_idx, col_start = 2, col_end = #key_pill, hl_group = "Special" })
-			table.insert(highlights, { line = line_idx, col_start = -1 - #it.modes - 2, col_end = -1, hl_group = "DiagnosticWarn" })
+			table.insert(
+				highlights,
+				{ line = line_idx, col_start = -1 - #it.modes - 2, col_end = -1, hl_group = "DiagnosticWarn" }
+			)
 		end
 		add_line("")
 	end
@@ -683,14 +697,20 @@ local function render_cheatsheet(topic)
 	-- Tips section
 	if topic.tips and #topic.tips > 0 then
 		add_line(" 💡 Pro-Tips & Workflow Notes", "Title")
-		add_line(" ───────────────────────────────────────────────────────────────────", "Comment")
+		add_line(
+			" ───────────────────────────────────────────────────────────────────",
+			"Comment"
+		)
 		for _, tip in ipairs(topic.tips) do
 			add_line("  • " .. tip, "Normal")
 		end
 		add_line("")
 	end
 
-	add_line("────────────────────────────────────────────────────────────────────", "Comment")
+	add_line(
+		"────────────────────────────────────────────────────────────────────",
+		"Comment"
+	)
 	add_line(" [Tab/Right]: Focus reader │ [/]: Search │ [q/Esc]: Close │ [<F1>]: Toggle", "DiagnosticHint")
 
 	vim.bo[state.right_buf].modifiable = true
@@ -777,7 +797,10 @@ function M.open()
 
 	local index_lines = {}
 	table.insert(index_lines, " 📖 KrsVim Help Categories")
-	table.insert(index_lines, " ──────────────────────────────")
+	table.insert(
+		index_lines,
+		" ──────────────────────────────"
+	)
 	for _, topic in ipairs(state.topics) do
 		table.insert(index_lines, string.format("  %s %-18s", topic.icon, topic.title))
 	end

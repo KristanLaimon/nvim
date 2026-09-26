@@ -23,7 +23,7 @@ KrsVim provides a full **C#**, **.NET**, and **Blazor** development environment,
 
 Accessible via **Command Palette** (`<C-S-p>` / `:CommandPalette`):
 
-* `:CsharpNewType` – Reopen the type template popup for the current empty `.cs` buffer.
+* `:CsharpNewType` – Reopen the type template popup for the current empty `.cs` buffer. See [file creation templates](../file-templates.md) to add menu choices.
 * `:DotnetNew` – Interactive `.NET` project creator (`dotnet new` template picker).
 * `:NugetManager` – Open NuGet package manager to search and add package references to `.csproj`.
 * `:FormatDocument` – Format active `.cs` file using CSharpier or LSP fallback.
@@ -48,16 +48,15 @@ filename. Subfolders become namespace segments. For example, `Models/Customer.cs
 in a project with `RootNamespace` set to `Acme.App` produces:
 
 ```csharp
-namespace Acme.App.Models
+namespace Acme.App.Models;
+
+internal class Customer
 {
-    internal class Customer
-    {
-    }
 }
 ```
 
-Templates use block namespaces for compatibility with older projects. Without a
-project, the type is created in the global namespace. Keywords are escaped with
+Templates use file-scoped namespaces. Without a
+project or a nearby C# namespace declaration, the type is created in the global namespace. Keywords are escaped with
 `@`; punctuation and non-ASCII characters in generated identifiers become `_`.
 Namespace detection reads a literal `RootNamespace` and expands
 `$(MSBuildProjectName)`; it does not evaluate imported properties, conditions, or

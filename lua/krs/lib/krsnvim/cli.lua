@@ -398,6 +398,9 @@ end
 --- cli.menu("SELECT FRAMEWORK", { "React", "Vue", "Svelte", "Angular" }, function(choice, idx)
 ---     print("Picked:", choice, "at index:", idx)
 --- end)
+local active_menu_win = nil
+local active_menu_buf = nil
+
 function M.menu(title, options, callback)
 	local opts = {}
 	if type(title) == "table" then
@@ -414,6 +417,25 @@ function M.menu(title, options, callback)
 	-- If running in interactive Neovim UI, launch floating modal with Vim, Arrow, and Mouse controls
 	local has_ui = vim and vim.api and vim.api.nvim_list_uis and #vim.api.nvim_list_uis() > 0
 	if has_ui and vim.api.nvim_open_win then
+		if active_menu_win and vim.api.nvim_win_is_valid(active_menu_win) then
+			pcall(vim.api.nvim_win_close, active_menu_win, true)
+		end
+		if active_menu_buf and vim.api.nvim_buf_is_valid(active_menu_buf) then
+			pcall(vim.api.nvim_buf_delete, active_menu_buf, { force = true })
+		end
+		active_menu_win = nil
+		active_menu_buf = nil
+
+		local prev_win = vim.api.nvim_get_current_win()
+		if vim.api.nvim_win_get_config(prev_win).relative ~= "" then
+			for _, w in ipairs(vim.api.nvim_list_wins()) do
+				if vim.api.nvim_win_get_config(w).relative == "" then
+					prev_win = w
+					break
+				end
+			end
+		end
+
 		local selected_idx = 1
 		local items = opts.items
 
@@ -493,7 +515,14 @@ function M.menu(title, options, callback)
 			title = " 🦊 KRS Interactive Menu ",
 			title_pos = "center",
 		})
+		active_menu_win = win
+		active_menu_buf = buf
+
 		local function close_menu()
+			if active_menu_win == win then
+				active_menu_win = nil
+				active_menu_buf = nil
+			end
 			if vim.api.nvim_win_is_valid(win) then
 				pcall(vim.api.nvim_win_close, win, true)
 			end
@@ -502,6 +531,9 @@ function M.menu(title, options, callback)
 			-- removes any window that still displays it.
 			if vim.api.nvim_buf_is_valid(buf) then
 				pcall(vim.api.nvim_buf_delete, buf, { force = true })
+			end
+			if prev_win and vim.api.nvim_win_is_valid(prev_win) then
+				pcall(vim.api.nvim_set_current_win, prev_win)
 			end
 		end
 

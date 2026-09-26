@@ -137,7 +137,8 @@ function M.raw_diff_for(file, file_type, cwd, commit_hash)
 		return {
 			string.format("Binary files for %s differ (binary blacklist)", file),
 			"[ Binary file: preview and diff analysis disabled ]",
-		}, false
+		},
+			false
 	end
 
 	if commit_hash or file_type == "commit" then
@@ -176,7 +177,8 @@ function M.raw_diff_for(file, file_type, cwd, commit_hash)
 					return {
 						string.format("Binary files for %s differ (binary content detected)", file),
 						"[ Binary file: preview and diff analysis disabled ]",
-					}, false
+					},
+						false
 				end
 			end
 			return lines, true

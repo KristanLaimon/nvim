@@ -1,31 +1,21 @@
-```
+<p align="center">
+  <img width="300" height="300" alt="foxnvim-logo" src="https://github.com/user-attachments/assets/fdd81f9b-85ff-49ff-a2c3-7918fed9ab32" />
 
-      ___           ___           ___           ___           ___                       ___     
-     /\__\         /\  \         /\  \         /\__\         /\__\          ___        /\__\    
-    /:/  /        /::\  \       /::\  \       /::|  |       /:/  /         /\  \      /::|  |   
-   /:/__/        /:/\:\  \     /:/\ \  \     /:|:|  |      /:/  /          \:\  \    /:|:|  |   
-  /::\__\____   /::\~\:\  \   _\:\~\ \  \   /:/|:|  |__   /:/__/  ___      /::\__\  /:/|:|__|__ 
- /:/\:::::\__\ /:/\:\ \:\__\ /\ \:\ \ \__\ /:/ |:| /\__\  |:|  | /\__\  __/:/\/__/ /:/ |::::\__\
- \/_|:|~~|~    \/_|::\/:/  / \:\ \:\ \/__/ \/__|:|/:/  /  |:|  |/:/  / /\/:/  /    \/__/~~/:/  /
-    |:|  |        |:|::/  /   \:\ \:\__\       |:/:/  /   |:|__/:/  /  \::/__/           /:/  / 
-    |:|  |        |:|\/__/     \:\/:/  /       |::/  /     \::::/__/    \:\__\          /:/  /  
-    |:|  |        |:|  |        \::/  /        /:/  /       ~~~~         \/__/         /:/  /   
-     \|__|         \|__|         \/__/         \/__/                                   \/__/    
+  <br>
+  <strong>Foxnvim</strong>
+  <br>
+  <span style="display:block;font-size:1.25rem;">An opinionated neovim distribution for fox coders with IDE features included for FullStack development in many languages.</span>
+  <br><br>
+  <a href="https://github.com/KristanLaimon/nvim/stargazers"><img src="https://img.shields.io/github/stars/KristanLaimon/nvim?style=flat-square" alt="GitHub Stars"></a>
+</p>
 
-```
+<img width="1703" height="807" alt="image" src="https://github.com/user-attachments/assets/aeefe6e7-1d6c-4af5-997d-dd3adc0e025f" />
 
 
-# 🦊 FoxVim
+# Features
 
-![foxnv-cover](./.github/cover.png)
-![foxnv-editor](./.github/editor-example.png)
-![foxnv-editor-v2](./.github/cover-with-transparency.png)
-
-An opinionated Neovim distribution for Windows, Linux, WSL, and mobile terminal workflows.
-
-> 🦊 **Neovim Version:** Currently running on **NVIM v0.12.4** (requires Neovim >= 0.10).
-
-## At a glance
+- Custom config & compatibility with `Neovide`
+<img width="1703" height="874" alt="image" src="https://github.com/user-attachments/assets/d31db9d2-ea1a-4d46-b17a-6c3f0d2a78b0" />
 
 - Project environments with isolated buffers, layouts, LSPs, and terminal pools.
 - Nine persistent integrated terminals, task output slots, dev-server control, and launch profiles.
@@ -38,6 +28,8 @@ Open the Command Palette with `<C-S-p>` or `:CommandPalette` to discover actions
 
 ## Environment and terminal compatibility
 
+> 🦊 **Neovim Version:** Currently running on **NVIM v0.12.4** (requires Neovim >= 0.10).
+> 
 | Environment | FoxVim support |
 |---|---|
 | **Windows** | Native PowerShell or Git Bash setup, Windows paths, and Windows Terminal keybinding setup. |
@@ -49,22 +41,6 @@ Open the Command Palette with `<C-S-p>` or `:CommandPalette` to discover actions
 | **macOS, Fedora, Alpine** | `brew`, `dnf`, and `apk` setup paths are included. |
 
 The shell-keybinding setup supports **Windows Terminal, Kitty, Foot, WezTerm, Alacritty, Ghostty, and Termux**. Inside Neovim, each environment has nine independent terminals; a WSL filesystem path automatically selects a WSL shell. See [installation](docs/installation.md), [terminals](docs/terminals.md), and [environments](docs/environments.md).
-
-## Startup time
-
-FoxVim uses Neovim's bytecode loader, deferred plugin-spec module resolution, lazy plugins, lazy state reads, and disabled built-in runtime plugins.
-
-| Measurement | Result | Method |
-|---|---:|---|
-| Warm headless start | **83.1 ms median** | Five runs on 2026-09-26: Arch Linux x86_64, NVIM 0.12.5; range 72.8–97.2 ms. |
-| Earlier Windows baseline | **~260 ms** | Historical figure recorded in [architecture notes](docs/architecture.md#⚡-startup-performance--lazy_require). |
-
-Hardware, terminal UI, filesystem cache, installed language tooling, and Neovim version affect startup. Measure your system with:
-
-```sh
-nvim --headless --startuptime /tmp/foxvim-startup.log '+qa!'
-tail -n 1 /tmp/foxvim-startup.log
-```
 
 ## Plugin inventory
 

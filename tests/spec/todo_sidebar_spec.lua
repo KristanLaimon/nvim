@@ -2,12 +2,12 @@
 -- tests/spec/todo_sidebar_spec.lua -- Todo & comments right sidebar test suite.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local todo = require("plugins.krs.tools.todo_sidebar")
-local cp = require("plugins.krs.tools.command_palette")
+local todo = require("plugins.fox.tools.todo_sidebar")
+local cp = require("plugins.fox.tools.command_palette")
 
-describe("plugins.krs.tools.todo_sidebar", function()
+describe("plugins.fox.tools.todo_sidebar", function()
 	beforeEach(function()
 		todo.setup()
 	end)
@@ -46,11 +46,11 @@ describe("plugins.krs.tools.todo_sidebar", function()
 	end)
 
 	it("parses multi-line /* FIXME */ comments with author", function()
-		local line = "  /* FIXME(kristan): memory leak when buffer closes */"
+		local line = "  /* FIXME(fox): memory leak when buffer closes */"
 		local item = todo.parse_comment_line(line, "src/engine.c", 45)
 		expect(item).toBeDefined()
 		expect(item.tag).toBe("FIXME")
-		expect(item.extra).toBe("(kristan)")
+		expect(item.extra).toBe("(fox)")
 		expect(item.text).toBe("memory leak when buffer closes")
 	end)
 
@@ -130,7 +130,7 @@ describe("plugins.krs.tools.todo_sidebar", function()
 		local win = todo.state.win
 		expect(vim.api.nvim_win_is_valid(win)).toBe(true)
 		local buf = todo.state.buf
-		expect(vim.bo[buf].filetype).toBe("krs_todo_sidebar")
+		expect(vim.bo[buf].filetype).toBe("fox_todo_sidebar")
 
 		todo.toggle()
 		expect(todo.is_open()).toBe(false)

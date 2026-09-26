@@ -1,0 +1,25 @@
+-- 12_testing_framework.foxnvim: Test suite for foxnvim.test testing framework transpilation
+local test = require("fox.lib.foxnvim.test")
+local describe = test.describe
+local it = test.it
+local expect = test.expect
+
+print("=== Starting Testing Framework E2E Transpile Test ===")
+
+describe("Core Operations Suite", function()
+	it("verifies mathematical addition", function()
+		local a = 15
+		local b = 25
+		local total = a + b
+		expect(total).toBe(40)
+	end)
+
+	it("verifies string values", function()
+		local name = "foxnvimscript"
+		expect(name).toBe("foxnvimscript")
+	end)
+end)
+
+assert(1 == 1, "One equals one assertion")
+
+print("=== Testing Framework E2E Transpile Test Completed ===")

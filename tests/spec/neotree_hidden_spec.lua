@@ -2,17 +2,17 @@
 -- tests/spec/neotree_hidden_spec.lua -- Neo-tree custom hidden items tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local neotree_hidden = require("plugins.krs.editor.neotree_hidden")
-local project = require("krs.core.project")
+local neotree_hidden = require("plugins.fox.editor.neotree_hidden")
+local project = require("fox.core.project")
 
-describe("plugins.krs.editor.neotree_hidden state management", function()
+describe("plugins.fox.editor.neotree_hidden state management", function()
 	local test_root = nil
 
 	beforeEach(function()
 		test_root = vim.fn.tempname()
-		vim.fn.mkdir(test_root .. "/.krsnvim", "p")
+		vim.fn.mkdir(test_root .. "/.foxnvim", "p")
 		neotree_hidden.visibility_mode = "hide"
 		neotree_hidden.clear_all(test_root)
 	end)
@@ -24,9 +24,9 @@ describe("plugins.krs.editor.neotree_hidden state management", function()
 		end
 	end)
 
-	it("resolves config path inside .krsnvim/", function()
+	it("resolves config path inside .foxnvim/", function()
 		local conf = neotree_hidden.get_config_path(test_root)
-		expect(conf:find(".krsnvim", 1, true) ~= nil).toBe(true)
+		expect(conf:find(".foxnvim", 1, true) ~= nil).toBe(true)
 		expect(conf:find("neotree_hidden.json", 1, true) ~= nil).toBe(true)
 	end)
 

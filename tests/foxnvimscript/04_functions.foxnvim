@@ -1,0 +1,16 @@
+-- 04_functions.foxnvim: Function declarations, parameters, and returns
+function multiply(x, y)
+    return x * y
+end
+
+function greet_user(user, role)
+    print("User:", user, "Role:", role)
+end
+
+greet_user("Alice", "Admin")
+greet_user("Bob", "Developer")
+
+local val1 = 4
+local val2 = 5
+local result = multiply(val1, val2)
+print("4 * 5 =", result)

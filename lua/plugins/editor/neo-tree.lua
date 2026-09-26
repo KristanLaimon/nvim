@@ -4,7 +4,7 @@
 -- WHAT THIS FILE ADDS
 --   1. A REMEMBERED width that survives restarts, and stays put when other
 --      windows open and close (see "width pinning" below).
---   2. Create/rename/move through the shared KRS input modal, so the sidebar
+--   2. Create/rename/move through the shared FOX input modal, so the sidebar
 --      matches the rest of the editor instead of neo-tree's own prompts.
 --   3. `<C-S-CR>` opens the selected entry with the OS default application.
 --   4. Search keys that reuse the project's own file finders.
@@ -21,10 +21,10 @@
 --   <C-/> find files (gitignore)   <C-S-/> find all files   <C-;> terminal
 -- ============================================================================
 
-local lazy_req = require("krs.core.lazy_require")
-local store = lazy_req("krs.core.store")
+local lazy_req = require("fox.core.lazy_require")
+local store = lazy_req("fox.core.store")
 
-local env_ok, env_mod = pcall(require, "krs.core.environment")
+local env_ok, env_mod = pcall(require, "fox.core.environment")
 local env = env_ok and env_mod.detect() or {}
 local is_mobile_or_proot = env.is_termux or env.is_proot or env.is_mobile or (vim.env.TERMUX_VERSION ~= nil)
 
@@ -131,7 +131,7 @@ local function toggle_neotree()
 	vim.cmd("silent! Neotree toggle")
 	vim.schedule(function()
 		pcall(function()
-			require("krs.core.dock").enforce_neotree_layout()
+			require("fox.core.dock").enforce_neotree_layout()
 		end)
 	end)
 end
@@ -147,7 +147,7 @@ vim.api.nvim_create_autocmd("FileType", {
 		pin_width()
 		vim.schedule(function()
 			pcall(function()
-				require("krs.core.dock").enforce_neotree_layout()
+				require("fox.core.dock").enforce_neotree_layout()
 			end)
 		end)
 	end,
@@ -183,7 +183,7 @@ local function ensure_neotree_not_alone()
 		end)
 		pin_width()
 		pcall(function()
-			require("krs.core.dock").enforce_neotree_layout()
+			require("fox.core.dock").enforce_neotree_layout()
 		end)
 	end
 end
@@ -205,7 +205,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 		local file = data.file
 		if file ~= "" and vim.fn.isdirectory(file) == 1 then
 			vim.schedule(function()
-				local pinned_tabs = require("plugins.krs.ui.pinned_tabs")
+				local pinned_tabs = require("plugins.fox.ui.pinned_tabs")
 				local has_pins = #pinned_tabs.load_pins() > 0
 				if not has_pins then
 					vim.cmd("Alpha")
@@ -230,7 +230,7 @@ vim.api.nvim_create_autocmd({ "BufWinEnter", "BufWinLeave" }, {
 			ensure_neotree_not_alone()
 			pin_width()
 			pcall(function()
-				require("krs.core.dock").enforce_neotree_layout()
+				require("fox.core.dock").enforce_neotree_layout()
 			end)
 		end)
 	end,
@@ -374,7 +374,7 @@ end
 --- @param parent_dir string Directory to create in.
 --- @param kind "file"|"folder"
 local function create_entry(parent_dir, kind)
-	require("plugins.krs.ui.input_modal").open({
+	require("plugins.fox.ui.input_modal").open({
 		label = kind == "folder" and "New Folder" or "New File",
 		default_value = "",
 		relative = "editor",
@@ -396,7 +396,7 @@ local function create_entry(parent_dir, kind)
 				vim.fn.mkdir(target, "p")
 				vim.notify("Created folder: " .. clean, vim.log.levels.INFO, { title = "Neo-tree" })
 			else
-				if require("krs.core.new_file").create(target) then
+				if require("fox.core.new_file").create(target) then
 					vim.cmd("edit " .. vim.fn.fnameescape(target))
 					vim.notify("Created file: " .. clean, vim.log.levels.INFO, { title = "Neo-tree" })
 				end
@@ -476,7 +476,7 @@ return {
 				})
 			end
 
-			local neotree_hidden = require("plugins.krs.editor.neotree_hidden")
+			local neotree_hidden = require("plugins.fox.editor.neotree_hidden")
 			neotree_hidden.setup()
 
 			local user_cmds = {
@@ -530,13 +530,13 @@ return {
 				},
 				NeotreeMove = {
 					function()
-						require("plugins.krs.editor.neotree_mover").handle_move_ex()
+						require("plugins.fox.editor.neotree_mover").handle_move_ex()
 					end,
 					"Move selected file or folder in Neo-tree (En la mano)",
 				},
 				NeotreeCancelMove = {
 					function()
-						require("plugins.krs.editor.neotree_mover").cancel()
+						require("plugins.fox.editor.neotree_mover").cancel()
 					end,
 					"Cancel pending Neo-tree move operation",
 				},
@@ -572,13 +572,13 @@ return {
 						neotree_hidden.toggle_path(node.path)
 					end, true),
 					open_with_system_app = with_node(function(node)
-						require("plugins.krs.ui.image_viewer").open_with_system_app(node.path)
+						require("plugins.fox.ui.image_viewer").open_with_system_app(node.path)
 					end, true),
 
 					rename_with_modal = with_node(function(node)
 						local old_path, old_name = node.path, node.name
 
-						require("plugins.krs.ui.input_modal").open({
+						require("plugins.fox.ui.input_modal").open({
 							label = "Rename (" .. old_name .. ")",
 							default_value = old_name,
 							relative = "editor",
@@ -591,7 +591,7 @@ return {
 								local renamed, err = os.rename(old_path, new_path)
 
 								if renamed then
-									require("krs.core.buffer_rename").update_buffers_path(old_path, new_path)
+									require("fox.core.buffer_rename").update_buffers_path(old_path, new_path)
 									vim.notify("Renamed: " .. old_name .. " ➜ " .. new_name, vim.log.levels.INFO, {
 										title = "Neo-tree",
 									})
@@ -607,11 +607,11 @@ return {
 
 					move_item = function(state)
 						local node = state and state.tree and state.tree:get_node()
-						require("plugins.krs.editor.neotree_mover").handle_move(node, state)
+						require("plugins.fox.editor.neotree_mover").handle_move(node, state)
 					end,
 
 					cancel_move = function(state)
-						local mover = require("plugins.krs.editor.neotree_mover")
+						local mover = require("plugins.fox.editor.neotree_mover")
 						if mover.is_holding() then
 							mover.cancel()
 						else
@@ -620,7 +620,7 @@ return {
 					end,
 
 					move_with_picker = with_node(function(node)
-						require("plugins.krs.tools.file_explorer").open_move_picker({
+						require("plugins.fox.tools.file_explorer").open_move_picker({
 							source_path = node.path,
 							root_dir = vim.fn.getcwd(),
 						})
@@ -733,31 +733,31 @@ return {
 					{
 						event = "file_added",
 						handler = function(filename)
-							vim.api.nvim_exec_autocmds("User", { pattern = "KrsFileCreated", data = { path = filename } })
+							vim.api.nvim_exec_autocmds("User", { pattern = "FoxFileCreated", data = { path = filename } })
 						end,
 					},
 					{
 						event = "file_renamed",
 						handler = function(args)
-							require("krs.core.buffer_rename").update_buffers_path(args.source, args.destination)
+							require("fox.core.buffer_rename").update_buffers_path(args.source, args.destination)
 						end,
 					},
 					{
 						event = "file_moved",
 						handler = function(args)
-							require("krs.core.buffer_rename").update_buffers_path(args.source, args.destination)
+							require("fox.core.buffer_rename").update_buffers_path(args.source, args.destination)
 						end,
 					},
 					{
 						event = "dir_renamed",
 						handler = function(args)
-							require("krs.core.buffer_rename").update_buffers_path(args.source, args.destination)
+							require("fox.core.buffer_rename").update_buffers_path(args.source, args.destination)
 						end,
 					},
 					{
 						event = "dir_moved",
 						handler = function(args)
-							require("krs.core.buffer_rename").update_buffers_path(args.source, args.destination)
+							require("fox.core.buffer_rename").update_buffers_path(args.source, args.destination)
 						end,
 					},
 				},

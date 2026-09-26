@@ -6,7 +6,7 @@
 -- across projects).
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
 
 describe("LSP project auto-stop", function()

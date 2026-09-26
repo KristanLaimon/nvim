@@ -29,8 +29,8 @@ times in msec
 026.155  000.023  000.023: require('vim._core.log')
 046.910  022.151  021.909: require('vim._core.defaults')
 046.921  000.015: init default mappings & autocommands
-049.117  000.144  000.144: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share\nvim\runtime\ftplugin.vim
-049.745  000.124  000.124: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share\nvim\runtime\indent.vim
+049.117  000.144  000.144: sourcing C:\Users\Fox\scoop\apps\neovim\current\share\nvim\runtime\ftplugin.vim
+049.745  000.124  000.124: sourcing C:\Users\Fox\scoop\apps\neovim\current\share\nvim\runtime\indent.vim
 051.378  000.440  000.440: require('vim.fs')
 051.860  000.472  000.472: require('vim.uri')
 051.882  001.235  000.323: require('vim.loader')
@@ -43,14 +43,14 @@ times in msec
 057.845  001.802  000.349: require('vim.treesitter.languagetree')
 057.855  002.448  000.646: require('vim.treesitter')
 058.499  006.557  001.656: require('vim_options')
-058.760  000.253  000.253: require('krs.core.keymap_registry')
+058.760  000.253  000.253: require('fox.core.keymap_registry')
 060.152  001.162  001.162: require('keymaps.editor')
 060.881  000.468  000.468: require('keymaps.debug')
 061.074  000.914  000.446: require('keymaps.search')
 062.296  000.144  000.144: require('vim.F')
 062.511  001.006  000.862: require('vim.diagnostic')
 062.837  001.757  000.751: require('keymaps.lsp')
-064.509  001.662  001.662: require('keymaps.krs')
+064.509  001.662  001.662: require('keymaps.fox')
 064.523  005.756  000.260: require('keymaps')
 068.689  003.497  003.497: require('lazy')
 068.743  000.027  000.027: require('ffi')
@@ -70,7 +70,7 @@ times in msec
 074.821  001.637  000.310: require('lazy.manage')
 074.826  001.995  000.358: require('lazy.view.commands')
 075.125  000.267  000.267: require('lazy.core.fragments')
-079.126  000.275  000.275: require('krs.core.lazy_require')
+079.126  000.275  000.275: require('fox.core.lazy_require')
 083.703  000.971  000.971: require('vim.lsp.protocol')
 083.810  001.388  000.417: require('vim.lsp.log')
 084.615  000.347  000.347: require('vim._core.util')
@@ -81,46 +81,46 @@ times in msec
 086.303  000.048  000.048: require('vim._core.stringbuffer')
 086.353  000.783  000.421: require('vim.lsp.rpc')
 086.387  004.346  000.436: require('vim.lsp')
-086.392  004.625  000.279: require('krs.lsp.editorconfig')
-088.408  000.335  000.335: require('krs.core.lazyspec')
-088.491  000.691  000.355: require('plugins.krs.type_injector')
-088.973  000.247  000.247: require('krs.core.path')
-088.984  000.471  000.224: require('krs.core.store')
+086.392  004.625  000.279: require('fox.lsp.editorconfig')
+088.408  000.335  000.335: require('fox.core.lazyspec')
+088.491  000.691  000.355: require('plugins.fox.type_injector')
+088.973  000.247  000.247: require('fox.core.path')
+088.984  000.471  000.224: require('fox.core.store')
 089.322  000.327  000.327: require('vim.lsp.client')
 095.974  000.429  000.429: require('vim.ui')
-096.955  000.257  000.257: require('krs.launch.runtimes')
-099.197  000.541  000.541: require('krs.core.ui')
-102.732  000.395  000.395: require('krs.core.dock')
-105.145  000.412  000.412: require('krs.core.z_index')
+096.955  000.257  000.257: require('fox.launch.runtimes')
+099.197  000.541  000.541: require('fox.core.ui')
+102.732  000.395  000.395: require('fox.core.dock')
+105.145  000.412  000.412: require('fox.core.z_index')
 110.765  000.389  000.389: require('lazy.core.handler.event')
 110.784  000.853  000.465: require('lazy.core.handler.ft')
 111.230  000.433  000.433: require('lazy.core.handler.cmd')
 111.692  000.434  000.434: require('lazy.core.handler.keys')
-114.027  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-114.117  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-114.407  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-114.480  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-114.770  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-114.849  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-116.465  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-116.544  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-118.597  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-118.682  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-119.138  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-119.569  000.088  000.088: sourcing C:/Users/Kristan/AppData/Local/nvim-data/lazy/vim-blade/ftdetect/blade.vim
-119.594  000.347  000.259: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-119.608  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-119.637  000.002  000.002: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-119.727  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-121.953  001.369  001.369: sourcing nvim_exec2() called at C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/filetype.lua:0
-121.966  001.658  000.290: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/filetype.lua
-121.989  002.152  000.494: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-122.355  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-122.407  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
+114.027  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+114.117  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+114.407  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+114.480  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+114.770  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+114.849  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+116.465  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+116.544  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+118.597  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+118.682  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+119.138  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+119.569  000.088  000.088: sourcing C:/Users/Fox/AppData/Local/nvim-data/lazy/vim-blade/ftdetect/blade.vim
+119.594  000.347  000.259: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+119.608  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+119.637  000.002  000.002: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+119.727  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+121.953  001.369  001.369: sourcing nvim_exec2() called at C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/filetype.lua:0
+121.966  001.658  000.290: sourcing C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/filetype.lua
+121.989  002.152  000.494: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+122.355  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+122.407  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
 125.154  000.253  000.253: require('notify.util.queue')
 125.168  000.589  000.336: require('notify.util')
-125.698  000.092  000.092: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-125.738  000.023  000.023: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
+125.698  000.092  000.092: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+125.738  000.023  000.023: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
 125.747  000.574  000.459: require('notify.config.highlights')
 125.757  001.543  000.380: require('notify.config')
 126.520  000.388  000.388: require('notify.stages')
@@ -135,17 +135,17 @@ times in msec
 129.681  003.917  000.621: require('notify.instance')
 129.692  007.265  001.805: require('notify')
 130.192  000.382  000.382: require('notify.stages.fade_in_slide_out')
-130.253  000.022  000.022: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-130.276  000.010  000.010: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-130.546  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-130.588  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-160.369  000.479  000.479: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\colors\nagatoro-krs.lua:0
-160.774  001.352  000.874: sourcing C:\Users\Kristan\AppData\Local\nvim\colors\nagatoro-krs.lua
+130.253  000.022  000.022: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+130.276  000.010  000.010: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+130.546  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+130.588  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+160.369  000.479  000.479: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\colors\nagatoro-fox.lua:0
+160.774  001.352  000.874: sourcing C:\Users\Fox\AppData\Local\nvim\colors\nagatoro-fox.lua
 160.899  000.023  000.023: sourcing nvim_exec2() called at ColorScheme Autocommands for "*":0
-161.713  000.165  000.165: sourcing C:/Users/Kristan/AppData/Local/nvim-data/lazy/nvim-web-devicons/plugin/nvim-web-devicons.vim
-161.742  000.562  000.397: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-161.763  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-161.844  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
+161.713  000.165  000.165: sourcing C:/Users/Fox/AppData/Local/nvim-data/lazy/nvim-web-devicons/plugin/nvim-web-devicons.vim
+161.742  000.562  000.397: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+161.763  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+161.844  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
 165.848  000.590  000.590: require('nvim-web-devicons.filetypes')
 167.337  000.926  000.926: require('nvim-web-devicons.default.icons_by_filename')
 168.538  001.165  001.165: require('nvim-web-devicons.default.icons_by_file_extension')
@@ -154,25 +154,25 @@ times in msec
 169.945  000.371  000.371: require('nvim-web-devicons.default.icons_by_window_manager')
 169.956  004.047  000.600: require('nvim-web-devicons.icons-default')
 170.381  008.512  003.874: require('nvim-web-devicons')
-174.658  000.012  000.012: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-174.785  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-176.333  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-176.376  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-177.905  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-177.949  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
+174.658  000.012  000.012: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+174.785  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+176.333  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+176.376  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+177.905  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+177.949  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
 180.221  002.245  002.245: require('alpha')
 180.629  000.392  000.392: require('alpha.themes.dashboard')
-180.943  000.268  000.268: require('plugins.krs.wsl')
-189.982  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-190.042  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-190.310  000.017  000.017: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-190.338  000.015  000.015: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-190.374  000.025  000.025: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-190.408  000.016  000.016: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-190.433  000.015  000.015: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-190.460  000.018  000.018: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-192.293  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-192.359  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
+180.943  000.268  000.268: require('plugins.fox.wsl')
+189.982  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+190.042  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+190.310  000.017  000.017: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+190.338  000.015  000.015: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+190.374  000.025  000.025: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+190.408  000.016  000.016: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+190.433  000.015  000.015: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+190.460  000.018  000.018: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+192.293  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+192.359  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
 194.901  000.332  000.332: require('bufferline.lazy')
 195.241  000.316  000.316: require('bufferline.commands')
 195.606  000.354  000.354: require('bufferline.config')
@@ -185,124 +185,124 @@ times in msec
 199.077  000.417  000.417: require('vim.version')
 201.283  002.993  002.575: require('bufferline.hover')
 201.918  000.529  000.529: require('bufferline.ui')
-203.683  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-203.742  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-206.455  000.012  000.012: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-206.524  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-207.126  000.422  000.422: require('plugins.krs.statusline_picker')
+203.683  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+203.742  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+206.455  000.012  000.012: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+206.524  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+207.126  000.422  000.422: require('plugins.fox.statusline_picker')
 210.578  000.445  000.445: require('lualine_require')
 212.760  005.442  004.997: require('lualine')
-213.116  000.029  000.029: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
+213.116  000.029  000.029: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
 217.229  000.508  000.508: require('lualine.highlight')
-219.683  000.018  000.018: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-219.866  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-219.990  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.033  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.075  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.116  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.173  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.227  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.299  000.010  000.010: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.338  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.481  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.520  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.580  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.623  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.663  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.702  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.773  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-220.821  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-221.010  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-221.051  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-221.094  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-221.131  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-221.168  000.022  000.022: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-230.242  000.059  000.059: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-230.268  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-231.633  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-231.668  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-231.724  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-231.847  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-231.875  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-231.910  000.012  000.012: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-231.936  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-231.970  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-231.994  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.021  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.048  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.074  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.098  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.124  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.153  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.177  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.202  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.241  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.266  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.292  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-232.316  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-233.157  000.050  000.050: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-233.173  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-233.212  000.033  000.033: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-233.230  000.010  000.010: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.274  000.014  000.014: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.312  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.340  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.366  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.417  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.455  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.483  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.515  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.540  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.567  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.593  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.617  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.644  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.668  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.707  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.732  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.758  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.801  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.828  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.853  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.877  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.905  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.935  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.959  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-236.984  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-237.007  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-237.032  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-237.058  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
+219.683  000.018  000.018: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+219.866  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+219.990  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.033  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.075  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.116  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.173  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.227  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.299  000.010  000.010: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.338  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.481  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.520  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.580  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.623  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.663  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.702  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.773  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+220.821  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+221.010  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+221.051  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+221.094  000.009  000.009: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+221.131  000.007  000.007: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+221.168  000.022  000.022: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+230.242  000.059  000.059: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+230.268  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+231.633  000.011  000.011: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+231.668  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+231.724  000.006  000.006: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+231.847  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+231.875  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+231.910  000.012  000.012: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+231.936  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+231.970  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+231.994  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.021  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.048  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.074  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.098  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.124  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.153  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.177  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.202  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.241  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.266  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.292  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+232.316  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+233.157  000.050  000.050: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+233.173  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+233.212  000.033  000.033: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+233.230  000.010  000.010: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.274  000.014  000.014: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.312  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.340  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.366  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.417  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.455  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.483  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.515  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.540  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.567  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.593  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.617  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.644  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.668  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.707  000.005  000.005: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.732  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.758  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.801  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.828  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.853  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.877  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.905  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.935  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.959  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+236.984  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+237.007  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+237.032  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+237.058  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
 238.319  000.529  000.529: require('lualine.utils.mode')
-240.809  000.025  000.025: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-240.922  000.065  000.065: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-240.974  000.040  000.040: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-240.996  000.010  000.010: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-241.013  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-241.271  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-241.323  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-243.777  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-243.823  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-246.785  000.348  000.348: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/plugin/editorconfig.lua
-246.823  000.866  000.519: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-247.639  000.354  000.354: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/plugin/man.lua
-247.674  000.832  000.478: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-248.540  000.382  000.382: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/plugin/net.lua
-248.577  000.881  000.499: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-249.394  000.328  000.328: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/plugin/osc52.lua
-249.429  000.832  000.504: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-250.818  000.882  000.882: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/plugin/rplugin.vim
-250.847  001.395  000.513: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-251.788  000.416  000.416: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/plugin/shada.lua
-251.826  000.953  000.537: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-252.647  000.312  000.312: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/plugin/spellfile.lua
-252.681  000.834  000.522: sourcing nvim_exec2() called at C:\Users\Kristan\AppData\Local\nvim\init.lua:0
-253.938  000.977  000.977: require('krs.core.installer')
+240.809  000.025  000.025: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+240.922  000.065  000.065: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+240.974  000.040  000.040: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+240.996  000.010  000.010: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+241.013  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+241.271  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+241.323  000.004  000.004: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+243.777  000.008  000.008: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+243.823  000.003  000.003: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+246.785  000.348  000.348: sourcing C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/plugin/editorconfig.lua
+246.823  000.866  000.519: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+247.639  000.354  000.354: sourcing C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/plugin/man.lua
+247.674  000.832  000.478: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+248.540  000.382  000.382: sourcing C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/plugin/net.lua
+248.577  000.881  000.499: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+249.394  000.328  000.328: sourcing C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/plugin/osc52.lua
+249.429  000.832  000.504: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+250.818  000.882  000.882: sourcing C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/plugin/rplugin.vim
+250.847  001.395  000.513: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+251.788  000.416  000.416: sourcing C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/plugin/shada.lua
+251.826  000.953  000.537: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+252.647  000.312  000.312: sourcing C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/plugin/spellfile.lua
+252.681  000.834  000.522: sourcing nvim_exec2() called at C:\Users\Fox\AppData\Local\nvim\init.lua:0
+253.938  000.977  000.977: require('fox.core.installer')
 254.156  189.628  123.389: require('lazy_init')
-254.178  203.692  000.265: sourcing C:\Users\Kristan\AppData\Local\nvim\init.lua
+254.178  203.692  000.265: sourcing C:\Users\Fox\AppData\Local\nvim\init.lua
 254.242  003.361: sourcing vimrc file(s)
-257.413  000.266  000.266: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share\nvim\runtime\filetype.lua
-259.152  000.144  000.144: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share\nvim\runtime\syntax\synload.vim
-259.333  001.127  000.983: sourcing C:\Users\Kristan\scoop\apps\neovim\current\share/nvim/runtime/syntax/syntax.vim
+257.413  000.266  000.266: sourcing C:\Users\Fox\scoop\apps\neovim\current\share\nvim\runtime\filetype.lua
+259.152  000.144  000.144: sourcing C:\Users\Fox\scoop\apps\neovim\current\share\nvim\runtime\syntax\synload.vim
+259.333  001.127  000.983: sourcing C:\Users\Fox\scoop\apps\neovim\current\share/nvim/runtime/syntax/syntax.vim
 259.371  003.736: inits 3
 261.673  002.301: reading ShaDa
 261.942  000.269: opening buffers

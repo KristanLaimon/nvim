@@ -1,6 +1,6 @@
 # 💎 Ruby Toolchain Guide
 
-This document provides setup instructions, LSP server settings, formatting pipelines, and execution details for Ruby in **KrsVim**.
+This document provides setup instructions, LSP server settings, formatting pipelines, and execution details for Ruby in **FoxVim**.
 
 ---
 
@@ -36,7 +36,7 @@ The **Ruby** bundle (`💎 Ruby`) is an optional, opt-in bundle in the Language 
 
 ## 🚀 4. Launch Profiles
 
-- **Launch Profile (`.krsnvim/launch.json`)**:
+- **Launch Profile (`.foxnvim/launch.json`)**:
   ```json
   {
     "name": "Run Ruby Script",

@@ -2,13 +2,13 @@
 -- tests/spec/lsp_scoping_spec.lua -- LSP server scoping & activation rules.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 describe("LSP server scoping", function()
-	local typescript = require("krs.langs.typescript")
-	local web_ui = require("krs.langs.web_ui")
-	local web = require("krs.langs.web")
+	local typescript = require("fox.langs.typescript")
+	local web_ui = require("fox.langs.web_ui")
+	local web = require("fox.langs.web")
 
 	it("only activates ESLint LSP when project has an ESLint config file", function()
 		expect(typescript.lsp_config.eslint).toBeDefined()

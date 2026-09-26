@@ -1,4 +1,4 @@
-# 📝 Todo & Comments Right Sidebar (`plugins.krs.tools.todo_sidebar`)
+# 📝 Todo & Comments Right Sidebar (`plugins.fox.tools.todo_sidebar`)
 
 [← Back to Wiki Index](index.md)
 
@@ -67,7 +67,7 @@ The **Todo & Comments Sidebar** is a fast, interactive right-docked panel (`spli
 
 ## 🔧 Architecture & Configuration
 
-Settings can be customized directly in `M.settings` inside [`lua/plugins/krs/tools/todo_sidebar.lua`](../lua/plugins/krs/tools/todo_sidebar.lua):
+Settings can be customized directly in `M.settings` inside [`lua/plugins/fox/tools/todo_sidebar.lua`](../lua/plugins/fox/tools/todo_sidebar.lua):
 
 ```lua
 M.settings = {

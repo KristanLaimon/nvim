@@ -1,12 +1,12 @@
 -- ============================================================================
--- tests/spec/z_index_spec.lua -- Spec suite for krs.core.z_index manager.
+-- tests/spec/z_index_spec.lua -- Spec suite for fox.core.z_index manager.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach = t.describe, t.it, t.expect, t.beforeEach
-local z_index = require("krs.core.z_index")
+local z_index = require("fox.core.z_index")
 
-describe("krs.core.z_index", function()
+describe("fox.core.z_index", function()
 	beforeEach(function()
 		z_index.clear()
 	end)
@@ -64,9 +64,9 @@ describe("krs.core.z_index", function()
 		expect(new_z).toBe(150)
 	end)
 
-	it("supports re-export modules krs.core.zindex and krs.core.z-index", function()
-		local mod1 = require("krs.core.zindex")
-		local mod2 = require("krs.core.z-index")
+	it("supports re-export modules fox.core.zindex and fox.core.z-index", function()
+		local mod1 = require("fox.core.zindex")
+		local mod2 = require("fox.core.z-index")
 
 		expect(mod1).toBe(z_index)
 		expect(mod2).toBe(z_index)

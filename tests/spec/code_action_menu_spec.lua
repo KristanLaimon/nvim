@@ -7,9 +7,9 @@
 -- original order so the list does not shuffle between identical requests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local menu = require("krs.lsp.code_action_menu")
+local menu = require("fox.lsp.code_action_menu")
 
 --- Names of the actions, in the order the menu would show them.
 --- @param items table[] Raw items.

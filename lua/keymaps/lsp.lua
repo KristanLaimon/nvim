@@ -63,7 +63,7 @@ end
 -- ============================================================================
 
 vim.keymap.set("n", M.settings.keys.hover, function()
-	require("plugins.krs.editor.hover_links").show_or_focus_hover()
+	require("plugins.fox.editor.hover_links").show_or_focus_hover()
 end, opts("Show or focus hover documentation"))
 
 vim.keymap.set({ "i", "v" }, M.settings.keys.signature_help, function()
@@ -99,7 +99,7 @@ end
 -- ============================================================================
 
 vim.keymap.set({ "n", "i", "v" }, M.settings.keys.code_action, function()
-	require("krs.lsp.code_action_menu").request()
+	require("fox.lsp.code_action_menu").request()
 end, opts("Quick Fix / Code Actions (Dropdown at Caret)"))
 
 -- ============================================================================
@@ -118,7 +118,7 @@ end, opts("Quick Fix / Code Actions (Dropdown at Caret)"))
 --   3. Add it below following the same pattern.
 if not vim.g.neovide and vim.fn.has("gui_running") == 0 then
 	local code_action_fn = function()
-		require("krs.lsp.code_action_menu").request()
+		require("fox.lsp.code_action_menu").request()
 	end
 
 	-- CSI-u (Kitty Keyboard Protocol) — sent by Kitty, foot, WezTerm, and
@@ -200,7 +200,7 @@ local function goto_definition_at_mouse()
 		pcall(vim.api.nvim_win_set_cursor, mouse_pos.winid, { mouse_pos.line, math.max(0, mouse_pos.column - 1) })
 	end
 
-	local ok, hover_links = pcall(require, "plugins.krs.editor.hover_links")
+	local ok, hover_links = pcall(require, "plugins.fox.editor.hover_links")
 	if ok and hover_links.follow_link_at_cursor then
 		local handled = hover_links.follow_link_at_cursor()
 		if handled then
@@ -294,7 +294,7 @@ local function rename_file(old_path)
 	local dir = vim.fn.fnamemodify(old_path, ":h")
 	local old_name = vim.fn.fnamemodify(old_path, ":t")
 
-	require("plugins.krs.ui.input_modal").open({
+	require("plugins.fox.ui.input_modal").open({
 		label = "Rename File",
 		default_value = old_name,
 		relative = "editor",
@@ -316,7 +316,7 @@ local function rename_file(old_path)
 				return
 			end
 
-			require("krs.core.buffer_rename").update_buffers_path(old_path, new_path)
+			require("fox.core.buffer_rename").update_buffers_path(old_path, new_path)
 			vim.notify("Renamed file: " .. old_name .. " ➜ " .. new_name, vim.log.levels.INFO)
 		end,
 	})
@@ -325,7 +325,7 @@ end
 --- Renames the symbol under the cursor through the LSP.
 --- @param old_name string Current symbol name.
 local function rename_symbol(old_name)
-	require("plugins.krs.ui.input_modal").open({
+	require("plugins.fox.ui.input_modal").open({
 		label = "LSP Rename",
 		default_value = old_name,
 		relative = "cursor",

@@ -2,7 +2,7 @@
 -- tests/spec/startup_notification_spec.lua -- Startup toast notification test.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 describe("lazy startup stats", function()

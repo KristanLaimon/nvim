@@ -6,11 +6,11 @@
 -- and clean process tree termination on cleanup.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local peek = require("plugins.krs.dev.sneak_peek")
+local peek = require("plugins.fox.dev.sneak_peek")
 
-describe("plugins.krs.dev.sneak_peek", function()
+describe("plugins.fox.dev.sneak_peek", function()
 	local temp_dir
 	local original_termopen
 	local original_open_folder_picker

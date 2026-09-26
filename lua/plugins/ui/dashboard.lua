@@ -2,7 +2,7 @@
 -- PLUGINS: Starter Dashboard (alpha-nvim) with Environment Detection & Responsive Banners
 -- ============================================================================
 
-local env_lib = require("krs.core.environment")
+local env_lib = require("fox.core.environment")
 
 local settings = {
 	--- Colour of the ASCII banner. Re-applied on every colorscheme change.
@@ -13,9 +13,9 @@ local settings = {
 		{ "f", "📁", "File Explorer", ":TelescopeFileBrowserDesktop<CR>" },
 		{ "p", "💼", "Recent projects", ":RecentProjects<CR>" },
 		{ "n", "📝", "Notes", ":Notes<CR>" },
-		{ "s", "📦", "Dependencies & Toolchains", ":KrsInstallDependencies<CR>" },
-		{ "h", "🩺", "Health Check", ":KrsHealthCheck<CR>" },
-		{ "w", "📚", "Wiki & Docs (Ctrl+Shift+D)", ":KrsWiki<CR>" },
+		{ "s", "📦", "Dependencies & Toolchains", ":FoxInstallDependencies<CR>" },
+		{ "h", "🩺", "Health Check", ":FoxHealthCheck<CR>" },
+		{ "w", "📚", "Wiki & Docs (Ctrl+Shift+D)", ":FoxWiki<CR>" },
 		{ "e", "🧩", "Plugins & Extensions", ":Lazy<CR>" },
 		{ "m", "⚙️", "Server Manager (Mason)", ":Mason<CR>" },
 		{ "q", "🚪", "Quit", ":qa<CR>" },
@@ -219,12 +219,12 @@ return {
 		dashboard.section.buttons.val = vim.tbl_map(make_button, settings.buttons)
 
 		-- The WSL entry would be a dead end on a machine without WSL.
-		local ok_wsl, wsl = pcall(require, "plugins.krs.tools.wsl")
+		local ok_wsl, wsl = pcall(require, "plugins.fox.tools.wsl")
 		if ok_wsl and wsl.available() then
 			table.insert(dashboard.section.buttons.val, settings.wsl_button_position, make_button(settings.wsl_button))
 		end
 
-		dashboard.section.footer.val = "⚡ KRS Neovim (" .. env.label .. ")"
+		dashboard.section.footer.val = "⚡ FOX Neovim (" .. env.label .. ")"
 
 		-- alpha redraws on WinResized, which fires while a window is already gone
 		-- (closing a split or the explorer) and then throws "invalid window id".
@@ -281,7 +281,7 @@ return {
 		end
 
 		local function has_pins()
-			local ok, pinned_tabs = pcall(require, "plugins.krs.ui.pinned_tabs")
+			local ok, pinned_tabs = pcall(require, "plugins.fox.ui.pinned_tabs")
 			return ok and #pinned_tabs.load_pins() > 0
 		end
 

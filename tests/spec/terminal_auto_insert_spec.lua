@@ -1,10 +1,10 @@
 -- ============================================================================
 -- tests/spec/terminal_auto_insert_spec.lua -- Spec for Terminal auto-insert & click behavior
 -- ============================================================================
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, afterEach = t.describe, t.it, t.expect, t.afterEach
 
-local terminal = require("plugins.krs.dev.terminal")
+local terminal = require("plugins.fox.dev.terminal")
 
 describe("terminal auto insert & click behavior", function()
 	local created_bufs = {}
@@ -23,7 +23,7 @@ describe("terminal auto insert & click behavior", function()
 
 		local buf = vim.api.nvim_create_buf(false, true)
 		table.insert(created_bufs, buf)
-		vim.b[buf].krs_is_multi_term = true
+		vim.b[buf].fox_is_multi_term = true
 
 		vim.api.nvim_exec_autocmds("BufEnter", { buffer = buf })
 
@@ -54,7 +54,7 @@ describe("terminal auto insert & click behavior", function()
 		table.insert(created_bufs, term_buf)
 
 		vim.bo[neotree_buf].filetype = "neo-tree"
-		vim.b[term_buf].krs_is_multi_term = true
+		vim.b[term_buf].fox_is_multi_term = true
 
 		local win_neotree = vim.api.nvim_get_current_win()
 		vim.api.nvim_win_set_buf(win_neotree, neotree_buf)
@@ -64,7 +64,7 @@ describe("terminal auto insert & click behavior", function()
 		vim.api.nvim_win_set_buf(win_term, term_buf)
 
 		-- Start in terminal window, press left (C-h)
-		_G._krs_last_win_before_neotree = win_term
+		_G._fox_last_win_before_neotree = win_term
 		vim.api.nvim_set_current_win(win_neotree)
 
 		-- From Neo-tree, press right (C-l)

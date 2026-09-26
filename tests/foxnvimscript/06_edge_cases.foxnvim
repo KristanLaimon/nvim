@@ -1,0 +1,21 @@
+-- 06_edge_cases.foxnvim: Edge cases, parenthesized strings, assertions, comments
+-- Comment with parens (like this) and keywords if then else end
+print("Edge Case 1: Parentheses in string (Hello (World) [Test])")
+
+local complex_str = "Nested, string, with (parens) and commas"
+print(complex_str)
+
+assert(1 + 1 == 2, "Math assertion 1+1=2 passed")
+print("Assertion 1 passed.")
+
+local test_var_123 = 100
+test_var_123 = test_var_123 + 50
+print("Variable with digits:", test_var_123)
+
+function calculate_total(price, tax)
+    local subtotal = price + tax
+    return subtotal
+end
+
+local total = calculate_total(100, 15)
+print("Calculated Total:", total)

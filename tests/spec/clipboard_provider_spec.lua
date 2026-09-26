@@ -2,7 +2,7 @@
 -- tests/spec/clipboard_provider_spec.lua -- Clipboard provider tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 describe("Clipboard provider setup in options", function()

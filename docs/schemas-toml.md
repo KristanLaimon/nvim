@@ -53,7 +53,7 @@ Follow this step-by-step checklist whenever you want to add a new TOML schema va
 
 - [ ] **Step 1: Obtain the JSON schema for your TOML tool**
   Save the schema `.json` file inside `schemas/toml/`.  
-  *Example file path:* `C:\Users\Kristan\AppData\Local\nvim\schemas\toml\cargo.json`
+  *Example file path:* `C:\Users\Fox\AppData\Local\nvim\schemas\toml\cargo.json`
 
 - [ ] **Step 2: Open [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua)**
   Locate `opts.servers.taplo.settings`.

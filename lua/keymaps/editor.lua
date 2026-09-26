@@ -19,7 +19,7 @@ local M = {}
 -- ============================================================================
 
 local is_mobile_ed
-local env_ok_ed, env_mod_ed = pcall(require, "krs.core.environment")
+local env_ok_ed, env_mod_ed = pcall(require, "fox.core.environment")
 if env_ok_ed then
 	local env = env_mod_ed.detect()
 	is_mobile_ed = env.is_mobile or env.is_termux or env.is_proot
@@ -144,13 +144,13 @@ for _, key in ipairs(M.settings.keys.pin_tab) do
 		if vim.fn.mode() == "i" then
 			pcall(vim.cmd, "stopinsert")
 		end
-		require("plugins.krs.ui.pinned_tabs").toggle_pin()
+		require("plugins.fox.ui.pinned_tabs").toggle_pin()
 	end, opts("Toggle pin tab (code buffer only)"))
 end
 
 for _, key in ipairs(M.settings.keys.fold_toggle or {}) do
 	vim.keymap.set({ "n", "v", "i", "t" }, key, function()
-		require("plugins.krs.editor.folding").toggle_fold()
+		require("plugins.fox.editor.folding").toggle_fold()
 	end, opts("Toggle fold at cursor (HTML, functions, scopes)"))
 end
 
@@ -181,12 +181,12 @@ local function is_terminal_win(win)
 	if not buf or not vim.api.nvim_buf_is_valid(buf) then
 		return false
 	end
-	return (vim.bo[buf].buftype == "terminal" or vim.b[buf].krs_is_multi_term) and true or false
+	return (vim.bo[buf].buftype == "terminal" or vim.b[buf].fox_is_multi_term) and true or false
 end
 
 local function focus_window_left()
 	local cur_win = vim.api.nvim_get_current_win()
-	_G._krs_last_win_before_neotree = cur_win
+	_G._fox_last_win_before_neotree = cur_win
 	pcall(vim.cmd, "wincmd h")
 	local new_win = vim.api.nvim_get_current_win()
 	if is_terminal_win(new_win) and vim.api.nvim_get_mode().mode ~= "t" then
@@ -199,14 +199,14 @@ local function focus_window_right()
 	local buf = vim.api.nvim_win_get_buf(cur_win)
 	local is_neotree = vim.bo[buf].filetype == "neo-tree"
 
-	local target_win = _G._krs_last_win_before_neotree
+	local target_win = _G._fox_last_win_before_neotree
 	if
 		is_neotree
 		and target_win
 		and vim.api.nvim_win_is_valid(target_win)
 		and vim.api.nvim_win_get_tabpage(target_win) == vim.api.nvim_get_current_tabpage()
 	then
-		_G._krs_last_win_before_neotree = nil
+		_G._fox_last_win_before_neotree = nil
 		vim.api.nvim_set_current_win(target_win)
 		if is_terminal_win(target_win) and vim.api.nvim_get_mode().mode ~= "t" then
 			pcall(vim.cmd, "startinsert")
@@ -214,7 +214,7 @@ local function focus_window_right()
 		return
 	end
 
-	_G._krs_last_win_before_neotree = nil
+	_G._fox_last_win_before_neotree = nil
 	pcall(vim.cmd, "wincmd l")
 	local new_win = vim.api.nvim_get_current_win()
 	if is_terminal_win(new_win) and vim.api.nvim_get_mode().mode ~= "t" then
@@ -276,7 +276,7 @@ local function resize_dir(direction)
 
 		-- When inside a terminal window (split or floating), Ctrl+Up/Down stretches or shrinks terminal height
 		if is_terminal_win(win) and (direction == "up" or direction == "down") then
-			local ok, term = pcall(require, "plugins.krs.dev.terminal")
+			local ok, term = pcall(require, "plugins.fox.dev.terminal")
 			if ok and term and term.resize_height then
 				local delta = (direction == "up") and step or -step
 				if term.resize_height(delta) then
@@ -368,7 +368,7 @@ local function toggle_neotree()
 		end
 		vim.cmd("silent! Neotree toggle")
 		pcall(function()
-			require("krs.core.dock").enforce_neotree_layout()
+			require("fox.core.dock").enforce_neotree_layout()
 		end)
 	end
 end

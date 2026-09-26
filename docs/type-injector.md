@@ -1,4 +1,4 @@
-# 💉 Type Injector (`plugins.krs.tools.type_injector`)
+# 💉 Type Injector (`plugins.fox.tools.type_injector`)
 
 [← Back to Wiki Index](index.md)
 
@@ -10,8 +10,8 @@ Turns type definitions on and off **per project**, for Lua and for TypeScript/Ja
 
 | Command | Action |
 | :--- | :--- |
-| `:KrsTypes` / `:TypeInjector` | Open the picker |
-| `:KrsGitignoreGenerated` | Add the generated `.krsnvim/types.d.ts` to `.gitignore` |
+| `:FoxTypes` / `:TypeInjector` | Open the picker |
+| `:FoxGitignoreGenerated` | Add the generated `.foxnvim/types.d.ts` to `.gitignore` |
 
 Inside the picker: `<Enter>` / `<Tab>` toggles a schema, `<C-n>` installs an `@types` package from NPM, `u` updates an already downloaded package to `@latest`, `<C-d>` deletes one. Active schemas are ✅, sorted to the top, with their version in the label.
 
@@ -48,15 +48,15 @@ Adding one is just adding a directory — `scan_available_schemas()` reads the f
 
 **Lua (`lua_ls`).** Active schema directories are appended to `Lua.workspace.library`, and the running client is notified with `workspace/didChangeConfiguration` — so toggling a schema takes effect immediately, no restart.
 
-**TypeScript (`tsc`).** All active schemas are collapsed into a *single* generated file, `.krsnvim/types.d.ts`, holding one `/// <reference path="…" />` per schema. The project's TS config is patched to include it. One generated file instead of N `typeRoots` entries keeps `tsconfig.json` readable and makes "what types are on?" a single file to look at.
+**TypeScript (`tsc`).** All active schemas are collapsed into a *single* generated file, `.foxnvim/types.d.ts`, holding one `/// <reference path="…" />` per schema. The project's TS config is patched to include it. One generated file instead of N `typeRoots` entries keeps `tsconfig.json` readable and makes "what types are on?" a single file to look at.
 
-Automatic type acquisition is disabled on `tsc` (see [Languages](languages.md)), so what you toggle here is exactly what the server sees. The client name notified after a change is resolved from `lua/krs/langs/typescript/init.lua`'s `M.lsp_server`, not hardcoded — it stays correct if that server is ever swapped.
+Automatic type acquisition is disabled on `tsc` (see [Languages](languages.md)), so what you toggle here is exactly what the server sees. The client name notified after a change is resolved from `lua/fox/langs/typescript/init.lua`'s `M.lsp_server`, not hardcoded — it stays correct if that server is ever swapped.
 
 ---
 
 ## 💾 State
 
-`.krsnvim/types.json` records which schemas are active, per language:
+`.foxnvim/types.json` records which schemas are active, per language:
 
 ```json
 {
@@ -65,7 +65,7 @@ Automatic type acquisition is disabled on `tsc` (see [Languages](languages.md)),
 }
 ```
 
-Commit that file — it's the project's decision. The *generated* `.krsnvim/types.d.ts` is machine output; `:KrsGitignoreGenerated` adds it to `.gitignore` for you (and is a no-op if it's already listed).
+Commit that file — it's the project's decision. The *generated* `.foxnvim/types.d.ts` is machine output; `:FoxGitignoreGenerated` adds it to `.gitignore` for you (and is a no-op if it's already listed).
 
 ---
 

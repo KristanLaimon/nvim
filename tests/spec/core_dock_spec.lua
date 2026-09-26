@@ -6,9 +6,9 @@
 -- the two panes would fight over the same side of the dock.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, afterEach = t.describe, t.it, t.expect, t.afterEach
-local dock = require("krs.core.dock")
+local dock = require("fox.core.dock")
 
 local opened_windows = {}
 
@@ -22,17 +22,17 @@ local function open_window(tag)
 	vim.api.nvim_win_set_buf(win, buf)
 
 	if tag == "task" then
-		vim.b[buf].krs_is_task = true
+		vim.b[buf].fox_is_task = true
 		vim.bo[buf].filetype = dock.task_filetype
 	elseif tag == "terminal" then
-		vim.b[buf].krs_is_multi_term = true
+		vim.b[buf].fox_is_multi_term = true
 	end
 
 	table.insert(opened_windows, win)
 	return win
 end
 
-describe("krs.core.dock.classify", function()
+describe("fox.core.dock.classify", function()
 	afterEach(function()
 		for _, win in ipairs(opened_windows) do
 			if vim.api.nvim_win_is_valid(win) then

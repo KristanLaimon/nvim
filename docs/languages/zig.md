@@ -1,6 +1,6 @@
 # ⚡ Zig Toolchain Guide
 
-This document provides setup instructions, LSP server settings, formatting pipelines, and execution details for Zig in **KrsVim**.
+This document provides setup instructions, LSP server settings, formatting pipelines, and execution details for Zig in **FoxVim**.
 
 ---
 
@@ -36,7 +36,7 @@ The **Zig** bundle (`⚡ Zig`) is an optional, opt-in bundle in the Language Too
 
 ## 🚀 4. Launch Profiles
 
-- **Launch Profile (`.krsnvim/launch.json`)**:
+- **Launch Profile (`.foxnvim/launch.json`)**:
   ```json
   {
     "name": "Run Zig Application",

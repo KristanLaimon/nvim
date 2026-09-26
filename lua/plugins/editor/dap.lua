@@ -3,13 +3,13 @@
 -- ============================================================================
 -- WHAT THIS FILE OWNS
 --   1. mason-nvim-dap: which adapters get installed automatically.
---   2. Per-language DAP config, read from each krs.langs module's `dap_setup`
+--   2. Per-language DAP config, read from each fox.langs module's `dap_setup`
 --      (function) and/or `dap_filetypes`/`dap_configs` (plain data) -- see
---      lua/krs/langs/php/init.lua for the plain-data shape and
---      lua/krs/langs/bash/init.lua for the function shape. ADD A LANGUAGE's
+--      lua/fox/langs/php/init.lua for the plain-data shape and
+--      lua/fox/langs/bash/init.lua for the function shape. ADD A LANGUAGE's
 --      debugger there, not here; only cross-language modules (bun/node/browsers
 --      -- they all debug the same JS/TS/web filetypes via js-debug, so no single
---      language owns them) stay as their own file in lua/plugins/krs/debuggers/.
+--      language owns them) stay as their own file in lua/plugins/fox/debuggers/.
 --   3. `.vscode/launch.json` support: the `type` -> filetype table nvim-dap needs
 --      to know which configurations apply to the file you are in.
 --   4. dap-ui layout, ANSI colour in the repl, inline variable values, and the
@@ -79,14 +79,14 @@ return {
 			-- Cross-language adapters & configurations
 			-- ----------------------------------------------------------------------
 			-- bun/node/browsers all debug the same JS/TS/web filetypes through
-			-- js-debug (or Bun's own adapter), shared by multiple krs.langs modules
+			-- js-debug (or Bun's own adapter), shared by multiple fox.langs modules
 			-- (typescript, web) -- no single language module owns them, so they stay
-			-- as their own file in lua/plugins/krs/debuggers/. Order here is the
+			-- as their own file in lua/plugins/fox/debuggers/. Order here is the
 			-- order they appear in the picker, so the first entry of the first
 			-- module is what <F5> runs by default.
 			for _, generic in ipairs({ "bun", "node", "browsers" }) do
 				local ok, err = pcall(function()
-					require("plugins.krs.debuggers." .. generic)(dap)
+					require("plugins.fox.debuggers." .. generic)(dap)
 				end)
 				if not ok then
 					vim.notify("DAP: failed to load debugger '" .. generic .. "': " .. tostring(err), vim.log.levels.WARN)
@@ -96,14 +96,14 @@ return {
 			-- ----------------------------------------------------------------------
 			-- Per-language adapters & configurations
 			-- ----------------------------------------------------------------------
-			-- Each krs.langs module owns its own debugger: `dap_setup(dap)` for
+			-- Each fox.langs module owns its own debugger: `dap_setup(dap)` for
 			-- anything that needs to register an adapter or build configs at
-			-- runtime (bash, go, lua/krsnvimscript), or plain `dap_filetypes` +
+			-- runtime (bash, go, lua/foxnvimscript), or plain `dap_filetypes` +
 			-- `dap_configs` for a static list (php, csharp, python). This fixed
-			-- order is what the picker shows -- krs.langs.langs itself is an
+			-- order is what the picker shows -- fox.langs.langs itself is an
 			-- unordered table, so it can't be walked directly here.
-			local shared = require("plugins.krs.debuggers._shared")
-			local langs = require("krs.langs").langs
+			local shared = require("plugins.fox.debuggers._shared")
+			local langs = require("fox.langs").langs
 			for _, key in ipairs({ "python", "csharp", "php", "bash", "go", "lua", "cpp" }) do
 				local lang = langs[key]
 				if lang then
@@ -125,7 +125,7 @@ return {
 			-- now. It still needs this table to know which filetypes a `type` applies to,
 			-- otherwise a config is only offered when filetype == type (so `"type": "bun"`
 			-- would only ever appear in a file of filetype "bun", i.e. never).
-			local web_filetypes = require("plugins.krs.debuggers._shared").web_filetypes
+			local web_filetypes = require("plugins.fox.debuggers._shared").web_filetypes
 			require("dap.ext.vscode").type_to_filetypes = {
 				bun = web_filetypes,
 				["pwa-node"] = web_filetypes,
@@ -170,7 +170,7 @@ return {
 			if baleia_ok then
 				local colorize = baleia.setup({ line_starts_at = 1 })
 				vim.api.nvim_create_autocmd("FileType", {
-					group = vim.api.nvim_create_augroup("KrsDapAnsi", { clear = true }),
+					group = vim.api.nvim_create_augroup("FoxDapAnsi", { clear = true }),
 					pattern = { "dap-repl", "dapui_console" },
 					callback = function(args)
 						colorize.automatically(args.buf)
@@ -216,7 +216,7 @@ return {
 			-- content: a second buffer holding the same code, no breakpoint signs, and a
 			-- junk entry in the bufferline. before.stackTrace runs before nvim-dap reads
 			-- the response, so dropping the ref here sends it back to the real file.
-			dap.listeners.before.stackTrace["krs_prefer_disk_source"] = function(_, _, response)
+			dap.listeners.before.stackTrace["fox_prefer_disk_source"] = function(_, _, response)
 				for _, frame in ipairs((response or {}).stackFrames or {}) do
 					local src = frame.source
 					if
@@ -231,7 +231,7 @@ return {
 				end
 			end
 
-			dap.listeners.after.event_stopped["krs_jump_on_pause"] = function(session, body)
+			dap.listeners.after.event_stopped["fox_jump_on_pause"] = function(session, body)
 				if body.reason ~= "pause" or body.allThreadsStopped or not body.threadId then
 					return
 				end
@@ -252,13 +252,13 @@ return {
 			dap.listeners.before.attach["dapui_config"] = function()
 				dapui.open()
 			end
-			dap.listeners.after.event_initialized["krs_notify_status"] = function()
+			dap.listeners.after.event_initialized["fox_notify_status"] = function()
 				vim.notify("✅ Debugger connected! Session active.", vim.log.levels.INFO, { title = "DAP Debugger" })
 			end
 			dap.listeners.before.event_terminated["dapui_config"] = function()
 				dapui.close()
 			end
-			dap.listeners.before.event_terminated["krs_notify_status"] = function()
+			dap.listeners.before.event_terminated["fox_notify_status"] = function()
 				vim.notify("🏁 Debug session terminated.", vim.log.levels.INFO, { title = "DAP Debugger" })
 			end
 			dap.listeners.before.event_exited["dapui_config"] = function()
@@ -290,7 +290,7 @@ return {
 			end
 			define_dap_highlights()
 			vim.api.nvim_create_autocmd("ColorScheme", {
-				group = vim.api.nvim_create_augroup("KrsDapHighlights", { clear = true }),
+				group = vim.api.nvim_create_augroup("FoxDapHighlights", { clear = true }),
 				callback = define_dap_highlights,
 			})
 		end,

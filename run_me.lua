@@ -1,25 +1,25 @@
 -- ============================================================================
--- 🦊 run_me.lua -- Master CLI Runner for KRSNVIM Scripts (Pure Lua)
+-- 🦊 run_me.lua -- Master CLI Runner for FOXNVIM Scripts (Pure Lua)
 -- ============================================================================
 
 local root = vim.fn.stdpath("config")
 package.path = root .. "/lua/?.lua;" .. root .. "/lua/?/init.lua;" .. package.path
 
--- Explicit krsnvimscript library imports
-local cli = require("krs.lib.krsnvim.cli")
-local terminal = require("krs.lib.krsnvim.terminal")
-local console = require("krs.lib.krsnvim.console")
+-- Explicit foxnvimscript library imports
+local cli = require("fox.lib.foxnvim.cli")
+local terminal = require("fox.lib.foxnvim.terminal")
+local console = require("fox.lib.foxnvim.console")
 
 local schema = {
 	name = "run_me",
-	description = "Master CLI to run KRSNVIM setup, tests, syntax check, and utility scripts.",
+	description = "Master CLI to run FOXNVIM setup, tests, syntax check, and utility scripts.",
 	options = {
 		["tests"] = "Run project test suite (run_tests)",
 		["syntax"] = "Run syntax check on all Lua files (run_sintaxcheck)",
 		["setup"] = "Run dependency setup script (setup.ps1 / setup.sh)",
 		["setup-ps"] = "Configure Windows Terminal keymaps (setup-powershell.ps1)",
 		["unsetup-ps"] = "Restore Windows Terminal keymaps (unsetup-powershell.ps1)",
-		["example"] = "Run example script (example.krsnvim)",
+		["example"] = "Run example script (example.foxnvim)",
 		["lint"] = "Format & lint Lua files (stylua + luacheck)",
 		["all"] = "Run all checks: lint, syntax, tests",
 		["help"] = "Show this CLI help screen",
@@ -120,7 +120,7 @@ end
 
 local function run_example()
 	console.log("[run_me] Running Example Script...")
-	safe_dofile(root .. "/scripts/example.krsnvim")
+	safe_dofile(root .. "/scripts/example.foxnvim")
 	return true
 end
 
@@ -154,13 +154,13 @@ local function show_menu()
 		"Run Setup Dependencies (setup.ps1 / setup.sh)",
 		"Setup Windows Terminal Keymaps (setup-powershell.ps1)",
 		"Unsetup Windows Terminal Keymaps (unsetup-powershell.ps1)",
-		"Run Example Script (scripts/example.krsnvim)",
+		"Run Example Script (scripts/example.foxnvim)",
 		"Lint & Format (stylua + luacheck)",
 		"Run All (lint + syntax + tests)",
 		"Exit",
 	}
 
-	cli.menu({ title = "KRSNVIM", subtitle = "Master CLI Script Runner", items = options }, function(choice, idx)
+	cli.menu({ title = "FOXNVIM", subtitle = "Master CLI Script Runner", items = options }, function(choice, idx)
 		if idx == 1 then
 			run_tests()
 		elseif idx == 2 then

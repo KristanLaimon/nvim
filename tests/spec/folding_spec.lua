@@ -1,14 +1,14 @@
 -- ============================================================================
 -- tests/spec/folding_spec.lua
--- Unit tests for plugins/krs/folding.lua (HTML, functions, scope folding & persistence).
+-- Unit tests for plugins/fox/folding.lua (HTML, functions, scope folding & persistence).
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
 
-local folding = require("plugins.krs.editor.folding")
+local folding = require("plugins.fox.editor.folding")
 
-describe("plugins.krs.editor.folding", function()
+describe("plugins.fox.editor.folding", function()
 	local buf
 
 	beforeEach(function()
@@ -54,9 +54,9 @@ describe("plugins.krs.editor.folding", function()
 		expect(vim.fn.exists(":FoldClearViews")).toBe(2)
 	end)
 
-	it("resolves folds storage directory inside .krsnvim", function()
+	it("resolves folds storage directory inside .foxnvim", function()
 		local dir = folding.get_folds_dir()
-		expect(dir:find(".krsnvim", 1, true)).toBeTruthy()
+		expect(dir:find(".foxnvim", 1, true)).toBeTruthy()
 	end)
 
 	it("executes fold level helper functions without error", function()

@@ -1,14 +1,14 @@
 -- ============================================================================
--- tests/spec/core_ui_spec.lua -- Contract tests for krs.core.ui.
+-- tests/spec/core_ui_spec.lua -- Contract tests for fox.core.ui.
 -- ============================================================================
 -- Geometry is the part that used to break: fractional sizes, tiny terminals and
 -- floats drifting off-screen. Those rules are pinned here; visual styling is not
 -- tested because it carries no logic.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, afterEach = t.describe, t.it, t.expect, t.afterEach
-local ui = require("krs.core.ui")
+local ui = require("fox.core.ui")
 
 local opened = {}
 
@@ -19,7 +19,7 @@ local function open(opts)
 	return buf, win
 end
 
-describe("krs.core.ui.resolve_size", function()
+describe("fox.core.ui.resolve_size", function()
 	it("treats values below 1 as a fraction of the editor", function()
 		expect(ui.resolve_size(0.5, 100)).toBe(50)
 	end)
@@ -33,7 +33,7 @@ describe("krs.core.ui.resolve_size", function()
 	end)
 end)
 
-describe("krs.core.ui.center", function()
+describe("fox.core.ui.center", function()
 	it("centers within the editor", function()
 		local row, col = ui.center(vim.o.columns - 10, vim.o.lines - 10)
 
@@ -49,13 +49,13 @@ describe("krs.core.ui.center", function()
 	end)
 end)
 
-describe("krs.core.ui.scratch_buffer", function()
+describe("fox.core.ui.scratch_buffer", function()
 	it("creates an unlisted throwaway buffer", function()
-		local buf = ui.scratch_buffer({ lines = { "a", "b" }, filetype = "krstest" })
+		local buf = ui.scratch_buffer({ lines = { "a", "b" }, filetype = "foxtest" })
 
 		expect(vim.bo[buf].buftype).toBe("nofile")
 		expect(vim.bo[buf].bufhidden).toBe("wipe")
-		expect(vim.bo[buf].filetype).toBe("krstest")
+		expect(vim.bo[buf].filetype).toBe("foxtest")
 		expect(vim.api.nvim_buf_get_lines(buf, 0, -1, false)).toEqual({ "a", "b" })
 	end)
 
@@ -65,7 +65,7 @@ describe("krs.core.ui.scratch_buffer", function()
 	end)
 end)
 
-describe("krs.core.ui.float", function()
+describe("fox.core.ui.float", function()
 	afterEach(function()
 		for _, win in ipairs(opened) do
 			ui.close(win)
@@ -108,7 +108,7 @@ describe("krs.core.ui.float", function()
 	end)
 end)
 
-describe("krs.core.ui.close_on_keys", function()
+describe("fox.core.ui.close_on_keys", function()
 	it("maps every configured dismiss key in the buffer", function()
 		local buf, win = open({ lines = { "x" }, width = 10 })
 		ui.close_on_keys(buf, win)
@@ -126,7 +126,7 @@ describe("krs.core.ui.close_on_keys", function()
 	end)
 end)
 
-describe("krs.core.ui.compute_dual_panel & resize_dual_panel", function()
+describe("fox.core.ui.compute_dual_panel & resize_dual_panel", function()
 	it("computes synchronous side-by-side panel geometry", function()
 		local geo = ui.compute_dual_panel({ left_ratio = 0.35, width_ratio = 0.80, height_ratio = 0.80, gap = 2 })
 

@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-KrsVim provides the baseline frontend setup for plain HTML and CSS projects, including Emmet snippets and Tailwind CSS support. Framework-specific tooling is documented separately in the [Astro guide](astro.md) and [Web UI guide](web-ui.md).
+FoxVim provides the baseline frontend setup for plain HTML and CSS projects, including Emmet snippets and Tailwind CSS support. Framework-specific tooling is documented separately in the [Astro guide](astro.md) and [Web UI guide](web-ui.md).
 
 ---
 
@@ -14,7 +14,7 @@ KrsVim provides the baseline frontend setup for plain HTML and CSS projects, inc
 | **Formatters (Conform)** | `prettierd`, `prettier`, `biome` | Priority chain for HTML and CSS |
 | **Treesitter Parsers** | `html`, `css` | Syntax highlighting and element folding |
 | **Autocompletion** | `blink.cmp` | Emmet abbreviations, CSS class autocompletion, and live Tailwind color previews (` ██ `) |
-| **Tailwind Class Sorting** | `plugins.krs.editor.tailwind_organizer` | Automatic class sorting on save or on command (`:TailwindOrganize`) |
+| **Tailwind Class Sorting** | `plugins.fox.editor.tailwind_organizer` | Automatic class sorting on save or on command (`:TailwindOrganize`) |
 
 ---
 

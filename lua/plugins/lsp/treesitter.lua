@@ -2,7 +2,7 @@
 -- PLUGIN: nvim-treesitter -- syntax trees for highlighting and text objects.
 -- ============================================================================
 -- ADD A LANGUAGE by adding its parser to the list below; `:TSUpdate` installs it.
--- The `.krsnvim` filetype has no parser of its own: it is registered as an alias
+-- The `.foxnvim` filetype has no parser of its own: it is registered as an alias
 -- of Lua in lua/vim_options.lua.
 --
 -- NOTE ON THE `main` BRANCH
@@ -27,7 +27,7 @@ return {
 	build = ":TSUpdate",
 	event = { "BufReadPost", "BufNewFile" },
 	config = function()
-		local env_ok, env_mod = pcall(require, "krs.core.environment")
+		local env_ok, env_mod = pcall(require, "fox.core.environment")
 		local is_native_termux = false -- only true for bare Termux (Android, no proot)
 		if env_ok then
 			local env = env_mod.detect()

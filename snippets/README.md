@@ -1,12 +1,12 @@
 # 📋 Snippets Guide: How to Create Snippets & Identify Language Names
 
-This guide explains how to create custom snippets in **KrsVim** using standard **VSCode JSON format** and how to find the exact `<lang>` filetype identifier Neovim expects for `<lang>.json` files inside the `snippets/` directory.
+This guide explains how to create custom snippets in **FoxVim** using standard **VSCode JSON format** and how to find the exact `<lang>` filetype identifier Neovim expects for `<lang>.json` files inside the `snippets/` directory.
 
 ---
 
 ## 🔍 How to Identify Neovim's `<lang>` Identifier
 
-Snippets in KrsVim are stored as `snippets/<lang>.json`. The `<lang>` string MUST match the exact **Neovim Filetype** (`vim.bo.filetype`), which is not always the same as the file extension.
+Snippets in FoxVim are stored as `snippets/<lang>.json`. The `<lang>` string MUST match the exact **Neovim Filetype** (`vim.bo.filetype`), which is not always the same as the file extension.
 
 ### Method 1: Ask Neovim Directly (Recommended)
 Open any file in Neovim and run one of these commands:
@@ -20,8 +20,8 @@ or in Lua command line:
 The output string (e.g. `typescriptreact`, `cs`, `sh`, `ps1`, `cpp`) is the exact name for `<lang>.json`.
 
 ### Method 2: Use the Built-in Snippet Manager Commands
-KrsVim automatically auto-detects the current file's filetype identifier:
-- Run `:KrsSnippetEdit` (or `:SnippetManager` → *Edit Snippets for Current Filetype*).
+FoxVim automatically auto-detects the current file's filetype identifier:
+- Run `:FoxSnippetEdit` (or `:SnippetManager` → *Edit Snippets for Current Filetype*).
 - Neovim will automatically resolve and open `snippets/<lang>.json` for the file you are currently editing.
 
 ---
@@ -131,15 +131,15 @@ Renders a choices dropdown selection during snippet expansion.
 
 ---
 
-## 🛠️ Snippet Commands in KrsVim
+## 🛠️ Snippet Commands in FoxVim
 
 You can manage all snippets directly from Neovim:
 
 | Command | Palette Entry (`<C-S-p>`) | Action |
 | :--- | :--- | :--- |
 | `:SnippetManager` | **Snippets: Open Snippet Manager** | Opens interactive GUI menu |
-| `:KrsSnippetEdit [lang]` | **Snippets: Edit Snippets for Language** | Opens `snippets/<lang>.json` |
-| `:KrsSnippetAdd [lang]` | **Snippets: Add New Snippet** | Interactive prompt to create a snippet |
-| `:KrsSnippetReload` | **Snippets: Reload Snippets** | Hot-reloads definitions into `blink.cmp` |
+| `:FoxSnippetEdit [lang]` | **Snippets: Edit Snippets for Language** | Opens `snippets/<lang>.json` |
+| `:FoxSnippetAdd [lang]` | **Snippets: Add New Snippet** | Interactive prompt to create a snippet |
+| `:FoxSnippetReload` | **Snippets: Reload Snippets** | Hot-reloads definitions into `blink.cmp` |
 
 Saved snippet changes apply **immediately** upon saving (`:w`) without restarting Neovim!

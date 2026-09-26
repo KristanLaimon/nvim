@@ -1,8 +1,8 @@
-# 🌙 Lua & KrsVim Script Development Suite
+# 🌙 Lua & FoxVim Script Development Suite
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-KrsVim provides full editing and transpilation support for **Lua** and local `.krsnvim` scripts (`krsnvimtranspiler`).
+FoxVim provides full editing and transpilation support for **Lua** and local `.foxnvim` scripts (`foxnvimtranspiler`).
 
 ---
 
@@ -10,11 +10,11 @@ KrsVim provides full editing and transpilation support for **Lua** and local `.k
 
 | Feature | Tool / Package | Details |
 | :--- | :--- | :--- |
-| **Language Server (LSP)** | `lua_ls` | Configured with Neovim API globals (`vim`) and `.krsnvim` script globals (`fetch`, `console`, `import`, `cli`, `terminal`, `fs`) |
+| **Language Server (LSP)** | `lua_ls` | Configured with Neovim API globals (`vim`) and `.foxnvim` script globals (`fetch`, `console`, `import`, `cli`, `terminal`, `fs`) |
 | **Formatters (Conform)** | `stylua` | Opinionated Lua code formatting |
-| **Treesitter Parsers** | `lua` | Full syntax trees for Lua and `.krsnvim` scripts |
-| **Autocompletion** | `blink.cmp` + `krsnvim_cmp` | Neovim Lua API completion + `.krsnvim` library completion |
-| **Transpiler** | `krsnvimtranspiler` | Transpiles `.krsnvim` scripts to cross-platform Bash (`.sh`) and PowerShell (`.ps1`) |
+| **Treesitter Parsers** | `lua` | Full syntax trees for Lua and `.foxnvim` scripts |
+| **Autocompletion** | `blink.cmp` + `foxnvim_cmp` | Neovim Lua API completion + `.foxnvim` library completion |
+| **Transpiler** | `foxnvimtranspiler` | Transpiles `.foxnvim` scripts to cross-platform Bash (`.sh`) and PowerShell (`.ps1`) |
 
 ---
 
@@ -23,8 +23,8 @@ KrsVim provides full editing and transpilation support for **Lua** and local `.k
 Accessible via **Command Palette** (`<C-S-p>` / `:CommandPalette`):
 
 * `:FormatDocument` – Format active Lua file using StyLua.
-* `:KrsTranspile` – Transpile active `.krsnvim` script.
-* `:KrsTranspileSh` – Transpile `.krsnvim` script to Bash (`.sh`).
-* `:KrsTranspilePs1` – Transpile `.krsnvim` script to PowerShell (`.ps1`).
-* `:KrsTranspileBoth` – Transpile `.krsnvim` script to both `.sh` and `.ps1`.
+* `:FoxTranspile` – Transpile active `.foxnvim` script.
+* `:FoxTranspileSh` – Transpile `.foxnvim` script to Bash (`.sh`).
+* `:FoxTranspilePs1` – Transpile `.foxnvim` script to PowerShell (`.ps1`).
+* `:FoxTranspileBoth` – Transpile `.foxnvim` script to both `.sh` and `.ps1`.
 * `:LanguageManager` – Manage Lua language bundle.

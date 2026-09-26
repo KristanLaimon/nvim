@@ -2,7 +2,7 @@
 -- PLUGINS: Theme and statusline.
 -- ============================================================================
 -- doki-theme-vim ships the upstream palettes; the active colorscheme is the local
--- `nagatoro-krs` in colors/, which is where every highlight is actually defined.
+-- `nagatoro-fox` in colors/, which is where every highlight is actually defined.
 --
 -- lualine renders the single global statusline (`laststatus = 3`): branch, diff
 -- and diagnostics on the left, file name next, mode and position on the right.
@@ -14,18 +14,18 @@ return {
 		-- Eager: a lazily loaded theme means a flash of the default colours.
 		lazy = false,
 		config = function()
-			local has_omarchy, omarchy_mod = pcall(require, "plugins.krs.ui.omarchy_theme")
+			local has_omarchy, omarchy_mod = pcall(require, "plugins.fox.ui.omarchy_theme")
 			if has_omarchy and omarchy_mod.is_sync_enabled() and omarchy_mod.is_omarchy_available() then
 				omarchy_mod.apply_omarchy_theme({ quiet = true })
 				omarchy_mod.start_watcher()
 				return
 			end
 
-			local has_picker, picker = pcall(require, "plugins.krs.ui.theme_picker")
+			local has_picker, picker = pcall(require, "plugins.fox.ui.theme_picker")
 			if has_picker then
 				picker.restore_saved_theme()
 			else
-				pcall(vim.cmd.colorscheme, "nagatoro-krs")
+				pcall(vim.cmd.colorscheme, "nagatoro-fox")
 			end
 		end,
 	},
@@ -35,7 +35,7 @@ return {
 			"nvim-tree/nvim-web-devicons",
 		},
 		opts = function()
-			local has_picker, picker = pcall(require, "plugins.krs.ui.statusline_picker")
+			local has_picker, picker = pcall(require, "plugins.fox.ui.statusline_picker")
 			if has_picker then
 				return picker.get_lualine_config()
 			end

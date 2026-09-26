@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-KrsVim provides a dedicated **Go** environment powered by `gopls`, `gofumpt`, `goimports`, and `delve` DAP debugging.
+FoxVim provides a dedicated **Go** environment powered by `gopls`, `gofumpt`, `goimports`, and `delve` DAP debugging.
 
 ---
 

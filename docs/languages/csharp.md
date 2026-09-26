@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-KrsVim provides a full **C#**, **.NET**, and **Blazor** development environment, supporting solution files (`.sln`), project files (`.csproj`), NuGet package management, formatting with CSharpier, and debugging via `netcoredbg`.
+FoxVim provides a full **C#**, **.NET**, and **Blazor** development environment, supporting solution files (`.sln`), project files (`.csproj`), NuGet package management, formatting with CSharpier, and debugging via `netcoredbg`.
 
 ---
 

@@ -1,23 +1,23 @@
 -- ============================================================================
 -- tests/spec/hover_and_pinned_tabs_spec.lua
--- Comprehensive unit tests for pinned_tabs plugin (.krsnvim pins & workspaces).
+-- Comprehensive unit tests for pinned_tabs plugin (.foxnvim pins & workspaces).
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
 
-local pinned_tabs = require("plugins.krs.ui.pinned_tabs")
-local path = require("krs.core.path")
-local project = require("krs.core.project")
-local workspaces = require("plugins.krs.tools.workspaces")
+local pinned_tabs = require("plugins.fox.ui.pinned_tabs")
+local path = require("fox.core.path")
+local project = require("fox.core.project")
+local workspaces = require("plugins.fox.tools.workspaces")
 
 local root
 local orig_cwd
 
-describe("plugins.krs.ui.pinned_tabs", function()
+describe("plugins.fox.ui.pinned_tabs", function()
 	beforeEach(function()
 		root = path.normalize(vim.fn.tempname())
-		vim.fn.mkdir(path.join(root, ".krsnvim"), "p")
+		vim.fn.mkdir(path.join(root, ".foxnvim"), "p")
 		orig_cwd = vim.fn.getcwd()
 		vim.api.nvim_set_current_dir(root)
 	end)

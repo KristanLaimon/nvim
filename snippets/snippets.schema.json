@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "VSCode Snippets Schema",
-  "description": "User Snippets configuration schema for KrsVim & VSCode",
+  "description": "User Snippets configuration schema for FoxVim & VSCode",
   "type": "object",
   "patternProperties": {
     "^(?!\\$schema$).*$": {

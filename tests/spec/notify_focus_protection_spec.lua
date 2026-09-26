@@ -2,12 +2,12 @@
 -- tests/spec/notify_focus_protection_spec.lua -- Notify focus protection tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
-describe("krs.core.notify focus protection", function()
+describe("fox.core.notify focus protection", function()
 	it("registers NotifyDismiss and ClearToasts user commands and sets vim.notify", function()
-		local core_notify = require("krs.core.notify")
+		local core_notify = require("fox.core.notify")
 		core_notify.setup()
 
 		local cmds = vim.api.nvim_get_commands({})
@@ -16,7 +16,7 @@ describe("krs.core.notify focus protection", function()
 	end)
 
 	it("dispatches non-blocking notifications cleanly without errors", function()
-		local core_notify = require("krs.core.notify")
+		local core_notify = require("fox.core.notify")
 		core_notify.setup()
 
 		local ok = pcall(function()

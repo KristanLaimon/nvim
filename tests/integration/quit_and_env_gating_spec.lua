@@ -8,7 +8,7 @@
 --            treesitter.lua, autopairs.lua and lsp.lua's blink.cmp opts.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 -- ----------------------------------------------------------------------------
@@ -16,38 +16,38 @@ local describe, it, expect = t.describe, t.it, t.expect
 -- ----------------------------------------------------------------------------
 
 describe("buffer_cleaner bang routing", function()
-	local buffer_cleaner = require("plugins.krs.editor.buffer_cleaner")
+	local buffer_cleaner = require("plugins.fox.editor.buffer_cleaner")
 	buffer_cleaner.setup()
 
-	it("registers KrsQ and KrsBd as bang-aware user commands", function()
-		expect(vim.fn.exists(":KrsQ") > 0).toBeTruthy()
-		expect(vim.fn.exists(":KrsBd") > 0).toBeTruthy()
+	it("registers FoxQ and FoxBd as bang-aware user commands", function()
+		expect(vim.fn.exists(":FoxQ") > 0).toBeTruthy()
+		expect(vim.fn.exists(":FoxBd") > 0).toBeTruthy()
 	end)
 
-	it("routes :KrsQ! with force=true and :KrsQ with force=false", function()
+	it("routes :FoxQ! with force=true and :FoxQ with force=false", function()
 		local received = {}
 		local original = _G.Neotree_Smart_Quit
 		_G.Neotree_Smart_Quit = function(force)
 			table.insert(received, force)
 		end
 
-		vim.cmd("KrsQ")
-		vim.cmd("KrsQ!")
+		vim.cmd("FoxQ")
+		vim.cmd("FoxQ!")
 
 		_G.Neotree_Smart_Quit = original
 
 		expect(received).toEqual({ false, true })
 	end)
 
-	it("routes :KrsBd! with force=true and :KrsBd with force=false", function()
+	it("routes :FoxBd! with force=true and :FoxBd with force=false", function()
 		local received = {}
 		local original = _G.Smart_Close_Buffer
 		_G.Smart_Close_Buffer = function(_, force)
 			table.insert(received, force)
 		end
 
-		vim.cmd("KrsBd")
-		vim.cmd("KrsBd!")
+		vim.cmd("FoxBd")
+		vim.cmd("FoxBd!")
 
 		_G.Smart_Close_Buffer = original
 
@@ -103,13 +103,13 @@ end)
 -- ----------------------------------------------------------------------------
 
 describe("environment-based mobile gating (proot treated as desktop)", function()
-	--- Swaps `krs.core.environment` for a stub returning `fixture`, runs `fn`,
+	--- Swaps `fox.core.environment` for a stub returning `fixture`, runs `fn`,
 	--- then restores the real module either way.
 	--- @param fixture table Partial env table merged over sane defaults.
 	--- @param fn fun()
 	local function with_env(fixture, fn)
-		local real = package.loaded["krs.core.environment"]
-		package.loaded["krs.core.environment"] = {
+		local real = package.loaded["fox.core.environment"]
+		package.loaded["fox.core.environment"] = {
 			detect = function()
 				return vim.tbl_extend("force", {
 					is_tmux = false,
@@ -126,7 +126,7 @@ describe("environment-based mobile gating (proot treated as desktop)", function(
 			end,
 		}
 		local ok, err = pcall(fn)
-		package.loaded["krs.core.environment"] = real
+		package.loaded["fox.core.environment"] = real
 		if not ok then
 			error(err, 0)
 		end

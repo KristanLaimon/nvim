@@ -3,7 +3,7 @@
 [← Back to Wiki Index](index.md)
 
 A from-scratch guide to wiring **any** debugger into this config, written around a real
-worked example: making `bun` stop on breakpoints (`lua/plugins/krs/bun_dap.lua`).
+worked example: making `bun` stop on breakpoints (`lua/plugins/fox/bun_dap.lua`).
 
 You do not need to know anything about debuggers to start here. By the end you should be
 able to add a new language's debugger yourself, and — more importantly — diagnose it when
@@ -74,7 +74,7 @@ asks the *editor* to spawn the process so its output lands in an editor terminal
 
 That entire format is ~15 lines of code to implement, and you can see it in this repo:
 the `write()` function and the `process.stdin.on("data")` loop inside `SERVER_SOURCE` in
-[`lua/plugins/krs/bun_dap.lua`](../lua/plugins/krs/bun_dap.lua).
+[`lua/plugins/fox/bun_dap.lua`](../lua/plugins/fox/bun_dap.lua).
 
 ### 2.2 The handshake — this is where bugs live
 
@@ -185,14 +185,14 @@ filetypes each adapter type is relevant for.
 `load_launchjs` is deprecated: nvim-dap reads `.vscode/launch.json` on demand now. It still
 needs this table, for exactly the reason above.
 
-### 3.4 One file per language: `lua/plugins/krs/debuggers/`
+### 3.4 One file per language: `lua/plugins/fox/debuggers/`
 
 Both tables used to be filled inline in `dap.lua`. They are now split one module per
 language, each returning a `function(dap)` that registers its own adapter and appends its
 own configurations:
 
 ```
-lua/plugins/krs/debuggers/
+lua/plugins/fox/debuggers/
 ├── _shared.lua   -- js-debug registration, skipFiles, web filetypes, the `add` helper
 ├── bun.lua       -- 🐰 Bun's WebKit-inspector adapter
 ├── node.lua      -- 🚀 pwa-node (js-debug)
@@ -208,7 +208,7 @@ lua/plugins/krs/debuggers/
 ```lua
 for _, language in ipairs({ "bun", "node", "browsers", "python", "csharp", "php", "go" }) do
   local ok, err = pcall(function()
-    require("plugins.krs.debuggers." .. language)(dap)
+    require("plugins.fox.debuggers." .. language)(dap)
   end)
   if not ok then
     vim.notify("DAP: failed to load debugger '" .. language .. "': " .. tostring(err), vim.log.levels.WARN)
@@ -223,7 +223,7 @@ Three things follow from this shape:
 - **A broken module can't take the others down.** Each `require` is `pcall`'d and warns by
   name.
 - **These files are not lazy specs.** lazy's directory import only walks subdirectories
-  containing an `init.lua`, so `debuggers/` is invisible to `{ import = "plugins.krs" }` —
+  containing an `init.lua`, so `debuggers/` is invisible to `{ import = "plugins.fox" }` —
   which is precisely why plain modules can live there. See
   [Module Architecture](module-architecture.md#-subdirectories-are-invisible-to-import).
 
@@ -238,7 +238,7 @@ Three things follow from this shape:
 
 Browser modules come in two shapes: **Launch** (starts the dev server if nothing is serving,
 then opens the browser on it — `url` is a function, resolved inside nvim-dap's coroutine, so
-it can wait for the port; see [Dev Server Bridge](launch-profiles.md#-dev-server-bridge-pluginskrsdev_server)),
+it can wait for the port; see [Dev Server Bridge](launch-profiles.md#-dev-server-bridge-pluginsfoxdev_server)),
 and **Attach** (starts nothing; Chromium must already be running with
 `--remote-debugging-port=9222`).
 
@@ -265,14 +265,14 @@ misbehaviour:
 | **`switchbuf`** | Forced to `useopen,usevisible,uselast`. nvim 0.12 defaults to `uselast`, which only reuses the current window when its `buftype` is `""` — stop with focus in the console and the source lands in `winnr('#')` instead of the code window |
 | **ANSI output (baleia)** | nvim-dap writes adapter `output` events as plain text, so runtimes that colorize (Bun, anything with `FORCE_COLOR`) show literal `[0m[33m1[0m`. baleia turns the escapes back into highlights, applied globally to `dap-repl` and `dapui_console` |
 | **Virtual text** | IntelliJ-style: values at end-of-line, floored at column 80, so code is never pushed right (the plugin's `inline` default shifts the rest of the line). Values truncated at 60 chars, linked to `Comment` so only what changed on this step stands out |
-| **`krs_prefer_disk_source`** | js-debug returns a non-zero `sourceReference` for scripts Node ran through in-memory TypeScript stripping, even though the file exists on disk. `source_to_bufnr` checks `sourceReference` before `path`, so nvim-dap opens `dap-src://…` with adapter-served content: a duplicate buffer, no breakpoint signs, junk in the bufferline. A `before.stackTrace` listener zeroes the ref when the path is readable, sending it back to the real file |
-| **`krs_jump_on_pause`** | nvim-dap only jumps to the stopped frame when `reason ~= "pause" or allThreadsStopped`. js-debug always reports `allThreadsStopped = false`, so a `debugger` statement, pause-on-entry or the pause button leaves the session stopped with no source buffer and no cursor move. This listener fetches the top frame and jumps for it |
+| **`fox_prefer_disk_source`** | js-debug returns a non-zero `sourceReference` for scripts Node ran through in-memory TypeScript stripping, even though the file exists on disk. `source_to_bufnr` checks `sourceReference` before `path`, so nvim-dap opens `dap-src://…` with adapter-served content: a duplicate buffer, no breakpoint signs, junk in the bufferline. A `before.stackTrace` listener zeroes the ref when the path is readable, sending it back to the real file |
+| **`fox_jump_on_pause`** | nvim-dap only jumps to the stopped frame when `reason ~= "pause" or allThreadsStopped`. js-debug always reports `allThreadsStopped = false`, so a `debugger` statement, pause-on-entry or the pause button leaves the session stopped with no source buffer and no cursor move. This listener fetches the top frame and jumps for it |
 | **Signs & highlights** | 🦊 breakpoint, 🔶 conditional, 💬 logpoint, ⭕ rejected, 🟡 stopped — see [Breakpoints](breakpoints.md). The highlight groups are re-applied on `ColorScheme`, since `:colorscheme` clears user-defined groups |
 
 ### 3.6 Repl completion ("immediate window")
 
 The repl is a normal buffer, so blink.cmp's default sources offered string methods and words
-scraped from the file — useless while stopped at a breakpoint. `lua/krs/lsp/dap_repl_source.lua`
+scraped from the file — useless while stopped at a breakpoint. `lua/fox/lsp/dap_repl_source.lua`
 asks the **debug adapter** instead, so the menu only holds what exists in the current frame.
 
 - Enabled only while `dap.session()` is live; triggers on `.`, `[`, `"`, `'`.
@@ -292,7 +292,7 @@ asks the **debug adapter** instead, so the menu only holds what exists in the cu
    configure anything. Add its **nvim-dap adapter name** (not the Mason package name —
    `js` → js-debug-adapter, `python` → debugpy, `coreclr` → netcoredbg) to `ensure_installed`
    in `dap.lua`.
-2. **Create `lua/plugins/krs/debuggers/<language>.lua`** returning `function(dap) … end`.
+2. **Create `lua/plugins/fox/debuggers/<language>.lua`** returning `function(dap) … end`.
    Register the adapter (`executable` or `server`, per its README), guarded with
    `vim.fn.filereadable(...) == 1` so a missing install degrades quietly instead of erroring
    at startup.
@@ -608,8 +608,8 @@ Two-thirds of the work in this integration was platform detail, not protocol.
 | Path | What it is |
 | :--- | :--- |
 | [`lua/plugins/editor/dap.lua`](../lua/plugins/editor/dap.lua) | All adapters + configurations + dap-ui setup |
-| [`lua/plugins/krs/bun_dap.lua`](../lua/plugins/krs/bun_dap.lua) | Bun adapter installer and generated stdio server |
-| [`lua/plugins/krs/launch_profiles.lua`](../lua/plugins/krs/launch_profiles.lua) | Per-project profiles that build DAP configs dynamically |
+| [`lua/plugins/fox/bun_dap.lua`](../lua/plugins/fox/bun_dap.lua) | Bun adapter installer and generated stdio server |
+| [`lua/plugins/fox/launch_profiles.lua`](../lua/plugins/fox/launch_profiles.lua) | Per-project profiles that build DAP configs dynamically |
 | [`tests/bun_dap_breakpoint_check.ts`](../tests/bun_dap_breakpoint_check.ts) | Editor-free breakpoint regression check |
 | [`dapmin.lua`](../dapmin.lua) / [`dapdiag.lua`](../dapdiag.lua) | Minimal repro harness / session state logger |
 
@@ -619,7 +619,7 @@ Two-thirds of the work in this integration was platform detail, not protocol.
   *Initialization* sequence diagram; skip the request catalogue until you need it)
 - `nvim-dap` docs — `:h dap.txt`, `:h dap-adapter`, `:h dap-configuration`
 - nvim-dap source: `nvim-data/lazy/nvim-dap/lua/dap/session.lua` — the client half of §2.2
-- Bun's adapter: `nvim-data/krs-bun-dap/packages/bun-debug-adapter-protocol/src/debugger/adapter.ts`
+- Bun's adapter: `nvim-data/fox-bun-dap/packages/bun-debug-adapter-protocol/src/debugger/adapter.ts`
 
 ---
 

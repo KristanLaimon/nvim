@@ -16,14 +16,14 @@ A **schema** is a directory of `.d.ts` files under `schemas-langs/typescript_jav
 schemas-langs/typescript_javascript/<schema_name>/
 ```
 
-Two roots are searched (`M.get_schema_roots` in `lua/plugins/krs/type_injector.lua`):
+Two roots are searched (`M.get_schema_roots` in `lua/plugins/fox/type_injector.lua`):
 
 1. `stdpath("data")/schemas-langs/typescript_javascript/<schema_name>/` — where the picker's `<C-n>` NPM install lands; fine for personal, machine-local schemas.
-2. `stdpath("config")/schemas-langs/typescript_javascript/<schema_name>/` (this repo's `schemas-langs/typescript_javascript/`) — versioned with the rest of KrsVim; use this for anything you want to keep and share across machines.
+2. `stdpath("config")/schemas-langs/typescript_javascript/<schema_name>/` (this repo's `schemas-langs/typescript_javascript/`) — versioned with the rest of FoxVim; use this for anything you want to keep and share across machines.
 
 ### Step 2: Get real `.d.ts` files, no `npm install` required
 
-`resolve_schema_dir()` / `active_schema_entries()` (`lua/plugins/krs/type_injector.lua`) accept **two shapes** for a schema directory:
+`resolve_schema_dir()` / `active_schema_entries()` (`lua/plugins/fox/type_injector.lua`) accept **two shapes** for a schema directory:
 
 - **Flat** — an `index.d.ts` (or any `*.d.ts` at the top level) directly in `schemas-langs/typescript_javascript/<name>/`. Use this for most packages.
 - **`node_modules/@types/<pkg>/`** — mirrors what `npm install` would produce. Only needed when a package's own `.d.ts` uses `/// <reference types="X" />` (an *ambient* reference, resolved through Node's module resolution) rather than `/// <reference path="./x.d.ts" />` (a plain relative file reference, which works with the flat shape — no special layout needed).
@@ -97,15 +97,15 @@ npx -y -p typescript tsc -p tsconfig.json   # no errors = the schema resolves cl
 
 ### Step 4: Version it
 
-The extracted `package.json` already has a real `"version"` field — keep it (don't replace it with a hand-written stub like the Lua guide's convention). `M.get_schema_version()` reads it from `schema_dir/package.json` first, falling back to `node_modules/@types/<name>/package.json` (the npm-install-flow shape) — either location works, so it doesn't matter that a hand-fetched schema's `package.json` is the real upstream one instead of a `krs-schema-*` placeholder.
+The extracted `package.json` already has a real `"version"` field — keep it (don't replace it with a hand-written stub like the Lua guide's convention). `M.get_schema_version()` reads it from `schema_dir/package.json` first, falling back to `node_modules/@types/<name>/package.json` (the npm-install-flow shape) — either location works, so it doesn't matter that a hand-fetched schema's `package.json` is the real upstream one instead of a `fox-schema-*` placeholder.
 
 ---
 
 ## ✅ Register (activate) a schema for a project
 
-**Through the picker (recommended):** open the target project in Neovim, run `:KrsTypes` (or `:TypeInjector`) from a `.ts`/`.js`/`.tsx`/`.jsx` buffer, toggle the schema on. This writes `.krsnvim/types.json`, regenerates `.krsnvim/types.d.ts` (one `/// <reference path>` per active schema), patches `tsconfig.json`'s `include` if needed, and notifies the running `tsc` client — no restart.
+**Through the picker (recommended):** open the target project in Neovim, run `:FoxTypes` (or `:TypeInjector`) from a `.ts`/`.js`/`.tsx`/`.jsx` buffer, toggle the schema on. This writes `.foxnvim/types.json`, regenerates `.foxnvim/types.d.ts` (one `/// <reference path>` per active schema), patches `tsconfig.json`'s `include` if needed, and notifies the running `tsc` client — no restart.
 
-**By hand:** create/edit `.krsnvim/types.json` at the project root:
+**By hand:** create/edit `.foxnvim/types.json` at the project root:
 
 ```json
 {
@@ -113,17 +113,17 @@ The extracted `package.json` already has a real `"version"` field — keep it (d
 }
 ```
 
-Then either run `:KrsTypes` once (toggle a schema off/on, or just open/close the picker — `apply_lsp_settings()` runs on open) to regenerate `.krsnvim/types.d.ts` and patch `tsconfig.json`, or do both yourself:
+Then either run `:FoxTypes` once (toggle a schema off/on, or just open/close the picker — `apply_lsp_settings()` runs on open) to regenerate `.foxnvim/types.d.ts` and patch `tsconfig.json`, or do both yourself:
 
 ```ts
-// .krsnvim/types.d.ts -- auto-generated shape, one line per active schema
+// .foxnvim/types.d.ts -- auto-generated shape, one line per active schema
 /// <reference path="/abs/path/to/schemas-langs/typescript_javascript/node/index.d.ts" />
 /// <reference path="/abs/path/to/schemas-langs/typescript_javascript/bun/index.d.ts" />
 ```
 
 ```jsonc
 // tsconfig.json -- must include the generated file, or the TS language server ignores it entirely
-{ "include": ["**/*", ".krsnvim/**/*.d.ts"] }
+{ "include": ["**/*", ".foxnvim/**/*.d.ts"] }
 ```
 
 Multiple schemas can be active at once — list them all in `types.json`; they combine into the one generated file.
@@ -145,9 +145,9 @@ Any project with the schema active picks it up the next time `tsc` re-reads the 
 
 ## 🗑️ Delete a schema
 
-**Through the picker:** select the schema, `<C-d>` — confirms, deletes the schema directory, deactivates it from the currently-open project's `.krsnvim/types.json` (other projects' `types.json` entries become dangling references — harmless, `scan_available_schemas()` just stops listing the name).
+**Through the picker:** select the schema, `<C-d>` — confirms, deletes the schema directory, deactivates it from the currently-open project's `.foxnvim/types.json` (other projects' `types.json` entries become dangling references — harmless, `scan_available_schemas()` just stops listing the name).
 
-**By hand:** delete `schemas-langs/typescript_javascript/<schema_name>/` (check both roots with `M.get_schema_roots("typescript_javascript")` if unsure which one has it), remove the name from `.krsnvim/types.json` in any project that had it active, and re-run `:KrsTypes` (or `:LspRestart`) there to regenerate `.krsnvim/types.d.ts` without it.
+**By hand:** delete `schemas-langs/typescript_javascript/<schema_name>/` (check both roots with `M.get_schema_roots("typescript_javascript")` if unsure which one has it), remove the name from `.foxnvim/types.json` in any project that had it active, and re-run `:FoxTypes` (or `:LspRestart`) there to regenerate `.foxnvim/types.d.ts` without it.
 
 ---
 
@@ -157,9 +157,9 @@ Any project with the schema active picks it up the next time `tsc` re-reads the 
 | :--- | :--- | :--- |
 | Create (via npm registry) | `<C-n>` → package name → installs through `npm install` | `curl` the registry tarball URL, `tar xzf`, copy `*.d.ts` + `package.json` into `schemas-langs/typescript_javascript/<name>/` |
 | Handle a `types="X"` reference | Automatic — npm installs the dependency into `node_modules` | Nest a copy under `<name>/node_modules/@types/X/` yourself (Step 3) |
-| Register for a project | `<Enter>`/`<Tab>`/`<Space>` | Add name to `.krsnvim/types.json` → `"typescript_javascript": [...]`, then `:KrsTypes` once to regen `.krsnvim/types.d.ts` |
+| Register for a project | `<Enter>`/`<Tab>`/`<Space>` | Add name to `.foxnvim/types.json` → `"typescript_javascript": [...]`, then `:FoxTypes` once to regen `.foxnvim/types.d.ts` |
 | Update | — | Delete + re-fetch the folder's contents |
-| Deregister | `<Enter>`/`<Tab>`/`<Space>` (toggle off) | Remove name from `.krsnvim/types.json`, re-run `:KrsTypes`/`:LspRestart` |
+| Deregister | `<Enter>`/`<Tab>`/`<Space>` (toggle off) | Remove name from `.foxnvim/types.json`, re-run `:FoxTypes`/`:LspRestart` |
 | Delete | `<C-d>` | `rm -rf schemas-langs/typescript_javascript/<name>` + remove from any project's `types.json` |
 
 See [Type Injector](type-injector.md) for how the wiring works end to end (generated reference file, `tsconfig.json` patching, LSP notification), and [Managing Lua Type Schemas](how-to-manage-lua-type-schemas.md) for the Lua/`lua_ls` side.

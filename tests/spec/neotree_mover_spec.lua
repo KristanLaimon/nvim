@@ -2,11 +2,11 @@
 -- tests/spec/neotree_mover_spec.lua -- Neo-tree Mover ("En la mano") tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local mover = require("plugins.krs.editor.neotree_mover")
+local mover = require("plugins.fox.editor.neotree_mover")
 
-describe("plugins.krs.editor.neotree_mover", function()
+describe("plugins.fox.editor.neotree_mover", function()
 	local test_root = nil
 
 	beforeEach(function()

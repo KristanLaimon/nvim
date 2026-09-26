@@ -1,6 +1,6 @@
 # 🐚 Shell, Bash & PowerShell Development Suite
 
-This document provides setup instructions, LSP server settings, formatting pipelines, and execution details for Shell, Bash, and PowerShell scripts in **KrsVim**.
+This document provides setup instructions, LSP server settings, formatting pipelines, and execution details for Shell, Bash, and PowerShell scripts in **FoxVim**.
 
 ---
 

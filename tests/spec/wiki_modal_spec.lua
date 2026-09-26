@@ -2,22 +2,22 @@
 -- tests/spec/wiki_modal_spec.lua -- Documentation Center Wiki Modal.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local wiki_modal = require("plugins.krs.ui.wiki_modal")
+local wiki_modal = require("plugins.fox.ui.wiki_modal")
 local lsp_keymaps = require("keymaps.lsp")
 
-describe("plugins.krs.ui.wiki_modal", function()
+describe("plugins.fox.ui.wiki_modal", function()
 	it("exposes documentation categories and docs directory setting", function()
 		expect(wiki_modal.categories).toBeDefined()
 		expect(#wiki_modal.categories).toBeGreaterThan(0)
 		expect(wiki_modal.settings.docs_dir).toBeDefined()
 	end)
 
-	it("registers KrsWiki and NvimWiki user commands", function()
+	it("registers FoxWiki and NvimWiki user commands", function()
 		wiki_modal.setup()
 		local cmds = vim.api.nvim_get_commands({})
-		expect(cmds["KrsWiki"]).toBeDefined()
+		expect(cmds["FoxWiki"]).toBeDefined()
 		expect(cmds["NvimWiki"]).toBeDefined()
 	end)
 
@@ -79,7 +79,7 @@ describe("plugins.krs.ui.wiki_modal", function()
 		local right_win = nil
 		for _, win in ipairs(vim.api.nvim_list_wins()) do
 			local buf = vim.api.nvim_win_get_buf(win)
-			if vim.bo[buf].filetype == "markdown" and vim.b[buf].krs_wiki_modal then
+			if vim.bo[buf].filetype == "markdown" and vim.b[buf].fox_wiki_modal then
 				right_win = win
 				break
 			end

@@ -1,8 +1,8 @@
-# 🎓 How-To & Configuration Guide: Extending & Customizing KrsVim
+# 🎓 How-To & Configuration Guide: Extending & Customizing FoxVim
 
 [← Back to Wiki Index](index.md)
 
-This comprehensive guide teaches you how to extend, customize, and maintain your **KrsVim** Neovim setup. It is written with easy-to-follow examples for every part of the configuration so you can add new plugins, languages, themes, terminals, or custom modules with complete confidence.
+This comprehensive guide teaches you how to extend, customize, and maintain your **FoxVim** Neovim setup. It is written with easy-to-follow examples for every part of the configuration so you can add new plugins, languages, themes, terminals, or custom modules with complete confidence.
 
 New to Vim/Neovim itself (modes, buffers, the leader key)? Read
 [Neovim Basics](neovim-basics.md) first — this page assumes you already know what
@@ -15,15 +15,15 @@ those words mean.
 Every feature in this config follows the same shape, so the same three steps
 find and change almost anything without needing to ask for help:
 
-1. **Find the file.** Every KRS feature lives in one file named after what it
-   does: `lua/plugins/krs/<feature>.lua` (e.g. `git_center.lua`, `tasks.lua`,
+1. **Find the file.** Every FOX feature lives in one file named after what it
+   does: `lua/plugins/fox/<feature>.lua` (e.g. `git_center.lua`, `tasks.lua`,
    `wiki_modal.lua`). Not sure of the name? Search for text you see on screen —
    e.g. if a notification says "Saved as favorite", `grep -rn "Saved as
    favorite" lua/` finds the exact file and line.
 2. **Look at the top of that file for `M.settings`.** Keybinds, titles, colors,
    and other tunables are pulled out into this table on purpose — you almost
    never need to touch the logic below it. See `M.settings.keys.open` in
-   `lua/plugins/krs/wiki_modal.lua` for an example: change the value, save, and
+   `lua/plugins/fox/wiki_modal.lua` for an example: change the value, save, and
    the next `:e` or restart picks it up.
 3. **Save and reload.** `:source $MYVIMRC` re-runs `init.lua` for options/keymap
    changes; a changed plugin `config` function needs `:Lazy reload <name>` or a
@@ -39,16 +39,16 @@ second while you iterate.
 ## 📂 File Structure & Directory Layout Explanation
 
 ```
-c:\Users\Kristan\AppData\Local\nvim\
+c:\Users\Fox\AppData\Local\nvim\
 ├── init.lua                   -- Main Neovim bootstrap file (loads lua/lazy_init.lua)
-├── colors/                    -- Colorscheme files in nagatoro-krs palette format (*-krs.lua & nagatoro-*.lua)
+├── colors/                    -- Colorscheme files in nagatoro-fox palette format (*-fox.lua & nagatoro-*.lua)
 ├── docs/                      -- Full offline documentation & Wiki files
 ├── lua/
 │   ├── config/                -- Core editor bootstrap & global options
 │   │   ├── options.lua        -- Vim options, filetypes, path resolution
 │   │   ├── lazy.lua           -- Lazy.nvim plugin manager bootstrap
-│   │   └── keymaps/           -- Global keybindings (lsp.lua, editor.lua, search.lua, debug.lua, krs.lua)
-│   ├── krs/                   -- Shared pure Lua libraries (NO keymaps/autocmds, 100% unit-testable)
+│   │   └── keymaps/           -- Global keybindings (lsp.lua, editor.lua, search.lua, debug.lua, fox.lua)
+│   ├── fox/                   -- Shared pure Lua libraries (NO keymaps/autocmds, 100% unit-testable)
 │   │   ├── core/              -- Store (JSON persistence), Path, Project, UI floats, Z-Index stack
 │   │   ├── git/               -- Git command wrappers, porcelain parsers, diff formatters
 │   │   ├── launch/            -- Launch profile runtimes & DAP resolvers
@@ -59,9 +59,9 @@ c:\Users\Kristan\AppData\Local\nvim\
 │       ├── lsp/               -- LSP servers, Mason, Blink.cmp, Conform formatting, Treesitter
 │       ├── ui/                -- Dashboard, Bufferline, Statusline, Devicons, Themes
 │       ├── miscelanea/        -- Utility plugins
-│       └── krs/               -- Custom local KRS modules (each a self-contained Lazy spec)
+│       └── fox/               -- Custom local FOX modules (each a self-contained Lazy spec)
 ├── tests/                     -- Unit & integration test suite (`tests/run.lua`)
-└── .krsnvim/                  -- Per-project persistent state (tasks.json, launch.json, breakpoints.json)
+└── .foxnvim/                  -- Per-project persistent state (tasks.json, launch.json, breakpoints.json)
 ```
 
 ---
@@ -85,12 +85,12 @@ M.settings = {
 }
 ```
 
-**Feature keybind** (a KRS panel like Git Center, Wiki, Tasks): same idea, but
-inside that feature's own file under `lua/plugins/krs/`, because the key needs
+**Feature keybind** (a FOX panel like Git Center, Wiki, Tasks): same idea, but
+inside that feature's own file under `lua/plugins/fox/`, because the key needs
 to stay next to the `lazy.nvim` spec that registers it as a lazy-load trigger.
 
 ```lua
--- lua/plugins/krs/wiki_modal.lua
+-- lua/plugins/fox/wiki_modal.lua
 M.settings = {
     keys = {
         open = { "<C-S-d>", "<leader>?" }, -- add/remove keys here
@@ -141,18 +141,18 @@ return {
 
 ---
 
-## 🔌 2. How to Create a Local KRS Module or `.krslocal` Feature
+## 🔌 2. How to Create a Local FOX Module or `.foxlocal` Feature
 
-Custom features in KrsVim live in `lua/plugins/krs/*.lua`. Every file directly inside `lua/plugins/krs/` returns a dual spec-module metatable that auto-registers with `lazy.nvim`.
+Custom features in FoxVim live in `lua/plugins/fox/*.lua`. Every file directly inside `lua/plugins/fox/` returns a dual spec-module metatable that auto-registers with `lazy.nvim`.
 
-### Step-by-Step Example (`lua/plugins/krs/my_helper.lua`):
+### Step-by-Step Example (`lua/plugins/fox/my_helper.lua`):
 
 ```lua
 -- ============================================================================
--- KRS PLUGIN: My Helper -- Custom local module.
+-- FOX PLUGIN: My Helper -- Custom local module.
 -- ============================================================================
 
-local store = require("krs.core.store")
+local store = require("fox.core.store")
 
 local M = {}
 
@@ -175,8 +175,8 @@ M.setup()
 
 -- 2. Return dual spec-module metatable
 local plugin_spec = {
-    name = "krs_my_helper",
-    dir = require("krs.core.lazyspec").for_module(),
+    name = "fox_my_helper",
+    dir = require("fox.core.lazyspec").for_module(),
     lazy = false,
     config = M.setup,
 }
@@ -192,22 +192,22 @@ To add full IDE support for a new programming language (e.g., Elixir, Zig, Scala
 
 > ⚠️ There is no `servers = {}` table or `ensure_installed` list to edit in `lsp.lua`/`treesitter.lua` — those files only merge what each language declares. See [Adding a Language / LSP](adding-language.md) for the real, current steps; summary below.
 
-1. **Create `lua/krs/langs/<language>/init.lua`**, exporting `M.lsp_config` (lspconfig opts, keyed by server name), `M.mason`/`M.mason_order` (Mason package metadata), and `M.formatters_by_ft` (conform formatter list per filetype). Register it in `lua/krs/langs/init.lua`'s `M.langs` table (and `M.lang_order`) — `lsp.lua` and `formatting.lua` auto-merge from there.
+1. **Create `lua/fox/langs/<language>/init.lua`**, exporting `M.lsp_config` (lspconfig opts, keyed by server name), `M.mason`/`M.mason_order` (Mason package metadata), and `M.formatters_by_ft` (conform formatter list per filetype). Register it in `lua/fox/langs/init.lua`'s `M.langs` table (and `M.lang_order`) — `lsp.lua` and `formatting.lua` auto-merge from there.
 
-2. **Add bundle metadata to the same `init.lua`**: `M.bundle_name`, `M.requires`, `M.treesitter`. `lua/krs/core/installer.lua`'s `M.language_bundles` builds itself from these — its `mason_pkgs` resolves straight from the `M.mason_order` in Step 1, no separate list to keep in sync. Nothing installs automatically — the user opts in per language via `:LanguageManager`.
+2. **Add bundle metadata to the same `init.lua`**: `M.bundle_name`, `M.requires`, `M.treesitter`. `lua/fox/core/installer.lua`'s `M.language_bundles` builds itself from these — its `mason_pkgs` resolves straight from the `M.mason_order` in Step 1, no separate list to keep in sync. Nothing installs automatically — the user opts in per language via `:LanguageManager`.
 
-3. **Debug Adapter (DAP) (`lua/plugins/editor/dap.lua` & `lua/krs/launch/runtimes.lua`)**:
+3. **Debug Adapter (DAP) (`lua/plugins/editor/dap.lua` & `lua/fox/launch/runtimes.lua`)**:
    Register DAP adapter configuration in `lua/plugins/editor/dap.lua` and launch command in `runtimes.lua`.
 
 ---
 
 ## 🖥️ 4. How to Customize Terminals & Dock
 
-KrsVim includes a multi-terminal manager supporting 9 independent floating/docked terminal buffers.
+FoxVim includes a multi-terminal manager supporting 9 independent floating/docked terminal buffers.
 
 - **Toggle Terminal**: `<C-;>`
 - **Switch Slots**: `<A-1>` .. `<A-9>`
-- **Config file**: `lua/plugins/krs/terminals.lua`
+- **Config file**: `lua/plugins/fox/terminals.lua`
 - **Default Shell**: Automatically detects WSL `wsl.exe` on Windows, or `pwsh.exe` / `bash`. You can set your preferred shell in `lua/vim_options.lua`:
   ```lua
   vim.opt.shell = "pwsh"
@@ -218,7 +218,7 @@ KrsVim includes a multi-terminal manager supporting 9 independent floating/docke
 ## 🎨 5. How to Customize Statusline & Themes
 
 ### Statusline Themes:
-Run `:KrsStatuslineTheme` or select from Command Palette (`<C-Shift-P>`) to switch between:
+Run `:FoxStatuslineTheme` or select from Command Palette (`<C-Shift-P>`) to switch between:
 - `nvchad_pills` (NvChad rounded pills)
 - `nvchad_blocks` (NvChad block separators)
 - `nagatoro_classic` (Classic Nagatoro statusline)
@@ -226,7 +226,7 @@ Run `:KrsStatuslineTheme` or select from Command Palette (`<C-Shift-P>`) to swit
 - `minimal` (Compact)
 
 ### Editor Themes in `colors/*.lua`:
-To create a new theme matching `nagatoro-krs` format, copy `colors/nagatoro-krs.lua` to `colors/mytheme-krs.lua`, change `vim.g.colors_name = "mytheme-krs"`, and edit the palette table `p`:
+To create a new theme matching `nagatoro-fox` format, copy `colors/nagatoro-fox.lua` to `colors/mytheme-fox.lua`, change `vim.g.colors_name = "mytheme-fox"`, and edit the palette table `p`:
 ```lua
 local p = {
     bg = "#1a1b26",
@@ -237,15 +237,15 @@ local p = {
     -- ...
 }
 ```
-Run `:KrsThemePicker` or `<leader>th` to switch themes live with interactive preview!
+Run `:FoxThemePicker` or `<leader>th` to switch themes live with interactive preview!
 
 ---
 
 ## 🛠️ 6. How to Add Build Tasks & Launch Profiles
 
-Per-project build tasks and debugging launch profiles live in `.krsnvim/` inside your project root:
+Per-project build tasks and debugging launch profiles live in `.foxnvim/` inside your project root:
 
-- **`.krsnvim/tasks.json`** (Build & script runner):
+- **`.foxnvim/tasks.json`** (Build & script runner):
   ```json
   {
     "custom_tasks": [
@@ -259,7 +259,7 @@ Per-project build tasks and debugging launch profiles live in `.krsnvim/` inside
   ```
   Press `<C-S-t>` to open the Task Runner menu.
 
-- **`.krsnvim/launch.json`** (Debugging profiles):
+- **`.foxnvim/launch.json`** (Debugging profiles):
   ```json
   {
     "version": "0.2.0",
@@ -291,7 +291,7 @@ Per-project build tasks and debugging launch profiles live in `.krsnvim/` inside
 - **Windows**: `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1`
 - **Linux / WSL**: `./scripts/setup.sh`
 
-*(If external tools are missing, KrsVim degrades gracefully with clear notifications instead of crashing).*
+*(If external tools are missing, FoxVim degrades gracefully with clear notifications instead of crashing).*
 
 ---
 

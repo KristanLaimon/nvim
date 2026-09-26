@@ -2,11 +2,11 @@
 -- tests/spec/cmp_colorify_spec.lua -- Colorify engine & CMP kind formatting.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local colorify = require("krs.lsp.colorify")
+local colorify = require("fox.lsp.colorify")
 
-describe("krs.lsp.colorify", function()
+describe("fox.lsp.colorify", function()
 	describe("extract_hex_color", function()
 		it("extracts 6-digit hex color strings", function()
 			expect(colorify.extract_hex_color("#e06c75")).toBe("#e06c75")

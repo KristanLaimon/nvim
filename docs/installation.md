@@ -2,13 +2,13 @@
 
 [← Back to Wiki Index](index.md)
 
-Welcome to **KrsVim**! Whether you just cloned the repository, ran `nvim` for the very first time, or are looking to ensure all external tools are properly installed, this guide covers everything you need to know.
+Welcome to **FoxVim**! Whether you just cloned the repository, ran `nvim` for the very first time, or are looking to ensure all external tools are properly installed, this guide covers everything you need to know.
 
 ---
 
 ## 🏁 Quick Start: Automated Setup Scripts (Recommended)
 
-KrsVim includes idempotent setup scripts for both Windows and Unix-like environments. These scripts check for missing CLI dependencies and install them automatically. They are safe to run at any time—if a tool is already installed, the script simply skips it.
+FoxVim includes idempotent setup scripts for both Windows and Unix-like environments. These scripts check for missing CLI dependencies and install them automatically. They are safe to run at any time—if a tool is already installed, the script simply skips it.
 
 ### 🪟 Windows (PowerShell)
 Open PowerShell in your `%LOCALAPPDATA%\nvim` directory and run:
@@ -39,10 +39,10 @@ chmod +x scripts/setup.sh
 
 When you launch `nvim` for the first time:
 1. **`lazy.nvim` auto-bootstraps**: All Neovim plugins will automatically download and install.
-2. **Mason auto-installs LSPs**: Language servers, formatters, and debug adapters configured in KrsVim will be managed in the background.
+2. **Mason auto-installs LSPs**: Language servers, formatters, and debug adapters configured in FoxVim will be managed in the background.
 
 ### 🛡️ Graceful Degradation Matrix
-If you skip running `setup.ps1` or `setup.sh`, KrsVim handles missing external CLIs gracefully:
+If you skip running `setup.ps1` or `setup.sh`, FoxVim handles missing external CLIs gracefully:
 
 | Missing CLI | Affected Feature | Graceful Fallback Behavior |
 | :--- | :--- | :--- |
@@ -62,10 +62,10 @@ If you skip running `setup.ps1` or `setup.sh`, KrsVim handles missing external C
 
 ## 🔍 In-Editor Health Checks & Diagnostics
 
-KrsVim provides several built-in commands to inspect runtime dependencies from within Neovim:
+FoxVim provides several built-in commands to inspect runtime dependencies from within Neovim:
 
 - `:checkhealth` — Standard Neovim system and plugin health report.
-- `:KrsHealthCheck` — KrsVim's complete CLI report, including Tree-sitter, StyLua, and Luacheck.
+- `:FoxHealthCheck` — FoxVim's complete CLI report, including Tree-sitter, StyLua, and Luacheck.
 - `:Mason` — Opens the Mason UI to view installed LSP servers, formatters, and debug adapters.
 - `:Lazy` — Opens the Lazy plugin manager to verify plugin status and updates.
 - `:PHPCheckTools` — Diagnostic modal probing host and WSL PHP, Composer, Intelephense, Pint, and Xdebug.
@@ -77,7 +77,7 @@ KrsVim provides several built-in commands to inspect runtime dependencies from w
 
 For manual installation or custom package managers, here is the complete tool checklist:
 
-| Tool / CLI | Purpose in KrsVim | Windows (Scoop) | Linux / WSL Package |
+| Tool / CLI | Purpose in FoxVim | Windows (Scoop) | Linux / WSL Package |
 |---|---|---|---|
 | **Neovim** (v0.12.4 / >= 0.10) | Core editor runtime (Current setup: `NVIM v0.12.4`) | `scoop install neovim` | `neovim` |
 | **Git** | Mason, Neogit, Lazy.nvim, Git Control Center | `scoop install git` | `git` |
@@ -86,8 +86,8 @@ For manual installation or custom package managers, here is the complete tool ch
 | **chafa** | Terminal pixel-art image previewer (`:ImageViewer`) | `scoop install chafa` | `chafa` |
 | **GCC / MinGW** | Treesitter parser compilation | `scoop install gcc` | `gcc` / `build-essential` |
 | **Tree-sitter CLI** (`tree-sitter`) | Builds parsers required by `nvim-treesitter`'s `main` branch | `scoop install tree-sitter` | `tree-sitter-cli` (Arch/Debian) |
-| **StyLua** (`stylua`) | Formats KrsVim's Lua configuration | `scoop install stylua` | `stylua` |
-| **Luacheck** (`luacheck`) | Lints KrsVim's Lua configuration | `scoop install luacheck` | `luacheck` |
+| **StyLua** (`stylua`) | Formats FoxVim's Lua configuration | `scoop install stylua` | `stylua` |
+| **Luacheck** (`luacheck`) | Lints FoxVim's Lua configuration | `scoop install luacheck` | `luacheck` |
 | **Node.js & npm** | JS/TS LSP, Prettier, JSON/HTML LSPs | `scoop install nodejs-lts` | `nodejs npm` |
 | **Bun** *(optional)* | Bun launch profiles & fast JS runtime | `scoop install bun` | `curl -fsSL https://bun.sh/install \| bash` |
 | **Go** *(optional)* | Go LSP (`gopls`), `gofumpt`, Delve debugger | `scoop install go` | `golang` |
@@ -97,24 +97,24 @@ For manual installation or custom package managers, here is the complete tool ch
 
 ---
 
-## 📂 Per-Project Files (`.krsnvim/`)
+## 📂 Per-Project Files (`.foxnvim/`)
 
-KrsVim writes per-project configuration files under `.krsnvim/` at the root of your project directory only when you use specific features:
+FoxVim writes per-project configuration files under `.foxnvim/` at the root of your project directory only when you use specific features:
 
 | File | Feature / Module | Description |
 |---|---|---|
-| `.krsnvim/tasks.json` | [Task Runner](tasks.md) | Project build tasks, custom commands, and chains. |
-| `.krsnvim/launch.json` | [Launch Profiles](launch-profiles.md) | Debugger and runner configurations (`<C-S-q>`). |
-| `.krsnvim/breakpoints.json` | [Breakpoints](breakpoints.md) | Persistent DAP breakpoints across sessions. |
-| `.krsnvim/types.json` | [Type Injector](type-injector.md) | Custom Lua/TS type definitions and schemas. |
+| `.foxnvim/tasks.json` | [Task Runner](tasks.md) | Project build tasks, custom commands, and chains. |
+| `.foxnvim/launch.json` | [Launch Profiles](launch-profiles.md) | Debugger and runner configurations (`<C-S-q>`). |
+| `.foxnvim/breakpoints.json` | [Breakpoints](breakpoints.md) | Persistent DAP breakpoints across sessions. |
+| `.foxnvim/types.json` | [Type Injector](type-injector.md) | Custom Lua/TS type definitions and schemas. |
 
-> 📁 **Alternative Directory Names:** If `.krslocal/` or `.nvimkrs/` already exist in your project root, KrsVim respects them as machine-local overrides. No files are created if a feature is unused.
+> 📁 **Alternative Directory Names:** If `.foxlocal/` or `.nvimfox/` already exist in your project root, FoxVim respects them as machine-local overrides. No files are created if a feature is unused.
 
 ---
 
 ## 🖋️ Font & GUI Preferences
 
-KrsVim defaults to **JetBrainsMono Nerd Font** (14pt).
+FoxVim defaults to **JetBrainsMono Nerd Font** (14pt).
 - Adjust font size dynamically in GUI builds (Neovide / Windows GUI) using `<C-+>`, `<C-->`, and `<C-0>`.
 - Font size preferences are saved automatically to `font_config.json` in your global `nvim-data` directory (`stdpath("data")`).
 - A **Nerd Font** (v3.0+) is strongly recommended for icons in the statusline, file explorer, dashboard, and DAP signs.

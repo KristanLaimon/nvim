@@ -3,8 +3,8 @@
 -- ============================================================================
 -- HOW A SERVER GETS ENABLED
 --   Every server's settings live in its owning language module, NOT here -- see
---   lua/krs/langs/<lang>/init.lua's `M.lsp_config`, keyed by server name (e.g.
---   lua/krs/langs/typescript/init.lua for vtsls/jsonls/biome/eslint). This file only:
+--   lua/fox/langs/<lang>/init.lua's `M.lsp_config`, keyed by server name (e.g.
+--   lua/fox/langs/typescript/init.lua for vtsls/jsonls/biome/eslint). This file only:
 --   1. Merges every language's `lsp_config` into one `opts.servers` table.
 --   2. Adds settings that need a plugin only available at runtime (SchemaStore).
 --   3. Merges blink.cmp capabilities into each entry and enables it.
@@ -13,8 +13,8 @@
 --   below instead of in a language module.
 --
 -- LUA
---   `lua_ls` also serves `.krsnvim` scripts: script globals (fetch, console, import,
---   krsnvim) are re-added on attach so they do not show up as undefined.
+--   `lua_ls` also serves `.foxnvim` scripts: script globals (fetch, console, import,
+--   foxnvim) are re-added on attach so they do not show up as undefined.
 --
 -- JSON / TOML SCHEMAS
 --   Bundled schemas in `schemas/` are preferred over the online SchemaStore
@@ -30,7 +30,7 @@ local function get_schema_uri(category, filename)
 	return vim.uri_from_fname(path)
 end
 
---- Generic, language-agnostic servers with no owning lua/krs/langs/<lang> module.
+--- Generic, language-agnostic servers with no owning lua/fox/langs/<lang> module.
 local function generic_servers()
 	return {
 		taplo = {
@@ -101,7 +101,7 @@ end
 
 --- Merges every language module's `lsp_config` into one servers table.
 local function build_servers()
-	local langs = require("krs.langs").langs
+	local langs = require("fox.langs").langs
 	local servers = generic_servers()
 	for _, lang in pairs(langs) do
 		if lang.lsp_config then
@@ -183,7 +183,7 @@ return {
 								"babelrc.json",
 								"Turborepo",
 								"biome.json",
-								"KrsVim Snippets Schema",
+								"FoxVim Snippets Schema",
 							},
 							replace = {
 								["tsconfig.json"] = get_schema_uri("json", "tsconfig.json"),
@@ -208,7 +208,7 @@ return {
 									url = get_schema_uri("json", "biome.json"),
 								},
 								{
-									name = "KrsVim Snippets Schema",
+									name = "FoxVim Snippets Schema",
 									description = "VSCode-compatible snippet file schema",
 									fileMatch = { "snippets/*.json", "snippets/**/*.json" },
 									url = vim.uri_from_fname(vim.fn.stdpath("config") .. "/snippets/snippets.schema.json"),
@@ -311,18 +311,18 @@ return {
 						local bufnr = args.buf
 						local fname = vim.api.nvim_buf_get_name(bufnr)
 						local ft = vim.bo[bufnr].filetype
-						local is_krs = (ft == "krsnvim" or fname:match("%.krsnvim$") ~= nil)
+						local is_fox = (ft == "foxnvim" or fname:match("%.foxnvim$") ~= nil)
 
-						if is_krs then
+						if is_fox then
 							client.config.settings.Lua = client.config.settings.Lua or {}
 							client.config.settings.Lua.diagnostics = client.config.settings.Lua.diagnostics or {}
 							client.config.settings.Lua.diagnostics.globals =
-								{ "vim", "fetch", "console", "import", "krsnvim", "cli", "terminal", "fs" }
+								{ "vim", "fetch", "console", "import", "foxnvim", "cli", "terminal", "fs" }
 							pcall(client.notify, "workspace/didChangeConfiguration", { settings = client.config.settings })
 						end
 					end
 
-					local env_ok, env_mod = pcall(require, "krs.core.environment")
+					local env_ok, env_mod = pcall(require, "fox.core.environment")
 					local env = env_ok and env_mod.detect() or {}
 					local is_mobile_or_proot = env.is_termux or env.is_proot or env.is_mobile or (vim.env.TERMUX_VERSION ~= nil)
 
@@ -389,7 +389,7 @@ return {
 					local current = vim.lsp.inlay_hint.is_enabled({ bufnr = 0 })
 					vim.lsp.inlay_hint.enable(not current, { bufnr = 0 })
 					local status_msg = not current and "enabled 💡" or "disabled 🙈"
-					require("krs.core.notify").notify("Inlay hints " .. status_msg, vim.log.levels.INFO, "LSP")
+					require("fox.core.notify").notify("Inlay hints " .. status_msg, vim.log.levels.INFO, "LSP")
 				end
 			end
 
@@ -401,7 +401,7 @@ return {
 			)
 			pcall(
 				vim.api.nvim_create_user_command,
-				"KrsToggleInlayHints",
+				"FoxToggleInlayHints",
 				toggle_inlay_hints,
 				{ desc = "Toggle LSP Inlay Hints" }
 			)
@@ -413,7 +413,7 @@ return {
 			vim.api.nvim_create_autocmd("DirChanged", {
 				group = vim.api.nvim_create_augroup("LspProjectAutoStop", { clear = true }),
 				callback = function()
-					if vim.g._krs_environment_switching then
+					if vim.g._fox_environment_switching then
 						return
 					end
 					if
@@ -439,7 +439,7 @@ return {
 		version = "1.*",
 		opts = function(_, opts)
 			local is_mobile = false
-			local env_ok, env_mod = pcall(require, "krs.core.environment")
+			local env_ok, env_mod = pcall(require, "fox.core.environment")
 			if env_ok then
 				local env = env_mod.detect()
 				is_mobile = env.is_termux or env.is_proot or env.is_mobile
@@ -461,7 +461,7 @@ return {
 
 			local merged = vim.tbl_deep_extend("force", opts or {}, {
 				enabled = function()
-					return vim.bo.filetype ~= "krsinputmodal" and vim.b.completion ~= false
+					return vim.bo.filetype ~= "foxinputmodal" and vim.b.completion ~= false
 				end,
 				snippets = {
 					preset = "default",
@@ -491,7 +491,7 @@ return {
 								kind_icon = {
 									ellipsis = false,
 									text = function(ctx)
-										local colorify = require("krs.lsp.colorify")
+										local colorify = require("fox.lsp.colorify")
 										local hex = colorify.extract_color_from_ctx(ctx)
 										if hex then
 											return " ██ "
@@ -499,7 +499,7 @@ return {
 										return colorify.get_kind_icon(ctx.kind)
 									end,
 									highlight = function(ctx)
-										local colorify = require("krs.lsp.colorify")
+										local colorify = require("fox.lsp.colorify")
 										local hex = colorify.extract_color_from_ctx(ctx)
 										if hex then
 											return colorify.get_or_create_color_hl(hex)
@@ -509,7 +509,7 @@ return {
 								},
 								kind = {
 									text = function(ctx)
-										return require("krs.lsp.colorify").format_kind_label(ctx.kind)
+										return require("fox.lsp.colorify").format_kind_label(ctx.kind)
 									end,
 								},
 							},
@@ -544,7 +544,7 @@ return {
 					-- Debug repl completes from the stopped frame only, never lsp/buffer words.
 					per_filetype = { ["dap-repl"] = { "dap" } },
 					providers = {
-						dap = { name = "DAP", module = "krs.lsp.dap_repl_source", async = true },
+						dap = { name = "DAP", module = "fox.lsp.dap_repl_source", async = true },
 						snippets = {
 							opts = {
 								search_paths = { vim.fn.stdpath("config") .. "/snippets" },

@@ -2,11 +2,11 @@
 -- tests/spec/statusline_spec.lua -- Statusline engine & theme picker.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local statusline = require("plugins.krs.ui.statusline_picker")
+local statusline = require("plugins.fox.ui.statusline_picker")
 
-describe("plugins.krs.ui.statusline_picker", function()
+describe("plugins.fox.ui.statusline_picker", function()
 	it("formats modes into NvChad icon pills", function()
 		expect(statusline.format_mode("NORMAL")).toBe(" NORMAL")
 		expect(statusline.format_mode("INSERT")).toBe("󰏫 INSERT")
@@ -54,7 +54,7 @@ describe("plugins.krs.ui.statusline_picker", function()
 	end)
 
 	it("formats multi-terminal labels with process title (Terminal #number - process)", function()
-		vim.b.krs_term_num = 2
+		vim.b.fox_term_num = 2
 		vim.b.term_title = nil
 		expect(statusline.format_filename("term://code//5120:powershell.exe")).toBe("󰞷 Terminal #2 - powershell")
 
@@ -64,7 +64,7 @@ describe("plugins.krs.ui.statusline_picker", function()
 		vim.b.term_title = "Administrator: Windows PowerShell"
 		expect(statusline.format_filename("term://code//5120:powershell.exe")).toBe("󰞷 Terminal #2 - powershell")
 
-		vim.b.krs_term_num = nil
+		vim.b.fox_term_num = nil
 		vim.b.term_title = nil
 	end)
 
@@ -79,10 +79,10 @@ describe("plugins.krs.ui.statusline_picker", function()
 		end
 	end)
 
-	it("registers KrsStatuslineTheme user command", function()
+	it("registers FoxStatuslineTheme user command", function()
 		statusline.setup()
 		local cmds = vim.api.nvim_get_commands({})
-		expect(cmds["KrsStatuslineTheme"]).toBeDefined()
+		expect(cmds["FoxStatuslineTheme"]).toBeDefined()
 	end)
 
 	it("dynamically resolves git branch from directory instead of defaulting to main", function()

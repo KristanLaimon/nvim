@@ -14,13 +14,13 @@
 --   <CR> open   f favorite   r rename   d remove from the list
 --
 -- COLLABORATORS
---   krs.projects.favorites   Starred paths, shared with the file explorer.
---   plugins.krs.tools.wsl          WSL detection and its own recent list.
+--   fox.projects.favorites   Starred paths, shared with the file explorer.
+--   plugins.fox.tools.wsl          WSL detection and its own recent list.
 -- ============================================================================
 
-local lazy_req = require("krs.core.lazy_require")
-local favorites = lazy_req("krs.projects.favorites")
-local path_util = lazy_req("krs.core.path")
+local lazy_req = require("fox.core.lazy_require")
+local favorites = lazy_req("fox.projects.favorites")
+local path_util = lazy_req("fox.core.path")
 
 -- ============================================================================
 -- CONFIGURATION
@@ -114,7 +114,7 @@ return {
 		-- Helpers
 		-- ------------------------------------------------------------------
 
-		--- Comparison/storage form of a project path (see krs.projects.favorites).
+		--- Comparison/storage form of a project path (see fox.projects.favorites).
 		--- @param p string|nil
 		--- @return string
 		local function normalize(p)
@@ -175,7 +175,7 @@ return {
 		--- WSL helper module, when it is available.
 		--- @return table|nil wsl
 		local function wsl_module()
-			local ok, wsl = pcall(require, "plugins.krs.tools.wsl")
+			local ok, wsl = pcall(require, "plugins.fox.tools.wsl")
 			return ok and wsl or nil
 		end
 
@@ -325,7 +325,7 @@ return {
 			end
 
 			pcall(vim.api.nvim_set_current_dir, dir)
-			local pinned_tabs = require("plugins.krs.ui.pinned_tabs")
+			local pinned_tabs = require("plugins.fox.ui.pinned_tabs")
 			local has_pins = #pinned_tabs.load_pins() > 0
 			if not has_pins then
 				if vim.bo.filetype ~= "alpha" then
@@ -517,7 +517,7 @@ return {
 								actions.close(prompt_bufnr)
 
 								vim.schedule(function()
-									require("plugins.krs.ui.input_modal").open({
+									require("plugins.fox.ui.input_modal").open({
 										label = "Rename Project (" .. old_name .. ")",
 										default_value = old_name,
 										relative = "editor",

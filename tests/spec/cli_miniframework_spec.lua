@@ -1,18 +1,18 @@
 -- ============================================================================
 -- tests/spec/cli_miniframework_spec.lua
--- Comprehensive unit tests for krsnvim.cli mini-framework and krsnvim.terminal.
+-- Comprehensive unit tests for foxnvim.cli mini-framework and foxnvim.terminal.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
-local krsnvim = require("krs.lib.krsnvim")
-local cli = krsnvim.cli
-local terminal = krsnvim.terminal
+local foxnvim = require("fox.lib.foxnvim")
+local cli = foxnvim.cli
+local terminal = foxnvim.terminal
 
-describe("krsnvim.cli mini-framework", function()
+describe("foxnvim.cli mini-framework", function()
 	it("generates ASCII title banners from single text parameter string", function()
-		local banner = cli.ascii_title("KRS")
+		local banner = cli.ascii_title("FOX")
 		expect(type(banner)).toBe("string")
 		expect(#banner > 0).toBeTruthy()
 		expect(banner:find("█")).toBeTruthy()

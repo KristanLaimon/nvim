@@ -2,7 +2,7 @@
 -- tests/spec/search_keymaps_spec.lua -- Unit tests for search keymappings.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 describe("search keymaps configuration", function()

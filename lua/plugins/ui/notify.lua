@@ -16,7 +16,7 @@ return {
 		priority = 1000,
 		opts = function()
 			local is_mobile = false
-			local env_ok, env_mod = pcall(require, "krs.core.environment")
+			local env_ok, env_mod = pcall(require, "fox.core.environment")
 			if env_ok then
 				local env = env_mod.detect()
 				is_mobile = env.is_mobile or env.is_termux or env.is_proot
@@ -185,8 +185,8 @@ return {
 					notify.dismiss({ silent = true })
 				end, { desc = "Dismiss active notifications" })
 			else
-				-- Fallback to krs.core.notify
-				require("krs.core.notify").setup()
+				-- Fallback to fox.core.notify
+				require("fox.core.notify").setup()
 			end
 		end,
 	},

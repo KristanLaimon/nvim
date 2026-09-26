@@ -1,6 +1,6 @@
 # ⚡ C / C++ Toolchain Guide
 
-This document provides setup instructions, LSP server settings, formatting/static-checking pipelines, debugging profiles, and commands for C and C++ in **KrsVim**.
+This document provides setup instructions, LSP server settings, formatting/static-checking pipelines, debugging profiles, and commands for C and C++ in **FoxVim**.
 
 ---
 
@@ -56,7 +56,7 @@ Before installing the Mason packages via `:LanguageManager`:
 
 - **DAP Engine**: `codelldb` (LLDB Debug Adapter)
 - **Keybindings**: Press `<F5>` to start debugging, `<C-b>` to toggle breakpoints.
-- **Launch Profile (`.krsnvim/launch.json`)**:
+- **Launch Profile (`.foxnvim/launch.json`)**:
   ```json
   {
     "name": "Run C++ Main",

@@ -3,7 +3,7 @@
 -- ============================================================================
 -- 1. vim-blade      Syntax highlighting for `.blade.php` templates.
 -- 2. blade-nav      Jump to and complete Blade components and routes.
--- 3. krs_php_tools  Registers `:PHPCheckTools`, which reports whether PHP and
+-- 3. fox_php_tools  Registers `:PHPCheckTools`, which reports whether PHP and
 --                   Composer are actually installed (on Windows or in WSL) and
 --                   how to install what is missing.
 -- 4. PATH vendor/bin  Prepends project `./vendor/bin` to `PATH` for local Composer binaries.
@@ -74,12 +74,12 @@ return {
 
 	-- PHP & Laravel Environment Check Modal Hook
 	{
-		name = "krs_php_tools",
-		dir = vim.fn.stdpath("config") .. "/lua/plugins/krs",
+		name = "fox_php_tools",
+		dir = vim.fn.stdpath("config") .. "/lua/plugins/fox",
 		ft = { "php", "blade" },
 		cmd = "PHPCheckTools",
 		config = function()
-			local php = require("krs.langs.php")
+			local php = require("fox.langs.php")
 			local modal = php.modal
 
 			vim.api.nvim_create_user_command("PHPCheckTools", function()
@@ -96,7 +96,7 @@ return {
 						-- Defer slightly to allow buffer layout to settle
 						vim.defer_fn(function()
 							pending = false
-							if vim.g.krs_testing or _G.krs_testing then
+							if vim.g.fox_testing or _G.fox_testing then
 								return
 							end
 							if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_get_current_buf() == buf then

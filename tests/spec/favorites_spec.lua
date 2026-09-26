@@ -6,13 +6,13 @@
 -- rule and every saved favorite silently disappears from the UI.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local favorites = require("krs.projects.favorites")
+local favorites = require("fox.projects.favorites")
 
 local original_file
 
-describe("krs.projects.favorites", function()
+describe("fox.projects.favorites", function()
 	beforeEach(function()
 		original_file = favorites.file
 		favorites.file = vim.fn.tempname() .. ".json"

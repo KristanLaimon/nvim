@@ -1,8 +1,8 @@
-# 📝 Reusable Input Modal Component (`plugins.krs.ui.input_modal`)
+# 📝 Reusable Input Modal Component (`plugins.fox.ui.input_modal`)
 
 [← Back to Wiki Index](index.md)
 
-The **Reusable Input Modal** is a custom floating UI component in KRS Neovim (`lua/plugins/krs/input_modal.lua`) designed to provide a clean, consistent input experience for renaming, file creation, commit message editing, and custom prompts.
+The **Reusable Input Modal** is a custom floating UI component in FOX Neovim (`lua/plugins/fox/input_modal.lua`) designed to provide a clean, consistent input experience for renaming, file creation, commit message editing, and custom prompts.
 
 ---
 
@@ -14,7 +14,7 @@ The **Reusable Input Modal** is a custom floating UI component in KRS Neovim (`l
 - **Clean Callback Interface**: Delivers an `(ok: boolean, new_text: string)` payload:
   - `ok = true` when confirmed with `<CR>` or `:w`.
   - `ok = false` when cancelled with `<Esc>`, `q`, or closing the window.
-- **Dynamic Z-Index Stack Placement**: Integrates with [`krs.core.z_index`](z-index.md) to ensure prompt dialogs always render on top of any UI layer.
+- **Dynamic Z-Index Stack Placement**: Integrates with [`fox.core.z_index`](z-index.md) to ensure prompt dialogs always render on top of any UI layer.
 - **Global `vim.ui.input` Override**: Automatically powers standard Neovim input prompts across plugins.
 
 ---
@@ -22,7 +22,7 @@ The **Reusable Input Modal** is a custom floating UI component in KRS Neovim (`l
 ## 🛠️ Lua API & Usage Example
 
 ```lua
-local input_modal = require("plugins.krs.ui.input_modal")
+local input_modal = require("plugins.fox.ui.input_modal")
 
 input_modal.open({
     label = "Rename Symbol",         -- Title label shown in border header

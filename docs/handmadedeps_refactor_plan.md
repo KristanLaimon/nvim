@@ -134,6 +134,6 @@ These external plugins will be **removed from `lazy.nvim`** and replaced with pu
 1. **Git Branch Verification**: Confirm `git branch` displays `dependency-refactor`.
 2. **Dashboard & UI**: Open Neovim without arguments (`nvim`), verify ASCII Fox banner, menu buttons (`f`, `p`, `s`, `w`, `e`, `m`, `q`), and environment label match exact original layout.
 3. **Bufferline & Tabs**: Open multiple files, cycle tabs (`gt`, `gT`), reorder tabs (`<A-S-h>`, `<A-S-l>`), delete a file from disk, verify `[D]` tag appears on tab without lag.
-4. **Toast Notifications**: Trigger notifications (`:KrsSetupStatus`, `:PHPCheckTools`), test single/double-click copying to system clipboard, verify slide animation.
+4. **Toast Notifications**: Trigger notifications (`:FoxSetupStatus`, `:PHPCheckTools`), test single/double-click copying to system clipboard, verify slide animation.
 5. **Git Center**: Press `<C-S-g>`, verify Git Center opens, stage files, open diff modal (`d`), view history log (`l`).
 6. **Cord (Discord)**: Verify `:Cord status` works and Discord Rich Presence is active.

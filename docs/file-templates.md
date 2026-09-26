@@ -1,8 +1,8 @@
 # File creation templates
 
-KrsVim offers a template menu when you open a new, empty file and its Neovim filetype has at least one Markdown template. It also works for files created through the file explorers. Press Enter to insert a template, or Escape to leave the file empty. Run `:KrsFileTemplate` to reopen the menu while the buffer is empty. The command is also in the Command Palette.
+FoxVim offers a template menu when you open a new, empty file and its Neovim filetype has at least one Markdown template. It also works for files created through the file explorers. Press Enter to insert a template, or Escape to leave the file empty. Run `:FoxFileTemplate` to reopen the menu while the buffer is empty. The command is also in the Command Palette.
 
-Add a file under `templates/<filetype>/` in the Neovim config directory. The folder name is the Neovim filetype, such as `cs`, `lua`, `svelte`, or `typescriptreact`. A new Markdown file becomes a menu choice without changing Lua code. Templates in the current workspace's `.krsnvim/templates/<filetype>/` or `templates/<filetype>/` are also read, with workspace choices taking precedence over config choices of the same name.
+Add a file under `templates/<filetype>/` in the Neovim config directory. The folder name is the Neovim filetype, such as `cs`, `lua`, `svelte`, or `typescriptreact`. A new Markdown file becomes a menu choice without changing Lua code. Templates in the current workspace's `.foxnvim/templates/<filetype>/` or `templates/<filetype>/` are also read, with workspace choices taking precedence over config choices of the same name.
 
 For example, `templates/cs/class.md`:
 

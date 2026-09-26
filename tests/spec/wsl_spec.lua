@@ -6,9 +6,9 @@
 -- or makes the project picker stat a network path and boot WSL for no reason.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, afterEach = t.describe, t.it, t.expect, t.afterEach
-local wsl = require("plugins.krs.tools.wsl")
+local wsl = require("plugins.fox.tools.wsl")
 
 describe("wsl.parse_wsl_path", function()
 	it("splits a wsl.localhost path into distro and linux path", function()
@@ -143,7 +143,7 @@ describe("PHP tool checks", function()
 	end)
 
 	it("only probes WSL when explicitly requested", function()
-		local modal = require("plugins.krs.tools.php_tools_modal")
+		local modal = require("plugins.fox.tools.php_tools_modal")
 		original_has, original_executable, original_system = vim.fn.has, vim.fn.executable, vim.fn.system
 		local calls = 0
 
@@ -166,7 +166,7 @@ describe("PHP tool checks", function()
 end)
 
 describe("git.cmd.build with WSL paths", function()
-	local git = require("krs.git.cmd")
+	local git = require("fox.git.cmd")
 
 	it("constructs wsl.exe command for WSL UNC path on Windows", function()
 		local argv = git.build({ "status", "--porcelain=v1" }, [[\\wsl.localhost\Ubuntu\home\me\repo]])

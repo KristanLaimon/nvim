@@ -1,6 +1,6 @@
 # ⚙️ VSCode Compatibility & Configuration (`.vscode/`)
 
-**KrsVim** provides first-class support for common `.vscode/` workspace files (`settings.json`, `launch.json`, and `tasks.json`) so your Neovim environment seamlessly inherits your VSCode project configurations without requiring any extra setup.
+**FoxVim** provides first-class support for common `.vscode/` workspace files (`settings.json`, `launch.json`, and `tasks.json`) so your Neovim environment seamlessly inherits your VSCode project configurations without requiring any extra setup.
 
 ---
 
@@ -22,18 +22,18 @@ Automatically loaded and applied to Neovim options and LSP configurations upon o
 | `lua.diagnostics.globals` | `lua_ls` workspace globals |
 
 **Commands**:
-- `:VSCodeSettings` / `:KrsVSCodeSettings` — Open menu to edit, view, or re-apply settings.
+- `:VSCodeSettings` / `:FoxVSCodeSettings` — Open menu to edit, view, or re-apply settings.
 
 ---
 
 ### 2. 🚀 `.vscode/launch.json` (Launch & Debug Profiles)
-KrsVim automatically reads `.vscode/launch.json` alongside `.krsnvim/launch.json`.
+FoxVim automatically reads `.vscode/launch.json` alongside `.foxnvim/launch.json`.
 
-* **Smart Launch (`<C-S-s>`)** & **Launch Profiles Menu (`<C-S-q>`)**: Any debug or run configuration defined in `.vscode/launch.json` automatically shows up in KrsVim's launch launcher tagged with `⚡ [VSCode]`.
+* **Smart Launch (`<C-S-s>`)** & **Launch Profiles Menu (`<C-S-q>`)**: Any debug or run configuration defined in `.vscode/launch.json` automatically shows up in FoxVim's launch launcher tagged with `⚡ [VSCode]`.
 * **DAP Integration (`<F5>`)**: Automatically wired to `nvim-dap` for breakpoints and live debugging.
 
 ---
 
 ### 3. 🛠️ `.vscode/tasks.json` (Task Runner Discovery)
-* **Task Runner Menu (`<C-S-t>`)**: Tasks defined under `.vscode/tasks.json` are automatically discovered alongside `package.json`, `Makefile`, and `.krsnvim/tasks.json`.
+* **Task Runner Menu (`<C-S-t>`)**: Tasks defined under `.vscode/tasks.json` are automatically discovered alongside `package.json`, `Makefile`, and `.foxnvim/tasks.json`.
 * Tasks can be run as background terminal slots with live scrollback (`<C-A-S-1..4>`).

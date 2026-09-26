@@ -1,14 +1,14 @@
 -- ============================================================================
 -- tests/integration/dap_adapters_spec.lua -- Debug adapter wiring.
 -- ============================================================================
--- Fails loudly when lua/plugins/krs/debuggers/ stops registering adapters and
+-- Fails loudly when lua/plugins/fox/debuggers/ stops registering adapters and
 -- configurations the way lua/plugins/editor/dap.lua expects -- in particular when
 -- mason-nvim-dap's generic defaults sneak back in and duplicate a language.
 -- ============================================================================
 
 require("lazy").load({ plugins = { "nvim-dap" } })
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 local dap = require("dap")
 

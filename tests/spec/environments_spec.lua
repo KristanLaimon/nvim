@@ -2,11 +2,11 @@
 -- tests/spec/environments_spec.lua -- Environments manager unit tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local envs = require("plugins.krs.tools.environments")
+local envs = require("plugins.fox.tools.environments")
 
-describe("plugins.krs.tools.environments", function()
+describe("plugins.fox.tools.environments", function()
 	local temp_dir
 	local orig_storage_dir
 	local orig_envs
@@ -17,17 +17,17 @@ describe("plugins.krs.tools.environments", function()
 		orig_storage_dir = envs.settings.storage_dir
 		envs.settings.storage_dir = temp_dir
 
-		orig_envs = vim.deepcopy(_G._krs_environments or {})
-		orig_active_slot = _G._krs_active_env_slot or 1
+		orig_envs = vim.deepcopy(_G._fox_environments or {})
+		orig_active_slot = _G._fox_active_env_slot or 1
 
-		_G._krs_environments = {}
-		_G._krs_active_env_slot = 1
+		_G._fox_environments = {}
+		_G._fox_active_env_slot = 1
 	end)
 
 	afterEach(function()
 		envs.settings.storage_dir = orig_storage_dir
-		_G._krs_environments = orig_envs
-		_G._krs_active_env_slot = orig_active_slot
+		_G._fox_environments = orig_envs
+		_G._fox_active_env_slot = orig_active_slot
 
 		if temp_dir and vim.fn.isdirectory(temp_dir) == 1 then
 			vim.fn.delete(temp_dir, "rf")
@@ -60,12 +60,12 @@ describe("plugins.krs.tools.environments", function()
 		expect(envs.get_active_count()).toBe(2)
 		expect(envs.has_multiple_environments()).toBe(true)
 
-		_G._krs_active_env_slot = 1
+		_G._fox_active_env_slot = 1
 		local ind1 = envs.indicator_status()
 		expect(ind1:find("Project1") ~= nil).toBe(true)
 		expect(ind1:find("%[1:") ~= nil).toBe(true)
 
-		_G._krs_active_env_slot = 2
+		_G._fox_active_env_slot = 2
 		local ind2 = envs.indicator_status()
 		expect(ind2:find("Project2") ~= nil).toBe(true)
 		expect(ind2:find("%[2:") ~= nil).toBe(true)
@@ -88,16 +88,16 @@ describe("plugins.krs.tools.environments", function()
 		envs.create_environment(2, dir2, "SlotTwo", false)
 
 		local buf1 = vim.api.nvim_create_buf(true, false)
-		vim.b[buf1].krs_env_slot = 1
+		vim.b[buf1].fox_env_slot = 1
 
 		local buf2 = vim.api.nvim_create_buf(true, false)
-		vim.b[buf2].krs_env_slot = 2
+		vim.b[buf2].fox_env_slot = 2
 
-		_G._krs_active_env_slot = 1
+		_G._fox_active_env_slot = 1
 		expect(envs.is_buffer_in_current_environment(buf1)).toBe(true)
 		expect(envs.is_buffer_in_current_environment(buf2)).toBe(false)
 
-		_G._krs_active_env_slot = 2
+		_G._fox_active_env_slot = 2
 		expect(envs.is_buffer_in_current_environment(buf1)).toBe(false)
 		expect(envs.is_buffer_in_current_environment(buf2)).toBe(true)
 
@@ -110,7 +110,7 @@ describe("plugins.krs.tools.environments", function()
 		local env = envs.create_environment(1, dir, "ToClose", false)
 
 		local buf = vim.api.nvim_create_buf(true, false)
-		vim.b[buf].krs_env_slot = 1
+		vim.b[buf].fox_env_slot = 1
 
 		local term_buf = vim.api.nvim_create_buf(true, false)
 		env.terminals = { [1] = { buf = term_buf, win = nil } }
@@ -135,13 +135,13 @@ describe("plugins.krs.tools.environments", function()
 		envs.save_all(true)
 
 		-- Verify index file was written
-		local store = require("krs.core.store")
+		local store = require("fox.core.store")
 		local index = store.load(temp_dir .. "/index.json", {})
 		expect(index.slots["1"] ~= nil).toBe(true)
 		expect(index.slots["1"].name).toBe("PersistedEnv")
 
 		-- Clear memory
-		_G._krs_environments = {}
+		_G._fox_environments = {}
 		expect(envs.get_environment(1)).toBe(nil)
 
 		-- Restore

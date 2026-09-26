@@ -1,5 +1,5 @@
 -- ============================================================================
--- KrsVim -- entry point (Neovim v0.12.4).
+-- FoxVim -- entry point (Neovim v0.12.4).
 -- ============================================================================
 -- Target / Current Neovim Version: NVIM v0.12.4
 --
@@ -10,9 +10,9 @@
 --
 -- WHERE THINGS LIVE
 --   lua/config/    Editor bootstrap: options, keymaps, plugin manager.
---   lua/krs/       Shared internal libraries (core, git, launch, lsp).
+--   lua/fox/       Shared internal libraries (core, git, launch, lsp).
 --   lua/plugins/   One lazy.nvim spec per file, grouped by area.
---   lua/krsnvim/   The krsnvimscript automation library (its own public API).
+--   lua/foxnvim/   The foxnvimscript automation library (its own public API).
 --   tests/         Unit specs (`nvim -l tests/run.lua`) and integration specs.
 --   docs/          Architecture and feature documentation.
 --
@@ -27,7 +27,7 @@ end
 vim.o.background = "dark"
 
 require("vim_options")
-require("krs.core.keymap_registry").install()
+require("fox.core.keymap_registry").install()
 require("keymaps")
 require("lazy_init")
 
@@ -40,18 +40,18 @@ vim.api.nvim_create_user_command("ReloadConfig", function()
 			package.loaded[name] = nil
 		end
 	end
-	require("krs.core.keymap_registry").reset()
+	require("fox.core.keymap_registry").reset()
 	dofile(vim.env.MYVIMRC)
 	vim.notify("Config reloaded", vim.log.levels.INFO)
 end, {})
 
 -- Run the test suite from inside the editor. The same specs run headlessly with
 -- `nvim -l tests/run.lua`; see tests/run.lua for the runner itself.
-vim.api.nvim_create_user_command("KrsTest", function(command)
+vim.api.nvim_create_user_command("FoxTest", function(command)
 	local root = vim.fn.stdpath("config")
 	local runner = dofile(root .. "/tests/run.lua")
 	runner.run(root, command.args ~= "" and command.args or nil)
-end, { nargs = "?", desc = "Run the KRS unit test suite (optionally filtered by spec name)" })
+end, { nargs = "?", desc = "Run the FOX unit test suite (optionally filtered by spec name)" })
 
 -- If nvim is being run inside Neovide GUI
 if vim.g.neovide then

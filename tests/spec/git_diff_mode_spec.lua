@@ -2,11 +2,11 @@
 -- tests/spec/git_diff_mode_spec.lua -- Git Diff Mode (Same branch & 2 branches)
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local diff_mode = require("plugins.krs.git.diff_mode")
+local diff_mode = require("plugins.fox.git.diff_mode")
 
-describe("plugins.krs.git.diff_mode", function()
+describe("plugins.fox.git.diff_mode", function()
 	beforeEach(function()
 		if diff_mode.is_open() then
 			diff_mode.close()
@@ -222,15 +222,15 @@ describe("plugins.krs.git.diff_mode", function()
 		expect(diff_mode.state.file_list_win).toBeNil()
 	end)
 
-	it("closes diff mode completely when closing sidebar via :KrsQ / :q", function()
-		require("plugins.krs.editor.buffer_cleaner").setup()
+	it("closes diff mode completely when closing sidebar via :FoxQ / :q", function()
+		require("plugins.fox.editor.buffer_cleaner").setup()
 		diff_mode.start_same_branch()
 		expect(diff_mode.is_open()).toBeTruthy()
 		local sb_win = diff_mode.state.file_list_win
 		expect(sb_win ~= nil and vim.api.nvim_win_is_valid(sb_win)).toBeTruthy()
 
 		vim.api.nvim_set_current_win(sb_win)
-		vim.cmd("KrsQ")
+		vim.cmd("FoxQ")
 
 		expect(diff_mode.is_open()).toBeFalsy()
 		expect(diff_mode.state.is_active).toBeFalsy()
@@ -448,8 +448,8 @@ describe("plugins.krs.git.diff_mode", function()
 	end)
 
 	it("decouples Diff Mode from Git Center so V toggle does not lock out Git Center", function()
-		local panel = require("plugins.krs.git.git_center.panel")
-		local init = require("plugins.krs.git.git_center")
+		local panel = require("plugins.fox.git.git_center.panel")
+		local init = require("plugins.fox.git.git_center")
 
 		-- Initially closed
 		expect(panel.is_open()).toBeFalsy()
@@ -486,7 +486,7 @@ describe("plugins.krs.git.diff_mode", function()
 
 	it("keeps focus in diff sidebar window when selecting a file from list", function()
 		local sample_files = {
-			{ file = "lua/plugins/krs/git/diff_mode.lua", status = "M" },
+			{ file = "lua/plugins/fox/git/diff_mode.lua", status = "M" },
 			{ file = "README.md", status = "M" },
 		}
 		local win, buf = diff_mode.open_file_list_window(sample_files, 1)
@@ -511,7 +511,7 @@ describe("plugins.krs.git.diff_mode", function()
 
 		-- Must remain focused on the diff sidebar window, NOT automatically jumping to code center
 		expect(vim.api.nvim_get_current_win()).toBe(win)
-		expect(diff_mode.state.active_file).toBe("lua/plugins/krs/git/diff_mode.lua")
+		expect(diff_mode.state.active_file).toBe("lua/plugins/fox/git/diff_mode.lua")
 
 		diff_mode.close()
 	end)
@@ -601,7 +601,7 @@ describe("plugins.krs.git.diff_mode", function()
 	it("computes diff stats including total diffs and file subtotals", function()
 		local cwd = vim.fn.getcwd()
 		local files = {
-			{ file = "lua/plugins/krs/git/diff_mode.lua", status = "M" },
+			{ file = "lua/plugins/fox/git/diff_mode.lua", status = "M" },
 		}
 		local stats = diff_mode.compute_diff_stats("HEAD~1", "HEAD", cwd, files)
 		expect(type(stats)).toBe("table")
@@ -610,7 +610,7 @@ describe("plugins.krs.git.diff_mode", function()
 		expect(type(stats.per_file)).toBe("table")
 
 		-- Get file subtotal stat
-		local file_stat = diff_mode.get_file_stat(stats, "lua/plugins/krs/git/diff_mode.lua", cwd)
+		local file_stat = diff_mode.get_file_stat(stats, "lua/plugins/fox/git/diff_mode.lua", cwd)
 		expect(type(file_stat.add)).toBe("number")
 		expect(type(file_stat.del)).toBe("number")
 	end)
@@ -659,7 +659,7 @@ describe("plugins.krs.git.diff_mode", function()
 	it("computes change counts across diff hunks", function()
 		local cwd = vim.fn.getcwd()
 		local files = {
-			{ file = "lua/plugins/krs/git/diff_mode.lua", status = "M" },
+			{ file = "lua/plugins/fox/git/diff_mode.lua", status = "M" },
 		}
 		local counts = diff_mode.compute_change_counts("HEAD~1", "HEAD", cwd, files)
 		expect(type(counts)).toBe("table")

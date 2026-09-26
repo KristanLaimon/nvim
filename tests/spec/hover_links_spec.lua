@@ -3,15 +3,15 @@
 -- Unit tests for hover_links plugin (LSP hover doc link navigation & parsing).
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
 
-local hover_links = require("plugins.krs.editor.hover_links")
-local path = require("krs.core.path")
+local hover_links = require("plugins.fox.editor.hover_links")
+local path = require("fox.core.path")
 
 local temp_dir
 
-describe("plugins.krs.editor.hover_links link navigation and parsing", function()
+describe("plugins.fox.editor.hover_links link navigation and parsing", function()
 	beforeEach(function()
 		temp_dir = path.normalize(vim.fn.tempname())
 		vim.fn.mkdir(temp_dir, "p")

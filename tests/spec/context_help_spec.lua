@@ -6,9 +6,9 @@
 -- rather than matching something loosely.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, afterEach = t.describe, t.it, t.expect, t.afterEach
-local help = require("plugins.krs.context_help")
+local help = require("plugins.fox.context_help")
 
 local scratch_buffers = {}
 

@@ -1,15 +1,15 @@
 -- ============================================================================
 -- tests/spec/tasks_spec.lua -- Task Runner logic (no UI, no processes).
 -- ============================================================================
--- Covered: chain resolution, project discovery, and `.krsnvim/tasks.json`
+-- Covered: chain resolution, project discovery, and `.foxnvim/tasks.json`
 -- persistence including the two legacy fallbacks. Terminal execution and the
 -- Telescope picker are deliberately out of scope -- they need a real UI.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local tasks = require("plugins.krs.dev.tasks")
-local path = require("krs.core.path")
+local tasks = require("plugins.fox.dev.tasks")
+local path = require("fox.core.path")
 
 local root
 
@@ -140,7 +140,7 @@ describe("tasks project data persistence", function()
 		expect(tasks.get_project_data(root)).toEqual({ custom_tasks = {} })
 	end)
 
-	it("round-trips through .krsnvim/tasks.json", function()
+	it("round-trips through .foxnvim/tasks.json", function()
 		local task = { name = "Dev", cmd = "npm run dev" }
 		tasks.save_project_data(root, { default_task = task, custom_tasks = { task } })
 
@@ -164,14 +164,14 @@ describe("tasks project data persistence", function()
 		expect(updated.custom_tasks[1].cmd).toBe("npm run build:prod")
 	end)
 
-	it("writes into .krsnvim/ specifically", function()
+	it("writes into .foxnvim/ specifically", function()
 		tasks.save_project_data(root, { custom_tasks = {} })
 
-		expect(path.is_file(path.join(root, ".krsnvim", "tasks.json"))).toBeTruthy()
+		expect(path.is_file(path.join(root, ".foxnvim", "tasks.json"))).toBeTruthy()
 	end)
 
-	it("reads the legacy .nvimkrs root file when .krsnvim is absent", function()
-		write(".nvimkrs", { '{"default_task":{"name":"Legacy","cmd":"make"},"custom_tasks":[]}' })
+	it("reads the legacy .nvimfox root file when .foxnvim is absent", function()
+		write(".nvimfox", { '{"default_task":{"name":"Legacy","cmd":"make"},"custom_tasks":[]}' })
 
 		expect(tasks.get_project_data(root).default_task.name).toBe("Legacy")
 	end)
@@ -193,15 +193,15 @@ describe("tasks project data persistence", function()
 		expect(tasks.slots[1].name).toBe("Long Task 2")
 	end)
 
-	it("prefers .krsnvim/tasks.json over the legacy file", function()
-		write(".nvimkrs", { '{"default_task":{"name":"Legacy"},"custom_tasks":[]}' })
+	it("prefers .foxnvim/tasks.json over the legacy file", function()
+		write(".nvimfox", { '{"default_task":{"name":"Legacy"},"custom_tasks":[]}' })
 		tasks.save_project_data(root, { default_task = { name = "Current" }, custom_tasks = {} })
 
 		expect(tasks.get_project_data(root).default_task.name).toBe("Current")
 	end)
 
 	it("coerces a malformed custom_tasks field to an empty list", function()
-		write(".krsnvim/tasks.json", { '{"custom_tasks": "not a list"}' })
+		write(".foxnvim/tasks.json", { '{"custom_tasks": "not a list"}' })
 
 		expect(tasks.get_project_data(root).custom_tasks).toEqual({})
 	end)

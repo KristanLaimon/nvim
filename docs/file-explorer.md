@@ -1,8 +1,8 @@
-# 📁 File Explorers & Move Picker (`plugins.krs.tools.file_explorer`)
+# 📁 File Explorers & Move Picker (`plugins.fox.tools.file_explorer`)
 
 [← Back to Wiki Index](index.md)
 
-KRS Neovim includes native floating file explorers for Desktop, WSL, folder picking, and moving files.
+FOX Neovim includes native floating file explorers for Desktop, WSL, folder picking, and moving files.
 
 ---
 

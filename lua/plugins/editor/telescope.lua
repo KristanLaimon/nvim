@@ -220,7 +220,7 @@ return {
 					n = {
 						-- `?` shows the context help for whatever picker is open.
 						["?"] = function()
-							require("plugins.krs.context_help").show_help()
+							require("plugins.fox.context_help").show_help()
 						end,
 					},
 				},
@@ -246,7 +246,7 @@ return {
 		--- Ensures focus is in a main code buffer window before launching a picker,
 		--- preventing files from accidentally opening inside Neo-tree or terminal splits.
 		local function ensure_code_window()
-			local ok, dock = pcall(require, "krs.core.dock")
+			local ok, dock = pcall(require, "fox.core.dock")
 			if not ok then
 				return
 			end
@@ -416,7 +416,7 @@ return {
 				return
 			end
 
-			local favorites = require("krs.projects.favorites")
+			local favorites = require("fox.projects.favorites")
 			local key = favorites.key(dir)
 
 			local ok, history = pcall(require, "project_nvim.utils.history")
@@ -437,7 +437,7 @@ return {
 			end
 
 			pcall(function()
-				require("plugins.krs.tools.wsl").add_recent_project(key)
+				require("plugins.fox.tools.wsl").add_recent_project(key)
 			end)
 		end
 
@@ -462,7 +462,7 @@ return {
 			end
 
 			pcall(vim.api.nvim_set_current_dir, dir)
-			local pinned_tabs = require("plugins.krs.ui.pinned_tabs")
+			local pinned_tabs = require("plugins.fox.ui.pinned_tabs")
 			local has_pins = #pinned_tabs.load_pins() > 0
 			if not has_pins then
 				vim.cmd("Alpha")
@@ -490,7 +490,7 @@ return {
 		--- @param on_select function|nil `function(dir)` Optional callback when selected.
 		open_folder_picker = function(opts, on_select)
 			opts = opts or {}
-			return require("plugins.krs.tools.file_explorer").open_folder_picker(opts, on_select)
+			return require("plugins.fox.tools.file_explorer").open_folder_picker(opts, on_select)
 		end
 
 		_G.OpenFolderPicker = open_folder_picker
@@ -502,16 +502,16 @@ return {
 		end, { desc = "Browse folders and open one as the active project" })
 		if settings.open_folder_key then
 			vim.keymap.set({ "n", "i" }, settings.open_folder_key, function()
-				require("plugins.krs.dev.sneak_peek").toggle_or_pick()
+				require("plugins.fox.dev.sneak_peek").toggle_or_pick()
 			end, { desc = "Sneak-Peek Project Modal (Ctrl+Shift+O)" })
 		end
 
 		vim.api.nvim_create_user_command("TelescopeFileBrowserDesktop", function()
-			require("plugins.krs.tools.file_explorer").open_desktop_explorer()
+			require("plugins.fox.tools.file_explorer").open_desktop_explorer()
 		end, { desc = "Open the floating desktop file explorer" })
 		if settings.desktop_explorer_key then
 			vim.keymap.set({ "n", "i" }, settings.desktop_explorer_key, function()
-				require("plugins.krs.tools.file_explorer").open_desktop_explorer()
+				require("plugins.fox.tools.file_explorer").open_desktop_explorer()
 			end, { desc = "Open Desktop File Explorer" })
 		end
 

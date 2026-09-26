@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# unsetup-bash.sh - Cross-Terminal Revert & Cleanup Manager for KRS Neovim
+# unsetup-bash.sh - Cross-Terminal Revert & Cleanup Manager for FOX Neovim
 # Reverts injected keybindings and restores original terminal configurations.
 # Supports: Kitty, Foot, WezTerm, Alacritty, Termux, Windows Terminal
 # ==============================================================================
@@ -15,7 +15,7 @@ COLOR_GRAY='\033[0;90m'
 COLOR_NC='\033[0m'
 
 echo -e "${COLOR_CYAN}============================================================${COLOR_NC}"
-echo -e "${COLOR_CYAN} [*] KRS Neovim - Terminal Keybindings Uninstaller (Bash)   ${COLOR_NC}"
+echo -e "${COLOR_CYAN} [*] FOX Neovim - Terminal Keybindings Uninstaller (Bash)   ${COLOR_NC}"
 echo -e "${COLOR_CYAN}============================================================${COLOR_NC}"
 
 RESTORE_BACKUP=false
@@ -55,42 +55,42 @@ clean_block() {
 
     if grep -q "$start_pattern" "$file" 2>/dev/null; then
         sed -i "/$start_pattern/,/$end_pattern/d" "$file"
-        echo -e "   ${COLOR_GREEN}[+] Removed KRS keybinding block successfully.${COLOR_NC}"
+        echo -e "   ${COLOR_GREEN}[+] Removed FOX keybinding block successfully.${COLOR_NC}"
     else
-        echo -e "   ${COLOR_GRAY}[i] No KRS keybindings found in $file.${COLOR_NC}"
+        echo -e "   ${COLOR_GRAY}[i] No FOX keybindings found in $file.${COLOR_NC}"
     fi
 }
 
 # --- Kitty ---
 clean_kitty() {
     local kitty_file="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
-    clean_block "$kitty_file" "# >>> KRS NEOVIM CONSISTENT KEYBINDINGS >>>" "# <<< KRS NEOVIM CONSISTENT KEYBINDINGS <<<" "Kitty"
+    clean_block "$kitty_file" "# >>> FOX NEOVIM CONSISTENT KEYBINDINGS >>>" "# <<< FOX NEOVIM CONSISTENT KEYBINDINGS <<<" "Kitty"
 }
 
 # --- Foot ---
 clean_foot() {
     local foot_file="${XDG_CONFIG_HOME:-$HOME/.config}/foot/foot.ini"
-    clean_block "$foot_file" "# >>> KRS NEOVIM FOOT BINDINGS >>>" "# <<< KRS NEOVIM FOOT BINDINGS <<<" "Foot"
+    clean_block "$foot_file" "# >>> FOX NEOVIM FOOT BINDINGS >>>" "# <<< FOX NEOVIM FOOT BINDINGS <<<" "Foot"
 }
 
 # --- WezTerm ---
 clean_wezterm() {
     local wez1="$HOME/.wezterm.lua"
     local wez2="${XDG_CONFIG_HOME:-$HOME/.config}/wezterm/wezterm.lua"
-    clean_block "$wez1" "\-\- >>> KRS NEOVIM WEZTERM BINDINGS >>>" "\-\- <<< KRS NEOVIM WEZTERM BINDINGS <<<" "WezTerm (~/.wezterm.lua)"
-    clean_block "$wez2" "\-\- >>> KRS NEOVIM WEZTERM BINDINGS >>>" "\-\- <<< KRS NEOVIM WEZTERM BINDINGS <<<" "WezTerm (.config/wezterm)"
+    clean_block "$wez1" "\-\- >>> FOX NEOVIM WEZTERM BINDINGS >>>" "\-\- <<< FOX NEOVIM WEZTERM BINDINGS <<<" "WezTerm (~/.wezterm.lua)"
+    clean_block "$wez2" "\-\- >>> FOX NEOVIM WEZTERM BINDINGS >>>" "\-\- <<< FOX NEOVIM WEZTERM BINDINGS <<<" "WezTerm (.config/wezterm)"
 }
 
 # --- Alacritty ---
 clean_alacritty() {
     local alacritty_file="${XDG_CONFIG_HOME:-$HOME/.config}/alacritty/alacritty.toml"
-    clean_block "$alacritty_file" "# >>> KRS NEOVIM ALACRITTY BINDINGS >>>" "# <<< KRS NEOVIM ALACRITTY BINDINGS <<<" "Alacritty"
+    clean_block "$alacritty_file" "# >>> FOX NEOVIM ALACRITTY BINDINGS >>>" "# <<< FOX NEOVIM ALACRITTY BINDINGS <<<" "Alacritty"
 }
 
 # --- Termux ---
 clean_termux() {
     local termux_file="$HOME/.termux/termux.properties"
-    clean_block "$termux_file" "# >>> KRS NEOVIM TERMUX SHORTCUTS >>>" "# <<< KRS NEOVIM TERMUX SHORTCUTS <<<" "Termux"
+    clean_block "$termux_file" "# >>> FOX NEOVIM TERMUX SHORTCUTS >>>" "# <<< FOX NEOVIM TERMUX SHORTCUTS <<<" "Termux"
     if [ -f "$termux_file" ]; then
         echo -e "   ${COLOR_CYAN}[i] Run 'termux-reload-settings' to reload original Termux properties.${COLOR_NC}"
     fi

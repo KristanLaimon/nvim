@@ -2,7 +2,7 @@
 -- tests/spec/mobile_keymaps_spec.lua -- Mobile & Phone term keymap tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 -- Ensure keymaps are loaded
@@ -17,14 +17,14 @@ end
 
 describe("Mobile & Phone Termux keymap aliases", function()
 	it("binds Command Palette shortcuts for Ctrl+Shift+P and leader aliases", function()
-		local palette = require("plugins.krs.tools.command_palette")
+		local palette = require("plugins.fox.tools.command_palette")
 		palette.setup()
 		expect(palette.settings.keys.open).toContain("<C-S-p>")
 		expect(palette.settings.keys.open).toContain("<leader>cp")
 	end)
 
 	it("binds Integrated Terminal toggle shortcuts for Ctrl+t, Ctrl+\\, leader+t, and leader+ft", function()
-		local term = require("plugins.krs.dev.terminal")
+		local term = require("plugins.fox.dev.terminal")
 		term.setup()
 		expect(term.settings.keys.toggle).toContain("<C-t>")
 		expect(term.settings.keys.toggle).toContain("<C-T>")
@@ -42,7 +42,7 @@ describe("Mobile & Phone Termux keymap aliases", function()
 	end)
 
 	it("has ZERO keymap collisions across all mobile shortcut aliases", function()
-		local registry = require("krs.core.keymap_registry")
+		local registry = require("fox.core.keymap_registry")
 		expect(#registry.collisions).toBe(0)
 	end)
 end)

@@ -4,7 +4,7 @@ max_line_length = false
 globals = {
 	"vim",
 
-	"krsnvim",
+	"foxnvim",
 	"cli",
 	"terminal",
 	"fs",
@@ -72,7 +72,7 @@ globals = {
 	"G_defaults",
 	"love",
 
-	"krs_testing",
+	"fox_testing",
 }
 
 files["run_me.lua"] = {

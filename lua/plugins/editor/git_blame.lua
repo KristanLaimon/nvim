@@ -53,7 +53,7 @@ return {
 	config = function(_, opts)
 		set_gitblame_highlight()
 		vim.api.nvim_create_autocmd("ColorScheme", {
-			group = vim.api.nvim_create_augroup("krs_gitblame_hl", { clear = true }),
+			group = vim.api.nvim_create_augroup("fox_gitblame_hl", { clear = true }),
 			callback = set_gitblame_highlight,
 		})
 		local ok, gitblame = pcall(require, "gitblame")

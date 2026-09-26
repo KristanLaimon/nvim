@@ -2,7 +2,7 @@
 -- tests/spec/telescope_find_files_spec.lua -- Unit tests for find_files gitignore behavior.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 describe("telescope find files gitignore filtering", function()

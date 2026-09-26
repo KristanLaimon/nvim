@@ -2,20 +2,20 @@
 -- tests/spec/lsp_references_spec.lua -- LSP reference counter & CodeLens.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local lsp_refs = require("plugins.krs.tools.lsp_references")
+local lsp_refs = require("plugins.fox.tools.lsp_references")
 
-describe("plugins.krs.tools.lsp_references", function()
+describe("plugins.fox.tools.lsp_references", function()
 	it("defaults to enabled = true (ON)", function()
 		expect(type(lsp_refs.is_enabled())).toBe("boolean")
 	end)
 
-	it("registers KrsToggleReferences and KrsRunCodeLens user commands", function()
+	it("registers FoxToggleReferences and FoxRunCodeLens user commands", function()
 		lsp_refs.setup()
 		local cmds = vim.api.nvim_get_commands({})
-		expect(cmds["KrsToggleReferences"]).toBeDefined()
-		expect(cmds["KrsRunCodeLens"]).toBeDefined()
+		expect(cmds["FoxToggleReferences"]).toBeDefined()
+		expect(cmds["FoxRunCodeLens"]).toBeDefined()
 	end)
 
 	it("toggles enabled state and returns boolean", function()

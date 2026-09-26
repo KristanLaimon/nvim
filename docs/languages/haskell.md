@@ -1,6 +1,6 @@
 # 🔮 Haskell Toolchain Guide
 
-This document provides setup instructions, LSP server settings, formatting pipelines, and execution details for Haskell in **KrsVim**.
+This document provides setup instructions, LSP server settings, formatting pipelines, and execution details for Haskell in **FoxVim**.
 
 ---
 
@@ -38,7 +38,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
 
 ## 🚀 4. Launch Profiles
 
-- **Launch Profile (`.krsnvim/launch.json`)**:
+- **Launch Profile (`.foxnvim/launch.json`)**:
   ```json
   {
     "name": "Run Haskell Script",

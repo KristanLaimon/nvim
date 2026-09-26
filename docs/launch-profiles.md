@@ -1,8 +1,8 @@
-# 🚀 Launch Profiles (`plugins.krs.dev.launch_profiles`)
+# 🚀 Launch Profiles (`plugins.fox.dev.launch_profiles`)
 
 [← Back to Wiki Index](index.md)
 
-Per-project entry points — "what does F5 actually run here?" — stored in `.krsnvim/launch.json`. A profile carries a runtime, an entry point, args, env, pre-launch tasks, and a mode: run it in a terminal slot, or debug it under DAP.
+Per-project entry points — "what does F5 actually run here?" — stored in `.foxnvim/launch.json`. A profile carries a runtime, an entry point, args, env, pre-launch tasks, and a mode: run it in a terminal slot, or debug it under DAP.
 
 This is the layer *above* [Debug Adapters](debug-adapters.md): it builds a DAP configuration for you instead of making you write one.
 
@@ -63,7 +63,7 @@ Navigation: `1`-`8` jump to a field, `j`/`k`/`<Tab>` move, `<Enter>`/`<Space>` e
 
 ## 📄 `launch.json`
 
-Written to `.krsnvim/launch.json` (`.krslocal/` and `.nvimkrs/` are honoured when they already exist):
+Written to `.foxnvim/launch.json` (`.foxlocal/` and `.nvimfox/` are honoured when they already exist):
 
 ```json
 {
@@ -88,9 +88,9 @@ This is **not** VSCode's `.vscode/launch.json` — that file is still read by nv
 
 ### 🧠 IntelliSense inside `launch.json`
 
-`plugins.krs.dev.launch_cmp` registers a blink.cmp source that only fires in files named `launch.json`:
+`plugins.fox.dev.launch_cmp` registers a blink.cmp source that only fires in files named `launch.json`:
 
-- `pre_launch_tasks` → tasks discovered in the project (npm scripts, Makefile targets, go/cargo commands, `.krsnvim/tasks.json` entries)
+- `pre_launch_tasks` → tasks discovered in the project (npm scripts, Makefile targets, go/cargo commands, `.foxnvim/tasks.json` entries)
 - `runtime` → the eight runtimes, with a description of each
 - `mode` → `run` (terminal task slot) or `debug` (DAP)
 
@@ -129,7 +129,7 @@ The profile becomes a shell command handed to the [task runner](tasks.md) (`run_
 | `php` | `php` (Xdebug) | Xdebug is a *listener*: nvim waits on port 9003 and the PHP process connects back. `pathMappings` maps `/var/www/html` to the project root |
 | `dotnet` | `coreclr` (netcoredbg) | Launches the built **assembly**, not the project — see below |
 
-If the adapter isn't installed, the launch aborts with the exact fix: `:KrsBunDapInstall` for Bun, `:Mason` (or a restart, letting `mason-nvim-dap` fetch it) for everything else.
+If the adapter isn't installed, the launch aborts with the exact fix: `:FoxBunDapInstall` for Bun, `:Mason` (or a restart, letting `mason-nvim-dap` fetch it) for everything else.
 
 ### TypeScript under Node
 
@@ -147,7 +147,7 @@ With **Auto Build** on, `dotnet build <target>` is prepended to the pre-launch t
 
 ---
 
-## 🌐 Dev Server Bridge (`plugins.krs.dev.dev_server`)
+## 🌐 Dev Server Bridge (`plugins.fox.dev.dev_server`)
 
 Browser debug configurations need a URL that is *already serving*. This module starts the project's dev server (or reuses one that is up) and hands back its URL.
 
@@ -155,11 +155,11 @@ It is meant to be used as a **function value inside a DAP configuration**. nvim-
 
 ```lua
 url = function()
-  return require("plugins.krs.dev.dev_server").url()
+  return require("plugins.fox.dev.dev_server").url()
 end
 ```
 
-**Finding the server.** It TCP-connects to a candidate port list — a connect is the only check that proves something is *accepting*; parsing `netstat` reports a bound socket and races the server's first real listen. Defaults: `5173` (vite/sveltekit), `4321` (astro), `3000` (next/nuxt/remix), `4200` (angular), `5174`, `8080`, `1420` (tauri), `3001`. Override per project with `vim.g.krs_dev_ports = { 1234 }`.
+**Finding the server.** It TCP-connects to a candidate port list — a connect is the only check that proves something is *accepting*; parsing `netstat` reports a bound socket and races the server's first real listen. Defaults: `5173` (vite/sveltekit), `4321` (astro), `3000` (next/nuxt/remix), `4200` (angular), `5174`, `8080`, `1420` (tauri), `3001`. Override per project with `vim.g.fox_dev_ports = { 1234 }`.
 
 **Starting one.** The lockfile picks the package manager (`bun.lock`/`bun.lockb` → `bun run`, `pnpm-lock.yaml` → `pnpm`, `yarn.lock` → `yarn`, else `npm run`), and `package.json` picks the script (`dev`, then `start`, then `serve`). It runs in a task slot, and the module polls every 500ms up to a 60s deadline.
 

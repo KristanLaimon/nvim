@@ -2,16 +2,16 @@
 -- tests/spec/omarchy_theme_spec.lua -- Omarchy theme synchronization tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local omarchy = require("plugins.krs.ui.omarchy_theme")
-local cp = require("plugins.krs.tools.command_palette")
-local theme_picker = require("plugins.krs.ui.theme_picker")
+local omarchy = require("plugins.fox.ui.omarchy_theme")
+local cp = require("plugins.fox.tools.command_palette")
+local theme_picker = require("plugins.fox.ui.theme_picker")
 
 local original_store_file
 local original_sync_data_file
 
-describe("plugins.krs.ui.omarchy_theme", function()
+describe("plugins.fox.ui.omarchy_theme", function()
 	beforeEach(function()
 		original_store_file = omarchy.settings.store_file
 		original_sync_data_file = omarchy.settings.sync_data_file
@@ -128,15 +128,15 @@ blue = "#89b4fa"
 	it("registers user commands upon setup", function()
 		omarchy.setup()
 		local cmds = vim.api.nvim_get_commands({})
-		expect(cmds["KrsOmarchySyncToggle"]).toBeDefined()
-		expect(cmds["KrsOmarchySyncNow"]).toBeDefined()
-		expect(cmds["KrsOmarchySyncStatus"]).toBeDefined()
+		expect(cmds["FoxOmarchySyncToggle"]).toBeDefined()
+		expect(cmds["FoxOmarchySyncNow"]).toBeDefined()
+		expect(cmds["FoxOmarchySyncStatus"]).toBeDefined()
 	end)
 
 	it("includes omarchy sync toggle in command palette UI section", function()
 		local found = false
 		for _, cmd in ipairs(cp.commands) do
-			if cmd.cmd == "KrsOmarchySyncToggle" and cmd.category == "UI" then
+			if cmd.cmd == "FoxOmarchySyncToggle" and cmd.category == "UI" then
 				found = true
 				break
 			end
@@ -145,13 +145,13 @@ blue = "#89b4fa"
 	end)
 
 	it("strictly gates out non-Omarchy environments like Windows and WSL", function()
-		local real_env = package.loaded["krs.core.environment"]
+		local real_env = package.loaded["fox.core.environment"]
 		local windows_env = {
 			detect = function()
 				return { is_windows = true, is_wsl = false, is_mac = false, is_termux = false, is_omarchy = false }
 			end,
 		}
-		package.loaded["krs.core.environment"] = windows_env
+		package.loaded["fox.core.environment"] = windows_env
 
 		expect(omarchy.is_omarchy_available()).toBe(false)
 		local ok = omarchy.set_sync_enabled(true)
@@ -163,22 +163,22 @@ blue = "#89b4fa"
 				return { is_windows = false, is_wsl = true, is_mac = false, is_termux = false, is_omarchy = false }
 			end,
 		}
-		package.loaded["krs.core.environment"] = wsl_env
+		package.loaded["fox.core.environment"] = wsl_env
 		expect(omarchy.is_omarchy_available()).toBe(false)
 
-		package.loaded["krs.core.environment"] = real_env
+		package.loaded["fox.core.environment"] = real_env
 	end)
 
-	it("discovers omarchy-krs in theme_picker", function()
-		local real_env = package.loaded["krs.core.environment"]
+	it("discovers omarchy-fox in theme_picker", function()
+		local real_env = package.loaded["fox.core.environment"]
 		local omarchy_env = {
 			detect = function()
 				return { is_windows = false, is_wsl = false, is_mac = false, is_termux = false, is_omarchy = true }
 			end,
 		}
-		package.loaded["krs.core.environment"] = omarchy_env
+		package.loaded["fox.core.environment"] = omarchy_env
 		local themes = theme_picker.discover_themes()
-		package.loaded["krs.core.environment"] = real_env
-		expect(themes).toContain("omarchy-krs")
+		package.loaded["fox.core.environment"] = real_env
+		expect(themes).toContain("omarchy-fox")
 	end)
 end)

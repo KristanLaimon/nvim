@@ -1,6 +1,6 @@
 /**
  * Web/DOM Ambient Global Types Definition
- * Injected dynamically by KRS Type Injector
+ * Injected dynamically by FOX Type Injector
  */
 
 declare var window: Window & typeof globalThis;

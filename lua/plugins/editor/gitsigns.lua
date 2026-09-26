@@ -2,7 +2,7 @@
 -- PLUGINS: GitSigns -- git signs in signcolumn, hunk previews & stage/reset.
 -- ============================================================================
 
-local env_ok, env_mod = pcall(require, "krs.core.environment")
+local env_ok, env_mod = pcall(require, "fox.core.environment")
 local is_mobile_or_proot = false
 if env_ok then
 	local env = env_mod.detect()
@@ -58,7 +58,7 @@ return {
 				if vim.wo.diff then
 					return "]c"
 				end
-				local dm_ok, dm = pcall(require, "plugins.krs.git.diff_mode")
+				local dm_ok, dm = pcall(require, "plugins.fox.git.diff_mode")
 				if dm_ok and dm.is_open and dm.is_open() then
 					dm.jump_next_modification()
 					return "<Ignore>"
@@ -73,7 +73,7 @@ return {
 				if vim.wo.diff then
 					return "[c"
 				end
-				local dm_ok, dm = pcall(require, "plugins.krs.git.diff_mode")
+				local dm_ok, dm = pcall(require, "plugins.fox.git.diff_mode")
 				if dm_ok and dm.is_open and dm.is_open() then
 					dm.jump_prev_modification()
 					return "<Ignore>"

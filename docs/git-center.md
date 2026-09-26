@@ -1,4 +1,4 @@
-# 🐙 Interactive Git Control Center (`plugins.krs.git.git_center`)
+# 🐙 Interactive Git Control Center (`plugins.fox.git.git_center`)
 
 [← Back to Wiki Index](index.md)
 
@@ -10,7 +10,7 @@ The **Git Control Center** (`<C-S-g>`) is a high-speed, interactive floating Git
 
 - **Instant Opening (< 30ms)**: Asynchronous status parsing without heavy background Git log scans.
 - **Git Submodules & Repository Tabs**: Aesthetic tab bar integrated directly at the top of the control panel with support for Git submodules. Root repository is always on the far-left tab, followed by submodules sorted alphabetically.
-- **Persistent Active Tab**: Active submodule tab is saved per-project in `.krsnvim/git-center.json` so re-opening Git Center returns directly to the last active submodule repository.
+- **Persistent Active Tab**: Active submodule tab is saved per-project in `.foxnvim/git-center.json` so re-opening Git Center returns directly to the last active submodule repository.
 - **VSCode Live Side-by-Side Diff Preview**: Right-hand preview window and full-screen diff modal (`d`) display side-by-side comparisons (left = before with soft red `-` highlights, right = after with soft green `+` highlights).
 - **Branch Management & Checkout (`b`)**: Switch/checkout branches, create new branches, delete branches (with `-D` force delete fallback), and rename branches (`b`).
 - **Lazygit-Style Visual Aesthetics**: Vibrant section headers, status badges (`✓` staged green, `M` modified yellow, `?` untracked cyan, `D` deleted red), color-coded keybind badges `[c]`, `[s]`, `[u]`, `[P]`, `[b]`, `[l]`, and capsule repository tab indicators.
@@ -65,7 +65,7 @@ The **Git Control Center** (`<C-S-g>`) is a high-speed, interactive floating Git
 | `]c` / `[c` or `]d` / `[d` | Normal | Jump to next / previous modification in active diff buffer |
 | `c` (Diff Sidebar) | Normal | Configure diff scope / commits behind range |
 | `e` / `E` / `z` (Diff Sidebar) | Normal | Export currently diffed files with current code into a `.zip` archive |
-| `i` / `I` (Diff Sidebar) | Normal | Import & 3-way merge diff files from a compatible KRS `.zip` archive (with automatic conflict markers `<<<<<<<` / `>>>>>>>` when conflicts occur) |
+| `i` / `I` (Diff Sidebar) | Normal | Import & 3-way merge diff files from a compatible FOX `.zip` archive (with automatic conflict markers `<<<<<<<` / `>>>>>>>` when conflicts occur) |
 | `h` / `<Esc>` (Diff Sidebar) | Normal | Return focus to code editor |
 | `<F5>` / `<C-r>` | Normal | Refresh Git status |
 
@@ -74,12 +74,12 @@ The **Git Control Center** (`<C-S-g>`) is a high-speed, interactive floating Git
 ## 🔧 Customizing
 
 Everything tunable lives in `M.settings` at the top of
-[`lua/plugins/krs/git_center.lua`](../lua/plugins/krs/git_center.lua)
+[`lua/plugins/fox/git_center.lua`](../lua/plugins/fox/git_center.lua)
 — sizes, filenames, delays. To make the panel take up (almost) the whole
 screen instead of the default 92%×85%:
 
 ```lua
--- lua/plugins/krs/git_center.lua
+-- lua/plugins/fox/git_center.lua
 M.settings = {
     width_ratio = 0.98,   -- was 0.92
     height_ratio = 0.95,  -- was 0.85
@@ -88,7 +88,7 @@ M.settings = {
 }
 ```
 
-Save, restart (or `:Lazy reload krs_git_center`), reopen with `<C-S-g>`. Same
+Save, restart (or `:Lazy reload fox_git_center`), reopen with `<C-S-g>`. Same
 pattern for `modal_width_ratio`/`modal_height_ratio` (the full-screen diff
 modal opened with `d`) or `editor_width_ratio`/`editor_height` (the commit
 message box opened with `c`/`m`/`t`).
@@ -97,14 +97,14 @@ To change a keybind (e.g. `P` for push feels wrong), search this same file for
 the key's *current* mapping — Git Center's keys are wired inside its own
 buffer-local `map_keys` function rather than a flat `M.settings.keys` table
 (too many context-dependent bindings for that to stay simple), so `grep -n
-'"P"' lua/plugins/krs/git_center.lua` finds the exact `vim.keymap.set` call to
+'"P"' lua/plugins/fox/git_center.lua` finds the exact `vim.keymap.set` call to
 edit directly.
 
 ---
 
 ## 🔍 VS Code-Style Git Blame (`git-blame.nvim`)
 
-KrsVim integrates `f-person/git-blame.nvim` configured to emulate the VS Code GitLens inline blame virtual text.
+FoxVim integrates `f-person/git-blame.nvim` configured to emulate the VS Code GitLens inline blame virtual text.
 
 ### Features:
 - **Inline Virtual Text**: Displays `  <author>, <date> • <summary>` at the end of the active cursor line.

@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-KrsVim provides a high-performance **TypeScript / JavaScript** environment supporting Node.js, Bun, React (JSX/TSX), Vue, Svelte, and Astro.
+FoxVim provides a high-performance **TypeScript / JavaScript** environment supporting Node.js, Bun, React (JSX/TSX), Vue, Svelte, and Astro.
 
 ---
 
@@ -15,7 +15,7 @@ KrsVim provides a high-performance **TypeScript / JavaScript** environment suppo
 | **Treesitter Parsers** | `typescript`, `javascript`, `tsx`, `jsx` | Complete syntax parsing for TS, JS, and React |
 | **Autocompletion** | `blink.cmp` | LSP completions, snippets, path autocompletion, and Tailwind CSS color previews |
 | **Debug Adapter (DAP)** | `js-debug-adapter`, Bun adapter | `pwa-node` (Node.js), `pwa-chrome` (Chrome), `pwa-msedge` (Edge), and Bun DAP |
-| **Type Injector** | `plugins.krs.tools.type_injector` | Automatic type acquisition and project `@types` helper |
+| **Type Injector** | `plugins.fox.tools.type_injector` | Automatic type acquisition and project `@types` helper |
 
 ---
 

@@ -9,11 +9,11 @@
 --     * completion   -- registered as a blink.cmp source.
 --
 -- WHERE THE KNOWLEDGE LIVES
---   lua/krs/lsp/editorconfig.lua. Add a property there and all three features
+--   lua/fox/lsp/editorconfig.lua. Add a property there and all three features
 --   pick it up.
 -- ============================================================================
 
-local editorconfig = require("krs.lsp.editorconfig")
+local editorconfig = require("fox.lsp.editorconfig")
 
 -- ============================================================================
 -- CONFIGURATION
@@ -165,7 +165,7 @@ return {
 
 			opts.sources.providers.editorconfig = {
 				name = "EditorConfig",
-				module = "krs.lsp.editorconfig",
+				module = "fox.lsp.editorconfig",
 				-- Above the generic buffer/snippet sources: inside .editorconfig
 				-- these completions are the only relevant ones.
 				score_offset = 100,

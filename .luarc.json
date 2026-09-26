@@ -15,7 +15,7 @@
 	"diagnostics.globals": [
 		"vim",
 
-		"krsnvim", "cli", "terminal", "fs", "console", "fetch", "import",
+		"foxnvim", "cli", "terminal", "fs", "console", "fetch", "import",
 		"describe", "test", "expect", "it",
 		"setTimeout", "clearTimeout", "setInterval", "clearInterval",
 
@@ -32,7 +32,7 @@
 		"Event", "logger", "_", "T", "G_reader_settings", "G_defaults",
 		"love",
 
-		"krs_testing"
+		"fox_testing"
 	],
 	"diagnostics.disable": [
 		"undefined-field"

@@ -1,0 +1,12 @@
+-- 13_lua_globals_dofile.foxnvim: Lua globals, dofile, and system calls transpilation
+print("=== Starting Lua Globals & Dofile Transpile Test ===")
+
+local status = "ok"
+print("Status:", status)
+
+-- Transpile dofile / file execution call
+dofile("tests/foxnvimscript/01_basics.foxnvim")
+
+os.execute("echo Executed via os.execute")
+
+print("=== Lua Globals & Dofile Transpile Test Completed ===")

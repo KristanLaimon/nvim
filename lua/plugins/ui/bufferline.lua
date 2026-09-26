@@ -5,7 +5,7 @@
 --   * Closing a tab (icon, middle click, right click) routes through the smart
 --     buffer closer, so the editor lands on the dashboard instead of quitting.
 --   * A deleted file is prefixed with `[D]`, using the cached state from
---     plugins/krs/smart_check.lua -- no disk access while drawing the bar.
+--     plugins/fox/smart_check.lua -- no disk access while drawing the bar.
 --   * Only real files on disk become tabs. nvim-dap force-lists every stack frame
 --     buffer, which would otherwise fill the bar with node internals,
 --     `dap-src://` frames and the terminal console.
@@ -115,7 +115,7 @@ return {
 
 		apply_tab_highlights()
 		vim.api.nvim_create_autocmd("ColorScheme", {
-			group = vim.api.nvim_create_augroup("KrsBufferlineKeepWhiteCurrentTab", { clear = true }),
+			group = vim.api.nvim_create_augroup("FoxBufferlineKeepWhiteCurrentTab", { clear = true }),
 			callback = apply_tab_highlights,
 		})
 

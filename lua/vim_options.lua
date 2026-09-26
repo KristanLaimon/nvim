@@ -18,22 +18,22 @@
 -- ============================================================================
 
 -- 1. Filetype registration and syntax aliases
-require("krs.core.filetypes").setup()
+require("fox.core.filetypes").setup()
 
 -- 2. Fallback clipboard provider for headless / mobile
-require("krs.core.clipboard").setup()
+require("fox.core.clipboard").setup()
 
 -- 3. Prepend local toolchains to PATH for GUI launches
-require("krs.core.path_repair").setup()
+require("fox.core.path_repair").setup()
 
 -- 4. Set up system aliases (shim executables) like CC -> gcc
-require("krs.core.aliases").setup()
+require("fox.core.aliases").setup()
 
 -- 5. Mobile & low-power performance overrides
-require("krs.core.performance").setup()
+require("fox.core.performance").setup()
 
 -- 6. Generic file creation template system per programming language
-require("krs.core.templates").setup()
+require("fox.core.templates").setup()
 
 -- ============================================================================
 -- CONFIGURATION
@@ -257,4 +257,4 @@ end
 -- ============================================================================
 
 -- Initialize per-language internal configurations (e.g. PHP Composer vendor bin)
-require("krs.langs").setup()
+require("fox.langs").setup()

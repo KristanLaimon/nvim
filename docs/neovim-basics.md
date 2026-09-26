@@ -69,7 +69,7 @@ Wiki (Docs), and so on. Full table:
 Windows Terminal) can't tell `Ctrl+D` and `Ctrl+Shift+D` apart — they only
 report "Ctrl is held," not Shift, for letter keys. If a `Ctrl+Shift+X` panel
 ever does nothing, every one of them also has a `<leader>` fallback and a `:`
-command (e.g. `<leader>?` and `:KrsWiki` both open this wiki) that work
+command (e.g. `<leader>?` and `:FoxWiki` both open this wiki) that work
 everywhere regardless of what your terminal reports.
 
 ---
@@ -79,7 +79,7 @@ everywhere regardless of what your terminal reports.
 Anything starting with `:` is a command-line command, typed in Command-line
 mode. `:w` saves, `:q` quits, `:e path/to/file` opens a file. Every plugin in
 this config adds its own, always shown starting with a capital letter to tell
-them apart from built-ins — e.g. `:KrsWiki`, `:TaskRestart`, `:WorkspaceSave`.
+them apart from built-ins — e.g. `:FoxWiki`, `:TaskRestart`, `:WorkspaceSave`.
 
 Neovim's own manual is installed locally and searchable: `:help`, or
 `<leader>fh` in this config to fuzzy-search it. It's long, but it's the actual

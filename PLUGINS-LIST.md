@@ -42,9 +42,9 @@ Non-core = lazy-loaded (`event` / `cmd` / `ft` / `keys` trigger).
 **Misc**
 - `vyfor/cord.nvim` (`miscelanea/discord.lua`)
 
-## 2. KrsDeps
+## 2. FoxDeps
 
-Self-authored plugins under `lua/plugins/krs/`, registered as lazy.nvim specs (`name = "krs_*"` / `dir = ...`).
+Self-authored plugins under `lua/plugins/fox/`, registered as lazy.nvim specs (`name = "fox_*"` / `dir = ...`).
 
 ### Core
 
@@ -58,7 +58,7 @@ Self-authored plugins under `lua/plugins/krs/`, registered as lazy.nvim specs (`
 
 ### Non-core
 
-- `bun_dap.lua` (local `dir` spec: `krs-bun-dap`)
+- `bun_dap.lua` (local `dir` spec: `fox-bun-dap`)
 - `caps_lock.lua`
 - `colorscheme_preview.lua`
 - `command_palette.lua`
@@ -68,7 +68,7 @@ Self-authored plugins under `lua/plugins/krs/`, registered as lazy.nvim specs (`
 - `folding.lua`
 - `git_center.lua`
 - `hover_links.lua`
-- `krsnvim_cmp.lua`
+- `foxnvim_cmp.lua`
 - `launch_cmp.lua`
 - `launch_profiles.lua`
 - `line_endings.lua`
@@ -89,4 +89,4 @@ Self-authored plugins under `lua/plugins/krs/`, registered as lazy.nvim specs (`
 - `wsl.lua`
 
 Sub-module (not a lazy spec itself, used by `dap_breakpoints.lua`/DAP setup):
-- `debuggers/_shared.lua`, `debuggers/bash.lua`, `debuggers/browsers.lua`, `debuggers/bun.lua`, `debuggers/csharp.lua`, `debuggers/go.lua`, `debuggers/krsnvimscript.lua`, `debuggers/node.lua`, `debuggers/php.lua`, `debuggers/python.lua`
+- `debuggers/_shared.lua`, `debuggers/bash.lua`, `debuggers/browsers.lua`, `debuggers/bun.lua`, `debuggers/csharp.lua`, `debuggers/go.lua`, `debuggers/foxnvimscript.lua`, `debuggers/node.lua`, `debuggers/php.lua`, `debuggers/python.lua`

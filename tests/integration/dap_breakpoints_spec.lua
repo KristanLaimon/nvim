@@ -9,10 +9,10 @@
 
 require("lazy").load({ plugins = { "nvim-dap" } })
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 local dap_bp = require("dap.breakpoints")
-local krs = require("plugins.krs.dev.dap_breakpoints")
+local fox = require("plugins.fox.dev.dap_breakpoints")
 
 local root = vim.fn.tempname()
 vim.fn.mkdir(root, "p")
@@ -33,7 +33,7 @@ end
 
 --- Number of disabled signs in the sample buffer.
 local function disabled_count()
-	local placed = vim.fn.sign_getplaced(bufnr, { group = krs.settings.sign_group })
+	local placed = vim.fn.sign_getplaced(bufnr, { group = fox.settings.sign_group })
 	return #((placed[1] or {}).signs or {})
 end
 
@@ -42,13 +42,13 @@ describe("dap_breakpoints enable/disable", function()
 		dap_bp.set({ condition = "a == 1" }, bufnr, 2)
 		expect(live_lines()[2]).toBeDefined()
 
-		expect(krs.disable_at(bufnr, 2)).toBeTruthy()
+		expect(fox.disable_at(bufnr, 2)).toBeTruthy()
 		expect(live_lines()[2]).toBeNil()
 		expect(disabled_count()).toBe(1)
 	end)
 
 	it("enabling restores the breakpoint with its condition", function()
-		expect(krs.enable_at(bufnr, 2)).toBeTruthy()
+		expect(fox.enable_at(bufnr, 2)).toBeTruthy()
 		expect(live_lines()[2].condition).toBe("a == 1")
 		expect(disabled_count()).toBe(0)
 	end)
@@ -57,10 +57,10 @@ end)
 describe("dap_breakpoints persistence", function()
 	it("saves live and disabled breakpoints under a project-relative path", function()
 		dap_bp.set({}, bufnr, 3)
-		krs.disable_at(bufnr, 3)
-		krs.save_breakpoints(root)
+		fox.disable_at(bufnr, 3)
+		fox.save_breakpoints(root)
 
-		local saved = require("krs.core.store").load(krs.get_breakpoints_filepath(root))
+		local saved = require("fox.core.store").load(fox.get_breakpoints_filepath(root))
 		local entries = saved.breakpoints["sample.lua"]
 		expect(entries).toHaveLength(2)
 
@@ -74,20 +74,20 @@ describe("dap_breakpoints persistence", function()
 	end)
 
 	it("remove_all clears the buffer and persists the empty set", function()
-		local json_path = krs.get_breakpoints_filepath(root)
+		local json_path = fox.get_breakpoints_filepath(root)
 		local backup = vim.fn.readfile(json_path)
 
-		krs.remove_all()
+		fox.remove_all()
 		expect(vim.tbl_isempty(live_lines())).toBeTruthy()
 		expect(disabled_count()).toBe(0)
-		expect(require("krs.core.store").load(json_path).breakpoints["sample.lua"]).toBeNil()
+		expect(require("fox.core.store").load(json_path).breakpoints["sample.lua"]).toBeNil()
 
 		-- Put the file back for the restore test below.
 		vim.fn.writefile(backup, json_path)
 	end)
 
 	it("restores enabled and disabled breakpoints as they were", function()
-		krs.restore_for_buffer(bufnr, root)
+		fox.restore_for_buffer(bufnr, root)
 
 		expect(live_lines()[2]).toBeDefined()
 		expect(live_lines()[3]).toBeNil()
@@ -97,14 +97,14 @@ end)
 
 describe("dap_breakpoints bulk actions", function()
 	it("disable_all moves every breakpoint to the disabled group", function()
-		krs.disable_all()
+		fox.disable_all()
 
 		expect(vim.tbl_isempty(live_lines())).toBeTruthy()
 		expect(disabled_count()).toBe(2)
 	end)
 
 	it("enable_all brings them all back", function()
-		krs.enable_all()
+		fox.enable_all()
 
 		expect(live_lines()[2]).toBeDefined()
 		expect(live_lines()[3]).toBeDefined()

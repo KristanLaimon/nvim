@@ -6,9 +6,9 @@
 -- Anything that shells out (`node -v`, dotnet globs) is avoided or sandboxed.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local runtimes = require("krs.launch.runtimes")
+local runtimes = require("fox.launch.runtimes")
 
 local ROOT = "C:/proj"
 
@@ -73,10 +73,10 @@ describe("runtimes.build_command", function()
 	end)
 
 	it("returns no command for runtimes that execute themselves", function()
-		local cmd = runtimes.build_command(profile("krsnvimtranspiler"), ROOT)
+		local cmd = runtimes.build_command(profile("foxnvimtranspiler"), ROOT)
 
 		expect(cmd).toBeNil()
-		expect(runtimes.get("krsnvimtranspiler").execute).toBeDefined()
+		expect(runtimes.get("foxnvimtranspiler").execute).toBeDefined()
 	end)
 
 	it("also returns the launch context for reuse", function()
@@ -94,7 +94,7 @@ describe("runtimes.build_dap_config", function()
 		expect(runtimes.build_dap_config(profile("python"), ROOT).type).toBe("python")
 		expect(runtimes.build_dap_config(profile("php"), ROOT).type).toBe("php")
 		expect(runtimes.build_dap_config(profile("bun"), ROOT).type).toBe("bun")
-		expect(runtimes.build_dap_config(profile("krsnvimscript"), ROOT).type).toBe("krsnvimscript")
+		expect(runtimes.build_dap_config(profile("foxnvimscript"), ROOT).type).toBe("foxnvimscript")
 	end)
 
 	it("defaults to js-debug for node and unknown runtimes", function()
@@ -111,7 +111,7 @@ describe("runtimes.build_dap_config", function()
 
 	it("keeps js-debug out of node internals", function()
 		expect(runtimes.build_dap_config(profile("node"), ROOT).skipFiles).toEqual(
-			require("krs.langs.typescript").js_skip_files
+			require("fox.langs.typescript").js_skip_files
 		)
 	end)
 
@@ -119,13 +119,13 @@ describe("runtimes.build_dap_config", function()
 		local cfg = runtimes.build_dap_config(profile("deno"), ROOT)
 
 		expect(cfg.runtimeExecutable).toBe("deno")
-		expect(cfg.attachSimplePort).toBe(require("krs.langs.typescript").deno_inspect_port)
+		expect(cfg.attachSimplePort).toBe(require("fox.langs.typescript").deno_inspect_port)
 	end)
 
 	it("waits for xdebug to connect back on the configured port", function()
 		local cfg = runtimes.build_dap_config(profile("php"), ROOT)
 
-		expect(cfg.port).toBe(require("krs.langs.php").php_debug_port)
+		expect(cfg.port).toBe(require("fox.langs.php").php_debug_port)
 		expect(cfg.pathMappings["/var/www/html"]).toBe(ROOT)
 	end)
 

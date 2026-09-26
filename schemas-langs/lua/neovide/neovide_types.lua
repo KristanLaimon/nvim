@@ -1,6 +1,6 @@
 ---@meta
 -- ============================================================================
--- Neovide GUI Global Type Definitions -- injected by KRS Type Injector.
+-- Neovide GUI Global Type Definitions -- injected by FOX Type Injector.
 -- ============================================================================
 -- Options and global variables supported by Neovide (https://neovide.dev).
 -- Setting these in `vim.g` configures Neovide's animations, visuals, input,

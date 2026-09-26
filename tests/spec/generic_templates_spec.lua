@@ -1,6 +1,6 @@
-local t = require("krs.lib.krsnvim.test")
-local templates = require("krs.core.templates")
-local cli = require("krs.lib.krsnvim.cli")
+local t = require("fox.lib.foxnvim.test")
+local templates = require("fox.core.templates")
+local cli = require("fox.lib.foxnvim.cli")
 
 local tmp_dir
 
@@ -240,7 +240,7 @@ t.describe("generic file creation template system", function()
 
 			local popup_win = vim.api.nvim_get_current_win()
 			local popup_buf = vim.api.nvim_win_get_buf(popup_win)
-			t.expect(vim.bo[popup_buf].filetype).toBe("krsmenu")
+			t.expect(vim.bo[popup_buf].filetype).toBe("foxmenu")
 			local popup_lines = vim.api.nvim_buf_get_lines(popup_buf, 0, -1, false)
 			local popup_size = vim.api.nvim_win_get_config(popup_win)
 			t.expect(popup_lines[1]).toContain("SVELTE Template")
@@ -258,7 +258,7 @@ t.describe("generic file creation template system", function()
 
 			-- The floating window must now be closed!
 			t.expect(vim.api.nvim_win_is_valid(popup_win)).toBe(false)
-			t.expect(vim.b[buf].krs_template_pending).toBeNil()
+			t.expect(vim.b[buf].fox_template_pending).toBeNil()
 
 			local content = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
 			t.expect(content).toContain("<script")
@@ -316,7 +316,7 @@ t.describe("generic file creation template system", function()
 		local buf = vim.api.nvim_create_buf(true, false)
 		vim.api.nvim_buf_set_name(buf, tmp_dir .. "/Widget.cs")
 		local ok, err = pcall(function()
-			require("krs.langs.csharp").new_type(buf)
+			require("fox.langs.csharp").new_type(buf)
 			t.expect(selected).toBe("Service")
 			t.expect(table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")).toContain("internal class Widget")
 		end)

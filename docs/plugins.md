@@ -8,7 +8,7 @@ See [Module Architecture](module-architecture.md) for how the custom ones are wi
 
 ---
 
-## 🦊 Custom modules (`lua/plugins/krs/`)
+## 🦊 Custom modules (`lua/plugins/fox/`)
 
 | Module | File | What it does | Keys / commands |
 |---|---|---|---|
@@ -18,18 +18,18 @@ See [Module Architecture](module-architecture.md) for how the custom ones are wi
 | **Launch Profiles** | `launch_profiles.lua` | Per-project entry points with runtime, args, env, pre-launch tasks and a run/debug mode. Card picker + single-screen form editor. | `<C-S-s>`, `<C-S-q>` |
 | **Dev Server Bridge** | `dev_server.lua` | Starts (or reuses) the project's Vite/Astro/SvelteKit/Next/Angular dev server and yields its URL to browser debug configs. | used by debug configs |
 | **Persistent Breakpoints** | `dap_breakpoints.lua` | Saves/restores breakpoints per project, adds disabled breakpoints (a concept nvim-dap doesn't have). | `<A-b>`, `<A-h>`, `:DapBreakpoints*` |
-| **Bun Debug Adapter** | `bun_dap.lua` | Sparse-checks-out Bun's own debug adapter and writes the stdio entry point the VSCode extension never shipped. | `:KrsBunDapInstall` |
-| **Task & Script Manager** | `tasks.lua` | Per-project tasks in `.krsnvim/tasks.json`; run, chain, set a default detected from `Makefile`/`package.json`/etc. Up to 4 background slots. | `<C-S-t>`, `<C-S-a>`, `<C-1>`..`<C-4>` |
+| **Bun Debug Adapter** | `bun_dap.lua` | Sparse-checks-out Bun's own debug adapter and writes the stdio entry point the VSCode extension never shipped. | `:FoxBunDapInstall` |
+| **Task & Script Manager** | `tasks.lua` | Per-project tasks in `.foxnvim/tasks.json`; run, chain, set a default detected from `Makefile`/`package.json`/etc. Up to 4 background slots. | `<C-S-t>`, `<C-S-a>`, `<C-1>`..`<C-4>` |
 | **Multi-Terminal Manager** | `terminal.lua` | 9 lazily-spawned terminals, toggled independently. A `cwd` inside a WSL distro path launches `wsl.exe` there instead of the Windows shell. | `<A-1>`..`<A-9>`, `<C-;>` |
 | **Desktop File Explorer** | `file_explorer.lua` | Pure-Lua floating file browser rooted at `~/Desktop`. Create/rename/delete, drill in/out, set folder as active project. | `<C-S-f>`, `:TelescopeFileBrowserDesktop` |
 | **Neo-tree Custom Hidden** | `neotree_hidden.lua` | Visually hides files and folders in Neo-tree UI, highlights hidden items with active theme colors, persists hidden paths. | `H`, `gh` (in Neo-tree), `:NeotreeToggleCustomHiddenVisibility` |
 | **WSL File Explorer** | `file_explorer.lua` | Same explorer rooted at `\\wsl.localhost\<Distro>\`; lists distros when more than one is installed. Windows-only. | `<leader>fw`, `:TelescopeFileBrowserWSL` |
-| **Type Injector** | `type_injector.lua` | Per-project Lua/TS type schemas + `@types` package installer, applied live to `lua_ls` and `tsc`. | `:KrsTypes`, `:TypeInjector` |
+| **Type Injector** | `type_injector.lua` | Per-project Lua/TS type schemas + `@types` package installer, applied live to `lua_ls` and `tsc`. | `:FoxTypes`, `:TypeInjector` |
 | **Tailwind Organizer** | `tailwind_organizer.lua` | Sorts and multi-rows `class` / `className` attributes on save. | `<leader>tw`, `<leader>tt`, `:TailwindOrganize` |
 | **Nuget Package Manager** | `nuget.lua` | CRUD for `<PackageReference>` in a `.csproj` via `dotnet add/remove package`, in a Telescope picker. | `<leader>ng`, `:NugetManager` |
 | **Buffer Cleaner & Smart Quit** | `buffer_cleaner.lua` | Makes `:q` context-aware (close split → close tab → back to dashboard → quit) and sweeps empty `[No Name]` buffers. | `:q`, `:q!` |
 | **Context Help** | `context_help.lua` | Context-aware cheatsheet — different content in Neo-tree, Git, Telescope, editor. | `?`, `<F1>` |
-| **Documentation Wiki** | `wiki_modal.lua` | This dual-pane wiki modal — categorized index on the left, live markdown preview with link-following on the right, native `/`/`<C-f>` search in either pane. | `<C-S-d>`, `<leader>?`, `:KrsWiki` |
+| **Documentation Wiki** | `wiki_modal.lua` | This dual-pane wiki modal — categorized index on the left, live markdown preview with link-following on the right, native `/`/`<C-f>` search in either pane. | `<C-S-d>`, `<leader>?`, `:FoxWiki` |
 | **Live Colorscheme Preview** | `colorscheme_preview.lua` | Previews themes live while tabbing through `:colorscheme`, reverts on cancel. | `:colorscheme <Tab>` |
 | **Pixel-Art Image Viewer** | `image_viewer.lua` | Renders images as terminal pixel art via `chafa`, or hands off to the OS default app. | `<leader>i`, `<C-S-Enter>` |
 | **Input Modal** | `input_modal.lua` | The shared floating input dialog; overrides `vim.ui.input` globally. | used everywhere |
@@ -40,25 +40,25 @@ See [Module Architecture](module-architecture.md) for how the custom ones are wi
 | **WSL Helpers** | `wsl.lua` | Distro detection and path translation; also decides whether the dashboard shows the WSL button. | internal |
 | **launch.json IntelliSense** | `launch_cmp.lua` | blink.cmp source for `launch.json` — tasks, runtimes, modes. | automatic |
 
-Plus the shared libraries outside the spec tree, in `lua/krs/`:
+Plus the shared libraries outside the spec tree, in `lua/fox/`:
 
 | Library | What it does |
 |---|---|
-| `krs.core.path` | Cross-platform path normalize / join / compare |
-| `krs.core.store` | JSON load & save that never throws |
-| `krs.core.project` | Project root and `.krsnvim/` config resolution |
-| `krs.core.ui` | Floating window and scratch buffer factory |
-| `krs.core.z_index` | Centralized dynamic Z-index stack manager for floating UI popups & inputs — see [Z-Index Manager](z-index.md) |
-| `krs.core.dock` | The bottom dock shared by terminals and task outputs |
-| `krs.core.lazyspec` | Unique lazy.nvim `dir` per local spec — see [Module Architecture](module-architecture.md#-lazydir--why-every-spec-needs-its-own-directory) |
-| `krs.git.cmd` / `status` / `diff` | Running git, parsing status, formatting diffs |
-| `krs.launch.runtimes` | How each language is run and debugged |
-| `krs.lsp.code_action_menu` | The `<C-.>` dropdown at the caret |
-| `krs.lsp.editorconfig` | `.editorconfig` knowledge base and completion source |
-| `krs.lsp.dap_repl_source` | blink.cmp source that completes from the debug adapter's stopped frame |
-| `krs.projects.favorites` | Starred paths, shared by the explorer and the project picker |
+| `fox.core.path` | Cross-platform path normalize / join / compare |
+| `fox.core.store` | JSON load & save that never throws |
+| `fox.core.project` | Project root and `.foxnvim/` config resolution |
+| `fox.core.ui` | Floating window and scratch buffer factory |
+| `fox.core.z_index` | Centralized dynamic Z-index stack manager for floating UI popups & inputs — see [Z-Index Manager](z-index.md) |
+| `fox.core.dock` | The bottom dock shared by terminals and task outputs |
+| `fox.core.lazyspec` | Unique lazy.nvim `dir` per local spec — see [Module Architecture](module-architecture.md#-lazydir--why-every-spec-needs-its-own-directory) |
+| `fox.git.cmd` / `status` / `diff` | Running git, parsing status, formatting diffs |
+| `fox.launch.runtimes` | How each language is run and debugged |
+| `fox.lsp.code_action_menu` | The `<C-.>` dropdown at the caret |
+| `fox.lsp.editorconfig` | `.editorconfig` knowledge base and completion source |
+| `fox.lsp.dap_repl_source` | blink.cmp source that completes from the debug adapter's stopped frame |
+| `fox.projects.favorites` | Starred paths, shared by the explorer and the project picker |
 
-And the per-language debugger modules in `lua/plugins/krs/debuggers/`: `_shared.lua`, `bun.lua`, `node.lua`, `browsers.lua`, `python.lua`, `csharp.lua`, `php.lua`, `go.lua` — documented in [Debug Adapters](debug-adapters.md).
+And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.lua`, `bun.lua`, `node.lua`, `browsers.lua`, `python.lua`, `csharp.lua`, `php.lua`, `go.lua` — documented in [Debug Adapters](debug-adapters.md).
 
 ---
 

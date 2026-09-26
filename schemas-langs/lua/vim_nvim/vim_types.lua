@@ -1,6 +1,6 @@
 ---@meta
 -- ============================================================================
--- Neovim & Vim global type stub -- injected by the KRS Type Injector.
+-- Neovim & Vim global type stub -- injected by the FOX Type Injector.
 -- ============================================================================
 -- WHY THIS FILE EXISTS
 --   Projects that edit Lua without the Neovim runtime on their lua_ls path still

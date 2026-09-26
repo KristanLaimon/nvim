@@ -2,7 +2,7 @@
 -- tests/spec/keymap_registry_spec.lua -- Keymap collision toast test.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 describe("keymap_registry", function()
@@ -21,7 +21,7 @@ describe("keymap_registry", function()
 
 	it("toasts on a real mode+lhs+scope collision", function()
 		with_stub_notify(function(calls)
-			local registry = require("krs.core.keymap_registry")
+			local registry = require("fox.core.keymap_registry")
 			registry.install()
 
 			vim.keymap.set("n", "<F13>", function() end, { desc = "first" })
@@ -51,7 +51,7 @@ describe("keymap_registry", function()
 
 	it("does not toast for different modes or different buffers", function()
 		with_stub_notify(function(calls)
-			local registry = require("krs.core.keymap_registry")
+			local registry = require("fox.core.keymap_registry")
 			registry.install()
 
 			vim.keymap.set("n", "<F14>", function() end, {})
@@ -68,7 +68,7 @@ describe("keymap_registry", function()
 
 	it("silences a collision whose source matches the lazy stub handler pattern", function()
 		with_stub_notify(function(calls)
-			local registry = require("krs.core.keymap_registry")
+			local registry = require("fox.core.keymap_registry")
 			registry.install()
 			local raw_patterns = registry.ALLOWLIST_SOURCE_PATTERNS
 			registry.ALLOWLIST_SOURCE_PATTERNS = { "keymap_registry_spec%.lua" }
@@ -85,7 +85,7 @@ describe("keymap_registry", function()
 
 	it("still binds the key even when a collision is detected", function()
 		with_stub_notify(function()
-			local registry = require("krs.core.keymap_registry")
+			local registry = require("fox.core.keymap_registry")
 			registry.install()
 
 			vim.keymap.set("n", "<F16>", "<Nop>", {})
@@ -107,7 +107,7 @@ describe("keymap_registry", function()
 
 	it("clears tracked state when reset() is called so reloads do not toast", function()
 		with_stub_notify(function(calls)
-			local registry = require("krs.core.keymap_registry")
+			local registry = require("fox.core.keymap_registry")
 			registry.install()
 			registry.reset()
 
@@ -124,7 +124,7 @@ describe("keymap_registry", function()
 
 	it("allowlists runtime ftplugin and string chunk keymaps", function()
 		with_stub_notify(function()
-			local registry = require("krs.core.keymap_registry")
+			local registry = require("fox.core.keymap_registry")
 			registry.install()
 
 			-- Simulate keymap bind from runtime/ftplugin/markdown.lua
@@ -140,7 +140,7 @@ describe("keymap_registry", function()
 
 	it("safely handles nil or non-string lhs without crashing", function()
 		with_stub_notify(function()
-			local registry = require("krs.core.keymap_registry")
+			local registry = require("fox.core.keymap_registry")
 			registry.install()
 
 			-- Nil shortcut

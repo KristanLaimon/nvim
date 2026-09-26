@@ -1,4 +1,4 @@
-# 🌐 Environments Manager (`plugins.krs.tools.environments`)
+# 🌐 Environments Manager (`plugins.fox.tools.environments`)
 
 [← Back to Wiki Index](index.md)
 

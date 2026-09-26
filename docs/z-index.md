@@ -1,8 +1,8 @@
-# 📶 Dynamic Z-Index Stack Manager (`krs.core.z_index`)
+# 📶 Dynamic Z-Index Stack Manager (`fox.core.z_index`)
 
 [← Back to Wiki Index](index.md)
 
-The **Dynamic Z-Index Stack Manager** (`lua/krs/core/z_index.lua`) provides a centralized, in-memory Z-Index registry for floating UI components and modals in KrsVim.
+The **Dynamic Z-Index Stack Manager** (`lua/fox/core/z_index.lua`) provides a centralized, in-memory Z-Index registry for floating UI components and modals in FoxVim.
 
 ---
 
@@ -15,7 +15,7 @@ When multiple floating UI components (such as **Git Center**, **File Explorer / 
 
 ### ⚠️ Mandatory Guideline for Humans & AI Agents
 1. **Never hardcode static Z-index numbers** (e.g. `zindex = 100`) when creating new UI plugins, floating windows, or input prompts.
-2. **Always register with `krs.core.z_index`** (`require("krs.core.z_index")` or `require("krs.core").z_index`), or use [`ui.float`](../lua/krs/core/ui.lua) with `opts.name` / `opts.parent`.
+2. **Always register with `fox.core.z_index`** (`require("fox.core.z_index")` or `require("fox.core").z_index`), or use [`ui.float`](../lua/fox/core/ui.lua) with `opts.name` / `opts.parent`.
 3. **In-Memory Only**: Z-index tracking is strictly in-memory per Neovim session. `WinClosed` autocmds clean up stack entries automatically when floating windows close.
 
 ---
@@ -42,10 +42,10 @@ The Z-Index manager operates as a dynamic top-level stack:
 
 ### 1. High-Level Helper using `ui.float` (Recommended)
 
-When creating scratch buffers or standard floating popups using `ui.float`, pass `name` or `parent`. `ui.float` automatically pulls from `krs.core.z_index` and registers the window:
+When creating scratch buffers or standard floating popups using `ui.float`, pass `name` or `parent`. `ui.float` automatically pulls from `fox.core.z_index` and registers the window:
 
 ```lua
-local ui = require("krs.core.ui")
+local ui = require("fox.core.ui")
 
 -- Top-level UI component automatically gets the top Z-index layer
 local buf, win = ui.float({
@@ -61,7 +61,7 @@ local buf, win = ui.float({
 If creating custom windows directly via `vim.api.nvim_open_win`:
 
 ```lua
-local z_index = require("krs.core.z_index")
+local z_index = require("fox.core.z_index")
 
 -- 1. Allocate next dynamic z-index for the component
 local base_z = z_index.next_zindex("my_plugin")
@@ -85,7 +85,7 @@ z_index.register("my_plugin", win, { zindex = base_z })
 When opening a sub-modal or detail popup from an existing parent UI:
 
 ```lua
-local z_index = require("krs.core.z_index")
+local z_index = require("fox.core.z_index")
 
 -- Calculates parent's active base z-index + 30
 local child_z = z_index.next_zindex("my_plugin_detail_modal", { parent = "my_plugin", offset = 30 })
@@ -107,7 +107,7 @@ z_index.register("my_plugin_detail_modal", win, { parent = "my_plugin", offset =
 If a user focuses or toggles an already open component (e.g., clicking back into Git Center while File Explorer is open):
 
 ```lua
-local z_index = require("krs.core.z_index")
+local z_index = require("fox.core.z_index")
 
 -- Promotes component to top of stack and updates all its windows to higher z-index
 z_index.bring_to_front("git_center")
@@ -118,7 +118,7 @@ z_index.bring_to_front("git_center")
 ## 🔍 Module API Reference
 
 ```lua
-local z_index = require("krs.core.z_index")
+local z_index = require("fox.core.z_index")
 
 -- Get/calculate next z-index for name
 z_index.next_zindex(name, opts)
@@ -148,7 +148,7 @@ z_index.clear()
 ## 🔗 Require Aliases
 
 All of the following require paths resolve to the exact same module:
-- `require("krs.core.z_index")`
-- `require("krs.core.zindex")`
-- `require("krs.core.z-index")`
-- `require("krs.core").z_index` / `require("krs.core").zindex`
+- `require("fox.core.z_index")`
+- `require("fox.core.zindex")`
+- `require("fox.core.z-index")`
+- `require("fox.core").z_index` / `require("fox.core").zindex`

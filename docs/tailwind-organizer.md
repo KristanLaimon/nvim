@@ -1,4 +1,4 @@
-# 🌬️ Tailwind Organizer (`plugins.krs.editor.tailwind_organizer`)
+# 🌬️ Tailwind Organizer (`plugins.fox.editor.tailwind_organizer`)
 
 [← Back to Wiki Index](index.md)
 

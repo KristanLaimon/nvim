@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](index.md)
 
-This is the by-hand companion to [Type Injector](type-injector.md): everything the picker (`:KrsTypes`) does through menus, done directly on the filesystem. Use this when you're adding a new SDK's types (a game engine, an app's plugin API, an embedded Lua host) and don't want to go through the NPM install flow (that only exists for TypeScript/JavaScript — see [Managing TypeScript Type Schemas](how-to-manage-typescript-type-schemas.md) for that language's by-hand equivalent).
+This is the by-hand companion to [Type Injector](type-injector.md): everything the picker (`:FoxTypes`) does through menus, done directly on the filesystem. Use this when you're adding a new SDK's types (a game engine, an app's plugin API, an embedded Lua host) and don't want to go through the NPM install flow (that only exists for TypeScript/JavaScript — see [Managing TypeScript Type Schemas](how-to-manage-typescript-type-schemas.md) for that language's by-hand equivalent).
 
 A **schema** is just a directory of `.lua` stub files under `schemas-langs/lua/<name>/`. There is no registry to update — `scan_available_schemas()` reads the filesystem, so a directory that exists *is* an available schema.
 
@@ -16,10 +16,10 @@ A **schema** is just a directory of `.lua` stub files under `schemas-langs/lua/<
 schemas-langs/lua/<schema_name>/
 ```
 
-Two roots are searched (see `M.get_schema_roots` in `lua/plugins/krs/type_injector.lua`):
+Two roots are searched (see `M.get_schema_roots` in `lua/plugins/fox/type_injector.lua`):
 
 1. `stdpath("data")/schemas-langs/lua/<schema_name>/` — where NPM installs land; fine for personal, throwaway, or machine-local schemas.
-2. `stdpath("config")/schemas-langs/lua/<schema_name>/` (this repo's `schemas-langs/lua/`) — versioned with the rest of KrsVim; use this for anything you want to keep and share across machines.
+2. `stdpath("config")/schemas-langs/lua/<schema_name>/` (this repo's `schemas-langs/lua/`) — versioned with the rest of FoxVim; use this for anything you want to keep and share across machines.
 
 ### Step 2: Write the stub file(s)
 
@@ -53,7 +53,7 @@ Add a `package.json` next to the stub file(s) so the picker shows a version and 
 
 ```json
 {
-  "name": "krs-schema-<schema_name>",
+  "name": "fox-schema-<schema_name>",
   "private": true,
   "version": "<sdk version, e.g. output of `git describe --tags`>",
   "description": "What this stub covers and where it came from.",
@@ -69,9 +69,9 @@ Add a `package.json` next to the stub file(s) so the picker shows a version and 
 
 A schema existing on disk doesn't mean any project uses it — that's a separate per-project decision.
 
-**Through the picker (recommended):** open the target project in Neovim, run `:KrsTypes` (or `:TypeInjector`) from a `.lua` buffer, and toggle the schema on with `<Enter>`/`<Tab>`/`<Space>`. This writes `.krsnvim/types.json` and pushes the new `Lua.workspace.library` to the running `lua_ls` immediately — no restart needed.
+**Through the picker (recommended):** open the target project in Neovim, run `:FoxTypes` (or `:TypeInjector`) from a `.lua` buffer, and toggle the schema on with `<Enter>`/`<Tab>`/`<Space>`. This writes `.foxnvim/types.json` and pushes the new `Lua.workspace.library` to the running `lua_ls` immediately — no restart needed.
 
-**By hand:** create/edit `.krsnvim/types.json` at the project root:
+**By hand:** create/edit `.foxnvim/types.json` at the project root:
 
 ```json
 {
@@ -81,7 +81,7 @@ A schema existing on disk doesn't mean any project uses it — that's a separate
 
 Multiple schemas can be active at once — list them all. This file is per-project state, not per-schema — commit it, it's the project's own decision about which type sets it wants.
 
-If `lua_ls` is already attached, either restart it (`:LspRestart`) or re-run `:KrsTypes` and toggle the schema once (off, on) so `apply_lsp_settings()` fires and pushes the updated library list live.
+If `lua_ls` is already attached, either restart it (`:LspRestart`) or re-run `:FoxTypes` and toggle the schema once (off, on) so `apply_lsp_settings()` fires and pushes the updated library list live.
 
 ---
 
@@ -93,9 +93,9 @@ There's no "edit" command — just edit the `.lua` file(s) in `schemas-langs/lua
 
 ## 🗑️ Delete a schema
 
-**Through the picker:** select the schema, `<C-d>` — this asks for confirmation, deletes the schema directory (`vim.fn.delete(schema_dir, "rf")`), and deactivates it in every project's `.krsnvim/types.json` you touch afterward (deactivation is per-project, so other projects' `types.json` entries become dangling references — harmless, `scan_available_schemas()` just won't list the name anymore).
+**Through the picker:** select the schema, `<C-d>` — this asks for confirmation, deletes the schema directory (`vim.fn.delete(schema_dir, "rf")`), and deactivates it in every project's `.foxnvim/types.json` you touch afterward (deactivation is per-project, so other projects' `types.json` entries become dangling references — harmless, `scan_available_schemas()` just won't list the name anymore).
 
-**By hand:** delete `schemas-langs/lua/<schema_name>/` (from whichever root it's actually in — check both with `M.get_schema_roots("lua")` if unsure), and remove the name from `.krsnvim/types.json` in any project that had it active.
+**By hand:** delete `schemas-langs/lua/<schema_name>/` (from whichever root it's actually in — check both with `M.get_schema_roots("lua")` if unsure), and remove the name from `.foxnvim/types.json` in any project that had it active.
 
 ---
 
@@ -104,9 +104,9 @@ There's no "edit" command — just edit the `.lua` file(s) in `schemas-langs/lua
 | Action | Picker | By hand |
 | :--- | :--- | :--- |
 | Create | `<C-n>` (TS/JS only, via NPM) | `mkdir schemas-langs/lua/<name>` + write `.lua` stub(s) + optional `package.json` |
-| Register for a project | `<Enter>`/`<Tab>`/`<Space>` | Add name to `.krsnvim/types.json` → `"lua": [...]` |
+| Register for a project | `<Enter>`/`<Tab>`/`<Space>` | Add name to `.foxnvim/types.json` → `"lua": [...]` |
 | Update | — | Edit the `.lua` file(s) in place |
-| Deregister | `<Enter>`/`<Tab>`/`<Space>` (toggle off) | Remove name from `.krsnvim/types.json` |
+| Deregister | `<Enter>`/`<Tab>`/`<Space>` (toggle off) | Remove name from `.foxnvim/types.json` |
 | Delete | `<C-d>` | `rm -rf schemas-langs/lua/<name>` + remove from any project's `types.json` |
 
 See [Type Injector](type-injector.md) for how the wiring works end to end (LSP notification, TS reference-file generation, etc.).

@@ -4,7 +4,7 @@
 
 This guide outlines the exact step-by-step procedure for adding new programming language support, Language Servers (LSPs), Treesitter syntax highlighting, and auto-formatters to this Neovim setup.
 
-> ⚠️ **This config is not the "add each server to one big `servers = {}` table" style.** Every language owns one file, [`lua/krs/langs/<language>/init.lua`](../lua/krs/langs/), exporting `M.lsp_config`, `M.mason`/`M.mason_order`, `M.formatters_by_ft`, and (optionally) DAP config. `lua/plugins/lsp/lsp.lua`, `lua/plugins/lsp/formatting.lua`, and `lua/krs/core/installer.lua` only *merge* those per-language tables — they have no hardcoded per-language entries to edit. See [`docs/languages.md`](languages.md) for the full picture.
+> ⚠️ **This config is not the "add each server to one big `servers = {}` table" style.** Every language owns one file, [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs/), exporting `M.lsp_config`, `M.mason`/`M.mason_order`, `M.formatters_by_ft`, and (optionally) DAP config. `lua/plugins/lsp/lsp.lua`, `lua/plugins/lsp/formatting.lua`, and `lua/fox/core/installer.lua` only *merge* those per-language tables — they have no hardcoded per-language entries to edit. See [`docs/languages.md`](languages.md) for the full picture.
 
 ---
 
@@ -33,7 +33,7 @@ When authoring a language module, fields come from standard Neovim APIs and comm
    - `program`: Path to executable or script.
    - `cwd`: Working directory.
 
-4. **`M.mason`** *(KrsVim Language Tooling Manager)*:
+4. **`M.mason`** *(FoxVim Language Tooling Manager)*:
    - `mason`: Mason registry package name.
    - `type`: `"lsp"` | `"formatter"` | `"dap"` | `"extra"` (drives UI grouping).
    - `cmd`: Binary name used to detect an already-installed tool via `executable()`.
@@ -41,9 +41,9 @@ When authoring a language module, fields come from standard Neovim APIs and comm
 
 ---
 
-## ⚖️ Vanilla Neovim vs. KrsVim Architecture
+## ⚖️ Vanilla Neovim vs. FoxVim Architecture
 
-To appreciate why KrsVim uses single-file language modules, here is a comparison of how **pure vanilla Neovim (0.10+)** configures tools versus how **KrsVim** centralizes them:
+To appreciate why FoxVim uses single-file language modules, here is a comparison of how **pure vanilla Neovim (0.10+)** configures tools versus how **FoxVim** centralizes them:
 
 ### 1. Vanilla Neovim Way (No Framework or Plugins)
 In vanilla Neovim, you write autocmds to spawn `vim.lsp.start`, handle formatting with `vim.fn.system()`, and set keymaps on `LspAttach`:
@@ -75,23 +75,23 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 })
 ```
 
-### 2. KrsVim Centralized Architecture
-Instead of scattering manual autocmds across multiple config files, KrsVim puts all LSP settings, formatters, Mason packages, DAP debuggers, and runtimes into **one single file per language** (`lua/krs/langs/<language>/init.lua`).
+### 2. FoxVim Centralized Architecture
+Instead of scattering manual autocmds across multiple config files, FoxVim puts all LSP settings, formatters, Mason packages, DAP debuggers, and runtimes into **one single file per language** (`lua/fox/langs/<language>/init.lua`).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        KRSVIM AGGREGATION MODEL                        │
+│                        FOXVIM AGGREGATION MODEL                        │
 │                                                                        │
-│  lua/krs/langs/cpp/init.lua ──────► M.lsp_config  ──► lsp.lua        │
+│  lua/fox/langs/cpp/init.lua ──────► M.lsp_config  ──► lsp.lua        │
 │                             ──────► M.formatters ──► formatting.lua │
 │                             ──────► M.mason      ──► installer.lua  │
 │                             ──────► M.dap        ──► dap.lua        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-| Domain | Pure Vanilla Neovim | KrsVim Architecture |
+| Domain | Pure Vanilla Neovim | FoxVim Architecture |
 |---|---|---|
-| **LSP Setup** | Manual `vim.lsp.start()` or raw `lspconfig` | `M.lsp_config` in `lua/krs/langs/<lang>/init.lua` |
+| **LSP Setup** | Manual `vim.lsp.start()` or raw `lspconfig` | `M.lsp_config` in `lua/fox/langs/<lang>/init.lua` |
 | **Tool Installs** | Manual OS package commands (`apt`/`brew`) | Opt-in bundle installer via `:LanguageManager` UI |
 | **Formatting** | Manual `system()` or `vim.lsp.buf.format` | Async preference chains (`prettierd` -> `prettier`) via `conform.nvim` |
 | **Completion** | Hand-rolled `omnifunc` | NvChad layout with CSS color preview badges via `blink.cmp` |
@@ -100,8 +100,8 @@ Instead of scattering manual autocmds across multiple config files, KrsVim puts 
 
 ## 🛠️ Step-by-Step Guide
 
-### Step 1: Create (or extend) `lua/krs/langs/<language>/init.lua`
-Every field is optional — only add what the language needs. You can copy the interactive template file [`lua/krs/langs/init_template.lua`](../lua/krs/langs/init_template.lua) or see [`lua/krs/langs/csharp/init.lua`](../lua/krs/langs/csharp/init.lua) for the fullest example.
+### Step 1: Create (or extend) `lua/fox/langs/<language>/init.lua`
+Every field is optional — only add what the language needs. You can copy the interactive template file [`lua/fox/langs/init_template.lua`](../lua/fox/langs/init_template.lua) or see [`lua/fox/langs/csharp/init.lua`](../lua/fox/langs/csharp/init.lua) for the fullest example.
 
 ```lua
 local M = {}
@@ -134,27 +134,27 @@ M.formatters_by_ft = {
 return M
 ```
 
-Then register the module in [`lua/krs/langs/init.lua`](../lua/krs/langs/init.lua)'s `M.langs` table:
+Then register the module in [`lua/fox/langs/init.lua`](../lua/fox/langs/init.lua)'s `M.langs` table:
 
 ```lua
 M.langs = {
     -- ...existing entries
-    zig = require("krs.langs.zig"),
+    zig = require("fox.langs.zig"),
 }
 ```
 
 > ⚠️ **Why is this step required?**
-> `lsp.lua`'s `build_servers()` and `formatting.lua`'s `build_formatters_by_ft()` both loop over `require("krs.langs").langs` and merge each module's `lsp_config` / `formatters_by_ft`. A language missing from `M.langs` contributes nothing — no LSP server enable, no formatter, no Mason package tracked — no matter what's inside its `init.lua`.
+> `lsp.lua`'s `build_servers()` and `formatting.lua`'s `build_formatters_by_ft()` both loop over `require("fox.langs").langs` and merge each module's `lsp_config` / `formatters_by_ft`. A language missing from `M.langs` contributes nothing — no LSP server enable, no formatter, no Mason package tracked — no matter what's inside its `init.lua`.
 
 ---
 
 ### Step 2: Add bundle metadata to the same `init.lua`
-This repo has **no automatic Mason install**: `mason-lspconfig` is set up with `automatic_installation = false, ensure_installed = {}` in [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua). It also has **no automatic Treesitter parser install** beyond the fresh-install `core_parsers` list in [`lua/plugins/lsp/treesitter.lua`](../lua/plugins/lsp/treesitter.lua) (`lua`, `vim`, `vimdoc`, `markdown`, `markdown_inline`). Everything else — Mason LSP/DAP/formatter packages *and* Treesitter parsers — installs through an opt-in **Language Bundle**, shown in `:LanguageManager` (aliases: `:KrsLanguageManager`, `:LanguageTooling`).
+This repo has **no automatic Mason install**: `mason-lspconfig` is set up with `automatic_installation = false, ensure_installed = {}` in [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua). It also has **no automatic Treesitter parser install** beyond the fresh-install `core_parsers` list in [`lua/plugins/lsp/treesitter.lua`](../lua/plugins/lsp/treesitter.lua) (`lua`, `vim`, `vimdoc`, `markdown`, `markdown_inline`). Everything else — Mason LSP/DAP/formatter packages *and* Treesitter parsers — installs through an opt-in **Language Bundle**, shown in `:LanguageManager` (aliases: `:FoxLanguageManager`, `:LanguageTooling`).
 
-`lua/krs/core/installer.lua`'s `M.language_bundles` is **built automatically** from every language module's own metadata — nothing to hand-add there. A language only shows up as a bundle once its `init.lua` sets `M.bundle_name`; the bundle's Mason package list is resolved straight from the `M.mason_order` you already wrote in Step 1 (via `M.get_mason_package_name`), so the two can never drift out of sync. Add to the same `init.lua` from Step 1:
+`lua/fox/core/installer.lua`'s `M.language_bundles` is **built automatically** from every language module's own metadata — nothing to hand-add there. A language only shows up as a bundle once its `init.lua` sets `M.bundle_name`; the bundle's Mason package list is resolved straight from the `M.mason_order` you already wrote in Step 1 (via `M.get_mason_package_name`), so the two can never drift out of sync. Add to the same `init.lua` from Step 1:
 
 ```lua
--- Language Tooling Manager bundle metadata (see lua/krs/core/installer.lua).
+-- Language Tooling Manager bundle metadata (see lua/fox/core/installer.lua).
 M.bundle_name = "⚡ Zig"
 M.requires = {
     { cmd = "zig", name = "Zig toolchain", hint = "https://ziglang.org/download" },
@@ -164,8 +164,8 @@ M.treesitter = { "zig" }
 
 Optional extra fields:
 - `M.is_minimal = true` — marks the always-on core bundle (reserved for Lua/editor-internal filetypes; not for real languages).
-- `M.bundle_extra_mason_pkgs = { "some-pkg" }` — Mason packages the bundle should install that are intentionally **not** in `M.mason` (e.g. a DAP tool installed through a different mechanism, a standalone linter). See `lua/krs/langs/go/init.lua` (`delve`, `golangci-lint`) for an example.
-- `M.dotnet_tools = { "some-tool" }` — `dotnet tool install -g` packages, see `lua/krs/langs/csharp/init.lua`.
+- `M.bundle_extra_mason_pkgs = { "some-pkg" }` — Mason packages the bundle should install that are intentionally **not** in `M.mason` (e.g. a DAP tool installed through a different mechanism, a standalone linter). See `lua/fox/langs/go/init.lua` (`delve`, `golangci-lint`) for an example.
+- `M.dotnet_tools = { "some-tool" }` — `dotnet tool install -g` packages, see `lua/fox/langs/csharp/init.lua`.
 
 Skip this step only if the language should ship as part of `core_parsers` (the fresh-install default set) instead of an opt-in bundle — reserve that for editor-internal filetypes like Lua/markdown/vimdoc, not real languages.
 
@@ -180,7 +180,7 @@ Add the DAP config to the **same lang module** from Step 1. Two shapes are suppo
 
 Then add the language key to the iteration list in [`lua/plugins/editor/dap.lua`](../lua/plugins/editor/dap.lua) (the `ipairs({ "python", "csharp", ... })` line) to control where in the debugger picker this language's configs appear.
 
-For a **launch-profile runtime** (`M.launch_runtimes`): the runtime definition also goes in the lang module — [`lua/krs/launch/runtimes.lua`](../lua/krs/launch/runtimes.lua) auto-merges every language's `launch_runtimes`. The only edit needed there is adding the runtime key to `M.order` so the profile form can cycle to it.
+For a **launch-profile runtime** (`M.launch_runtimes`): the runtime definition also goes in the lang module — [`lua/fox/launch/runtimes.lua`](../lua/fox/launch/runtimes.lua) auto-merges every language's `launch_runtimes`. The only edit needed there is adding the runtime key to `M.order` so the profile form can cycle to it.
 
 See [`docs/debug-adapters.md`](debug-adapters.md) for the full DAP setup guide.
 
@@ -190,12 +190,12 @@ See [`docs/debug-adapters.md`](debug-adapters.md) for the full DAP setup guide.
 
 | Component | File to Edit | Key Section |
 |---|---|---|
-| **LSP Server + Formatter + Mason metadata** | [`lua/krs/langs/<language>/init.lua`](../lua/krs/langs/) | `M.lsp_config`, `M.formatters_by_ft`, `M.mason`/`M.mason_order` |
-| **Register the module** | [`lua/krs/langs/init.lua`](../lua/krs/langs/init.lua) | Add to `M.langs` |
-| **Install bundle (Mason pkgs + Treesitter parsers)** | [`lua/krs/langs/<language>/init.lua`](../lua/krs/langs/) | `M.bundle_name`, `M.requires`, `M.treesitter` |
-| **Debug Adapter (optional)** | [`lua/krs/langs/<language>/init.lua`](../lua/krs/langs/) (primary) · [`lua/plugins/editor/dap.lua`](../lua/plugins/editor/dap.lua) (add key to picker order) · [`lua/krs/launch/runtimes.lua`](../lua/krs/launch/runtimes.lua) (add key to `M.order`, if adding a launch runtime) | See [debug-adapters.md](debug-adapters.md) |
+| **LSP Server + Formatter + Mason metadata** | [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs/) | `M.lsp_config`, `M.formatters_by_ft`, `M.mason`/`M.mason_order` |
+| **Register the module** | [`lua/fox/langs/init.lua`](../lua/fox/langs/init.lua) | Add to `M.langs` |
+| **Install bundle (Mason pkgs + Treesitter parsers)** | [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs/) | `M.bundle_name`, `M.requires`, `M.treesitter` |
+| **Debug Adapter (optional)** | [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs/) (primary) · [`lua/plugins/editor/dap.lua`](../lua/plugins/editor/dap.lua) (add key to picker order) · [`lua/fox/launch/runtimes.lua`](../lua/fox/launch/runtimes.lua) (add key to `M.order`, if adding a launch runtime) | See [debug-adapters.md](debug-adapters.md) |
 
-`lua/plugins/lsp/lsp.lua`, `lua/plugins/lsp/formatting.lua`, `lua/plugins/lsp/treesitter.lua`, and `lua/krs/core/installer.lua` need **no edits** for a new language — they only aggregate what the language module declares (`installer.lua`'s `M.language_bundles` is built from it automatically).
+`lua/plugins/lsp/lsp.lua`, `lua/plugins/lsp/formatting.lua`, `lua/plugins/lsp/treesitter.lua`, and `lua/fox/core/installer.lua` need **no edits** for a new language — they only aggregate what the language module declares (`installer.lua`'s `M.language_bundles` is built from it automatically).
 
 ---
 

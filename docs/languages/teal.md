@@ -1,6 +1,6 @@
 # 🩵 Lua Extras & Teal Toolchain Guide
 
-This document provides setup instructions and details for Lua static analysis extras (`luacheck`, `selene`) and Teal language support (`teal-language-server`) in **KrsVim**.
+This document provides setup instructions and details for Lua static analysis extras (`luacheck`, `selene`) and Teal language support (`teal-language-server`) in **FoxVim**.
 
 ---
 

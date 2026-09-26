@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](index.md)
 
-The small modules — each one file in `lua/plugins/krs/`, each fixing one specific annoyance.
+The small modules — each one file in `lua/plugins/fox/`, each fixing one specific annoyance.
 
 ---
 
@@ -27,7 +27,7 @@ And it keeps `_G.OpenedFolders`, the record of folders you've opened as projects
 
 ## 💡 Help Menu & Cheatsheet Manager (`help_modal.lua`)
 
-Press `<F1>` (or run `:KrsHelp`, `:Cheatsheet`, `:HelpMenu`, or pick from the Command Palette `<C-S-p>`) to open the **Help Menu & Cheatsheet Manager**.
+Press `<F1>` (or run `:FoxHelp`, `:Cheatsheet`, `:HelpMenu`, or pick from the Command Palette `<C-S-p>`) to open the **Help Menu & Cheatsheet Manager**.
 
 A dual-pane modal mirroring the Wiki UI:
 - **Left Panel (Topic Index)**: Categorized domains:

@@ -2,11 +2,11 @@
 -- tests/spec/notes_spec.lua -- Notes manager & dashboard integration tests
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local notes = require("plugins.krs.tools.notes")
+local notes = require("plugins.fox.tools.notes")
 
-describe("plugins.krs.tools.notes", function()
+describe("plugins.fox.tools.notes", function()
 	local original_config_file
 	local test_config_file
 	local test_dir
@@ -32,7 +32,7 @@ describe("plugins.krs.tools.notes", function()
 	end)
 
 	it("rejects non-existent directory when setting notes folder", function()
-		local fake_dir = "/non/existent/path/for/krs/notes/12345"
+		local fake_dir = "/non/existent/path/for/fox/notes/12345"
 		local ok, err = notes.set_notes_dir(fake_dir)
 		expect(ok).toBeFalsy()
 		expect(err:match("does not exist") ~= nil).toBeTruthy()
@@ -53,7 +53,7 @@ describe("plugins.krs.tools.notes", function()
 		local loaded = notes.get_notes_dir()
 		expect(loaded).toBeDefined()
 		-- Normalize path comparisons
-		local path_util = require("krs.core.path")
+		local path_util = require("fox.core.path")
 		expect(path_util.equals(loaded, test_dir)).toBeTruthy()
 	end)
 
@@ -83,7 +83,7 @@ describe("plugins.krs.tools.notes", function()
 	end)
 
 	it("includes Notes in command palette commands list", function()
-		local cp = require("plugins.krs.tools.command_palette")
+		local cp = require("plugins.fox.tools.command_palette")
 		local has_notes = false
 		local has_change = false
 		for _, cmd in ipairs(cp.commands) do

@@ -1,4 +1,4 @@
-# 🗂️ Workspaces & Session Manager (`plugins.krs.tools.workspaces`)
+# 🗂️ Workspaces & Session Manager (`plugins.fox.tools.workspaces`)
 
 [← Back to Wiki Index](index.md)
 

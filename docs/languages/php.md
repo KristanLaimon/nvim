@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-KrsVim provides a complete development environment for **PHP** and **Laravel** applications, including Blade template highlighting, component autocompletion, Xdebug debugging, and automated code formatting.
+FoxVim provides a complete development environment for **PHP** and **Laravel** applications, including Blade template highlighting, component autocompletion, Xdebug debugging, and automated code formatting.
 
 ---
 

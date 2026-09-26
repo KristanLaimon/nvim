@@ -5,13 +5,13 @@
 -- construction for secondary decoupled repositories.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local sec_git = require("krs.git.secondary")
-local store = require("krs.core.store")
-local path_util = require("krs.core.path")
+local sec_git = require("fox.git.secondary")
+local store = require("fox.core.store")
+local path_util = require("fox.core.path")
 
-describe("krs.git.secondary path resolution", function()
+describe("fox.git.secondary path resolution", function()
 	it("expands $HOME and ~ to absolute user home directory", function()
 		local home = (vim.env.HOME or vim.env.USERPROFILE or "~"):gsub("\\", "/")
 		local res1 = sec_git.resolve_path("$HOME/.secrets-repo.git", "/tmp/project")
@@ -27,15 +27,15 @@ describe("krs.git.secondary path resolution", function()
 		expect(res).toBe(path_util.normalize(cwd))
 	end)
 
-	it("normalizes relative git_dir to dotfile format (e.g. git-krs -> ./.git-krs)", function()
-		expect(sec_git.normalize_git_dir("git-krs")).toBe("./.git-krs")
-		expect(sec_git.normalize_git_dir("./git-krs")).toBe("./.git-krs")
-		expect(sec_git.normalize_git_dir("./.git-krs")).toBe("./.git-krs")
+	it("normalizes relative git_dir to dotfile format (e.g. git-fox -> ./.git-fox)", function()
+		expect(sec_git.normalize_git_dir("git-fox")).toBe("./.git-fox")
+		expect(sec_git.normalize_git_dir("./git-fox")).toBe("./.git-fox")
+		expect(sec_git.normalize_git_dir("./.git-fox")).toBe("./.git-fox")
 		expect(sec_git.normalize_git_dir("$HOME/.secrets-repo.git")).toBe("$HOME/.secrets-repo.git")
 	end)
 end)
 
-describe("krs.git.secondary alias generation", function()
+describe("fox.git.secondary alias generation", function()
 	it("generates PowerShell function syntax for ps1", function()
 		local repo = {
 			alias = "secgit",
@@ -65,12 +65,12 @@ describe("krs.git.secondary alias generation", function()
 	end)
 end)
 
-describe("krs.git.secondary config management", function()
+describe("fox.git.secondary config management", function()
 	local test_dir
 
 	beforeEach(function()
 		test_dir = path_util.normalize(vim.fn.tempname())
-		vim.fn.mkdir(test_dir .. "/.krsnvim", "p")
+		vim.fn.mkdir(test_dir .. "/.foxnvim", "p")
 	end)
 
 	afterEach(function()
@@ -102,9 +102,9 @@ describe("krs.git.secondary config management", function()
 		expect(repo.alias).toBe("secgit")
 		expect(repo.show_untracked).toBeFalsy()
 
-		-- Verify helper scripts were created in .krsnvim
-		local sh_exists = vim.fn.filereadable(test_dir .. "/.krsnvim/secondary_aliases.sh") == 1
-		local ps1_exists = vim.fn.filereadable(test_dir .. "/.krsnvim/secondary_aliases.ps1") == 1
+		-- Verify helper scripts were created in .foxnvim
+		local sh_exists = vim.fn.filereadable(test_dir .. "/.foxnvim/secondary_aliases.sh") == 1
+		local ps1_exists = vim.fn.filereadable(test_dir .. "/.foxnvim/secondary_aliases.ps1") == 1
 		expect(sh_exists).toBeTruthy()
 		expect(ps1_exists).toBeTruthy()
 

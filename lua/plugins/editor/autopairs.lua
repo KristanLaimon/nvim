@@ -14,7 +14,7 @@ return {
 	event = "InsertEnter",
 	config = function()
 		local is_native_termux = false
-		local env_ok, env_mod = pcall(require, "krs.core.environment")
+		local env_ok, env_mod = pcall(require, "fox.core.environment")
 		if env_ok then
 			local env = env_mod.detect()
 			-- proot Ubuntu is a full Linux container — TS-aware pairs work fine there.

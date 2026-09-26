@@ -5,9 +5,9 @@
 -- emitted line carries a kind, because the highlighter indexes them in parallel.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local diff = require("krs.git.diff")
+local diff = require("fox.git.diff")
 
 local SAMPLE = {
 	"diff --git a/init.lua b/init.lua",

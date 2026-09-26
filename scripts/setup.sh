@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# setup.sh - System Dependency & Toolchain Installer for KRS Neovim
+# setup.sh - System Dependency & Toolchain Installer for FOX Neovim
 # Supports: Termux (Android), Debian/Ubuntu/WSL, Fedora, Arch, macOS, Alpine
 # ==============================================================================
 
@@ -15,7 +15,7 @@ CYAN='\033[1;36m'
 NC='\033[0m' # No Color
 
 echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} 🦊 KRS Neovim System Dependency & Toolchain Installer ${NC}"
+echo -e "${CYAN} 🦊 FOX Neovim System Dependency & Toolchain Installer ${NC}"
 echo -e "${CYAN}============================================================${NC}"
 
 # Detect OS & Package Manager
@@ -372,5 +372,5 @@ echo -e "${GREEN} ✅ System Dependency Setup Complete! ${NC}"
 echo -e "${GREEN}============================================================${NC}"
 echo -e "You can now launch Neovim."
 echo -e "Inside Neovim, if you wish to install additional LSPs or formatters, run:"
-echo -e "  ${CYAN}:KrsInstallAll${NC}"
+echo -e "  ${CYAN}:FoxInstallAll${NC}"
 echo ""

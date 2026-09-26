@@ -11,7 +11,7 @@
 --   nvim --headless -S tests/integration/run.lua dap    # name filter
 --
 -- WRITING AN INTEGRATION SPEC
---   Same shape as tests/spec (krsnvim.test describe/it/expect), but plugins may
+--   Same shape as tests/spec (foxnvim.test describe/it/expect), but plugins may
 --   be assumed loaded. Load what you need explicitly at the top of the spec:
 --     require("lazy").load({ plugins = { "nvim-dap" } })
 -- ============================================================================
@@ -35,7 +35,7 @@ for _, file in ipairs(vim.fn.glob(root .. "/tests/integration/*_spec.lua", false
 	end
 end
 
-local ok, result = pcall(require("krs.lib.krsnvim.test").run)
+local ok, result = pcall(require("fox.lib.foxnvim.test").run)
 if not ok then
 	print(tostring(result))
 end

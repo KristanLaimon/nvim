@@ -1,6 +1,6 @@
 # 📋 Snippets Manager (`:SnippetManager`)
 
-The **KrsVim Snippet Manager** lets you create, edit, override, delete, and list snippets per language in standard **VSCode JSON format**, fully integrated into Neovim's `blink.cmp` autocompletion engine — plus **full IntelliSense** (validation, field hints, hover docs) while editing snippet files themselves.
+The **FoxVim Snippet Manager** lets you create, edit, override, delete, and list snippets per language in standard **VSCode JSON format**, fully integrated into Neovim's `blink.cmp` autocompletion engine — plus **full IntelliSense** (validation, field hints, hover docs) while editing snippet files themselves.
 
 ---
 
@@ -8,10 +8,10 @@ The **KrsVim Snippet Manager** lets you create, edit, override, delete, and list
 
 | Command | Action |
 | :--- | :--- |
-| `:SnippetManager` / `:KrsSnippetManager` | Open the interactive Snippet Manager menu |
-| `:KrsSnippetEdit [lang]` | Open (or create) the snippets file for a language, e.g. `:KrsSnippetEdit lua` |
-| `:KrsSnippetAdd [lang]` | Interactively add a new snippet (prompts for name, prefix, body, description) |
-| `:KrsSnippetReload` | Force reload snippet definitions in `blink.cmp` |
+| `:SnippetManager` / `:FoxSnippetManager` | Open the interactive Snippet Manager menu |
+| `:FoxSnippetEdit [lang]` | Open (or create) the snippets file for a language, e.g. `:FoxSnippetEdit lua` |
+| `:FoxSnippetAdd [lang]` | Interactively add a new snippet (prompts for name, prefix, body, description) |
+| `:FoxSnippetReload` | Force reload snippet definitions in `blink.cmp` |
 
 Access all these from **Command Palette** (`<C-S-p>`) → category **Snippets**.
 
@@ -19,7 +19,7 @@ Access all these from **Command Palette** (`<C-S-p>`) → category **Snippets**.
 
 ## 🏁 Quickstart — Adding Your First Snippet
 
-1. Open the Snippet Manager: press `<C-S-p>` and search **Snippet Manager**, or run `:KrsSnippetManager`.
+1. Open the Snippet Manager: press `<C-S-p>` and search **Snippet Manager**, or run `:FoxSnippetManager`.
 2. Choose **"Edit Snippets for Current Filetype"** (uses whatever file you have open).
 3. The `snippets/<lang>.json` file opens with IntelliSense active.
 4. Add your snippet entry (see format below), save with `:w`.
@@ -169,4 +169,4 @@ Using the **same number** in multiple places makes them mirror — editing one u
 ---
 
 ## 🔄 Live Reload & Integration
-Custom snippets are stored in VSCode format so they are compatible with standard snippet engines and `blink.cmp`. Whenever you update a snippet file via `:KrsSnippetEdit` or `:KrsSnippetAdd`, the snippets become immediately available during completion.
+Custom snippets are stored in VSCode format so they are compatible with standard snippet engines and `blink.cmp`. Whenever you update a snippet file via `:FoxSnippetEdit` or `:FoxSnippetAdd`, the snippets become immediately available during completion.

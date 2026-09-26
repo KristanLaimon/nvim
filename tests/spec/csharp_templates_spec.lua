@@ -1,6 +1,6 @@
-local t = require("krs.lib.krsnvim.test")
-local cs = require("krs.langs.csharp")
-local cli = require("krs.lib.krsnvim.cli")
+local t = require("fox.lib.foxnvim.test")
+local cs = require("fox.langs.csharp")
+local cli = require("fox.lib.foxnvim.cli")
 local root, buf, menu, notify
 
 t.describe("C# file creation", function()
@@ -96,7 +96,7 @@ t.describe("C# file creation", function()
 			cs.new_type(buf)
 			local popup = vim.api.nvim_get_current_buf()
 			local popup_win = vim.api.nvim_get_current_win()
-			t.expect(vim.bo[popup].filetype).toBe("krsmenu")
+			t.expect(vim.bo[popup].filetype).toBe("foxmenu")
 			local lines = vim.api.nvim_buf_get_lines(popup, 0, -1, false)
 			local size = vim.api.nvim_win_get_config(popup_win)
 			t.expect(lines[1]).toContain("C# Type")
@@ -157,7 +157,7 @@ t.describe("C# file creation", function()
 		cli.menu = function(_, _, cb)
 			callback, calls = cb, calls + 1
 		end
-		local was_setup = vim.fn.exists("#KrsCsharp") == 1
+		local was_setup = vim.fn.exists("#FoxCsharp") == 1
 		cs.setup()
 		local ok, err = pcall(function()
 			vim.api.nvim_exec_autocmds("BufNewFile", { buffer = buf })
@@ -166,7 +166,7 @@ t.describe("C# file creation", function()
 			end)).toBe(true)
 			callback(nil)
 			vim.b[buf].csharp_template_offered = nil
-			t.expect(require("krs.core.new_file").create(vim.api.nvim_buf_get_name(buf))).toBe(true)
+			t.expect(require("fox.core.new_file").create(vim.api.nvim_buf_get_name(buf))).toBe(true)
 			t.expect(vim.wait(1000, function()
 				return calls == 2
 			end)).toBe(true)
@@ -177,7 +177,7 @@ t.describe("C# file creation", function()
 		if was_setup then
 			cs.setup()
 		else
-			vim.api.nvim_del_augroup_by_name("KrsCsharp")
+			vim.api.nvim_del_augroup_by_name("FoxCsharp")
 			vim.api.nvim_del_user_command("CsharpNewType")
 		end
 		assert(ok, err)
@@ -188,7 +188,7 @@ t.describe("C# file creation", function()
 		cli.menu = function(_, _, cb)
 			callback, calls = cb, calls + 1
 		end
-		local was_setup = vim.fn.exists("#KrsCsharp") == 1
+		local was_setup = vim.fn.exists("#FoxCsharp") == 1
 		cs.setup()
 		local ok, err = pcall(function()
 			local filename = vim.api.nvim_buf_get_name(buf)
@@ -212,7 +212,7 @@ t.describe("C# file creation", function()
 		if was_setup then
 			cs.setup()
 		else
-			vim.api.nvim_del_augroup_by_name("KrsCsharp")
+			vim.api.nvim_del_augroup_by_name("FoxCsharp")
 			vim.api.nvim_del_user_command("CsharpNewType")
 		end
 		assert(ok, err)
@@ -222,13 +222,13 @@ t.describe("C# file creation", function()
 		local path = root .. "/New/Deep/Item.txt"
 		local events = 0
 		local autocmd = vim.api.nvim_create_autocmd("User", {
-			pattern = "KrsFileCreated",
+			pattern = "FoxFileCreated",
 			callback = function()
 				events = events + 1
 			end,
 		})
 		vim.notify = function() end
-		local create = require("krs.core.new_file").create
+		local create = require("fox.core.new_file").create
 		local ok = create(path)
 		vim.fn.writefile({ "keep me" }, path)
 		local duplicate = create(path)
@@ -242,7 +242,7 @@ end)
 
 t.describe("project configuration search", function()
 	t.it("finds editorconfig or formatter configuration in one upward walk", function()
-		local langs = require("krs.langs")
+		local langs = require("fox.langs")
 		local dir = vim.fn.tempname()
 		vim.fn.mkdir(dir .. "/src", "p")
 		local buffer = vim.api.nvim_create_buf(false, true)

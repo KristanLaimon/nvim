@@ -2,10 +2,10 @@
 -- TESTS: Git Center Binary Blacklist & Safe Diff Preview
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local diff = require("krs.git.diff")
-local queries = require("plugins.krs.git.git_center.queries")
+local diff = require("fox.git.diff")
+local queries = require("plugins.fox.git.git_center.queries")
 
 describe("git_center binary blacklist and safe diff", function()
 	it("identifies common binary extensions via is_binary_file", function()

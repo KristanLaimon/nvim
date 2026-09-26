@@ -1,4 +1,4 @@
-# 🖥️ Multi-Terminal Manager (`plugins.krs.dev.terminal`)
+# 🖥️ Multi-Terminal Manager (`plugins.fox.dev.terminal`)
 
 [← Back to Wiki Index](index.md)
 
@@ -34,7 +34,7 @@ The **Lazy-Loading Multi-Terminal Manager** manages up to 9 independent terminal
 
 ## 💾 Global Persistence (State Directory)
 
-Terminal preferences are persisted globally in Neovim's state directory (`stdpath("state")`), preserving your environment across sessions without modifying project `.krsnvim/*.json` files:
+Terminal preferences are persisted globally in Neovim's state directory (`stdpath("state")`), preserving your environment across sessions without modifying project `.foxnvim/*.json` files:
 - Layout choice: `terminal_layout` (`dock`, `float`, or `bottom_float`)
 - Docked height: `terminal_height`
 - Bottom floating height: `terminal_bottom_float_height`

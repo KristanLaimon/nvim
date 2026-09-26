@@ -1,8 +1,8 @@
-# 🛠️ Per-Project Task Runner & Executor (`plugins.krs.dev.tasks`)
+# 🛠️ Per-Project Task Runner & Executor (`plugins.fox.dev.tasks`)
 
 [← Back to Wiki Index](index.md)
 
-The **KRS Task Runner** provides automatic project build detection, custom task chains, background task slots, and error popups for seamless development workflows.
+The **FOX Task Runner** provides automatic project build detection, custom task chains, background task slots, and error popups for seamless development workflows.
 
 ---
 

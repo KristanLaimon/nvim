@@ -1,0 +1,29 @@
+-- 02_conditionals.foxnvim: Conditionals and logical operators
+local score = 85
+local status = "active"
+
+if score >= 90 then
+    print("Grade: A")
+elseif score >= 80 and status == "active" then
+    print("Grade: B (Active)")
+elseif score >= 70 or not (status == "inactive") then
+    print("Grade: C (Not Inactive)")
+else
+    print("Grade: F")
+end
+
+local target_file = "tests/foxnvimscript/test_cond.tmp"
+
+if not fs.exists(target_file) then
+    print("File does not exist initially.")
+    fs.write(target_file, "temp content")
+end
+
+if fs.exists(target_file) then
+    print("File created and verified.")
+    fs.remove(target_file)
+end
+
+if not fs.exists(target_file) then
+    print("File successfully cleaned up.")
+end

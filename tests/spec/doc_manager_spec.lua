@@ -5,14 +5,14 @@
 -- network. The mock inspects the requested URL and returns canned JSON so the
 -- parsing/file-writing logic under test runs exactly as it would for real.
 --
--- NOTE: `krsnvim.test` does not propagate `beforeEach`/`afterEach` into nested
+-- NOTE: `foxnvim.test` does not propagate `beforeEach`/`afterEach` into nested
 -- `describe` blocks (each `describe` is its own independent suite), so every
 -- group below gets its own hooks rather than sharing one from a parent block.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local dm = require("plugins.krs.tools.doc_manager")
+local dm = require("plugins.fox.tools.doc_manager")
 
 --- Fake devdocs.io `db.json` bundle: two pages, like a multi-page doc set.
 local FAKE_DB_JSON = [[{"index":"<h1>Overview</h1>","tutorial/intro#1":"<p>Intro</p>"}]]
@@ -70,7 +70,7 @@ local function use_temp_docs_dir()
 	end
 end
 
-describe("plugins.krs.tools.doc_manager.ensure_dir/list_languages/list_versions", function()
+describe("plugins.fox.tools.doc_manager.ensure_dir/list_languages/list_versions", function()
 	local cleanup
 
 	beforeEach(function()
@@ -111,7 +111,7 @@ describe("plugins.krs.tools.doc_manager.ensure_dir/list_languages/list_versions"
 	end)
 end)
 
-describe("plugins.krs.tools.doc_manager.add_doc", function()
+describe("plugins.fox.tools.doc_manager.add_doc", function()
 	local cleanup
 
 	beforeEach(function()
@@ -135,7 +135,7 @@ describe("plugins.krs.tools.doc_manager.add_doc", function()
 	end)
 end)
 
-describe("plugins.krs.tools.doc_manager.download", function()
+describe("plugins.fox.tools.doc_manager.download", function()
 	local cleanup, system_spy
 
 	beforeEach(function()
@@ -210,7 +210,7 @@ describe("plugins.krs.tools.doc_manager.download", function()
 	end)
 end)
 
-describe("plugins.krs.tools.doc_manager.fetch_available", function()
+describe("plugins.fox.tools.doc_manager.fetch_available", function()
 	local system_spy
 
 	afterEach(function()
@@ -234,7 +234,7 @@ describe("plugins.krs.tools.doc_manager.fetch_available", function()
 	end)
 end)
 
-describe("plugins.krs.tools.doc_manager.browse_and_download", function()
+describe("plugins.fox.tools.doc_manager.browse_and_download", function()
 	local cleanup, system_spy, select_spy
 
 	beforeEach(function()

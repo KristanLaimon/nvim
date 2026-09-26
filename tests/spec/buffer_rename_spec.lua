@@ -2,11 +2,11 @@
 -- tests/spec/buffer_rename_spec.lua -- Buffer & bufferline tab rename tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
-local buffer_rename = require("krs.core.buffer_rename")
-local path = require("krs.core.path")
+local buffer_rename = require("fox.core.buffer_rename")
+local path = require("fox.core.path")
 
 describe("buffer_rename.update_buffers_path", function()
 	it("updates the name of an open buffer when its file is renamed", function()

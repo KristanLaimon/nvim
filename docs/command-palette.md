@@ -8,7 +8,7 @@ This guide explains how the VSCode-style Command Palette works and how to modify
 
 ## 📁 Key File
 
-- **Command Palette Plugin:** [`lua/plugins/krs/command_palette.lua`](../lua/plugins/krs/command_palette.lua)
+- **Command Palette Plugin:** [`lua/plugins/fox/command_palette.lua`](../lua/plugins/fox/command_palette.lua)
 
 ---
 
@@ -23,7 +23,7 @@ This guide explains how the VSCode-style Command Palette works and how to modify
 
 The Command Palette uses [Telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) as its picker engine with fuzzy string matching.
 
-Commands are stored in the `M.commands` array inside [`lua/plugins/krs/command_palette.lua`](../lua/plugins/krs/command_palette.lua).
+Commands are stored in the `M.commands` array inside [`lua/plugins/fox/command_palette.lua`](../lua/plugins/fox/command_palette.lua).
 
 Each command entry is a Lua table supporting three distinct action execution types:
 
@@ -37,7 +37,7 @@ Each command entry is a Lua table supporting three distinct action execution typ
 
 ### Method 1: Editing `M.commands` directly
 
-Open [`lua/plugins/krs/command_palette.lua`](../lua/plugins/krs/command_palette.lua) and append your new entry to `M.commands`:
+Open [`lua/plugins/fox/command_palette.lua`](../lua/plugins/fox/command_palette.lua) and append your new entry to `M.commands`:
 
 ```lua
 M.commands = {
@@ -53,7 +53,7 @@ M.commands = {
     { 
         name = "🧹 Clean Unused Buffers", 
         fn = function()
-            require("plugins.krs.editor.buffer_cleaner").clean_buffers()
+            require("plugins.fox.editor.buffer_cleaner").clean_buffers()
         end, 
         category = "Buffer" 
     },
@@ -65,7 +65,7 @@ M.commands = {
 You can register commands dynamically from any other Lua plugin or configuration file without modifying `command_palette.lua`:
 
 ```lua
-local cp = require("plugins.krs.tools.command_palette")
+local cp = require("plugins.fox.tools.command_palette")
 
 cp.add_command({
     name = "🚀 Run Custom Build Script",
@@ -115,7 +115,7 @@ end, { noremap = true, silent = true, desc = "Open Command Palette" })
 
 ## 📜 MRU History & Persistent Sorting
 
-Command executions are automatically saved to global persistent storage using `krs.core.store`.
+Command executions are automatically saved to global persistent storage using `fox.core.store`.
 
 - **Storage Location:** `stdpath("data") .. "/command_palette_history.json"`
 - **Behavior:**

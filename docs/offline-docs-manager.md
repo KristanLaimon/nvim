@@ -1,6 +1,6 @@
 # 📚 Offline Documentation Store (`:DocManager`)
 
-The **KrsVim Offline Documentation Store** enables full CRUD management and instant fuzzy searching of offline documentation for your programming languages, structured by language and version.
+The **FoxVim Offline Documentation Store** enables full CRUD management and instant fuzzy searching of offline documentation for your programming languages, structured by language and version.
 
 ---
 
@@ -8,10 +8,10 @@ The **KrsVim Offline Documentation Store** enables full CRUD management and inst
 
 | Command | Action |
 | :--- | :--- |
-| `:DocManager` / `:KrsDocManager` | Open the main Offline Doc Manager UI menu |
-| `:KrsDocSearch [query]` | Fuzzy search across all offline docs using Telescope live_grep |
-| `:KrsDocView [lang] [version]` | Browse offline docs for a language & version (e.g. `:KrsDocView lua 5.4`) |
-| `:KrsDocAdd [lang] [version] [topic]` | Create a new offline doc topic file with template |
+| `:DocManager` / `:FoxDocManager` | Open the main Offline Doc Manager UI menu |
+| `:FoxDocSearch [query]` | Fuzzy search across all offline docs using Telescope live_grep |
+| `:FoxDocView [lang] [version]` | Browse offline docs for a language & version (e.g. `:FoxDocView lua 5.4`) |
+| `:FoxDocAdd [lang] [version] [topic]` | Create a new offline doc topic file with template |
 
 Access all documentation commands via **Command Palette** (`<C-S-p>`) under the **Documentation** category.
 

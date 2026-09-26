@@ -1,5 +1,5 @@
 {
-  "name": "krs-schema-koreader",
+  "name": "fox-schema-koreader",
   "private": true,
   "version": "2026.07.2-38-g694c1c8b7",
   "description": "Hand-written LuaCATS stub for KOReader plugin globals. Version tracks `git describe --tags` of the KOReader checkout the stub was last checked against.",

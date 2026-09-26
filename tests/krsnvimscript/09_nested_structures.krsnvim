@@ -1,9 +1,0 @@
--- Test 09: Advanced Data Structures & Nested Tables
-local payload = { app = "krsnvim", status = "active", count = 42 }
-local encoded = json.encode(payload)
-print("Payload JSON:", encoded)
-
-local items = { "alpha", "beta", "gamma" }
-for idx, item in ipairs(items) do
-  print("Item:", item)
-end

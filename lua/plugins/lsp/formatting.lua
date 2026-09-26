@@ -13,7 +13,7 @@
 -- WHERE TO CHANGE THINGS
 --   Which tool formats which filetype, and any formatter-specific condition/args
 --   (prettier's astro handling, PHP's vendor/bin detection, ...), lives in the
---   owning language's lua/krs/langs/<lang>/init.lua (`M.formatters_by_ft` /
+--   owning language's lua/fox/langs/<lang>/init.lua (`M.formatters_by_ft` /
 --   `M.conform_formatters`), NOT here. This file only merges those into conform's
 --   `opts.formatters_by_ft` / `opts.formatters`.
 --   format_on_save     Timeout and LSP fallback.
@@ -24,7 +24,7 @@
 
 --- Merges every language module's `formatters_by_ft` into one table.
 local function build_formatters_by_ft()
-	local langs = require("krs.langs").langs
+	local langs = require("fox.langs").langs
 	local by_ft = {}
 	for _, lang in pairs(langs) do
 		if lang.formatters_by_ft then
@@ -39,7 +39,7 @@ end
 --- Merges every language module's `conform_formatters` (per-formatter condition/args
 --- overrides) into one table.
 local function build_conform_formatters()
-	local langs = require("krs.langs").langs
+	local langs = require("fox.langs").langs
 	local formatters = {}
 	for _, lang in pairs(langs) do
 		if lang.conform_formatters then
@@ -90,7 +90,7 @@ return {
 		event = "VeryLazy",
 		dependencies = { "williamboman/mason.nvim", "stevearc/conform.nvim" },
 		config = function()
-			local env_ok, env_mod = pcall(require, "krs.core.environment")
+			local env_ok, env_mod = pcall(require, "fox.core.environment")
 			local is_mobile = false
 			if env_ok then
 				local env = env_mod.detect()
@@ -100,7 +100,7 @@ return {
 			end
 
 			local ignore_list = {}
-			local langs_ok, langs_mod = pcall(require, "krs.langs")
+			local langs_ok, langs_mod = pcall(require, "fox.langs")
 			if langs_ok and langs_mod.langs then
 				for _, lang in pairs(langs_mod.langs) do
 					if lang.mason_order then

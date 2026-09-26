@@ -1,6 +1,6 @@
 ---@meta
 -- KOReader E-Book Reader Global Types Definition
--- Injected dynamically by KRS Type Injector
+-- Injected dynamically by FOX Type Injector
 --
 -- Schema version: KOReader v2026.07.2-38-g694c1c8b7 (see package.json in
 -- this folder; bump it whenever this file is regenerated against a newer

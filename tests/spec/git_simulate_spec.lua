@@ -2,20 +2,20 @@
 -- tests/spec/git_simulate_spec.lua -- Tests for dry-run merge and rebase simulation.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local simulate = require("krs.git.simulate")
-local path_util = require("krs.core.path")
+local simulate = require("fox.git.simulate")
+local path_util = require("fox.core.path")
 
-describe("krs.git.simulate", function()
+describe("fox.git.simulate", function()
 	local temp_repo
 
 	beforeEach(function()
 		temp_repo = vim.fn.tempname() .. "_sim"
 		vim.fn.mkdir(temp_repo, "p")
 		vim.system({ "git", "-C", temp_repo, "init", "-b", "main" }):wait()
-		vim.system({ "git", "-C", temp_repo, "config", "user.email", "tester@krs.dev" }):wait()
-		vim.system({ "git", "-C", temp_repo, "config", "user.name", "KRS Tester" }):wait()
+		vim.system({ "git", "-C", temp_repo, "config", "user.email", "tester@fox.dev" }):wait()
+		vim.system({ "git", "-C", temp_repo, "config", "user.name", "FOX Tester" }):wait()
 	end)
 
 	afterEach(function()

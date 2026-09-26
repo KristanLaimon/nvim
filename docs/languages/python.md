@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-KrsVim provides a complete **Python** setup with type checking, formatting, and debugging via `debugpy`.
+FoxVim provides a complete **Python** setup with type checking, formatting, and debugging via `debugpy`.
 
 ---
 

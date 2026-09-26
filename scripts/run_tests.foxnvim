@@ -1,0 +1,4 @@
+local root = vim.fn.stdpath("config")
+package.path = root .. "/lua/?.lua;" .. root .. "/lua/?/init.lua;" .. package.path
+require("fox.lib.foxnvim")
+dofile(root .. "/tests/run.lua")

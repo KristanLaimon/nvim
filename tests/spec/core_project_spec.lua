@@ -1,15 +1,15 @@
 -- ============================================================================
--- tests/spec/core_project_spec.lua -- Contract tests for krs.core.project.
+-- tests/spec/core_project_spec.lua -- Contract tests for fox.core.project.
 -- ============================================================================
--- Lookup ORDER is the contract here: `.krsnvim` wins over `.krslocal`, which wins
--- over the legacy `.nvimkrs`. A regression silently loads another directory's
+-- Lookup ORDER is the contract here: `.foxnvim` wins over `.foxlocal`, which wins
+-- over the legacy `.nvimfox`. A regression silently loads another directory's
 -- settings, so each precedence rule gets its own test.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local project = require("krs.core.project")
-local path = require("krs.core.path")
+local project = require("fox.core.project")
+local path = require("fox.core.path")
 
 local root
 
@@ -21,7 +21,7 @@ local function touch_config(dir, name)
 	return full
 end
 
-describe("krs.core.project.config_path", function()
+describe("fox.core.project.config_path", function()
 	beforeEach(function()
 		root = path.normalize(vim.fn.tempname())
 		vim.fn.mkdir(root, "p")
@@ -31,43 +31,43 @@ describe("krs.core.project.config_path", function()
 		vim.fn.delete(root, "rf")
 	end)
 
-	it("defaults to .krsnvim when nothing exists yet", function()
+	it("defaults to .foxnvim when nothing exists yet", function()
 		local file, exists = project.config_path("tasks.json", root)
 
-		expect(file).toBe(path.join(root, ".krsnvim", "tasks.json"))
+		expect(file).toBe(path.join(root, ".foxnvim", "tasks.json"))
 		expect(exists).toBeFalsy()
 	end)
 
-	it("finds an existing .krsnvim config", function()
-		local expected = touch_config(".krsnvim", "launch.json")
+	it("finds an existing .foxnvim config", function()
+		local expected = touch_config(".foxnvim", "launch.json")
 		local file, exists = project.config_path("launch.json", root)
 
 		expect(file).toBe(expected)
 		expect(exists).toBeTruthy()
 	end)
 
-	it("falls back to .krslocal when .krsnvim has no such file", function()
-		local expected = touch_config(".krslocal", "launch.json")
+	it("falls back to .foxlocal when .foxnvim has no such file", function()
+		local expected = touch_config(".foxlocal", "launch.json")
 
 		expect(project.config_path("launch.json", root)).toBe(expected)
 	end)
 
-	it("falls back to the legacy .nvimkrs directory last", function()
-		local expected = touch_config(".nvimkrs", "launch.json")
+	it("falls back to the legacy .nvimfox directory last", function()
+		local expected = touch_config(".nvimfox", "launch.json")
 
 		expect(project.config_path("launch.json", root)).toBe(expected)
 	end)
 
-	it("prefers .krsnvim when several candidates exist", function()
-		local expected = touch_config(".krsnvim", "launch.json")
-		touch_config(".krslocal", "launch.json")
-		touch_config(".nvimkrs", "launch.json")
+	it("prefers .foxnvim when several candidates exist", function()
+		local expected = touch_config(".foxnvim", "launch.json")
+		touch_config(".foxlocal", "launch.json")
+		touch_config(".nvimfox", "launch.json")
 
 		expect(project.config_path("launch.json", root)).toBe(expected)
 	end)
 end)
 
-describe("krs.core.project.config_dir", function()
+describe("fox.core.project.config_dir", function()
 	beforeEach(function()
 		root = path.normalize(vim.fn.tempname())
 		vim.fn.mkdir(root, "p")
@@ -77,15 +77,15 @@ describe("krs.core.project.config_dir", function()
 		vim.fn.delete(root, "rf")
 	end)
 
-	it("creates and returns <root>/.krsnvim", function()
+	it("creates and returns <root>/.foxnvim", function()
 		local dir = project.config_dir(root)
 
-		expect(dir).toBe(path.join(root, ".krsnvim"))
+		expect(dir).toBe(path.join(root, ".foxnvim"))
 		expect(path.is_dir(dir)).toBeTruthy()
 	end)
 end)
 
-describe("krs.core.project.root", function()
+describe("fox.core.project.root", function()
 	it("stops at the nearest marker directory", function()
 		local base = path.normalize(vim.fn.tempname())
 		local nested = path.join(base, "src", "deep")
@@ -103,7 +103,7 @@ describe("krs.core.project.root", function()
 
 	it("falls back to the cwd when no marker is found", function()
 		local orig = project.root_markers
-		project.root_markers = { "this-marker-never-exists-krs" }
+		project.root_markers = { "this-marker-never-exists-fox" }
 
 		expect(path.normalize(project.root())).toBe(path.normalize(vim.fn.getcwd()))
 

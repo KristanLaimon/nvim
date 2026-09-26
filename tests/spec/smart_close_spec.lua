@@ -2,11 +2,11 @@
 -- tests/spec/smart_close_spec.lua -- Buffer cleaner smart tab close tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local buffer_cleaner = require("plugins.krs.editor.buffer_cleaner")
+local buffer_cleaner = require("plugins.fox.editor.buffer_cleaner")
 
-describe("plugins.krs.editor.buffer_cleaner tab navigation", function()
+describe("plugins.fox.editor.buffer_cleaner tab navigation", function()
 	buffer_cleaner.setup()
 
 	local test_files = {}

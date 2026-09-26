@@ -1,12 +1,12 @@
 -- ============================================================================
--- tests/spec/installer_spec.lua -- KRS System Setup Installer spec.
+-- tests/spec/installer_spec.lua -- FOX System Setup Installer spec.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local installer = require("krs.core.installer")
+local installer = require("fox.core.installer")
 
-describe("krs.core.installer", function()
+describe("fox.core.installer", function()
 	local stdpath, data_dir
 	t.beforeEach(function()
 		stdpath = vim.fn.stdpath
@@ -59,7 +59,7 @@ describe("krs.core.installer", function()
 	end)
 
 	it("reports reset failure and preserves state when the path cannot be removed", function()
-		local state_path = data_dir .. "/krs_setup_completed.json"
+		local state_path = data_dir .. "/fox_setup_completed.json"
 		vim.fn.mkdir(state_path, "p")
 		vim.fn.writefile({ "keep" }, state_path .. "/child")
 		local notify = vim.notify
@@ -93,11 +93,11 @@ describe("krs.core.installer", function()
 	it("registers user commands on init()", function()
 		installer.init()
 		local cmds = vim.api.nvim_get_commands({})
-		expect(cmds["KrsSetup"]).toBeDefined()
-		expect(cmds["KrsInstallAll"]).toBeDefined()
-		expect(cmds["KrsSetupStatus"]).toBeDefined()
-		expect(cmds["KrsSetupReset"]).toBeDefined()
-		expect(cmds["KrsInstallDependencies"]).toBeDefined()
+		expect(cmds["FoxSetup"]).toBeDefined()
+		expect(cmds["FoxInstallAll"]).toBeDefined()
+		expect(cmds["FoxSetupStatus"]).toBeDefined()
+		expect(cmds["FoxSetupReset"]).toBeDefined()
+		expect(cmds["FoxInstallDependencies"]).toBeDefined()
 		expect(cmds["LanguageManager"]).toBeDefined()
 	end)
 

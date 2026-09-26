@@ -2,11 +2,11 @@
 -- tests/spec/gitignore_generated_spec.lua -- .gitignore insertion test suite.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local type_injector = require("plugins.krs.tools.type_injector")
+local type_injector = require("plugins.fox.tools.type_injector")
 
-describe("plugins.krs.tools.type_injector.gitignore_generated", function()
+describe("plugins.fox.tools.type_injector.gitignore_generated", function()
 	local temp_dir
 	local gitignore_path
 
@@ -22,15 +22,15 @@ describe("plugins.krs.tools.type_injector.gitignore_generated", function()
 		end
 	end)
 
-	it("creates .gitignore if missing and includes .krsnvim patterns", function()
+	it("creates .gitignore if missing and includes .foxnvim patterns", function()
 		type_injector.gitignore_generated(temp_dir)
 
 		expect(vim.fn.filereadable(gitignore_path)).toBe(1)
 		local lines = vim.fn.readfile(gitignore_path)
 		expect(lines).toEqual({
-			".krsnvim/types.d.ts",
-			".krsnvim/",
-			"*.krsnvim",
+			".foxnvim/types.d.ts",
+			".foxnvim/",
+			"*.foxnvim",
 		})
 	end)
 
@@ -41,9 +41,9 @@ describe("plugins.krs.tools.type_injector.gitignore_generated", function()
 
 		local lines = vim.fn.readfile(gitignore_path)
 		expect(lines).toEqual({
-			".krsnvim/types.d.ts",
-			".krsnvim/",
-			"*.krsnvim",
+			".foxnvim/types.d.ts",
+			".foxnvim/",
+			"*.foxnvim",
 			"",
 			"node_modules/",
 			"dist/",
@@ -51,16 +51,16 @@ describe("plugins.krs.tools.type_injector.gitignore_generated", function()
 	end)
 
 	it("does not duplicate entries already present in .gitignore", function()
-		vim.fn.writefile({ "*.krsnvim", "node_modules/" }, gitignore_path)
+		vim.fn.writefile({ "*.foxnvim", "node_modules/" }, gitignore_path)
 
 		type_injector.gitignore_generated(temp_dir)
 
 		local lines = vim.fn.readfile(gitignore_path)
 		expect(lines).toEqual({
-			".krsnvim/types.d.ts",
-			".krsnvim/",
+			".foxnvim/types.d.ts",
+			".foxnvim/",
 			"",
-			"*.krsnvim",
+			"*.foxnvim",
 			"node_modules/",
 		})
 	end)

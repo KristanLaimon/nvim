@@ -1,8 +1,8 @@
-# 🙈 Neo-tree Custom Hidden Files & Folders (`plugins.krs.editor.neotree_hidden`)
+# 🙈 Neo-tree Custom Hidden Files & Folders (`plugins.fox.editor.neotree_hidden`)
 
 [← Back to Wiki Index](index.md)
 
-KrsVim provides a native custom file and folder hiding system for **Neo-tree**. It allows you to visually exclude specific files, folders, or nested subtrees from the sidebar UI without modifying `.gitignore` or filesystem permissions.
+FoxVim provides a native custom file and folder hiding system for **Neo-tree**. It allows you to visually exclude specific files, folders, or nested subtrees from the sidebar UI without modifying `.gitignore` or filesystem permissions.
 
 ---
 
@@ -18,13 +18,13 @@ KrsVim provides a native custom file and folder hiding system for **Neo-tree**. 
 
 3. **Theme-Aware Highlight Colors**:
    - Items shown in "Show Mode" automatically adapt to your active Neovim colorscheme (linked to the theme's `Comment` group).
-   - Dynamically updates when switching themes via `:KrsThemePicker` or `ColorScheme` events.
+   - Dynamically updates when switching themes via `:FoxThemePicker` or `ColorScheme` events.
 
 4. **Command Palette Integration**:
    - Easily toggle visibility of marked items or clear all hidden marks via `<C-S-p>`.
 
-5. **Per-Project `.krsnvim/` Persistence**:
-   - Marked hidden paths (stored as portable project-relative paths) and visibility settings are saved per-project in `.krsnvim/neotree_hidden.json`.
+5. **Per-Project `.foxnvim/` Persistence**:
+   - Marked hidden paths (stored as portable project-relative paths) and visibility settings are saved per-project in `.foxnvim/neotree_hidden.json`.
    - Automatically switches settings when changing directories or project workspaces.
 
 ---
@@ -68,10 +68,10 @@ vim.api.nvim_set_hl(0, "NeoTreeCustomHidden", { link = "Comment", strikethrough 
 
 ## 🧠 Lua API Reference
 
-The `plugins.krs.editor.neotree_hidden` module exports the following functions for programmatic access:
+The `plugins.fox.editor.neotree_hidden` module exports the following functions for programmatic access:
 
 ```lua
-local neotree_hidden = require("plugins.krs.editor.neotree_hidden")
+local neotree_hidden = require("plugins.fox.editor.neotree_hidden")
 
 -- Toggles hidden state for an absolute or relative path
 neotree_hidden.toggle_path("/path/to/file_or_dir")

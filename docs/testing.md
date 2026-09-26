@@ -16,8 +16,8 @@ typo in a plugin file is invisible until then.
 | `nvim -l tests/run.lua` | Unit specs, no plugins loaded | ~1s |
 | `nvim -l tests/run.lua tasks` | Only specs whose name contains "tasks" | ~1s |
 | `nvim --headless -S tests/integration/run.lua` | Specs that need the real editor | a few seconds |
-| `:KrsTest` | The unit specs, from inside the editor | ~1s |
-| `:KrsTest git` | Filtered, from inside the editor | ~1s |
+| `:FoxTest` | The unit specs, from inside the editor | ~1s |
+| `:FoxTest git` | Filtered, from inside the editor | ~1s |
 
 All of them exit non-zero on failure, so they work unchanged in CI or a git hook.
 
@@ -31,24 +31,24 @@ tests/
 ├── syntax_check.lua     Compiles (never runs) every Lua file in the repository
 ├── spec/                Unit specs -- pure logic, no plugins loaded (one file per feature)
 ├── integration/         Specs that need plugins and a real UI (run.lua + a handful of *_spec.lua)
-└── krsnvimscript/       .krsnvim example scripts used as fixtures for lua/krsnvim/tests
+└── foxnvimscript/       .foxnvim example scripts used as fixtures for lua/foxnvim/tests
 ```
 
 `tests/spec/` has one `*_spec.lua` per feature (`tasks_spec.lua`, `git_status_spec.lua`,
 `wiki_modal_spec.lua`, and so on) — the filename always matches the module it pins down, so
-if you're editing `lua/plugins/krs/tasks.lua`, its test is `tests/spec/tasks_spec.lua`. This
+if you're editing `lua/plugins/fox/tasks.lua`, its test is `tests/spec/tasks_spec.lua`. This
 list grows constantly, so don't trust a snapshot of it here — `nvim -l tests/run.lua` prints
 every spec currently in the suite, and `ls tests/spec/` shows the files directly.
 
-The `krsnvimscript` library keeps its own suite in `lua/krsnvim/tests/`, run with
-`require("krs.lib.krsnvim.tests").run_all()`.
+The `foxnvimscript` library keeps its own suite in `lua/foxnvim/tests/`, run with
+`require("fox.lib.foxnvim.tests").run_all()`.
 
 ---
 
 ## ✍️ Writing a spec
 
-Both runners use the same framework, `krsnvim.test` — the Vitest-style
-`describe` / `it` / `expect` already shipped with the krsnvimscript library.
+Both runners use the same framework, `foxnvim.test` — the Vitest-style
+`describe` / `it` / `expect` already shipped with the foxnvimscript library.
 
 ```lua
 -- ============================================================================
@@ -57,11 +57,11 @@ Both runners use the same framework, `krsnvim.test` — the Vitest-style
 -- Why these particular cases matter.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local feature = require("krs.core.path")
+local feature = require("fox.core.path")
 
-describe("krs.core.path.normalize", function()
+describe("fox.core.path.normalize", function()
     it("converts backslashes to forward slashes", function()
         expect(feature.normalize([[C:\a\b]])).toBe("C:/a/b")
     end)
@@ -98,7 +98,7 @@ A sample of what's pinned down, to show the *kind* of thing a spec checks (see
 | Area | Spec | What it pins |
 | :--- | :--- | :--- |
 | Paths | `core_path_spec` | Drive letters, trailing slashes, case rules, relative paths |
-| Project config | `core_project_spec` | `.krsnvim` → `.krslocal` → `.nvimkrs` lookup ORDER |
+| Project config | `core_project_spec` | `.foxnvim` → `.foxlocal` → `.nvimfox` lookup ORDER |
 | Task runner | `tasks_spec` | Chain resolution, `depends_on`, discovery, legacy files |
 | Git | `git_status_spec`, `git_diff_spec` | Porcelain parsing, diff formatting and highlight tags |
 | WSL | `wsl_spec` | UNC path parsing and the `wsl.exe --cd` command |
@@ -108,7 +108,7 @@ A sample of what's pinned down, to show the *kind* of thing a spec checks (see
 
 UI-heavy flows (pickers, modals in use, terminal execution) are deliberately not
 covered: they need a driven UI, and the checks would be brittle. The logic behind
-them is factored out into `lua/krs/`, which IS covered.
+them is factored out into `lua/fox/`, which IS covered.
 
 ---
 
@@ -120,7 +120,7 @@ pays for itself the first time a later edit breaks it silently. If it's pure UI
 layout (window size, border color, title text), skip it; see the note above.
 
 1. **Find its spec.** Filename mirrors the module: editing
-   `lua/plugins/krs/tasks.lua` → open `tests/spec/tasks_spec.lua`. Nothing there
+   `lua/plugins/fox/tasks.lua` → open `tests/spec/tasks_spec.lua`. Nothing there
    yet? Copy the shape from [Writing a spec](#✍️-writing-a-spec) above and create
    `tests/spec/<module>_spec.lua` — `tests/run.lua` picks up every file in that
    folder automatically, no registration step.
@@ -128,8 +128,8 @@ layout (window size, border color, title text), skip it; see the note above.
    `it("does not share its open key with LSP go-to-definition", ...)` reads as a
    sentence on its own, before you ever look at the `expect(...)` line.
 3. **Run just that spec while you iterate**: `nvim -l tests/run.lua tasks` (or
-   `:KrsTest tasks` inside the editor) filters by filename substring, so you're
+   `:FoxTest tasks` inside the editor) filters by filename substring, so you're
    not waiting on the whole suite every save.
 4. **Run everything once before you're done**: `nvim -l tests/run.lua` — a change
-   in a shared module (`lua/krs/core/*.lua`) can break a spec for a completely
+   in a shared module (`lua/fox/core/*.lua`) can break a spec for a completely
    different feature that happens to depend on it.

@@ -2,11 +2,11 @@
 -- tests/spec/workspaces_spec.lua -- Workspaces manager tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local ws = require("plugins.krs.tools.workspaces")
+local ws = require("plugins.fox.tools.workspaces")
 
-describe("plugins.krs.tools.workspaces", function()
+describe("plugins.fox.tools.workspaces", function()
 	local temp_dir
 	local orig_storage_dir
 
@@ -46,7 +46,7 @@ describe("plugins.krs.tools.workspaces", function()
 		ws.save_workspace("Original Name")
 		ws.save_workspace("Original Name")
 
-		local store = require("krs.core.store")
+		local store = require("fox.core.store")
 		local index = store.load(temp_dir .. "/index.json", {})
 		expect(#index).toBe(1)
 		expect(index[1].name).toBe("Original Name")
@@ -64,7 +64,7 @@ describe("plugins.krs.tools.workspaces", function()
 
 		vim.ui.input = orig_input
 
-		local store = require("krs.core.store")
+		local store = require("fox.core.store")
 		local index = store.load(temp_dir .. "/index.json", {})
 		expect(#index).toBe(1)
 		expect(index[1].name).toBe("Renamed Workspace Name")
@@ -86,7 +86,7 @@ describe("plugins.krs.tools.workspaces", function()
 		vim.fn.confirm = orig_confirm
 
 		expect(called).toBe(true)
-		local store = require("krs.core.store")
+		local store = require("fox.core.store")
 		local index = store.load(temp_dir .. "/index.json", {})
 		expect(#index).toBe(0)
 	end)

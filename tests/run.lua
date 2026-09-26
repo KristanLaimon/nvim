@@ -1,23 +1,23 @@
 -- ============================================================================
--- tests/run.lua -- Headless entry point for the KRS test suite.
+-- tests/run.lua -- Headless entry point for the FOX test suite.
 -- ============================================================================
 -- HOW TO RUN
 --   nvim -l tests/run.lua              # everything
 --   nvim -l tests/run.lua core_path    # only specs whose name contains "core_path"
---   :KrsTest                           # from inside the editor (same runner)
+--   :FoxTest                           # from inside the editor (same runner)
 --
 -- HOW IT WORKS
 --   1. Every `tests/spec/*_spec.lua` file is a module returning nothing; it
---      registers suites through `krsnvim.test` (describe / it / expect).
+--      registers suites through `foxnvim.test` (describe / it / expect).
 --   2. This script loads them all, then calls `run()` once so a single summary
 --      is printed and the process exits non-zero on failure (CI friendly).
 --
 -- WRITING A SPEC -- create tests/spec/<module>_spec.lua:
---   local t = require("krs.lib.krsnvim.test")
+--   local t = require("fox.lib.foxnvim.test")
 --   local describe, it, expect = t.describe, t.it, t.expect
---   describe("krs.core.path", function()
+--   describe("fox.core.path", function()
 --     it("normalizes separators", function()
---       expect(require("krs.core.path").normalize([[C:\a]])).toBe("C:/a")
+--       expect(require("fox.core.path").normalize([[C:\a]])).toBe("C:/a")
 --     end)
 --   end)
 --
@@ -53,7 +53,7 @@ end
 function M.load_specs(root, filter)
 	local patterns = {
 		root .. "/" .. M.spec_dir .. "/*_spec.lua",
-		root .. "/tests/krsnvimscript/libraries/*_spec.lua",
+		root .. "/tests/foxnvimscript/libraries/*_spec.lua",
 	}
 	local files = {}
 	for _, pat in ipairs(patterns) do
@@ -84,8 +84,8 @@ end
 --- @param filter string|nil Optional spec name filter.
 --- @return integer exit_code 0 on success, 1 on any failure.
 function M.run(root, filter)
-	vim.g.krs_testing = true
-	_G.krs_testing = true
+	vim.g.fox_testing = true
+	_G.fox_testing = true
 	local loaded, errors = M.load_specs(root, filter)
 
 	for _, err in ipairs(errors) do
@@ -96,7 +96,7 @@ function M.run(root, filter)
 		return #errors > 0 and 1 or 0
 	end
 
-	local ok, result = pcall(require("krs.lib.krsnvim.test").run)
+	local ok, result = pcall(require("fox.lib.foxnvim.test").run)
 	if not ok or #errors > 0 then
 		if not ok then
 			print(tostring(result))

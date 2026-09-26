@@ -17,7 +17,7 @@ if ($Claude) {
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🦊 Checking dependencies for krsnvim..." -ForegroundColor Cyan
+Write-Host "🦊 Checking dependencies for foxnvim..." -ForegroundColor Cyan
 
 # 1. Check & Install Scoop if needed
 $scoopCmd = Get-Command scoop -ErrorAction SilentlyContinue
@@ -55,7 +55,7 @@ foreach ($bucket in @("main", "extras")) {
     }
 }
 
-# 3. External dependencies for krsnvim (excluding Mason / internal Neovim packages)
+# 3. External dependencies for foxnvim (excluding Mason / internal Neovim packages)
 $Dependencies = @(
     @{ Package = "neovim";     Cmd = "nvim" },
     @{ Package = "git";        Cmd = "git" },

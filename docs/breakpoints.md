@@ -1,4 +1,4 @@
-# 🔴 Breakpoints (`plugins.krs.dev.dap_breakpoints`)
+# 🔴 Breakpoints (`plugins.fox.dev.dap_breakpoints`)
 
 [← Back to Wiki Index](index.md)
 
@@ -42,7 +42,7 @@ Every one of these saves to disk immediately.
 
 ## 🚫 How "disabled" works
 
-nvim-dap has no disabled state — a breakpoint exists or it doesn't. So a disabled breakpoint is **removed from nvim-dap** (the adapter never binds it) and kept here as our own sign, in our own sign group (`krs_dap_disabled`), holding the options it was carrying (`condition`, `hit_condition`, `log_message`).
+nvim-dap has no disabled state — a breakpoint exists or it doesn't. So a disabled breakpoint is **removed from nvim-dap** (the adapter never binds it) and kept here as our own sign, in our own sign group (`fox_dap_disabled`), holding the options it was carrying (`condition`, `hit_condition`, `log_message`).
 
 Signs, not raw line numbers: a disabled breakpoint then drifts with edits exactly like a live one.
 
@@ -55,7 +55,7 @@ Two details that make it correct:
 
 ## 💾 Persistence
 
-Saved to `.krsnvim/breakpoints.json` (or `.krslocal/breakpoints.json` when that exists), keyed by path relative to the project root:
+Saved to `.foxnvim/breakpoints.json` (or `.foxlocal/breakpoints.json` when that exists), keyed by path relative to the project root:
 
 ```json
 {
@@ -77,7 +77,7 @@ Saved to `.krsnvim/breakpoints.json` (or `.krslocal/breakpoints.json` when that 
 
 **It restores into one concrete buffer only.** The earlier version looked each saved path up with `bufnr(path, true)`, which on Windows creates a *second*, forward-slash buffer that isn't the one on screen — so the signs landed nowhere — and re-added the same breakpoints on every `BufReadPost`, stacking duplicates. Path comparison is case-insensitive and slash-normalised for the same reason.
 
-> A project with no breakpoints never grows a `.krsnvim/` directory. An existing file *is* rewritten when empty, so "I deleted them all" persists.
+> A project with no breakpoints never grows a `.foxnvim/` directory. An existing file *is* rewritten when empty, so "I deleted them all" persists.
 
 ---
 

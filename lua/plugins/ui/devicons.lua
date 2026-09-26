@@ -9,11 +9,11 @@
 -- bufferline, neo-tree, telescope, etc.) transparently resolve to mini.icons,
 -- so none of those plugin configs need to change.
 --
--- The `.krsnvim` and `.proto` icons are registered as both extension and
+-- The `.foxnvim` and `.proto` icons are registered as both extension and
 -- filetype, same as before, because each consumer looks them up differently.
 --
 -- mini.icons LINKS its 9 `MiniIcons*` groups to built-in highlight groups by
--- default, on purpose, to "blend with the colorscheme" -- with nagatoro-krs
+-- default, on purpose, to "blend with the colorscheme" -- with nagatoro-fox
 -- that means every icon inherits the same accent colour instead of keeping
 -- its own hue. Fixed hex below overrides that; reapplied on every
 -- `ColorScheme` event because a colorscheme change re-links them.
@@ -48,12 +48,12 @@ return {
 		opts = {
 			style = "glyph",
 			extension = {
-				krsnvim = { glyph = "🦊", hl = "MiniIconsOrange" },
+				foxnvim = { glyph = "🦊", hl = "MiniIconsOrange" },
 				proto = { glyph = "", hl = "MiniIconsAzure" },
 				lua = { hl = "MiniIconsBlue" },
 			},
 			filetype = {
-				krsnvim = { glyph = "🦊", hl = "MiniIconsOrange" },
+				foxnvim = { glyph = "🦊", hl = "MiniIconsOrange" },
 				proto = { glyph = "", hl = "MiniIconsAzure" },
 				lua = { hl = "MiniIconsBlue" },
 			},
@@ -63,7 +63,7 @@ return {
 			require("mini.icons").mock_nvim_web_devicons()
 			apply_mini_icons_palette()
 			vim.api.nvim_create_autocmd("ColorScheme", {
-				group = vim.api.nvim_create_augroup("krs_mini_icons_palette", { clear = true }),
+				group = vim.api.nvim_create_augroup("fox_mini_icons_palette", { clear = true }),
 				callback = apply_mini_icons_palette,
 			})
 		end,

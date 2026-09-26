@@ -2,12 +2,12 @@
 -- tests/spec/git_diff_export_zip_spec.lua -- Tests for exporting & importing git diff zips
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local diff_mode = require("plugins.krs.git.diff_mode")
-local path_util = require("krs.core.path")
+local diff_mode = require("plugins.fox.git.diff_mode")
+local path_util = require("fox.core.path")
 
-describe("plugins.krs.git.diff_mode.export_zip", function()
+describe("plugins.fox.git.diff_mode.export_zip", function()
 	local temp_repo
 	local zip_dest
 	local target_import_repo
@@ -108,15 +108,15 @@ describe("plugins.krs.git.diff_mode.export_zip", function()
 		local manifest, err = diff_mode.read_zip_manifest(out)
 		expect(err).toBeNil()
 		expect(manifest).toBeDefined()
-		expect(manifest.generator).toBe("krs_git_diff_mode")
+		expect(manifest.generator).toBe("fox_git_diff_mode")
 		expect(#manifest.files).toBe(2)
 		expect(manifest.files[1]).toBe(f_added)
 		expect(manifest.files[2]).toBe(f_mod)
 	end)
 
-	it("rejects zip archives that lack .krs_diff_manifest.json", function()
-		-- Create a regular non-KRS zip file
-		local non_krs_zip = vim.fn.tempname() .. "_random.zip"
+	it("rejects zip archives that lack .fox_diff_manifest.json", function()
+		-- Create a regular non-FOX zip file
+		local non_fox_zip = vim.fn.tempname() .. "_random.zip"
 		local dummy_dir = vim.fn.tempname() .. "_dummy"
 		vim.fn.mkdir(dummy_dir, "p")
 		local df = path_util.join(dummy_dir, "test.txt")
@@ -126,20 +126,20 @@ describe("plugins.krs.git.diff_mode.export_zip", function()
 			dh:close()
 		end
 
-		diff_mode.zip_directory(dummy_dir, non_krs_zip)
+		diff_mode.zip_directory(dummy_dir, non_fox_zip)
 		pcall(vim.fn.delete, dummy_dir, "rf")
 
-		local manifest, err = diff_mode.read_zip_manifest(non_krs_zip)
+		local manifest, err = diff_mode.read_zip_manifest(non_fox_zip)
 		expect(manifest).toBeNil()
 		expect(err:match("Incompatible zip archive") ~= nil).toBeTruthy()
-		pcall(vim.fn.delete, non_krs_zip)
+		pcall(vim.fn.delete, non_fox_zip)
 	end)
 
 	it("rejects zip archives with mismatched generator signature", function()
 		local fake_zip = vim.fn.tempname() .. "_fake.zip"
 		local dummy_dir = vim.fn.tempname() .. "_dummy2"
 		vim.fn.mkdir(dummy_dir, "p")
-		local mf = path_util.join(dummy_dir, ".krs_diff_manifest.json")
+		local mf = path_util.join(dummy_dir, ".fox_diff_manifest.json")
 		local mh = io.open(mf, "w")
 		if mh then
 			mh:write(vim.json.encode({ generator = "other_tool", files = {} }))
@@ -182,8 +182,8 @@ describe("plugins.krs.git.diff_mode.export_zip", function()
 		local content = io.open(imported_file, "r"):read("*a")
 		expect(content:match("/api/v1") ~= nil).toBeTruthy()
 
-		-- 4. Verify .krs_diff_manifest.json was NOT extracted to target_import_repo
-		local manifest_in_target = path_util.join(target_import_repo, ".krs_diff_manifest.json")
+		-- 4. Verify .fox_diff_manifest.json was NOT extracted to target_import_repo
+		local manifest_in_target = path_util.join(target_import_repo, ".fox_diff_manifest.json")
 		expect(vim.fn.filereadable(manifest_in_target)).toBe(0)
 	end)
 
@@ -200,7 +200,7 @@ describe("plugins.krs.git.diff_mode.export_zip", function()
 		local staging = vim.fn.tempname() .. "_staging"
 		vim.fn.mkdir(staging, "p")
 		local inc_file = path_util.join(staging, f_name)
-		local base_file = path_util.join(staging, ".krs_diff_base", f_name)
+		local base_file = path_util.join(staging, ".fox_diff_base", f_name)
 		vim.fn.mkdir(vim.fs.dirname(inc_file), "p")
 		vim.fn.mkdir(vim.fs.dirname(base_file), "p")
 
@@ -216,11 +216,11 @@ describe("plugins.krs.git.diff_mode.export_zip", function()
 		end
 
 		local mf = {
-			generator = "krs_git_diff_mode",
+			generator = "fox_git_diff_mode",
 			version = "2.0",
 			files = { f_name },
 		}
-		local h_mf = io.open(path_util.join(staging, ".krs_diff_manifest.json"), "w")
+		local h_mf = io.open(path_util.join(staging, ".fox_diff_manifest.json"), "w")
 		if h_mf then
 			h_mf:write(vim.json.encode(mf))
 			h_mf:close()
@@ -264,7 +264,7 @@ describe("plugins.krs.git.diff_mode.export_zip", function()
 		local staging = vim.fn.tempname() .. "_staging2"
 		vim.fn.mkdir(staging, "p")
 		local inc_file = path_util.join(staging, f_name)
-		local base_file = path_util.join(staging, ".krs_diff_base", f_name)
+		local base_file = path_util.join(staging, ".fox_diff_base", f_name)
 		vim.fn.mkdir(vim.fs.dirname(inc_file), "p")
 		vim.fn.mkdir(vim.fs.dirname(base_file), "p")
 
@@ -280,11 +280,11 @@ describe("plugins.krs.git.diff_mode.export_zip", function()
 		end
 
 		local mf = {
-			generator = "krs_git_diff_mode",
+			generator = "fox_git_diff_mode",
 			version = "2.0",
 			files = { f_name },
 		}
-		local h_mf = io.open(path_util.join(staging, ".krs_diff_manifest.json"), "w")
+		local h_mf = io.open(path_util.join(staging, ".fox_diff_manifest.json"), "w")
 		if h_mf then
 			h_mf:write(vim.json.encode(mf))
 			h_mf:close()
@@ -320,16 +320,16 @@ describe("plugins.krs.git.diff_mode.export_zip", function()
 		expect(merged_data:match("3%.0%.0%-local") ~= nil).toBeTruthy()
 		expect(merged_data:match("2%.0%.0%-incoming") ~= nil).toBeTruthy()
 
-		-- Verify .krs_diff_base is not in target_import_repo
-		local base_in_target = path_util.join(target_import_repo, ".krs_diff_base")
+		-- Verify .fox_diff_base is not in target_import_repo
+		local base_in_target = path_util.join(target_import_repo, ".fox_diff_base")
 		expect(vim.fn.isdirectory(base_in_target)).toBe(0)
 	end)
 
 	it("end-to-end: exports modified file from git repo with base and imports with merge", function()
 		-- Initialize git repo in temp_repo
 		vim.system({ "git", "-C", temp_repo, "init" }):wait()
-		vim.system({ "git", "-C", temp_repo, "config", "user.email", "test@krs.dev" }):wait()
-		vim.system({ "git", "-C", temp_repo, "config", "user.name", "KRS Tester" }):wait()
+		vim.system({ "git", "-C", temp_repo, "config", "user.email", "test@fox.dev" }):wait()
+		vim.system({ "git", "-C", temp_repo, "config", "user.name", "FOX Tester" }):wait()
 
 		local f_name = "hello.txt"
 		local full_file = path_util.join(temp_repo, f_name)
@@ -382,7 +382,7 @@ describe("plugins.krs.git.diff_mode.export_zip", function()
 		expect(vim.fn.exists(":GitDiffExportZip")).toBe(2)
 		expect(vim.fn.exists(":GitDiffImportZip")).toBe(2)
 
-		local cp = require("plugins.krs.tools.command_palette")
+		local cp = require("plugins.fox.tools.command_palette")
 		local has_export = false
 		local has_import = false
 		for _, cmd in ipairs(cp.commands) do

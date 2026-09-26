@@ -1,0 +1,1616 @@
+-- ============================================================================
+-- FOX PLUGIN: Git Center -- Modals (Diff, Log, Branch)
+-- ============================================================================
+
+local lazy_req = require("fox.core.lazy_require")
+local ui = lazy_req("fox.core.ui")
+local diff = lazy_req("fox.git.diff")
+local config = require("plugins.fox.git.git_center.config")
+local queries = require("plugins.fox.git.git_center.queries")
+
+local M = {}
+
+local notify = config.notify
+local get_active_target = config.get_active_target
+local git_lines = queries.git_lines
+local git_run = queries.git_run
+
+local function is_toggle_key(key)
+	if not key then
+		return false
+	end
+	for _, tk in ipairs(config.settings.keys.toggle) do
+		if tk:lower() == key:lower() then
+			return true
+		end
+	end
+	return false
+end
+
+--- Opens the Branch Management modal UI.
+--- @param target_cwd string|nil Repository path.
+function M.open_branch_modal(target_cwd)
+	local prev_win = vim.api.nvim_get_current_win()
+	local active_cwd = target_cwd or (get_active_target() and get_active_target().full_path) or vim.fn.getcwd()
+	local info = queries.get_git_info(active_cwd)
+	if not info then
+		notify("Not inside a valid Git repository", vim.log.levels.WARN)
+		return
+	end
+
+	local raw_branches = git_lines({ "branch", "-a", "--sort=-committerdate" }, active_cwd)
+	local branches = {}
+	local current_branch = (info.branch and info.branch ~= "") and info.branch
+		or (queries.git_lines({ "branch", "--show-current" }, active_cwd)[1] or "HEAD")
+
+	for _, line in ipairs(raw_branches) do
+		local clean = line:gsub("^%*%s*", ""):gsub("^%s*", ""):gsub("%s*$", "")
+		if clean ~= "" and not clean:match("HEAD %->") then
+			local is_current = line:sub(1, 1) == "*" or clean == current_branch
+			local is_remote = clean:match("^remotes/") or clean:match("^origin/")
+			local display_name = clean:gsub("^remotes/origin/", ""):gsub("^remotes/", ""):gsub("^origin/", "")
+
+			local exists = false
+			for _, b in ipairs(branches) do
+				if b.name == display_name and b.is_remote == is_remote then
+					exists = true
+					break
+				end
+			end
+			if not exists then
+				table.insert(branches, {
+					raw = clean,
+					name = display_name,
+					is_current = is_current,
+					is_remote = is_remote,
+				})
+			end
+		end
+	end
+
+	if #branches == 0 then
+		table.insert(branches, { raw = current_branch, name = current_branch, is_current = true, is_remote = false })
+	end
+
+	local lines = {}
+	local current_idx = 1
+	for idx, b in ipairs(branches) do
+		if b.is_current then
+			current_idx = idx
+			table.insert(lines, string.format(" 🌿 %-30s [CURRENT HEAD]", b.name))
+		elseif b.is_remote then
+			table.insert(lines, string.format(" 🌐 %-30s (remote)", b.name))
+		else
+			table.insert(lines, string.format(" 🌲 %-30s", b.name))
+		end
+	end
+
+	local buf, win = ui.float({
+		width = 0.68,
+		height = math.min(18, math.max(6, #lines + 3)),
+		title = " 🌿 Branch Manager | [Enter]: Switch | [c/n]: Create | [t/T]: Dry-Run | [d/D]: Del | [r]: Rename ",
+		lines = lines,
+		modifiable = false,
+		zindex = 100,
+	})
+
+	config.branch_win = win
+	config.branch_buf = buf
+
+	vim.api.nvim_set_option_value("cursorline", true, { win = win })
+	pcall(vim.api.nvim_win_set_cursor, win, { current_idx, 0 })
+
+	local opts = { buffer = buf, noremap = true, silent = true, nowait = true }
+
+	local is_closed = false
+	local function close_modal(keep_screen)
+		if is_closed then
+			return
+		end
+		is_closed = true
+		if keep_screen == true then
+			config.cached_view = "branch"
+			config.cached_view_data.cwd = active_cwd
+		elseif keep_screen == false then
+			config.cached_view = "panel"
+			config.cached_view_data = {}
+		end
+		config.branch_win, config.branch_buf = nil, nil
+		ui.close(win)
+		if keep_screen then
+			local panel_mod = package.loaded["plugins.fox.git.git_center.panel"]
+			if panel_mod and panel_mod.close_git_center then
+				panel_mod.close_git_center({ keep_cached_view = true })
+			end
+			if prev_win and vim.api.nvim_win_is_valid(prev_win) then
+				pcall(vim.api.nvim_set_current_win, prev_win)
+			end
+		else
+			if
+				prev_win
+				and vim.api.nvim_win_is_valid(prev_win)
+				and not (config.main_win and vim.api.nvim_win_is_valid(config.main_win))
+			then
+				pcall(vim.api.nvim_set_current_win, prev_win)
+			elseif config.main_win and vim.api.nvim_win_is_valid(config.main_win) then
+				pcall(vim.api.nvim_set_current_win, config.main_win)
+			end
+		end
+	end
+
+	local function checkout_selected()
+		local cursor_row = vim.api.nvim_win_get_cursor(win)[1]
+		local target_b = branches[cursor_row]
+		if not target_b then
+			return
+		end
+
+		close_modal()
+
+		if target_b.is_current then
+			notify("Already on branch: " .. target_b.name, vim.log.levels.WARN)
+			return
+		end
+
+		notify("🌿 Checking out branch: " .. target_b.name .. "...")
+		local cmd_args = { "checkout", target_b.name }
+		if target_b.is_remote then
+			cmd_args = { "checkout", "-b", target_b.name, target_b.raw }
+		end
+
+		git_run(cmd_args, function(ok, output)
+			local gc = package.loaded["plugins.fox.git.git_center"]
+			if ok then
+				notify("✅ Checked out branch: " .. target_b.name)
+			else
+				git_run({ "switch", target_b.name }, function(ok2, output2)
+					if ok2 then
+						notify("✅ Switched to branch: " .. target_b.name)
+					else
+						notify("❌ Checkout failed:\n" .. output, vim.log.levels.ERROR)
+					end
+					if gc and gc.is_open and gc.is_open() and gc.refresh then
+						gc.refresh()
+					end
+				end, active_cwd)
+				return
+			end
+			if gc and gc.is_open and gc.is_open() and gc.refresh then
+				gc.refresh()
+			end
+		end, active_cwd)
+	end
+
+	local function create_branch()
+		close_modal()
+		require("plugins.fox.ui.input_modal").open({
+			label = "Create & Checkout New Branch",
+			default_value = "",
+			relative = "editor",
+			callback = function(ok, new_name)
+				if ok and new_name and new_name ~= "" then
+					new_name = new_name:gsub("%s+", "-"):gsub("[^%w%-_/.]", "")
+					git_run({ "checkout", "-b", new_name }, function(ok2, output)
+						local gc = package.loaded["plugins.fox.git.git_center"]
+						if ok2 then
+							notify("🌿 Created and switched to branch: " .. new_name)
+						else
+							notify("❌ Failed to create branch:\n" .. output, vim.log.levels.ERROR)
+						end
+						if gc and gc.is_open and gc.is_open() and gc.refresh then
+							gc.refresh()
+						end
+					end, active_cwd)
+				end
+			end,
+		})
+	end
+
+	local function delete_branch(force)
+		local cursor_row = vim.api.nvim_win_get_cursor(win)[1]
+		local target_b = branches[cursor_row]
+		if not target_b then
+			return
+		end
+		if target_b.is_current then
+			notify("Cannot delete current active branch!", vim.log.levels.WARN)
+			return
+		end
+
+		local flag = force and "-D" or "-d"
+		local label = force and "FORCE DELETE" or "Delete"
+		if vim.fn.confirm("⚠️ " .. label .. " branch '" .. target_b.name .. "'?", "&Yes\n&No", 2) ~= 1 then
+			return
+		end
+
+		close_modal()
+		git_run({ "branch", flag, target_b.name }, function(ok, output)
+			local gc = package.loaded["plugins.fox.git.git_center"]
+			if ok then
+				notify("🗑️ Deleted branch: " .. target_b.name)
+			elseif not force and output:match("not fully merged") then
+				if
+					vim.fn.confirm(
+						"⚠️ Branch '" .. target_b.name .. "' is not fully merged. Force delete (-D)?",
+						"&Yes\n&No",
+						2
+					) == 1
+				then
+					git_run({ "branch", "-D", target_b.name }, function(ok2, output2)
+						if ok2 then
+							notify("🗑️ Force deleted branch: " .. target_b.name)
+						else
+							notify("❌ Failed to delete branch:\n" .. output2, vim.log.levels.ERROR)
+						end
+						if gc and gc.is_open and gc.is_open() and gc.refresh then
+							gc.refresh()
+						end
+					end, active_cwd)
+				end
+			else
+				notify("❌ Failed to delete branch:\n" .. output, vim.log.levels.ERROR)
+			end
+			if gc and gc.is_open and gc.is_open() and gc.refresh then
+				gc.refresh()
+			end
+		end, active_cwd)
+	end
+
+	local function rename_branch()
+		local cursor_row = vim.api.nvim_win_get_cursor(win)[1]
+		local target_b = branches[cursor_row]
+		if not target_b then
+			return
+		end
+		close_modal()
+
+		require("plugins.fox.ui.input_modal").open({
+			label = "Rename Branch '" .. target_b.name .. "'",
+			default_value = target_b.name,
+			relative = "editor",
+			callback = function(ok, new_name)
+				if ok and new_name and new_name ~= "" and new_name ~= target_b.name then
+					new_name = new_name:gsub("%s+", "-"):gsub("[^%w%-_/.]", "")
+					git_run({ "branch", "-m", target_b.name, new_name }, function(ok2, output)
+						local gc = package.loaded["plugins.fox.git.git_center"]
+						if ok2 then
+							notify("✏️ Renamed branch to: " .. new_name)
+						else
+							notify("❌ Failed to rename branch:\n" .. output, vim.log.levels.ERROR)
+						end
+						if gc and gc.is_open and gc.is_open() and gc.refresh then
+							gc.refresh()
+						end
+					end, active_cwd)
+				end
+			end,
+		})
+	end
+
+	local function simulate_branch_merge()
+		local cursor_row = vim.api.nvim_win_get_cursor(win)[1]
+		local target_b = branches[cursor_row]
+		if not target_b then
+			return
+		end
+		local res = queries.simulate_merge(current_branch, target_b.name, active_cwd)
+		M.open_simulation_modal(res, active_cwd)
+	end
+
+	local function simulate_branch_rebase()
+		local cursor_row = vim.api.nvim_win_get_cursor(win)[1]
+		local target_b = branches[cursor_row]
+		if not target_b then
+			return
+		end
+		local res = queries.simulate_rebase(current_branch, target_b.name, active_cwd)
+		M.open_simulation_modal(res, active_cwd)
+	end
+
+	local function show_branch_help()
+		local help_lines = {
+			"",
+			"  Branch Manager — Shortcuts",
+			"  ─────────────────────────────────────",
+			"  Enter        Checkout selected branch",
+			"  c / n        Create & checkout new branch",
+			"  d            Delete branch (safe delete -d)",
+			"  D            Force delete branch (-D)",
+			"  r            Rename selected branch",
+			"  t / m        🧪 Test / Simulate Merge with active branch",
+			"  T            🧪 Test / Simulate Rebase onto active branch",
+			"  ? / F1       Show this help",
+			"  q / Esc      Close modal",
+			"",
+		}
+		local hb, hw = ui.float({
+			lines = help_lines,
+			width = 54,
+			height = #help_lines,
+			title = " ❓ Branch Help (? / <F1>) ",
+			border = "rounded",
+			relative = "editor",
+			zindex = 250,
+		})
+		if hw and vim.api.nvim_win_is_valid(hw) then
+			ui.close_on_keys(hb, hw, { "q", "<Esc>", "<CR>", "<Space>", "?", "<F1>" })
+		end
+	end
+
+	vim.keymap.set("n", "<CR>", checkout_selected, opts)
+	vim.keymap.set("n", "c", create_branch, opts)
+	vim.keymap.set("n", "n", create_branch, opts)
+	vim.keymap.set("n", "d", function()
+		delete_branch(false)
+	end, opts)
+	vim.keymap.set("n", "D", function()
+		delete_branch(true)
+	end, opts)
+	vim.keymap.set("n", "r", rename_branch, opts)
+	vim.keymap.set("n", "t", simulate_branch_merge, opts)
+	vim.keymap.set("n", "T", simulate_branch_rebase, opts)
+	vim.keymap.set("n", "m", simulate_branch_merge, opts)
+	vim.keymap.set("n", "?", show_branch_help, opts)
+	vim.keymap.set("n", "<F1>", show_branch_help, opts)
+	vim.keymap.set("n", "<C-?>", show_branch_help, opts)
+	vim.keymap.set("n", "<C-/>", show_branch_help, opts)
+
+	for _, key in ipairs(config.settings.keys.modal_close) do
+		vim.keymap.set("n", key, close_modal, opts)
+	end
+end
+
+--- Full commit log modal showing git log --all.
+--- @param target_cwd string|nil Repository path.
+--- @param initial_row integer|nil Optional row to restore cursor position.
+function M.open_commit_log_modal(target_cwd, initial_row)
+	local prev_win = vim.api.nvim_get_current_win()
+	local orig_cwd = vim.fn.getcwd()
+	local active_cwd = target_cwd or (get_active_target() and get_active_target().full_path) or orig_cwd
+
+	local info = queries.get_git_info(active_cwd)
+	if not info then
+		notify("Not inside a valid Git repository", vim.log.levels.WARN)
+		return
+	end
+
+	local raw_commits = queries.get_all_commit_graph(active_cwd, 150)
+	if #raw_commits == 0 then
+		notify("No commit history found", vim.log.levels.INFO)
+		return
+	end
+
+	local render = require("plugins.fox.git.git_center.render")
+	render.setup_panel_highlights()
+
+	local list_lines = {}
+	local line_commits = {}
+	local all_spans = {}
+	local commit_cache = {}
+
+	for idx, raw_line in ipairs(raw_commits) do
+		local clean_text, spans = render.parse_ansi_line(raw_line)
+		local line_text = " " .. clean_text
+		table.insert(list_lines, line_text)
+		table.insert(all_spans, spans)
+
+		local hash = clean_text:match("(%x%x%x%x%x%x%x+)")
+		if hash then
+			line_commits[idx] = hash
+		end
+	end
+
+	local function get_commit_at_row(row)
+		local hash = line_commits[row]
+		if not hash then
+			for r = row, 1, -1 do
+				if line_commits[r] then
+					hash = line_commits[r]
+					break
+				end
+			end
+			if not hash then
+				for r = row, #list_lines do
+					if line_commits[r] then
+						hash = line_commits[r]
+						break
+					end
+				end
+			end
+		end
+		if not hash then
+			return nil
+		end
+		if commit_cache[hash] then
+			return commit_cache[hash]
+		end
+
+		local meta = git_lines({ "show", "-s", "--pretty=format:%h%x1f%an%x1f%ar%x1f%s%x1f%d", hash }, active_cwd)
+		local commit = { hash = hash, author = "", date = "", subject = "", refs = "" }
+		if #meta > 0 then
+			local parts = vim.split(meta[1], "\x1f", { plain = true })
+			if #parts >= 4 then
+				commit.hash = parts[1] or hash
+				commit.author = parts[2] or ""
+				commit.date = parts[3] or ""
+				commit.subject = parts[4] or ""
+				commit.refs = parts[5] or ""
+			end
+		end
+		commit_cache[hash] = commit
+		return commit
+	end
+
+	diff.setup_highlights()
+
+	local tot_w = math.floor(vim.o.columns * config.settings.width_ratio)
+	local tot_h = math.floor(vim.o.lines * config.settings.height_ratio)
+	local s_row = math.floor((vim.o.lines - tot_h) / 2)
+	local s_col = math.floor((vim.o.columns - tot_w) / 2)
+
+	local ratio = config.current_left_ratio or config.load_saved_left_ratio(active_cwd)
+	local left_w = math.floor(tot_w * ratio)
+	local right_w = tot_w - left_w - 2
+
+	local z_index = require("fox.core.z_index")
+	local log_z = z_index.next_zindex("git_center_log", { parent = "git_center", offset = 30 })
+
+	local left_buf = vim.api.nvim_create_buf(false, true)
+	vim.bo[left_buf].buftype = "nofile"
+	vim.bo[left_buf].bufhidden = "wipe"
+	vim.bo[left_buf].swapfile = false
+	vim.api.nvim_buf_set_lines(left_buf, 0, -1, false, list_lines)
+
+	local ns_log = vim.api.nvim_create_namespace("FoxGitLogModalSpans")
+	vim.api.nvim_buf_clear_namespace(left_buf, ns_log, 0, -1)
+	for row, spans in ipairs(all_spans) do
+		for _, s in ipairs(spans) do
+			pcall(vim.api.nvim_buf_add_highlight, left_buf, ns_log, s.hl_group, row - 1, s.col_start + 1, s.col_end + 1)
+		end
+	end
+
+	local left_win = vim.api.nvim_open_win(left_buf, true, {
+		relative = "editor",
+		width = left_w,
+		height = tot_h,
+		row = s_row,
+		col = s_col,
+		style = "minimal",
+		border = "rounded",
+		zindex = log_z,
+		title = " 📜 Git Log (--all) | [<C-S-g>]: Toggle/Cache | [q/Esc]: Back to Panel | [j/k]: Move ",
+		title_pos = "center",
+	})
+	vim.api.nvim_set_option_value("cursorline", true, { win = left_win })
+
+	local right_buf = vim.api.nvim_create_buf(false, true)
+	vim.bo[right_buf].buftype = "nofile"
+	vim.bo[right_buf].bufhidden = "wipe"
+	vim.bo[right_buf].swapfile = false
+
+	local right_win = vim.api.nvim_open_win(right_buf, false, {
+		relative = "editor",
+		width = right_w,
+		height = tot_h,
+		row = s_row,
+		col = s_col + left_w + 2,
+		style = "minimal",
+		border = "rounded",
+		zindex = log_z,
+		title = " 👁️ Commit Details, Edited Files & Side-by-Side Diff ",
+		title_pos = "center",
+	})
+	z_index.register("git_center_log", { left_win, right_win }, { parent = "git_center", offset = 30, zindex = log_z })
+	vim.api.nvim_set_option_value("wrap", false, { win = right_win })
+	vim.api.nvim_set_option_value("number", true, { win = right_win })
+
+	config.log_win = left_win
+	config.log_buf = left_buf
+	config.log_right_win = right_win
+	config.log_right_buf = right_buf
+
+	if initial_row and initial_row >= 1 and initial_row <= #list_lines then
+		pcall(vim.api.nvim_win_set_cursor, left_win, { initial_row, 0 })
+	end
+
+	local is_closed = false
+	local function close_log_modal(keep_screen)
+		if is_closed then
+			return
+		end
+		is_closed = true
+		if keep_screen == true then
+			config.cached_view = "log"
+			config.cached_view_data.cwd = active_cwd
+			local ok, row = pcall(vim.api.nvim_win_get_cursor, left_win)
+			if ok and row then
+				config.cached_view_data.log_row = row[1]
+			end
+		elseif keep_screen == false then
+			config.cached_view = "panel"
+			config.cached_view_data = {}
+		end
+		config.log_win, config.log_buf = nil, nil
+		config.log_right_win, config.log_right_buf = nil, nil
+		ui.close(left_win)
+		ui.close(right_win)
+		if keep_screen then
+			local panel_mod = package.loaded["plugins.fox.git.git_center.panel"]
+			if panel_mod and panel_mod.close_git_center then
+				panel_mod.close_git_center({ keep_cached_view = true })
+			end
+			if prev_win and vim.api.nvim_win_is_valid(prev_win) then
+				pcall(vim.api.nvim_set_current_win, prev_win)
+			end
+		else
+			if
+				prev_win
+				and vim.api.nvim_win_is_valid(prev_win)
+				and not (config.main_win and vim.api.nvim_win_is_valid(config.main_win))
+			then
+				pcall(vim.api.nvim_set_current_win, prev_win)
+			elseif config.main_win and vim.api.nvim_win_is_valid(config.main_win) then
+				pcall(vim.api.nvim_set_current_win, config.main_win)
+			end
+		end
+	end
+
+	for _, win in ipairs({ left_win, right_win }) do
+		vim.api.nvim_create_autocmd("WinClosed", {
+			pattern = tostring(win),
+			once = true,
+			callback = function()
+				vim.schedule(close_log_modal)
+			end,
+		})
+	end
+
+	local current_commit_hash = nil
+	local current_target_file = nil
+
+	local function update_commit_details(target_filepath)
+		if is_closed or not (left_win and vim.api.nvim_win_is_valid(left_win)) then
+			return
+		end
+		local row = vim.api.nvim_win_get_cursor(left_win)[1]
+		local commit = get_commit_at_row(row)
+		if not commit then
+			return
+		end
+
+		local raw_stat = git_lines({ "show", "--name-status", "--pretty=format:", commit.hash }, active_cwd)
+		local edited_files = {}
+		for _, line in ipairs(raw_stat) do
+			local status_char, filepath = line:match("^([A-Z%d]+)%s+(.+)$")
+			if status_char and filepath then
+				table.insert(edited_files, { status = status_char:sub(1, 1), filepath = filepath })
+			end
+		end
+
+		if commit.hash ~= current_commit_hash then
+			current_commit_hash = commit.hash
+			current_target_file = target_filepath or (edited_files[1] and edited_files[1].filepath)
+		elseif target_filepath then
+			current_target_file = target_filepath
+		end
+
+		local raw_diff = {}
+		if current_target_file then
+			raw_diff = git_lines({ "show", "--color=never", commit.hash, "--", current_target_file }, active_cwd)
+		else
+			raw_diff = git_lines({ "show", "--color=never", commit.hash }, active_cwd)
+		end
+		local combined_diff_lines, l_kinds, r_kinds, col_w = diff.format_side_by_side_single(raw_diff, false, right_w)
+
+		local content = {}
+		table.insert(content, string.format(" 📌 Commit:      %s", commit.hash))
+		table.insert(content, string.format(" 👤 Author:      %s", commit.author))
+		table.insert(content, string.format(" 🕒 Date:        %s", commit.date))
+		if commit.refs ~= "" then
+			table.insert(content, string.format(" 🏷️ Refs:        %s", commit.refs))
+		end
+		table.insert(content, string.format(" 💬 Title:       %s", commit.subject))
+
+		if #edited_files > 0 then
+			table.insert(content, string.format(" 📁 Files Changed (%d):", #edited_files))
+			for _, item in ipairs(edited_files) do
+				local active_mark = item.filepath == current_target_file and "▶ " or "  "
+				table.insert(content, string.format(" %s• [%s] %s", active_mark, item.status, item.filepath))
+			end
+		end
+
+		table.insert(
+			content,
+			" ──────────────────────────────────────────────────────────────────────────"
+		)
+
+		for _, line in ipairs(combined_diff_lines) do
+			table.insert(content, line)
+		end
+
+		local save_cursor = nil
+		if right_win and vim.api.nvim_win_is_valid(right_win) then
+			save_cursor = vim.api.nvim_win_get_cursor(right_win)
+		end
+
+		vim.bo[right_buf].modifiable = true
+		vim.api.nvim_buf_set_lines(right_buf, 0, -1, false, content)
+		vim.bo[right_buf].modifiable = false
+
+		local header_line_count = 6 + (#edited_files > 0 and (#edited_files + 1) or 0)
+		diff.apply_highlights_side_by_side_single(right_buf, l_kinds, r_kinds, col_w, header_line_count)
+
+		if save_cursor and save_cursor[1] <= #content then
+			pcall(vim.api.nvim_win_set_cursor, right_win, save_cursor)
+		end
+	end
+
+	local function on_right_cursor_moved()
+		if is_closed or not (right_win and vim.api.nvim_win_is_valid(right_win)) then
+			return
+		end
+		local cursor_row = vim.api.nvim_win_get_cursor(right_win)[1]
+		local line_text = vim.api.nvim_buf_get_lines(right_buf, cursor_row - 1, cursor_row, false)[1] or ""
+
+		local filepath = line_text:match("•%s*%[[A-Z%d]+%]%s+(.+)$")
+		if filepath then
+			filepath = filepath:gsub("^%s*", ""):gsub("%s*$", "")
+			if filepath ~= current_target_file then
+				update_commit_details(filepath)
+			end
+		end
+	end
+
+	local augroup = vim.api.nvim_create_augroup("FoxGitLogModalPreview", { clear = true })
+
+	vim.api.nvim_create_autocmd("CursorMoved", {
+		group = augroup,
+		buffer = left_buf,
+		callback = function()
+			vim.schedule(function()
+				update_commit_details(nil)
+			end)
+		end,
+	})
+
+	vim.api.nvim_create_autocmd("CursorMoved", {
+		group = augroup,
+		buffer = right_buf,
+		callback = function()
+			vim.schedule(on_right_cursor_moved)
+		end,
+	})
+
+	update_commit_details(nil)
+
+	local function resize_log_split(delta)
+		if is_closed or not (left_win and vim.api.nvim_win_is_valid(left_win)) then
+			return
+		end
+
+		local cur_r = config.current_left_ratio or config.load_saved_left_ratio(active_cwd)
+		local new_r = math.max(0.20, math.min(0.80, cur_r + delta))
+		config.current_left_ratio = tonumber(string.format("%.3f", new_r))
+		config.save_left_ratio(config.root_dir or active_cwd, config.current_left_ratio)
+
+		local total_w = math.floor(vim.o.columns * config.settings.width_ratio)
+		local total_h = math.floor(vim.o.lines * config.settings.height_ratio)
+		local start_r = math.floor((vim.o.lines - total_h) / 2)
+		local start_c = math.floor((vim.o.columns - total_w) / 2)
+
+		left_w = math.floor(total_w * config.current_left_ratio)
+		right_w = total_w - left_w - 2
+
+		vim.api.nvim_win_set_config(left_win, {
+			relative = "editor",
+			width = left_w,
+			height = total_h,
+			row = start_r,
+			col = start_c,
+		})
+		vim.api.nvim_win_set_config(right_win, {
+			relative = "editor",
+			width = right_w,
+			height = total_h,
+			row = start_r,
+			col = start_c + left_w + 2,
+		})
+
+		update_commit_details(current_target_file)
+	end
+
+	local ctrl_d = vim.api.nvim_replace_termcodes("<C-d>", true, false, true)
+	local ctrl_u = vim.api.nvim_replace_termcodes("<C-u>", true, false, true)
+
+	local function scroll_log_preview(direction)
+		if right_win and vim.api.nvim_win_is_valid(right_win) then
+			vim.api.nvim_win_call(right_win, function()
+				vim.cmd("normal! " .. (direction == "down" and ctrl_d or ctrl_u))
+			end)
+		end
+	end
+
+	local opts = { buffer = left_buf, noremap = true, silent = true, nowait = true }
+	local right_opts = { buffer = right_buf, noremap = true, silent = true, nowait = true }
+
+	local function checkout_commit()
+		local row = vim.api.nvim_win_get_cursor(left_win)[1]
+		local commit = get_commit_at_row(row)
+		if not commit then
+			return
+		end
+		if
+			vim.fn.confirm("⚠️ Checkout commit " .. commit.hash .. " (" .. commit.subject .. ")?", "&Yes\n&No", 2) ~= 1
+		then
+			return
+		end
+		close_log_modal()
+		git_run({ "checkout", commit.hash }, function(ok, output)
+			local gc = package.loaded["plugins.fox.git.git_center"]
+			if ok then
+				notify("✅ Checked out commit: " .. commit.hash)
+			else
+				notify("❌ Checkout failed:\n" .. output, vim.log.levels.ERROR)
+			end
+			if gc and gc.is_open and gc.is_open() and gc.refresh then
+				gc.refresh()
+			end
+		end, active_cwd)
+	end
+
+	local function focus_log_left()
+		if left_win and vim.api.nvim_win_is_valid(left_win) then
+			vim.api.nvim_set_current_win(left_win)
+		end
+	end
+
+	local function focus_log_right()
+		if right_win and vim.api.nvim_win_is_valid(right_win) then
+			vim.api.nvim_set_current_win(right_win)
+		end
+	end
+
+	local function toggle_log_focus()
+		local target = vim.api.nvim_get_current_win() == left_win and right_win or left_win
+		if target and vim.api.nvim_win_is_valid(target) then
+			vim.api.nvim_set_current_win(target)
+		end
+	end
+
+	local function handle_right_enter()
+		if
+			not (right_win and vim.api.nvim_win_is_valid(right_win) and right_buf and vim.api.nvim_buf_is_valid(right_buf))
+		then
+			return
+		end
+		local cursor_line = vim.api.nvim_win_get_cursor(right_win)[1]
+		local line_text = vim.api.nvim_buf_get_lines(right_buf, cursor_line - 1, cursor_line, false)[1] or ""
+
+		local filepath = line_text:match("•%s*%[[A-Z%d]+%]%s+(.+)$")
+		if filepath then
+			filepath = filepath:gsub("^%s*", ""):gsub("%s*$", "")
+			M.open_diff_modal(filepath, nil, active_cwd)
+			return
+		end
+
+		toggle_log_focus()
+	end
+
+	local function open_left_commit_diff()
+		local row = vim.api.nvim_win_get_cursor(left_win)[1]
+		local commit = get_commit_at_row(row)
+		if commit then
+			M.open_diff_modal(nil, "commit", active_cwd, commit.hash)
+		end
+	end
+
+	local function handle_right_enter()
+		if
+			not (right_win and vim.api.nvim_win_is_valid(right_win) and right_buf and vim.api.nvim_buf_is_valid(right_buf))
+		then
+			return
+		end
+		local row = vim.api.nvim_win_get_cursor(left_win)[1]
+		local commit = get_commit_at_row(row)
+
+		local cursor_line = vim.api.nvim_win_get_cursor(right_win)[1]
+		local line_text = vim.api.nvim_buf_get_lines(right_buf, cursor_line - 1, cursor_line, false)[1] or ""
+
+		local filepath = line_text:match("•%s*%[[A-Z%d]+%]%s+(.+)$") or line_text:match("•%s*(.+)$")
+		if filepath then
+			filepath = filepath:gsub("^%s*", ""):gsub("%s*$", "")
+			M.open_diff_modal(filepath, "commit", active_cwd, commit and commit.hash)
+			return
+		end
+
+		toggle_log_focus()
+	end
+
+	local function current_right_file()
+		if
+			not (right_win and vim.api.nvim_win_is_valid(right_win) and right_buf and vim.api.nvim_buf_is_valid(right_buf))
+		then
+			return nil
+		end
+		local cursor_line = vim.api.nvim_win_get_cursor(right_win)[1]
+		local line_text = vim.api.nvim_buf_get_lines(right_buf, cursor_line - 1, cursor_line, false)[1] or ""
+		local filepath = line_text:match("^%s*•%s*%[[A-Z%d]+%]%s+(.+)$") or line_text:match("^%s*•%s*(.+)$")
+		if filepath then
+			return filepath:gsub("^%s*", ""):gsub("%s*$", "")
+		end
+		return nil
+	end
+
+	local function open_right_file_diff()
+		local row = vim.api.nvim_win_get_cursor(left_win)[1]
+		local commit = get_commit_at_row(row)
+		local filepath = current_right_file()
+		if commit then
+			M.open_diff_modal(filepath, "commit", active_cwd, commit.hash)
+		end
+	end
+
+	local function handle_log_shift_enter()
+		local filepath = current_right_file()
+		local panel = package.loaded["plugins.fox.git.git_center.panel"]
+		if filepath and panel then
+			close_log_modal()
+			panel.open_file_in_tab(filepath, active_cwd)
+		end
+	end
+
+	vim.keymap.set("n", "K", checkout_commit, opts)
+	vim.keymap.set("n", "d", open_left_commit_diff, opts)
+
+	vim.keymap.set("n", "<CR>", focus_log_right, opts)
+	vim.keymap.set("n", "<CR>", handle_right_enter, right_opts)
+	vim.keymap.set("n", "d", open_right_file_diff, right_opts)
+
+	for _, key in ipairs(config.settings.keys.open_tab) do
+		vim.keymap.set({ "n", "v", "i" }, key, handle_log_shift_enter, opts)
+		vim.keymap.set({ "n", "v", "i" }, key, handle_log_shift_enter, right_opts)
+	end
+
+	for _, key in ipairs({ "<C-h>", "<C-H>" }) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, focus_log_left, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, focus_log_left, right_opts)
+	end
+	for _, key in ipairs({ "<C-l>", "<C-L>" }) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, focus_log_right, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, focus_log_right, right_opts)
+	end
+
+	vim.keymap.set({ "n", "v", "i", "t" }, "<Tab>", toggle_log_focus, opts)
+	vim.keymap.set({ "n", "v", "i", "t" }, "<Tab>", toggle_log_focus, right_opts)
+
+	for _, key in ipairs(config.settings.keys.scroll_down) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			scroll_log_preview("down")
+		end, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			scroll_log_preview("down")
+		end, right_opts)
+	end
+	for _, key in ipairs(config.settings.keys.scroll_up) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			scroll_log_preview("up")
+		end, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			scroll_log_preview("up")
+		end, right_opts)
+	end
+
+	for _, key in ipairs(config.settings.keys.resize_left) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			resize_log_split(-0.03)
+		end, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			resize_log_split(-0.03)
+		end, right_opts)
+	end
+	for _, key in ipairs(config.settings.keys.resize_right) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			resize_log_split(0.03)
+		end, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			resize_log_split(0.03)
+		end, right_opts)
+	end
+
+	for _, key in ipairs(config.settings.keys.modal_close) do
+		local tk = is_toggle_key(key)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			close_log_modal(tk)
+		end, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			close_log_modal(tk)
+		end, right_opts)
+	end
+	vim.keymap.set("n", "l", function()
+		close_log_modal(false)
+	end, opts)
+	vim.keymap.set("n", "L", function()
+		close_log_modal(false)
+	end, opts)
+end
+
+--- Full-screen side-by-side diff viewer with file rotation and hunk navigation.
+--- @param target_file string|nil File to open on. Defaults to the first changed file.
+--- @param target_type string|nil "staged" | "unstaged" | "untracked" | "commit" (or commit hash).
+--- @param target_cwd string|nil Repository directory to view diffs for.
+--- @param commit_hash string|nil Optional commit hash for viewing past commit diffs.
+--- @param initial_index integer|nil Optional initial file index to display.
+function M.open_diff_modal(target_file, target_type, target_cwd, commit_hash, initial_index)
+	local prev_win = vim.api.nvim_get_current_win()
+	local orig_cwd = vim.fn.getcwd()
+	local active_cwd = target_cwd or (get_active_target() and get_active_target().full_path) or orig_cwd
+
+	local hash = commit_hash
+	if
+		not hash
+		and target_type
+		and type(target_type) == "string"
+		and target_type:match("^%x+$")
+		and #target_type >= 7
+	then
+		hash = target_type
+	end
+
+	local files = {}
+
+	if hash then
+		local raw_stat = git_lines({ "show", "--name-status", "--pretty=format:", hash }, active_cwd)
+		for _, line in ipairs(raw_stat) do
+			local status_char, filepath = line:match("^([A-Z%d]+)%s+(.+)$")
+			if status_char and filepath then
+				table.insert(files, { file = filepath, type = "commit", commit_hash = hash, status = status_char:sub(1, 1) })
+			end
+		end
+	end
+
+	if #files == 0 and not hash then
+		local info = queries.get_git_info(active_cwd)
+		if not info then
+			notify("Not a valid Git repository", vim.log.levels.WARN)
+			return
+		end
+
+		for _, file_type in ipairs({ "staged", "unstaged", "untracked" }) do
+			for _, file in ipairs(info[file_type]) do
+				table.insert(files, { file = file, type = file_type })
+			end
+		end
+	end
+
+	if #files == 0 then
+		if target_file then
+			table.insert(files, { file = target_file, type = hash and "commit" or "unstaged", commit_hash = hash })
+		else
+			notify("No changed files to show diff", vim.log.levels.INFO)
+			return
+		end
+	end
+
+	local index = initial_index and math.max(1, math.min(#files, initial_index)) or 1
+	for idx, item in ipairs(files) do
+		if target_file and (item.file == target_file or item.file:match(target_file .. "$")) then
+			index = idx
+			break
+		end
+	end
+
+	diff.setup_highlights()
+
+	local tot_w = math.floor(vim.o.columns * config.settings.modal_width_ratio)
+	local tot_h = math.floor(vim.o.lines * config.settings.modal_height_ratio)
+	local start_r = math.floor((vim.o.lines - tot_h) / 2)
+	local start_c = math.floor((vim.o.columns - tot_w) / 2)
+
+	local left_width = math.floor((tot_w - 2) * 0.50)
+	local right_width = tot_w - left_width - 2
+
+	local left_buf = vim.api.nvim_create_buf(false, true)
+	local right_buf = vim.api.nvim_create_buf(false, true)
+
+	for _, b in ipairs({ left_buf, right_buf }) do
+		vim.bo[b].buftype = "nofile"
+		vim.bo[b].bufhidden = "wipe"
+		vim.bo[b].swapfile = false
+	end
+
+	local z_index = require("fox.core.z_index")
+	local diff_z = z_index.next_zindex("git_center_diff", { parent = "git_center", offset = 40 })
+
+	local left_win = vim.api.nvim_open_win(left_buf, true, {
+		relative = "editor",
+		width = left_width,
+		height = tot_h,
+		row = start_r,
+		col = start_c,
+		style = "minimal",
+		border = "rounded",
+		zindex = diff_z,
+		title = " 🔴 BEFORE (Old) ",
+		title_pos = "center",
+	})
+
+	local right_win = vim.api.nvim_open_win(right_buf, false, {
+		relative = "editor",
+		width = right_width,
+		height = tot_h,
+		row = start_r,
+		col = start_c + left_width + 2,
+		style = "minimal",
+		border = "rounded",
+		zindex = diff_z,
+		title = " 🟢 AFTER (New) ",
+		title_pos = "center",
+	})
+
+	z_index.register("git_center_diff", { left_win, right_win }, { parent = "git_center", offset = 40, zindex = diff_z })
+
+	config.diff_modal_win = left_win
+	config.diff_modal_buf = left_buf
+
+	for _, w in ipairs({ left_win, right_win }) do
+		vim.api.nvim_set_option_value("number", true, { win = w })
+		vim.api.nvim_set_option_value("wrap", false, { win = w })
+		vim.api.nvim_set_option_value("scrollbind", true, { win = w })
+		vim.api.nvim_set_option_value("cursorbind", true, { win = w })
+	end
+
+	local function render(idx)
+		index = ((idx - 1) % #files) + 1
+		local item = files[index]
+
+		local raw_lines, is_untracked = queries.raw_diff_for(item.file, item.type, active_cwd, item.commit_hash or hash)
+		local l_lines, l_kinds, r_lines, r_kinds = diff.format_side_by_side_dual(raw_lines, is_untracked, item.file)
+
+		local label = (item.commit_hash or hash) and ("📌 Commit " .. (item.commit_hash or hash):sub(1, 7))
+			or (item.type == "staged" and "🟢 Staged" or (item.type == "unstaged" and "🔴 Unstaged" or "❓ Untracked"))
+
+		pcall(vim.api.nvim_win_set_config, left_win, {
+			title = string.format(" 🔴 BEFORE (%d/%d): %s [%s] │ [Ctrl+h/l]: Focus ", index, #files, item.file, label),
+			title_pos = "center",
+		})
+		pcall(vim.api.nvim_win_set_config, right_win, {
+			title = string.format(
+				" 🟢 AFTER (%d/%d): %s │ [<C-S-g>]: Cache │ [q/Esc]: Close │ [Tab/S-Tab]: Switch File ",
+				index,
+				#files,
+				item.file
+			),
+			title_pos = "center",
+		})
+
+		vim.bo[left_buf].modifiable = true
+		vim.api.nvim_buf_set_lines(left_buf, 0, -1, false, l_lines)
+		vim.bo[left_buf].modifiable = false
+
+		vim.bo[right_buf].modifiable = true
+		vim.api.nvim_buf_set_lines(right_buf, 0, -1, false, r_lines)
+		vim.bo[right_buf].modifiable = false
+
+		diff.apply_highlights_side_by_side_dual(left_buf, l_kinds, right_buf, r_kinds, item.file)
+
+		pcall(vim.api.nvim_win_set_cursor, left_win, { 1, 0 })
+		pcall(vim.api.nvim_win_set_cursor, right_win, { 1, 0 })
+	end
+
+	render(index)
+
+	local is_closed = false
+	local function close_modal(keep_screen)
+		if is_closed then
+			return
+		end
+		is_closed = true
+		if keep_screen == true then
+			config.cached_view = "diff"
+			config.cached_view_data = {
+				target_file = target_file,
+				target_type = target_type,
+				cwd = active_cwd,
+				commit_hash = hash,
+				diff_index = index,
+			}
+		elseif keep_screen == false then
+			config.cached_view = "panel"
+			config.cached_view_data = {}
+		end
+		config.diff_modal_win, config.diff_modal_buf = nil, nil
+		ui.close(left_win)
+		ui.close(right_win)
+		if orig_cwd and vim.fn.isdirectory(orig_cwd) == 1 then
+			pcall(vim.fn.chdir, orig_cwd)
+		end
+		if keep_screen then
+			local panel_mod = package.loaded["plugins.fox.git.git_center.panel"]
+			if panel_mod and panel_mod.close_git_center then
+				panel_mod.close_git_center({ keep_cached_view = true })
+			end
+			if prev_win and vim.api.nvim_win_is_valid(prev_win) then
+				pcall(vim.api.nvim_set_current_win, prev_win)
+			end
+		else
+			if
+				prev_win
+				and vim.api.nvim_win_is_valid(prev_win)
+				and not (config.main_win and vim.api.nvim_win_is_valid(config.main_win))
+			then
+				pcall(vim.api.nvim_set_current_win, prev_win)
+			elseif config.main_win and vim.api.nvim_win_is_valid(config.main_win) then
+				pcall(vim.api.nvim_set_current_win, config.main_win)
+			end
+		end
+	end
+
+	local function focus_diff_left()
+		if left_win and vim.api.nvim_win_is_valid(left_win) then
+			vim.api.nvim_set_current_win(left_win)
+		end
+	end
+
+	local function focus_diff_right()
+		if right_win and vim.api.nvim_win_is_valid(right_win) then
+			vim.api.nvim_set_current_win(right_win)
+		end
+	end
+
+	local ctrl_d = vim.api.nvim_replace_termcodes("<C-d>", true, false, true)
+	local ctrl_u = vim.api.nvim_replace_termcodes("<C-u>", true, false, true)
+
+	local function scroll_diff(direction)
+		local cur = vim.api.nvim_get_current_win()
+		if cur and vim.api.nvim_win_is_valid(cur) then
+			vim.api.nvim_win_call(cur, function()
+				vim.cmd("normal! " .. (direction == "down" and ctrl_d or ctrl_u))
+			end)
+		end
+	end
+
+	local function resize_modal_split(delta)
+		if is_closed or not (left_win and vim.api.nvim_win_is_valid(left_win)) then
+			return
+		end
+
+		local cur_r = config.current_left_ratio or config.load_saved_left_ratio(active_cwd)
+		local new_r = math.max(0.20, math.min(0.80, cur_r + delta))
+		config.current_left_ratio = tonumber(string.format("%.3f", new_r))
+		config.save_left_ratio(config.root_dir or active_cwd, config.current_left_ratio)
+
+		local total_w = math.floor(vim.o.columns * config.settings.modal_width_ratio)
+		local total_h = math.floor(vim.o.lines * config.settings.modal_height_ratio)
+		local start_r = math.floor((vim.o.lines - total_h) / 2)
+		local start_c = math.floor((vim.o.columns - total_w) / 2)
+
+		left_width = math.floor(total_w * config.current_left_ratio)
+		right_width = total_w - left_width - 2
+
+		pcall(vim.api.nvim_win_set_config, left_win, {
+			relative = "editor",
+			width = left_width,
+			height = total_h,
+			row = start_r,
+			col = start_c,
+		})
+		pcall(vim.api.nvim_win_set_config, right_win, {
+			relative = "editor",
+			width = right_width,
+			height = total_h,
+			row = start_r,
+			col = start_c + left_width + 2,
+		})
+
+		render(index)
+	end
+
+	for _, win in ipairs({ left_win, right_win }) do
+		vim.api.nvim_create_autocmd("WinClosed", {
+			pattern = tostring(win),
+			once = true,
+			callback = function()
+				close_modal(false)
+			end,
+		})
+	end
+
+	for _, b in ipairs({ left_buf, right_buf }) do
+		local opts = { buffer = b, noremap = true, silent = true, nowait = true }
+		for _, key in ipairs(config.settings.keys.modal_close) do
+			local tk = is_toggle_key(key)
+			vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+				close_modal(tk)
+			end, opts)
+		end
+
+		local function handle_diff_shift_enter()
+			local item = files[index]
+			local panel = package.loaded["plugins.fox.git.git_center.panel"]
+			if item and item.file and panel then
+				close_modal()
+				panel.open_file_in_tab(item.file, active_cwd)
+			end
+		end
+
+		for _, key in ipairs(config.settings.keys.open_tab) do
+			vim.keymap.set({ "n", "v", "i" }, key, handle_diff_shift_enter, opts)
+		end
+
+		for _, key in ipairs({ "<C-h>", "<C-H>" }) do
+			vim.keymap.set({ "n", "v", "i", "t" }, key, focus_diff_left, opts)
+		end
+		for _, key in ipairs({ "<C-l>", "<C-L>" }) do
+			vim.keymap.set({ "n", "v", "i", "t" }, key, focus_diff_right, opts)
+		end
+
+		for _, key in ipairs(config.settings.keys.scroll_down) do
+			vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+				scroll_diff("down")
+			end, opts)
+		end
+		for _, key in ipairs(config.settings.keys.scroll_up) do
+			vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+				scroll_diff("up")
+			end, opts)
+		end
+
+		for _, key in ipairs({ "<Tab>", "]" }) do
+			vim.keymap.set("n", key, function()
+				render(index + 1)
+			end, opts)
+		end
+		for _, key in ipairs({ "<S-Tab>", "[" }) do
+			vim.keymap.set("n", key, function()
+				render(index - 1)
+			end, opts)
+		end
+
+		for _, key in ipairs(config.settings.keys.resize_left) do
+			vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+				resize_modal_split(-0.03)
+			end, opts)
+		end
+		for _, key in ipairs(config.settings.keys.resize_right) do
+			vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+				resize_modal_split(0.03)
+			end, opts)
+		end
+
+		local function jump_hunk(step)
+			local win = vim.api.nvim_get_current_win()
+			local current = vim.api.nvim_win_get_cursor(win)[1]
+			local last = step > 0 and vim.api.nvim_buf_line_count(b) or 1
+
+			for line = current + step, last, step do
+				local text = vim.api.nvim_buf_get_lines(b, line - 1, line, false)[1] or ""
+				if text:match("─── Hunk") or text:match("^@@") then
+					pcall(vim.api.nvim_win_set_cursor, left_win, { line, 0 })
+					pcall(vim.api.nvim_win_set_cursor, right_win, { line, 0 })
+					return
+				end
+			end
+		end
+
+		vim.keymap.set("n", "]c", function()
+			jump_hunk(1)
+		end, opts)
+		vim.keymap.set("n", "[c", function()
+			jump_hunk(-1)
+		end, opts)
+	end
+end
+
+--- Opens the GitKraken-Style Commit Graph Viewer.
+--- @param target_cwd string|nil Repository directory.
+--- @param initial_mode? "branch"|"all" Defaults to "branch".
+function M.open_graph_viewer(target_cwd, initial_mode)
+	local gv = require("plugins.fox.git.git_center.graph_viewer")
+	gv.open(target_cwd, initial_mode)
+end
+
+--- Opens the Merge / Rebase Conflict Simulation modal.
+--- Predicts cleanly whether combining two branches will conflict without touching CWD or index.
+--- @param result table Result from queries.simulate_merge or queries.simulate_rebase.
+--- @param target_cwd string|nil Repository directory.
+function M.open_simulation_modal(result, target_cwd)
+	if not result then
+		notify("No simulation result data provided", vim.log.levels.WARN)
+		return
+	end
+
+	local active_cwd = target_cwd or (get_active_target() and get_active_target().full_path) or vim.fn.getcwd()
+	local lines = {}
+	local highlights = {}
+	local file_map = {}
+
+	local function add(text, hl)
+		table.insert(lines, text)
+		local row = #lines - 1
+		if hl then
+			table.insert(highlights, { row = row, col_start = 0, col_end = -1, hl = hl })
+		end
+		return row
+	end
+
+	local function add_hl(row, s, e, hl)
+		table.insert(highlights, { row = row, col_start = s, col_end = e, hl = hl })
+	end
+
+	add("")
+	local is_rebase = result.mode == "rebase"
+	local mode_name = is_rebase and "REBASE" or "MERGE"
+
+	if result.error then
+		add(string.format("  ❌ %s SIMULATION ERROR: %s", mode_name, result.error), "FoxGitGraphRed")
+		add("")
+	elseif result.is_clean then
+		add(
+			"  ╔════════════════════════════════════════════════════════════════════════╗",
+			"FoxGitFileStaged"
+		)
+		add(
+			string.format("  ║  ✅ CLEAN %s — ZERO CONFLICTS DETECTED                               ║", mode_name),
+			"FoxGitFileStaged"
+		)
+		add(
+			string.format(
+				"  ║  ✨ '%s' can be combined cleanly into '%s'!               ║",
+				result.incoming or "",
+				result.target or ""
+			),
+			"FoxGitFileStaged"
+		)
+		add(
+			"  ╚════════════════════════════════════════════════════════════════════════╝",
+			"FoxGitFileStaged"
+		)
+		add("")
+	else
+		local num_conf = #result.conflicted_files
+		add(
+			"  ╔════════════════════════════════════════════════════════════════════════╗",
+			"FoxGitFileDeleted"
+		)
+		add(
+			string.format(
+				"  ║  ❌ %s CONFLICTS DETECTED (%d conflicted file%s)                    ║",
+				mode_name,
+				num_conf,
+				num_conf == 1 and "" or "s"
+			),
+			"FoxGitFileDeleted"
+		)
+		add("  ║  ⚠️ Merging will produce conflicts. Workspace was NOT modified.       ║", "FoxGitConflictWarning")
+		add(
+			"  ╚════════════════════════════════════════════════════════════════════════╝",
+			"FoxGitFileDeleted"
+		)
+		add("")
+	end
+
+	if is_rebase and result.first_conflicting_commit then
+		local fc = result.first_conflicting_commit
+		add(
+			string.format("  ⚠️ Rebase will halt at commit #%d/%d (%s):", fc.index, fc.total, fc.hash),
+			"FoxGitConflictWarning"
+		)
+		add(string.format("     Subject: '%s' by %s", fc.subject, fc.author), "FoxGitGraphYellow")
+		add("")
+	end
+
+	-- Branch & Ancestor Overview
+	add(
+		"  ────────────────────────────────────────────────────────────────────────",
+		"FoxGitSeparator"
+	)
+	add("  📊 SIMULATION OVERVIEW", "FoxGitSectionBranch")
+	add(
+		"  ────────────────────────────────────────────────────────────────────────",
+		"FoxGitSeparator"
+	)
+
+	local r_target = add(string.format("   🌿 Target Branch:    %s", result.target or "HEAD"))
+	add_hl(r_target, 3, 22, "FoxGitKeyBadge")
+	add_hl(r_target, 24, -1, "FoxGitHeaderBranch")
+
+	local r_inc = add(string.format("   🌲 Incoming Branch:  %s", result.incoming or ""))
+	add_hl(r_inc, 3, 24, "FoxGitKeyBadge")
+	add_hl(r_inc, 25, -1, "FoxGitGraphYellow")
+
+	if result.merge_base then
+		local base_str = result.merge_base:sub(1, 8)
+		if result.merge_base_info then
+			base_str = string.format(
+				'%s ("%s" by %s, %s)',
+				base_str,
+				result.merge_base_info.subject,
+				result.merge_base_info.author,
+				result.merge_base_info.date
+			)
+		end
+		local r_base = add(string.format("   🧬 Common Ancestor:  %s", base_str))
+		add_hl(r_base, 3, 24, "FoxGitKeyBadge")
+		add_hl(r_base, 25, 33, "FoxGitGraphCyan")
+	end
+
+	local r_counts = add(
+		string.format(
+			"   📈 Commit Drift:     +%d incoming commits │ -%d commits behind target",
+			result.commits_ahead or 0,
+			result.commits_behind or 0
+		)
+	)
+	add_hl(r_counts, 3, 24, "FoxGitKeyBadge")
+
+	if result.is_fast_forward then
+		local r_ff = add("   ⚡ Fast-Forward:     YES (Can fast-forward without merge commit)", "FoxGitFileStaged")
+		add_hl(r_ff, 3, 24, "FoxGitKeyBadge")
+	else
+		local r_ff = add("   ⚡ Fast-Forward:     NO (Requires 3-way merge commit)")
+		add_hl(r_ff, 3, 24, "FoxGitKeyBadge")
+	end
+	add("")
+
+	-- Conflicted Files Section
+	if result.conflicted_files and #result.conflicted_files > 0 then
+		add(
+			"  ────────────────────────────────────────────────────────────────────────",
+			"FoxGitSeparator"
+		)
+		add(
+			string.format("  ⚠️ CONFLICTED FILES (%d) — Will require manual resolution:", #result.conflicted_files),
+			"FoxGitFileDeleted"
+		)
+		add(
+			"  ────────────────────────────────────────────────────────────────────────",
+			"FoxGitSeparator"
+		)
+		for _, conf in ipairs(result.conflicts or {}) do
+			local line_text = string.format("   🔴 [CONFLICT] %s %s", conf.file, conf.reason or "")
+			local row = add(line_text)
+			file_map[row + 1] = conf.file
+			add_hl(row, 3, 16, "FoxGitFileDeleted")
+			add_hl(row, 17, 17 + #conf.file, "FoxGitGraphWhite")
+			if conf.reason then
+				add_hl(row, 18 + #conf.file, -1, "FoxGitGraphDim")
+			end
+		end
+		add("")
+	end
+
+	-- Auto-Merged Clean Files Section
+	if result.auto_merged and #result.auto_merged > 0 then
+		add(
+			"  ────────────────────────────────────────────────────────────────────────",
+			"FoxGitSeparator"
+		)
+		add(
+			string.format("  ✓ AUTO-MERGED FILES (%d) — Merges cleanly without conflicts:", #result.auto_merged),
+			"FoxGitFileStaged"
+		)
+		add(
+			"  ────────────────────────────────────────────────────────────────────────",
+			"FoxGitSeparator"
+		)
+		for _, f in ipairs(result.auto_merged) do
+			local line_text = string.format("   🟢 [CLEAN]    %s", f)
+			local row = add(line_text)
+			file_map[row + 1] = f
+			add_hl(row, 3, 16, "FoxGitFileStaged")
+			add_hl(row, 17, -1, "FoxGitGraphWhite")
+		end
+		add("")
+	end
+
+	-- All Changed Files in Incoming
+	if result.changed_files and #result.changed_files > 0 then
+		add(
+			"  ────────────────────────────────────────────────────────────────────────",
+			"FoxGitSeparator"
+		)
+		add(string.format("  📂 ALL FILES CHANGED IN INCOMING (%d):", #result.changed_files), "FoxGitSectionBranch")
+		add(
+			"  ────────────────────────────────────────────────────────────────────────",
+			"FoxGitSeparator"
+		)
+		for _, item in ipairs(result.changed_files) do
+			local st_hl = item.status == "A" and "FoxGitFileStaged"
+				or (item.status == "D" and "FoxGitFileDeleted" or "FoxGitFileModified")
+			local line_text = string.format("   • [%s] %s", item.status, item.file)
+			local row = add(line_text)
+			file_map[row + 1] = item.file
+			add_hl(row, 5, 8, st_hl)
+			add_hl(row, 9, -1, "FoxGitGraphWhite")
+		end
+		add("")
+	end
+
+	-- Incoming Commits List
+	if result.incoming_commits and #result.incoming_commits > 0 then
+		add(
+			"  ────────────────────────────────────────────────────────────────────────",
+			"FoxGitSeparator"
+		)
+		add(string.format("  📜 INCOMING COMMITS (%d):", #result.incoming_commits), "FoxGitSectionCommit")
+		add(
+			"  ────────────────────────────────────────────────────────────────────────",
+			"FoxGitSeparator"
+		)
+		for _, c in ipairs(result.incoming_commits) do
+			local line_text = string.format("   • %s  %s (%s, %s)", c.hash, c.subject, c.author, c.date)
+			local row = add(line_text)
+			add_hl(row, 5, 5 + #c.hash, "FoxGitGraphYellow")
+			add_hl(row, 6 + #c.hash, -1, "FoxGitGraphWhite")
+		end
+		add("")
+	end
+
+	add(
+		"  ────────────────────────────────────────────────────────────────────────",
+		"FoxGitSeparator"
+	)
+	local r_foot = add("   [q / Esc] Close  │  [d / Enter] View File Diff  │  [? / F1] Shortcuts Help")
+	add_hl(r_foot, 3, 12, "FoxGitKeyBadge")
+	add_hl(r_foot, 23, 34, "FoxGitKeyBadge")
+	add_hl(r_foot, 54, 63, "FoxGitKeyBadge")
+	add("")
+
+	local win_title = is_rebase
+			and string.format(" 🧪 Rebase Simulation: %s onto %s ", result.incoming or "", result.target or "")
+		or string.format(" 🧪 Merge Simulation: %s ➜ %s ", result.incoming or "", result.target or "")
+
+	local buf, win = ui.float({
+		lines = lines,
+		width = 0.76,
+		height = 0.85,
+		title = win_title,
+		border = "rounded",
+		relative = "editor",
+		zindex = 220,
+	})
+
+	if not win or not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+
+	local ns = vim.api.nvim_create_namespace("fox_git_sim_modal")
+	for _, hl in ipairs(highlights) do
+		pcall(vim.api.nvim_buf_add_highlight, buf, ns, hl.hl, hl.row, hl.col_start, hl.col_end)
+	end
+
+	local opts = { noremap = true, silent = true, buffer = buf }
+
+	local function open_file_diff()
+		local row = vim.api.nvim_win_get_cursor(win)[1]
+		local target_file = file_map[row]
+		if target_file and result.incoming then
+			M.open_diff_modal(target_file, "unstaged", active_cwd, result.incoming)
+		end
+	end
+
+	vim.keymap.set("n", "<CR>", open_file_diff, opts)
+	vim.keymap.set("n", "d", open_file_diff, opts)
+	vim.keymap.set("n", "?", function()
+		notify(
+			"Simulation Modal:\n  [Enter / d]: Open diff for selected file\n  [q / Esc]: Close modal\n  [j / k]: Navigate list",
+			vim.log.levels.INFO
+		)
+	end, opts)
+	vim.keymap.set("n", "<F1>", function()
+		notify(
+			"Simulation Modal:\n  [Enter / d]: Open diff for selected file\n  [q / Esc]: Close modal\n  [j / k]: Navigate list",
+			vim.log.levels.INFO
+		)
+	end, opts)
+	vim.keymap.set("n", "<C-?>", function()
+		notify(
+			"Simulation Modal:\n  [Enter / d]: Open diff for selected file\n  [q / Esc]: Close modal\n  [j / k]: Navigate list",
+			vim.log.levels.INFO
+		)
+	end, opts)
+
+	ui.close_on_keys(buf, win, { "q", "<Esc>", "<C-c>" })
+end
+
+return M

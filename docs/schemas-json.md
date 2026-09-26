@@ -25,7 +25,7 @@ This guide explains how offline, 100% local JSON schema validation and autocompl
 | **Babel** | `schemas/json/babelrc.json` | `.babelrc`, `.babelrc.json`, `babel.config.json` | Standard SchemaStore override (`replace`) |
 | **Turborepo** | `schemas/json/turbo.json` | `turbo.json` | Standard SchemaStore override (`replace`) |
 | **Biome** | `schemas/json/biome.json` | `biome.json`, `biome.jsonc` | Custom schema entry (`extra`) |
-| **KrsVim Snippets** | `snippets/snippets.schema.json` | `snippets/*.json`, `snippets/**/*.json` | Custom schema entry (`extra`) |
+| **FoxVim Snippets** | `snippets/snippets.schema.json` | `snippets/*.json`, `snippets/**/*.json` | Custom schema entry (`extra`) |
 
 ---
 
@@ -75,7 +75,7 @@ Follow this step-by-step checklist whenever you want to add a new JSON schema to
 
 - [ ] **Step 1: Download or save the JSON schema file**
   Save the schema `.json` file inside `schemas/json/`.  
-  *Example file path:* `C:\Users\Kristan\AppData\Local\nvim\schemas\json\my-schema.json`
+  *Example file path:* `C:\Users\Fox\AppData\Local\nvim\schemas\json\my-schema.json`
 
 - [ ] **Step 2: Open [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua)**
   Locate `opts.servers.jsonls.settings`.

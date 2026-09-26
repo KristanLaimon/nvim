@@ -6,9 +6,9 @@
 -- quoted paths, detached HEAD, and binary files in numstat.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local status = require("krs.git.status")
+local status = require("fox.git.status")
 
 describe("git status parse_branch", function()
 	it("reads a branch with an upstream", function()

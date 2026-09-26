@@ -1,12 +1,12 @@
 -- tests/spec/leader_keymaps_spec.lua -- Enforces leader keymaps non-triggerability in insert & terminal modes.
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 describe("leader keymaps scoping and protection", function()
 	it("ensures leader keymaps are NOT bound in insert or terminal modes", function()
 		require("keymaps")
-		local registry = require("krs.core.keymap_registry")
+		local registry = require("fox.core.keymap_registry")
 		registry.install()
 
 		-- Test setting a leader mapping for all modes

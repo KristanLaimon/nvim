@@ -11,7 +11,7 @@
 --   after each: it stays "Previous buffer" (editor.lua) until VimEnter is
 --   fired for real. So this spec fires it explicitly.
 --
---   krs.core.keymap_registry keeps its own M.collisions log (not just a
+--   fox.core.keymap_registry keeps its own M.collisions log (not just a
 --   fire-and-forget vim.notify) precisely so this spec can also see the
 --   collisions that happened during the eager keymaps load, which
 --   finishes before any spec file -- including this one -- gets to run.
@@ -24,14 +24,14 @@
 --   surface collisions from it.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 describe("keymap collisions after a real startup", function()
 	it("has no un-allowlisted mode+lhs collisions once VimEnter has fired and plugins open", function()
 		vim.api.nvim_exec_autocmds("VimEnter", { modeline = false })
-		require("plugins.krs.git.git_center").setup()
-		require("plugins.krs.editor.hover_links").setup()
+		require("plugins.fox.git.git_center").setup()
+		require("plugins.fox.editor.hover_links").setup()
 
 		-- Create a markdown buffer and trigger FileType autocmd
 		local buf = vim.api.nvim_create_buf(true, false)
@@ -39,13 +39,13 @@ describe("keymap collisions after a real startup", function()
 		vim.bo[buf].filetype = "markdown"
 		vim.api.nvim_exec_autocmds("FileType", { buffer = buf, modeline = false })
 
-		-- Open and close krsvim wiki index modal
-		local wiki = require("plugins.krs.ui.wiki_modal")
+		-- Open and close foxvim wiki index modal
+		local wiki = require("plugins.fox.ui.wiki_modal")
 		wiki.setup()
 		wiki.open()
 		wiki.close()
 
-		local registry = require("krs.core.keymap_registry")
+		local registry = require("fox.core.keymap_registry")
 		local summary = {}
 		for _, c in ipairs(registry.collisions) do
 			table.insert(

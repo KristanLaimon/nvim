@@ -2,10 +2,10 @@
 -- PLUGINS: blink.cmp completion sources owned by this config.
 -- ============================================================================
 -- WHAT IS REGISTERED HERE
---   launch_json  IntelliSense inside `.krsnvim/launch.json`: task names, runtimes
---                and modes (lua/plugins/krs/launch_cmp.lua).
---   krsnvim      IntelliSense inside `*.krsnvim` scripts: console, fetch, import
---                and the library modules (lua/plugins/krs/krsnvim_cmp.lua).
+--   launch_json  IntelliSense inside `.foxnvim/launch.json`: task names, runtimes
+--                and modes (lua/plugins/fox/launch_cmp.lua).
+--   foxnvim      IntelliSense inside `*.foxnvim` scripts: console, fetch, import
+--                and the library modules (lua/plugins/fox/foxnvim_cmp.lua).
 --
 --   `schemastore.nvim` is declared here too, because it is what jsonls and yamlls
 --   pull their schemas from in lsp.lua.
@@ -23,20 +23,20 @@
 local sources = {
 	launch_json = {
 		name = "LaunchJson",
-		module = "plugins.krs.dev.launch_cmp",
+		module = "plugins.fox.dev.launch_cmp",
 		score_offset = 100,
 		enabled = function()
 			return vim.fn.expand("%:t") == "launch.json"
 		end,
 	},
-	krsnvim = {
-		name = "KrsNvimScript",
-		module = "plugins.krs.dev.krsnvim_cmp",
+	foxnvim = {
+		name = "FoxNvimScript",
+		module = "plugins.fox.dev.foxnvim_cmp",
 		score_offset = 100,
 		enabled = function()
 			local ft = vim.bo.filetype
 			local name = vim.fn.expand("%:t")
-			return ft == "lua" or ft == "krsnvim" or name:match("%.krsnvim$") ~= nil or name:match("%.lua$") ~= nil
+			return ft == "lua" or ft == "foxnvim" or name:match("%.foxnvim$") ~= nil or name:match("%.lua$") ~= nil
 		end,
 	},
 }

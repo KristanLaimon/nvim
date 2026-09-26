@@ -70,7 +70,7 @@ local function toggle_breakpoint()
 	dap.toggle_breakpoint()
 	vim.defer_fn(function()
 		pcall(function()
-			require("plugins.krs.dev.dap_breakpoints").save_breakpoints()
+			require("plugins.fox.dev.dap_breakpoints").save_breakpoints()
 		end)
 	end, M.settings.save_delay_ms)
 end
@@ -164,7 +164,7 @@ end
 
 -- See the header: bound late, and falls through to whatever was bound before.
 vim.api.nvim_create_autocmd("VimEnter", {
-	group = vim.api.nvim_create_augroup("KrsDapBreakpointEnableKeys", { clear = true }),
+	group = vim.api.nvim_create_augroup("FoxDapBreakpointEnableKeys", { clear = true }),
 	callback = function()
 		for _, key in ipairs(M.settings.keys.toggle_enabled) do
 			for _, mode in ipairs({ "n", "i", "v" }) do
@@ -184,7 +184,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 				end
 
 				vim.keymap.set(mode, key, function()
-					local ok, breakpoints = pcall(require, "plugins.krs.dev.dap_breakpoints")
+					local ok, breakpoints = pcall(require, "plugins.fox.dev.dap_breakpoints")
 					if ok and breakpoints.toggle_enabled({ silent = true }) then
 						return
 					end

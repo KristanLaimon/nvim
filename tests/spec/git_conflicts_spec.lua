@@ -2,10 +2,10 @@
 -- tests/spec/git_conflicts_spec.lua -- Git Conflict Resolver tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local conflicts = require("krs.git.conflicts")
-local resolver = require("plugins.krs.git.conflict_resolver")
+local conflicts = require("fox.git.conflicts")
+local resolver = require("plugins.fox.git.conflict_resolver")
 
 describe("git conflicts parse_markers", function()
 	it("parses standard 2-way conflict markers", function()
@@ -116,7 +116,7 @@ describe("git conflicts resolve_conflict_in_lines", function()
 	end)
 end)
 
-describe("plugins.krs.git.conflict_resolver", function()
+describe("plugins.fox.git.conflict_resolver", function()
 	it("exports public API methods and settings", function()
 		expect(type(resolver.open)).toBe("function")
 		expect(type(resolver.close)).toBe("function")
@@ -428,7 +428,7 @@ describe("git conflicts resolver edge cases and buffer preservation", function()
 	end)
 
 	it("restores pinned tabs on close without losing pin status", function()
-		local pinned_tabs = require("plugins.krs.ui.pinned_tabs")
+		local pinned_tabs = require("plugins.fox.ui.pinned_tabs")
 		local fake_pins = { "init.lua", "lua/vim_options.lua" }
 
 		resolver.state.is_open = true

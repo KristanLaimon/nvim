@@ -2,9 +2,9 @@
 -- tests/spec/git_blame_spec.lua -- Git Blame plugin specification & integration.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local cp = require("plugins.krs.tools.command_palette")
+local cp = require("plugins.fox.tools.command_palette")
 local git_blame_spec = require("plugins.editor.git_blame")
 
 describe("plugins.editor.git_blame", function()

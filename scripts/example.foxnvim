@@ -1,0 +1,17 @@
+-- 🦊 test.foxnvim - foxnvimscript example
+local root = vim.fn.stdpath("config")
+package.path = root .. "/lua/?.lua;" .. root .. "/lua/?/init.lua;" .. package.path
+require("fox.lib.foxnvim")
+
+local cli = require("fox.lib.foxnvim.terminal")
+local fetch = require("fox.lib.foxnvim.fetch")
+local console = require("fox.lib.foxnvim.console")
+
+print("Hello from test.foxnvim script! 🦊")
+
+cli.run("echo Hello from cli commands!")
+
+local res = fetch.get("https://jsonplaceholder.typicode.com/todos/1")
+if res.ok then
+	console.log("Fetch response:", res:text())
+end

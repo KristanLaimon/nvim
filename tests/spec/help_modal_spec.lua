@@ -1,12 +1,12 @@
 -- ============================================================================
--- TESTS: KrsVim Help Menu & Runtime Cheatsheet Manager (<F1>)
+-- TESTS: FoxVim Help Menu & Runtime Cheatsheet Manager (<F1>)
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local hm = require("plugins.krs.ui.help_modal")
+local hm = require("plugins.fox.ui.help_modal")
 
-describe("plugins.krs.ui.help_modal", function()
+describe("plugins.fox.ui.help_modal", function()
 	it("exposes all required topic categories including Neo-tree, Environments, Git-Center, InTab, Terminal", function()
 		local topic_ids = {}
 		for _, topic in ipairs(hm.topic_catalog) do
@@ -93,7 +93,7 @@ describe("plugins.krs.ui.help_modal", function()
 	it("registers user commands upon setup", function()
 		hm.setup()
 		local cmds = vim.api.nvim_get_commands({})
-		expect(cmds["KrsHelp"] ~= nil).toBe(true)
+		expect(cmds["FoxHelp"] ~= nil).toBe(true)
 		expect(cmds["Cheatsheet"] ~= nil).toBe(true)
 		expect(cmds["HelpMenu"] ~= nil).toBe(true)
 	end)

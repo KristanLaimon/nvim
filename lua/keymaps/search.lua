@@ -125,7 +125,7 @@ local function opts(desc)
 end
 
 local function ensure_code_window()
-	local ok, dock = pcall(require, "krs.core.dock")
+	local ok, dock = pcall(require, "fox.core.dock")
 	if not ok then
 		return
 	end

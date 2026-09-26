@@ -2,13 +2,13 @@
 -- tests/spec/git_graph_viewer_spec.lua -- GitKraken Commit Graph Viewer Tests
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local graph_viewer = require("plugins.krs.git.git_center.graph_viewer")
-local config = require("plugins.krs.git.git_center.config")
-local git_center = require("plugins.krs.git.git_center")
+local graph_viewer = require("plugins.fox.git.git_center.graph_viewer")
+local config = require("plugins.fox.git.git_center.config")
+local git_center = require("plugins.fox.git.git_center")
 
-describe("plugins.krs.git.git_center.graph_viewer", function()
+describe("plugins.fox.git.git_center.graph_viewer", function()
 	beforeEach(function()
 		if git_center.is_open() then
 			git_center.close_git_center()
@@ -51,12 +51,12 @@ describe("plugins.krs.git.git_center.graph_viewer", function()
 
 	it("parses raw git graph commit lines with delimiter", function()
 		local raw =
-			"* 87a6e94\x1f (HEAD -> main, origin/main, tag: v1.0.0)\x1fKristanLaimon\x1f25 hours ago\x1ffeat: Neo-tree mover"
+			"* 87a6e94\x1f (HEAD -> main, origin/main, tag: v1.0.0)\x1fFoxDeveloper\x1f25 hours ago\x1ffeat: Neo-tree mover"
 		local parsed = graph_viewer.parse_raw_graph_line(raw)
 
 		expect(parsed.is_commit).toBeTruthy()
 		expect(parsed.hash).toBe("87a6e94")
-		expect(parsed.author).toBe("KristanLaimon")
+		expect(parsed.author).toBe("FoxDeveloper")
 		expect(parsed.date).toBe("25 hours ago")
 		expect(parsed.subject).toBe("feat: Neo-tree mover")
 		expect(parsed.refs).toContain("HEAD -> main")
@@ -78,7 +78,7 @@ describe("plugins.krs.git.git_center.graph_viewer", function()
 			graph_raw = "*",
 			hash = "87a6e94",
 			refs = " (HEAD -> main, origin/main)",
-			author = "KristanLaimon",
+			author = "FoxDeveloper",
 			date = "25 hours ago",
 			subject = "feat: Neo-tree mover",
 		}
@@ -90,7 +90,7 @@ describe("plugins.krs.git.git_center.graph_viewer", function()
 		expect(line_text).toContain("🌿 main")
 		expect(line_text).toContain("☁️ main")
 		expect(line_text).toContain("feat: Neo-tree mover")
-		expect(line_text).toContain("👤 KristanLaimon")
+		expect(line_text).toContain("👤 FoxDeveloper")
 		expect(line_text).toContain("🕒 25 hours ago")
 
 		-- Spans should contain lane color, SHA hl, and ref badge hl
@@ -99,11 +99,11 @@ describe("plugins.krs.git.git_center.graph_viewer", function()
 		local has_sha_hl = false
 		local has_head_hl = false
 		for _, s in ipairs(spans) do
-			if s.hl_group == "KRSGitKrakenLane1" then
+			if s.hl_group == "FoxGitKrakenLane1" then
 				has_lane_hl = true
-			elseif s.hl_group == "KRSGitKrakenSha" then
+			elseif s.hl_group == "FoxGitKrakenSha" then
 				has_sha_hl = true
-			elseif s.hl_group == "KRSGitKrakenBadgeHead" then
+			elseif s.hl_group == "FoxGitKrakenBadgeHead" then
 				has_head_hl = true
 			end
 		end

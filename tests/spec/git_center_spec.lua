@@ -2,11 +2,11 @@
 -- tests/spec/git_center_spec.lua -- Lifecycle, toggle, buffer flags and keys.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local git_center = require("plugins.krs.git.git_center")
+local git_center = require("plugins.fox.git.git_center")
 
-describe("plugins.krs.git.git_center", function()
+describe("plugins.fox.git.git_center", function()
 	beforeEach(function()
 		if git_center.is_open() then
 			git_center.close_git_center()
@@ -153,9 +153,9 @@ describe("plugins.krs.git.git_center", function()
 	end)
 
 	it("resizes the split and clamps within the [0.20, 0.80] bounds", function()
-		local project = require("krs.core.project")
-		local store = require("krs.core.store")
-		local root = require("krs.core.path").normalize(project.root() or vim.fn.getcwd())
+		local project = require("fox.core.project")
+		local store = require("fox.core.store")
+		local root = require("fox.core.path").normalize(project.root() or vim.fn.getcwd())
 		local cfg_path = project.config_path(git_center.settings.config_filename, root)
 		store.save(cfg_path, { left_ratio = 0.50 })
 
@@ -176,9 +176,9 @@ describe("plugins.krs.git.git_center", function()
 	end)
 
 	it("persists the resized left ratio and restores it on next open", function()
-		local project = require("krs.core.project")
-		local store = require("krs.core.store")
-		local root = require("krs.core.path").normalize(project.root() or vim.fn.getcwd())
+		local project = require("fox.core.project")
+		local store = require("fox.core.store")
+		local root = require("fox.core.path").normalize(project.root() or vim.fn.getcwd())
 		local cfg_path = project.config_path(git_center.settings.config_filename, root)
 		store.save(cfg_path, { left_ratio = 0.50 })
 
@@ -242,7 +242,7 @@ describe("plugins.krs.git.git_center", function()
 	it(
 		"opens side-by-side diff modal with left (before) and right (after) float windows with elevated zindex and Ctrl+h/l keymaps",
 		function()
-			local z_index = require("krs.core.z_index")
+			local z_index = require("fox.core.z_index")
 			git_center.open_git_center()
 			git_center.open_diff_modal(nil, nil, vim.fn.getcwd())
 
@@ -270,7 +270,7 @@ describe("plugins.krs.git.git_center", function()
 	)
 
 	it("opens commit log modal with configured left ratio, dynamic zindex and correct keymaps", function()
-		local z_index = require("krs.core.z_index")
+		local z_index = require("fox.core.z_index")
 		git_center.open_git_center()
 		git_center.resize_split(0.05) -- Set custom ratio
 
@@ -325,7 +325,7 @@ describe("plugins.krs.git.git_center", function()
 	end)
 
 	it("restores focus to git-center main_win when closing log modal from right pane", function()
-		local z_index = require("krs.core.z_index")
+		local z_index = require("fox.core.z_index")
 		git_center.open_git_center()
 		local main_win = git_center.main_win
 		expect(vim.api.nvim_get_current_win()).toBe(main_win)
@@ -416,19 +416,19 @@ describe("plugins.krs.git.git_center", function()
 	end)
 
 	it("parses ANSI color codes into plain text and extmark spans cleanly", function()
-		local render = require("plugins.krs.git.git_center.render")
+		local render = require("plugins.fox.git.git_center.render")
 		local raw_line =
 			"\27[31m* \27[m\27[33me506b06\27[m \27[1;32m(HEAD -> \27[1;36mmain\27[1;32m)\27[m feat: commit title"
 		local clean, spans = render.parse_ansi_line(raw_line)
 
 		expect(clean).toBe("* e506b06 (HEAD -> main) feat: commit title")
 		expect(#spans).toBeGreaterThan(0)
-		expect(spans[1].hl_group).toBe("KRSGitGraphRed")
-		expect(spans[2].hl_group).toBe("KRSGitGraphYellow")
+		expect(spans[1].hl_group).toBe("FoxGitGraphRed")
+		expect(spans[2].hl_group).toBe("FoxGitGraphYellow")
 	end)
 
 	it("retrieves local branches and commit graph output via queries", function()
-		local queries = require("plugins.krs.git.git_center.queries")
+		local queries = require("plugins.fox.git.git_center.queries")
 		local branches = queries.get_local_branches(vim.fn.getcwd())
 		expect(type(branches)).toBe("table")
 		expect(#branches).toBeGreaterThan(0)
@@ -463,10 +463,10 @@ describe("plugins.krs.git.git_center", function()
 	end)
 
 	it("retrieves commit graph with author info and relative date", function()
-		local queries = require("plugins.krs.git.git_center.queries")
+		local queries = require("plugins.fox.git.git_center.queries")
 		local graph = queries.get_commit_graph(vim.fn.getcwd(), 3)
 		expect(#graph).toBeGreaterThan(0)
-		local render = require("plugins.krs.git.git_center.render")
+		local render = require("plugins.fox.git.git_center.render")
 		local clean = render.parse_ansi_line(graph[1])
 		-- Clean text should contain commit hash, author and relative date (e.g. ago)
 		expect(clean:match("%x%x%x%x%x%x") ~= nil).toBeTruthy()
@@ -578,7 +578,7 @@ describe("plugins.krs.git.git_center", function()
 
 		if branch_row then
 			vim.api.nvim_win_set_cursor(main_win, { branch_row, 0 })
-			local input_modal = require("plugins.krs.ui.input_modal")
+			local input_modal = require("plugins.fox.ui.input_modal")
 			local orig_open = input_modal.open
 			local opened_label = nil
 			input_modal.open = function(opts)

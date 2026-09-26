@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-KrsVim provides editing, validation, and formatting for **Dockerfiles**.
+FoxVim provides editing, validation, and formatting for **Dockerfiles**.
 
 ---
 

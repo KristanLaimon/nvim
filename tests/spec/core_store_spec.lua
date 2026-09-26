@@ -1,18 +1,18 @@
 -- ============================================================================
--- tests/spec/core_store_spec.lua -- Contract tests for krs.core.store.
+-- tests/spec/core_store_spec.lua -- Contract tests for fox.core.store.
 -- ============================================================================
 -- The store is the persistence layer for tasks, launch profiles, breakpoints and
 -- workspaces. Its promise is "reads never throw": a corrupt file must degrade to
 -- the caller's fallback instead of breaking the editor at startup.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
-local store = require("krs.core.store")
+local store = require("fox.core.store")
 
 local tmp_dir
 
-describe("krs.core.store", function()
+describe("fox.core.store", function()
 	beforeEach(function()
 		tmp_dir = vim.fn.tempname()
 		vim.fn.mkdir(tmp_dir, "p")
@@ -24,10 +24,10 @@ describe("krs.core.store", function()
 
 	it("round-trips a table through save and load", function()
 		local file = tmp_dir .. "/data.json"
-		local ok = store.save(file, { name = "krs", count = 3 })
+		local ok = store.save(file, { name = "fox", count = 3 })
 
 		expect(ok).toBeTruthy()
-		expect(store.load(file)).toEqual({ name = "krs", count = 3 })
+		expect(store.load(file)).toEqual({ name = "fox", count = 3 })
 	end)
 
 	it("creates missing parent directories on save", function()

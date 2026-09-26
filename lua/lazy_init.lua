@@ -7,14 +7,14 @@
 --   3. Disables the built-in plugins this config replaces.
 --
 -- IMPORT ORDER MATTERS
---   ui -> editor -> lsp -> krs -> miscelanea. Specs later in the list may depend
---   on earlier ones (the KRS modules assume telescope and dap exist), and lazy
+--   ui -> editor -> lsp -> fox -> miscelanea. Specs later in the list may depend
+--   on earlier ones (the FOX modules assume telescope and dap exist), and lazy
 --   merges duplicate specs in this order.
 --
 -- ADDING A PLUGIN
 --   Drop a new file in the matching lua/plugins/<area>/ directory that returns a
 --   lazy spec. Nothing here needs to change. Files in SUBdirectories (for example
---   lua/plugins/krs/debuggers/) are NOT imported, which is what makes that a safe
+--   lua/plugins/fox/debuggers/) are NOT imported, which is what makes that a safe
 --   place for helper modules.
 -- ============================================================================
 
@@ -33,11 +33,11 @@ local settings = {
 		"plugins.ui",
 		"plugins.editor",
 		"plugins.lsp",
-		"plugins.krs.ui",
-		"plugins.krs.editor",
-		"plugins.krs.tools",
-		"plugins.krs.git",
-		"plugins.krs.dev",
+		"plugins.fox.ui",
+		"plugins.fox.editor",
+		"plugins.fox.tools",
+		"plugins.fox.git",
+		"plugins.fox.dev",
 	},
 
 	--- Built-in plugins this config does not use. Skipping them shortens startup.

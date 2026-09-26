@@ -2,9 +2,9 @@
 -- tests/spec/git_submodules_spec.lua -- Submodule parsing, discovery and listing.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local submodules = require("krs.git.submodules")
+local submodules = require("fox.git.submodules")
 
 describe("git submodules parse_submodules", function()
 	it("parses submodule status lines with various status prefixes", function()
@@ -64,7 +64,7 @@ describe("git submodules discover", function()
 		local tmp_dir = vim.fn.tempname()
 		vim.fn.mkdir(tmp_dir .. "/.git", "p")
 
-		local git = require("krs.git.cmd")
+		local git = require("fox.git.cmd")
 		local original_lines = git.lines
 		local calls = 0
 		git.lines = function(...)
@@ -106,7 +106,7 @@ describe("git submodules caching", function()
 		local first = submodules.discover(tmp_dir)
 		expect(first).toEqual({ "libs/a", "libs/b" })
 
-		local git = require("krs.git.cmd")
+		local git = require("fox.git.cmd")
 		local original_spawn, original_lines = git.spawn, git.lines
 		local spawn_calls, lines_calls = 0, 0
 		git.spawn = function(...)

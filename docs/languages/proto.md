@@ -2,7 +2,7 @@
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-KrsVim provides editing, validation, autocompletion, and formatting for **Protocol Buffer (`.proto`)** schema definitions.
+FoxVim provides editing, validation, autocompletion, and formatting for **Protocol Buffer (`.proto`)** schema definitions.
 
 ---
 

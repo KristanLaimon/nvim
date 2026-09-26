@@ -1,6 +1,6 @@
 # 🐙 GitHub Actions Toolchain Guide
 
-This document provides setup instructions and details for GitHub Actions workflow & action tooling in **KrsVim**.
+This document provides setup instructions and details for GitHub Actions workflow & action tooling in **FoxVim**.
 
 ---
 

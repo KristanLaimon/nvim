@@ -1,15 +1,15 @@
 -- ============================================================================
--- tests/spec/core_path_spec.lua -- Contract tests for krs.core.path.
+-- tests/spec/core_path_spec.lua -- Contract tests for fox.core.path.
 -- ============================================================================
 -- Path handling is the single most copy-pasted logic in this config, so its
 -- edge cases (drive letters, trailing slashes, case sensitivity) are pinned here.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local path = require("krs.core.path")
+local path = require("fox.core.path")
 
-describe("krs.core.path.normalize", function()
+describe("fox.core.path.normalize", function()
 	it("converts backslashes to forward slashes", function()
 		expect(path.normalize([[C:\Users\me\project]])).toBe("C:/Users/me/project")
 	end)
@@ -35,9 +35,9 @@ describe("krs.core.path.normalize", function()
 	end)
 end)
 
-describe("krs.core.path.join", function()
+describe("fox.core.path.join", function()
 	it("joins segments with a single separator", function()
-		expect(path.join("root", ".krsnvim", "tasks.json")).toBe("root/.krsnvim/tasks.json")
+		expect(path.join("root", ".foxnvim", "tasks.json")).toBe("root/.foxnvim/tasks.json")
 	end)
 
 	it("collapses separators contributed by the segments", function()
@@ -53,7 +53,7 @@ describe("krs.core.path.join", function()
 	end)
 end)
 
-describe("krs.core.path.equals", function()
+describe("fox.core.path.equals", function()
 	it("ignores separator style", function()
 		expect(path.equals([[C:\a\b]], "C:/a/b")).toBeTruthy()
 	end)
@@ -67,7 +67,7 @@ describe("krs.core.path.equals", function()
 	end)
 end)
 
-describe("krs.core.path.relative_to", function()
+describe("fox.core.path.relative_to", function()
 	it("returns the path below the root", function()
 		expect(path.relative_to("C:/proj/src/main.lua", "C:/proj")).toBe("src/main.lua")
 	end)
@@ -85,7 +85,7 @@ describe("krs.core.path.relative_to", function()
 	end)
 end)
 
-describe("krs.core.path filesystem probes", function()
+describe("fox.core.path filesystem probes", function()
 	it("reports directories and files apart", function()
 		local dir = vim.fn.tempname()
 		path.ensure_dir(dir)

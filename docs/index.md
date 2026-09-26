@@ -1,6 +1,6 @@
-# 🦊 KrsVim Wiki
+# 🦊 FoxVim Wiki
 
-Welcome to the **KrsVim** documentation! KrsVim is a fast, Windows-first, WSL-aware Neovim distribution built around a modular architecture and rounded floating UI modules (`lua/plugins/krs/`).
+Welcome to the **FoxVim** documentation! FoxVim is a fast, Windows-first, WSL-aware Neovim distribution built around a modular architecture and rounded floating UI modules (`lua/plugins/fox/`).
 
 > 🦊 **Neovim Version:** Currently running on **NVIM v0.12.4** (requires Neovim >= 0.10).
 
@@ -12,14 +12,14 @@ Welcome to the **KrsVim** documentation! KrsVim is a fast, Windows-first, WSL-aw
 
 ## 🏁 New User Quick Start (First 5 Minutes)
 
-If you have just installed or launched KrsVim for the first time, follow these steps:
+If you have just installed or launched FoxVim for the first time, follow these steps:
 
 1. **Start Neovim**: Run `nvim` in your terminal. On first startup, `lazy.nvim` automatically downloads and installs all editor plugins.
-2. **Open the Dashboard & Wiki**: If you land on the dashboard screen, press `w` to open this Wiki inside Neovim (or run `:KrsWiki` / `:NvimWiki` from anywhere, or `<C-S-d>`).
-3. **Sync External Dependencies**: KrsVim relies on a few external CLI utilities (like `ripgrep`, `fd`, `gcc`, `chafa`, `node`, `bun`, `go`, `dotnet`). Run the automated setup script for your platform:
+2. **Open the Dashboard & Wiki**: If you land on the dashboard screen, press `w` to open this Wiki inside Neovim (or run `:FoxWiki` / `:NvimWiki` from anywhere, or `<C-S-d>`).
+3. **Sync External Dependencies**: FoxVim relies on a few external CLI utilities (like `ripgrep`, `fd`, `gcc`, `chafa`, `node`, `bun`, `go`, `dotnet`). Run the automated setup script for your platform:
    - **Windows (PowerShell)**: `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1`
    - **Linux / WSL / Git Bash**: `./scripts/setup.sh`
-   *(These scripts are idempotent—safe to run at any time! If you haven't run them yet, KrsVim will still run with [graceful fallbacks](installation.md#⚡-what-if-you-havent-run-setupps1-or-setupsh).)*
+   *(These scripts are idempotent—safe to run at any time! If you haven't run them yet, FoxVim will still run with [graceful fallbacks](installation.md#⚡-what-if-you-havent-run-setupps1-or-setupsh).)*
 4. **Discover Shortcuts**: Press `<C-S-p>` to launch the **Command Palette**, or press `?` / `<F1>` in any window to get instant, context-aware keyboard help.
 5. **Want to change something?** Every feature here is meant to be edited by you, not just read about — [How-To & Customization Guide § Quick Answer](how-to-customize-editor.md#⚡-quick-answer-how-do-i-change-x) is the fastest path from "I don't like this" to "fixed it myself."
 
@@ -35,7 +35,7 @@ If you have just installed or launched KrsVim for the first time, follow these s
 | 🎯 **C# / .NET / Blazor** | [**C# & Blazor Guide**](languages/csharp.md) | OmniSharp, csharp-ls, csharpier, netcoredbg, lemminx XML |
 | 🟦 **Go** | [**Go Guide**](languages/go.md) | gopls, delve DAP, gofumpt, goimports |
 | 🐍 **Python** | [**Python Guide**](languages/python.md) | pyright, debugpy DAP, black, isort, ruff |
-| 🌙 **Lua & Scripts** | [**Lua & Scripts Guide**](languages/lua.md) | lua_ls, stylua, type_injector, krsnvimtranspiler |
+| 🌙 **Lua & Scripts** | [**Lua & Scripts Guide**](languages/lua.md) | lua_ls, stylua, type_injector, foxnvimtranspiler |
 | 🌐 **Web Frontend Vanilla** | [**Web Frontend Guide**](languages/web.md) | HTML, CSS, Tailwind CSS, Emmet, snippets |
 | 🪐 **Web Frameworks** | [**Astro Guide**](languages/astro.md) | Astro LSP and Prettier |
 | 🧩 **Web UI** | [**Web UI Guide**](languages/web-ui.md) | Svelte, Angular, React/TSX, TypeScript LSP |
@@ -52,7 +52,7 @@ If you have just installed or launched KrsVim for the first time, follow these s
 | 🛠️ [**Languages, LSP & Formatting**](languages.md) | Mason servers, Conform formatters, Treesitter parsers & completion tuning |
 | 🌐 [**Adding a Language / LSP**](adding-language.md) | Step-by-step guide for adding new language servers, formatters & debuggers |
 | 📄 [**File Creation Templates**](file-templates.md) | Add Markdown templates for any Neovim filetype without Lua changes |
-| 📦 [**Plugin Inventory**](plugins.md) | Comprehensive listing of third-party plugins and custom `krs` modules |
+| 📦 [**Plugin Inventory**](plugins.md) | Comprehensive listing of third-party plugins and custom `fox` modules |
 
 ### ⌨️ Daily Driving & Workflow
 | Page | Contents |
@@ -66,15 +66,15 @@ If you have just installed or launched KrsVim for the first time, follow these s
 | 🙈 [**Neo-tree Custom Hidden**](neo-tree-hidden.md) | Visual file & folder hiding in Neo-tree (`H`/`gh`), theme-derived highlights & Command Palette |
 | 🖥️ [**Multi-Terminal Manager**](terminals.md) | 9 independent terminal buffers (`<A-1>`..`<A-9>`), height memory & auto-WSL |
 | 🎛️ [**Editor Quality of Life**](editor-qol.md) | Smart quit, context help (`?`/`<F1>`), colorscheme preview, image viewer (`:ImageViewer`), font sizing & PHP diagnostics |
-| 🎨 [**Color Palette & Themes**](color-palette.md) | HSL palette architecture and live theme swapping (`:KrsThemePicker`) |
+| 🎨 [**Color Palette & Themes**](color-palette.md) | HSL palette architecture and live theme swapping (`:FoxThemePicker`) |
 
 ### 🚀 Building, Running & Debugging
 | Page | Contents |
 | :--- | :--- |
 | 🛠️ [**Task Runner**](tasks.md) | Auto-discovery build tasks, custom command chains & 4 background output slots (`<C-1..4>`) |
-| 🚀 [**Launch Profiles**](launch-profiles.md) | `.krsnvim/launch.json`, smart launch (`<C-S-s>`), profile manager (`<C-S-q>`) & dev-server bridge |
+| 🚀 [**Launch Profiles**](launch-profiles.md) | `.foxnvim/launch.json`, smart launch (`<C-S-s>`), profile manager (`<C-S-q>`) & dev-server bridge |
 | 🐞 [**Debug Adapters (DAP)**](debug-adapters.md) | Full debugger guide, Bun adapter, repl completion & troubleshooting |
-| 🔴 [**Breakpoints**](breakpoints.md) | Session breakpoint persistence (`.krsnvim/breakpoints.json`), conditional breakpoints & logpoints |
+| 🔴 [**Breakpoints**](breakpoints.md) | Session breakpoint persistence (`.foxnvim/breakpoints.json`), conditional breakpoints & logpoints |
 
 ### 🧬 Code Helpers & Tooling
 | Page | Contents |
@@ -89,12 +89,12 @@ If you have just installed or launched KrsVim for the first time, follow these s
 | Page | Contents |
 | :--- | :--- |
 | 🏛️ [**Architecture Overview**](architecture.md) | Four-layer architecture, startup sequence & dependency graph |
-| 🧩 [**Module Architecture**](module-architecture.md) | How `lua/plugins/krs` modules self-register with `lazy.nvim` |
-| 🔌 [**Creating Local Plugins**](how-to-create-local-plugin.md) | Step-by-step guide for creating custom local features in `lua/plugins/krs/` |
+| 🧩 [**Module Architecture**](module-architecture.md) | How `lua/plugins/fox` modules self-register with `lazy.nvim` |
+| 🔌 [**Creating Local Plugins**](how-to-create-local-plugin.md) | Step-by-step guide for creating custom local features in `lua/plugins/fox/` |
 | 🧬 [**Managing Lua Type Schemas**](how-to-manage-lua-type-schemas.md) | Create/update/delete/register a [Type Injector](type-injector.md) Lua schema by hand, no picker needed |
 | 🧬 [**Managing TypeScript Type Schemas**](how-to-manage-typescript-type-schemas.md) | Same, for TypeScript/JS — fetching real `.d.ts` files straight from the npm registry, no `npm install` |
-| 📶 [**Dynamic Z-Index Manager**](z-index.md) | Centralized Z-index stack manager (`krs.core.z_index`) for floating windows |
-| 🧪 [**Testing Suite**](testing.md) | Running unit & integration tests (`:KrsTest`, `tests/run.lua`) |
+| 📶 [**Dynamic Z-Index Manager**](z-index.md) | Centralized Z-index stack manager (`fox.core.z_index`) for floating windows |
+| 🧪 [**Testing Suite**](testing.md) | Running unit & integration tests (`:FoxTest`, `tests/run.lua`) |
 
 ---
 
@@ -138,7 +138,7 @@ If you have just installed or launched KrsVim for the first time, follow these s
 | `<C-S-w>` | **Workspaces & Sessions** | Manage per-project session slots and buffer states |
 | `<C-S-t>` | **Task Runner** | Auto-discovered build, test, and package manager tasks |
 | `<C-S-s>` / `<C-S-q>` | **Launch & Debug Profiles** | Run default profile / open launch profile manager |
-| `<C-S-d>` / `:KrsWiki` | **Wiki & Documentation** | Dual-pane offline documentation modal |
+| `<C-S-d>` / `:FoxWiki` | **Wiki & Documentation** | Dual-pane offline documentation modal |
 | `?` / `<F1>` | **Context-Aware Help** | Display keyboard shortcuts for the focused panel |
 | `<C-;>` | **Toggle Active Terminal** | Toggle floating terminal buffer |
 | `<A-1>`..`<A-9>` | **Terminal Slots 1..9** | Switch between 9 independent background terminals |
@@ -147,8 +147,8 @@ If you have just installed or launched KrsVim for the first time, follow these s
 
 ## 🚀 Core Design Philosophy
 
-1. **Everything is a Local Module**: All custom features live in `lua/plugins/krs/*.lua` as single-file lazy specs backed by pure testable modules in `lua/krs/`.
-2. **Per-Project State (`.krsnvim/`)**: Tasks, launch profiles, breakpoints, and type definitions stay inside your project directory rather than polluting global editor state.
+1. **Everything is a Local Module**: All custom features live in `lua/plugins/fox/*.lua` as single-file lazy specs backed by pure testable modules in `lua/fox/`.
+2. **Per-Project State (`.foxnvim/`)**: Tasks, launch profiles, breakpoints, and type definitions stay inside your project directory rather than polluting global editor state.
 3. **First-Class Debugging**: Pre-configured DAP adapters for JS/TS, Bun, Python, Go, C#, PHP, C/C++, and Rust with persistent breakpoints and REPL integration.
 4. **Unified Floating UI**: Input popups, file pickers, git controls, and terminals share a cohesive rounded design system managed by a centralized [Z-Index Manager](z-index.md).
 5. **Multi-Layout Support**: Built-in compatibility for US Standard, US-International, Latam, and European keyboards.

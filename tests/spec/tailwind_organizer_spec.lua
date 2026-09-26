@@ -6,9 +6,9 @@
 -- forms get rewritten.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local tw = require("plugins.krs.editor.tailwind_organizer")
+local tw = require("plugins.fox.editor.tailwind_organizer")
 
 --- Organizes a class string with multi-line output forced on, so the row
 --- structure is visible regardless of length heuristics.

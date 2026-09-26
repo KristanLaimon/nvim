@@ -4,14 +4,14 @@
 -- WHAT IT DOES
 --   Displays reference counts (e.g. "󰌹 3 references") above functions, methods,
 --   classes, interfaces, and structs across all LSP servers, including gopls.
---   Integrates with `:KrsUsagesTheme` for Bubbles (default), Plain, & Labels.
+--   Integrates with `:FoxUsagesTheme` for Bubbles (default), Plain, & Labels.
 -- ============================================================================
 
 return {
 	"Wansmer/symbol-usage.nvim",
 	event = "LspAttach",
 	config = function(_, opts)
-		local ok, picker = pcall(require, "plugins.krs.tools.usages_picker")
+		local ok, picker = pcall(require, "plugins.fox.tools.usages_picker")
 		opts = opts or {}
 		opts.kinds = {
 			vim.lsp.protocol.SymbolKind.Function,

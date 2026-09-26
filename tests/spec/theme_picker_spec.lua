@@ -2,24 +2,24 @@
 -- tests/spec/theme_picker_spec.lua -- Nagatoro theme discovery & picker.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local theme_picker = require("plugins.krs.ui.theme_picker")
+local theme_picker = require("plugins.fox.ui.theme_picker")
 
-describe("plugins.krs.ui.theme_picker", function()
-	it("discovers all -krs and nagatoro-* formatted themes in colors/", function()
+describe("plugins.fox.ui.theme_picker", function()
+	it("discovers all -fox and nagatoro-* formatted themes in colors/", function()
 		local themes = theme_picker.discover_themes()
-		expect(themes).toContain("nagatoro-krs")
+		expect(themes).toContain("nagatoro-fox")
 		expect(themes).toContain("nagatoro-light")
-		expect(themes).toContain("onedark-krs")
-		expect(themes).toContain("catppuccin-krs")
-		expect(themes).toContain("nord-krs")
+		expect(themes).toContain("onedark-fox")
+		expect(themes).toContain("catppuccin-fox")
+		expect(themes).toContain("nord-fox")
 	end)
 
-	it("registers KrsThemePicker user command", function()
+	it("registers FoxThemePicker user command", function()
 		theme_picker.setup()
 		local cmds = vim.api.nvim_get_commands({})
-		expect(cmds["KrsThemePicker"]).toBeDefined()
+		expect(cmds["FoxThemePicker"]).toBeDefined()
 	end)
 
 	it("retrieves current saved theme or fallback", function()

@@ -2,7 +2,7 @@
 -- tests/spec/alt_keymaps_spec.lua -- Alt + <something> keymap functionality tests.
 -- ============================================================================
 
-local t = require("krs.lib.krsnvim.test")
+local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 -- Ensure keymaps are loaded
@@ -65,13 +65,13 @@ describe("Alt / Meta keymaps functionality", function()
 	end)
 
 	it("binds git stage all keymaps for Ctrl+Shift+X, Alt and Meta variants", function()
-		local krs_keys = require("keymaps.krs")
-		expect(krs_keys.settings.keys.git_stage_all).toContain("<C-S-x>")
-		expect(krs_keys.settings.keys.git_stage_all).toContain("<C-S-X>")
-		expect(krs_keys.settings.keys.git_stage_all).toContain("<A-s>")
-		expect(krs_keys.settings.keys.git_stage_all).toContain("<M-s>")
+		local fox_keys = require("keymaps.fox")
+		expect(fox_keys.settings.keys.git_stage_all).toContain("<C-S-x>")
+		expect(fox_keys.settings.keys.git_stage_all).toContain("<C-S-X>")
+		expect(fox_keys.settings.keys.git_stage_all).toContain("<A-s>")
+		expect(fox_keys.settings.keys.git_stage_all).toContain("<M-s>")
 
-		for _, key in ipairs(krs_keys.settings.keys.git_stage_all) do
+		for _, key in ipairs(fox_keys.settings.keys.git_stage_all) do
 			expect(has_normal_keymap(key)).toBe(true)
 		end
 

@@ -1,0 +1,17 @@
+-- 05_json_data.foxnvim: JSON encode and load
+local data_dir = "tests/foxnvimscript/json_out"
+if not fs.exists(data_dir) then
+    fs.mkdir(data_dir)
+end
+
+local json_file = data_dir .. "/config.json"
+local json_str = json.encode({ app = "foxnvim", version = "2.0", enabled = true })
+
+print("Encoded JSON:", json_str)
+fs.write(json_file, json_str)
+
+if fs.exists(json_file) then
+    print("JSON file written successfully.")
+    local loaded = json.load(json_file)
+    print("Loaded JSON from file.")
+end

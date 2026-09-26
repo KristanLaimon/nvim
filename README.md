@@ -4,13 +4,17 @@
   <br>
   <strong>Foxnvim</strong>
   <br>
-  <span style="display:block;font-size:1.25rem;">An opinionated neovim distribution for fox coders with IDE features included for FullStack development in many languages.</span>
+  <span style="display:block;font-size:1.25rem;">My personal neovim configuration for fox coders with IDE features included for FullStack development in many languages.</span>
   <br><br>
   <a href="https://github.com/KristanLaimon/nvim/stargazers"><img src="https://img.shields.io/github/stars/KristanLaimon/nvim?style=flat-square" alt="GitHub Stars"></a>
 </p>
 
-<img width="1703" height="807" alt="image" src="https://github.com/user-attachments/assets/aeefe6e7-1d6c-4af5-997d-dd3adc0e025f" />
+<video src="https://github.com/user-attachments/assets/ace791d2-96a6-4b3f-830b-345afa86391f"></video>
 
+This is intended for my own usage, but wanted to share as a public repo in case someone founds this config useful. You can fork-it, clone it, break it, do as you please.
+Expect to found highly opinionated keybinds, custom plugins and more. For fox coders! 🦊
+
+### This is for fullstack coding and AI friendly. From react/typescript/next.js to backends in PHP/Laravel, C# ASP.NET or Golang proyects.
 
 # Main Features
 
@@ -32,7 +36,7 @@ Open the Command Palette with `<C-S-p>` or `:CommandPalette` to discover actions
 <video src="https://github.com/user-attachments/assets/48f49970-2bd7-40a7-a8f3-1116a5d80e2a"></video>
 
 
-<video src="https://github.com/user-attachments/assets/ace791d2-96a6-4b3f-830b-345afa86391f"></video>
+
 
 
 

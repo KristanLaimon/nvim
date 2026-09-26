@@ -30,6 +30,24 @@ t.describe("generic file creation template system", function()
 		end
 	end)
 
+	t.it("discovers and parses typescriptreact component templates", function()
+		local tsx_tmpls = templates.get_templates("typescriptreact")
+		t.expect(#tsx_tmpls).toBe(7)
+
+		local names = {}
+		for _, tmpl in ipairs(tsx_tmpls) do
+			names[#names + 1] = tmpl.name
+		end
+
+		t.expect(names).toContain("Function Component with Props")
+		t.expect(names).toContain("Function Component (Hooks, no props)")
+		t.expect(names).toContain("Arrow Function with Props")
+		t.expect(names).toContain("Arrow Function (Hooks, no props)")
+		t.expect(names).toContain("Class Component")
+		t.expect(names).toContain("Server Component (Async)")
+		t.expect(names).toContain("Custom Hook")
+	end)
+
 	t.it("returns empty list for languages without template folder or 0 templates", function()
 		t.expect(templates.get_templates("nonexistent_lang")).toEqual({})
 		t.expect(templates.get_templates("")).toEqual({})
@@ -129,6 +147,48 @@ t.describe("generic file creation template system", function()
 		vim.api.nvim_buf_delete(buf, { force = true })
 	end)
 
+	t.it("supports linked numbered tabstops and finishes at $0", function()
+		local original = vim.api.nvim_get_current_buf()
+		local buf = vim.api.nvim_create_buf(true, false)
+		vim.api.nvim_buf_set_name(buf, tmp_dir .. "/Linked.lua")
+		vim.api.nvim_set_current_buf(buf)
+		local ok, err = pcall(function()
+			templates.apply_template_to_buffer(buf, {
+				name = "Linked",
+				filetype = "lua",
+				body = "${1:Item} = $1\n$2\n$0",
+			})
+			t.expect(vim.snippet.active()).toBe(true)
+			vim.api.nvim_buf_set_text(buf, 0, 0, 0, 4, { "Thing" })
+			vim.api.nvim_exec_autocmds("TextChangedI", { buffer = buf })
+			t.expect(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]).toBe("Thing = Thing")
+			vim.snippet.jump(1)
+			t.expect(vim.api.nvim_win_get_cursor(0)).toEqual({ 2, 0 })
+			vim.snippet.jump(1)
+			t.expect(vim.snippet.active()).toBe(false)
+			t.expect(vim.api.nvim_win_get_cursor(0)).toEqual({ 3, 0 })
+		end)
+		if vim.snippet.active() then
+			vim.snippet.stop()
+		end
+		vim.api.nvim_set_current_buf(original)
+		vim.api.nvim_buf_delete(buf, { force = true })
+		assert(ok, err)
+	end)
+
+	t.it("removes numbered markers when the target buffer is hidden", function()
+		local buf = vim.api.nvim_create_buf(true, false)
+		local file = tmp_dir .. "/Hidden.lua"
+		vim.api.nvim_buf_set_name(buf, file)
+		templates.apply_template_to_buffer(buf, {
+			name = "Hidden",
+			filetype = "lua",
+			body = "${1:Item} = $1\n$2\n$0",
+		}, file)
+		t.expect(vim.api.nvim_buf_get_lines(buf, 0, -1, false)).toEqual({ "Item = Item", "", "" })
+		vim.api.nvim_buf_delete(buf, { force = true })
+	end)
+
 	t.it("offers template menu and closes cleanly when option selected", function()
 		local buf = vim.api.nvim_create_buf(true, false)
 		local file = tmp_dir .. "/Widget.svelte"
@@ -139,7 +199,7 @@ t.describe("generic file creation template system", function()
 		local orig_menu = cli.menu
 		cli.menu = function(title, options, cb)
 			menu_called = true
-			t.expect(title).toContain("SVELTE")
+			t.expect(title.title).toContain("SVELTE")
 			t.expect(#options > 0).toBe(true)
 			cb(options[1])
 		end
@@ -181,6 +241,12 @@ t.describe("generic file creation template system", function()
 			local popup_win = vim.api.nvim_get_current_win()
 			local popup_buf = vim.api.nvim_win_get_buf(popup_win)
 			t.expect(vim.bo[popup_buf].filetype).toBe("krsmenu")
+			local popup_lines = vim.api.nvim_buf_get_lines(popup_buf, 0, -1, false)
+			local popup_size = vim.api.nvim_win_get_config(popup_win)
+			t.expect(popup_lines[1]).toContain("SVELTE Template")
+			t.expect(popup_lines[4]).toContain("Component")
+			t.expect(popup_size.width).toBe(math.min(96, vim.o.columns - 4))
+			t.expect(popup_size.height).toBe(math.min(18, vim.o.lines - 4))
 
 			-- Trigger Enter on the menu
 			for _, map in ipairs(vim.api.nvim_buf_get_keymap(popup_buf, "n")) do

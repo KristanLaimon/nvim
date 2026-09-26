@@ -97,6 +97,12 @@ t.describe("C# file creation", function()
 			local popup = vim.api.nvim_get_current_buf()
 			local popup_win = vim.api.nvim_get_current_win()
 			t.expect(vim.bo[popup].filetype).toBe("krsmenu")
+			local lines = vim.api.nvim_buf_get_lines(popup, 0, -1, false)
+			local size = vim.api.nvim_win_get_config(popup_win)
+			t.expect(lines[1]).toContain("C# Type")
+			t.expect(lines[4]).toContain("Class")
+			t.expect(size.width).toBe(math.min(96, vim.o.columns - 4))
+			t.expect(size.height).toBe(math.min(18, vim.o.lines - 4))
 			for _, keymap in ipairs(vim.api.nvim_buf_get_keymap(popup, "n")) do
 				if keymap.lhs == "<Esc>" then
 					keymap.callback()

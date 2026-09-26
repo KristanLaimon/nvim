@@ -3,7 +3,7 @@
 -- ============================================================================
 
 local t = require("krs.lib.krsnvim.test")
-local describe, it, expect, afterEach = t.describe, t.it, t.expect, t.afterEach
+local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
 local buffer_cleaner = require("plugins.krs.editor.buffer_cleaner")
 
 describe("plugins.krs.editor.buffer_cleaner tab navigation", function()
@@ -31,6 +31,8 @@ describe("plugins.krs.editor.buffer_cleaner tab navigation", function()
 			end
 		end
 	end
+
+	beforeEach(wipe_all_buffers)
 
 	afterEach(function()
 		wipe_all_buffers()

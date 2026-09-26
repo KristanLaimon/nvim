@@ -86,15 +86,23 @@ return {
 				modal.check_tools(false, true)
 			end, { desc = "Check PHP & Laravel CLI environment status" })
 
-			local checked = false
+			local checked, pending = false, false
 			vim.api.nvim_create_autocmd("FileType", {
 				pattern = { "php", "blade" },
-				callback = function()
-					if not checked then
-						checked = true
+				callback = function(args)
+					if not checked and not pending then
+						pending = true
+						local buf = args.buf
 						-- Defer slightly to allow buffer layout to settle
 						vim.defer_fn(function()
-							modal.check_tools(false)
+							pending = false
+							if vim.g.krs_testing or _G.krs_testing then
+								return
+							end
+							if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_get_current_buf() == buf then
+								checked = true
+								modal.check_tools(false)
+							end
 						end, 300)
 					end
 				end,

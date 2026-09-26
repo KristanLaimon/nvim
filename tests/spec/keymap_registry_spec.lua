@@ -42,7 +42,7 @@ describe("keymap_registry", function()
 			expect(collision_calls[1].opts.title).toBe("Keymap collision")
 			expect(collision_calls[1].opts.max_width).toBe(120)
 			expect(type(collision_calls[1].opts.on_open)).toBe("function")
-			expect(calls[1].opts.timeout).toBe(nil)
+			expect(collision_calls[1].opts.timeout).toBe(nil)
 			expect(collision_calls[1].level).toBe(vim.log.levels.WARN)
 
 			vim.keymap.del("n", "<F13>")
@@ -123,7 +123,7 @@ describe("keymap_registry", function()
 	end)
 
 	it("allowlists runtime ftplugin and string chunk keymaps", function()
-		with_stub_notify(function(calls)
+		with_stub_notify(function()
 			local registry = require("krs.core.keymap_registry")
 			registry.install()
 

@@ -310,7 +310,7 @@ function M.is_empty_buffer(buf)
 		and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
 end
 
---- Apply a template directly to a target buffer, handling $0 cursor positioning.
+--- Apply a template directly to a target buffer, using native snippet tabstops when visible.
 --- @param buf integer
 --- @param template table
 --- @param filename? string
@@ -332,48 +332,68 @@ function M.apply_template_to_buffer(buf, template, filename)
 	local vars = M.resolve_variables(filename, ft)
 	local rendered = M.render(template.body, vars)
 
-	local current_buf = vim.api.nvim_get_current_buf()
-	local is_current = (current_buf == buf)
-
-	-- If $0 is present and buffer is current, attempt native vim.snippet.expand
-	if rendered:find("%$0") and is_current and vim.snippet and vim.snippet.expand then
-		local ok_snip = pcall(vim.snippet.expand, rendered)
-		if ok_snip then
-			return
+	-- Native snippets provide numbered tabstops, linked mirrors, and the final $0.
+	if (rendered:find("%$%d") or rendered:find("%${%d")) and vim.snippet and vim.snippet.expand then
+		local win = vim.fn.bufwinid(buf)
+		if win ~= -1 and vim.api.nvim_win_is_valid(win) then
+			vim.api.nvim_set_current_win(win)
+			local ok_snip = pcall(vim.snippet.expand, rendered)
+			if ok_snip then
+				return
+			end
 		end
 	end
 
-	-- Manual line splitting and cursor placement
+	-- A hidden buffer has no window for an interactive snippet session. Insert
+	-- its text without leaving numbered markers in the file.
 	local lines = {}
-	local cursor_line = 1
-	local cursor_col = 0
-	local found_cursor = false
+	local positions = {}
+	local defaults = {}
+	for index, value in rendered:gmatch("%${(%d+):([^}]*)}") do
+		defaults[tonumber(index)] = value
+	end
 
 	for line in (rendered .. "\n"):gmatch("([^\n]*)\n") do
-		if not found_cursor then
-			local s, e = line:find("%$0")
-			if s then
-				cursor_line = #lines + 1
-				cursor_col = s - 1
-				line = line:sub(1, s - 1) .. line:sub(e + 1)
-				found_cursor = true
+		local result = {}
+		local col = 0
+		local i = 1
+		while i <= #line do
+			local rest = line:sub(i)
+			local index, default = rest:match("^%${(%d+):([^}]*)}")
+			local token = index and ("${" .. index .. ":" .. default .. "}")
+			if not index then
+				index = rest:match("^%${(%d+)}") or rest:match("^%$(%d+)")
+				token = index and (rest:match("^%${%d+}") or rest:match("^%$%d+"))
 			end
-		else
-			line = line:gsub("%$0", "")
+			if index then
+				index = tonumber(index)
+				positions[index] = positions[index] or { #lines + 1, col }
+				local value = defaults[index] or ""
+				result[#result + 1] = value
+				col = col + #value
+				i = i + #token
+			else
+				result[#result + 1] = line:sub(i, i)
+				col = col + 1
+				i = i + 1
+			end
 		end
-		lines[#lines + 1] = line
+		lines[#lines + 1] = table.concat(result)
 	end
 
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
-	if found_cursor then
-		local win = vim.fn.bufwinid(buf)
-		if win ~= -1 and vim.api.nvim_win_is_valid(win) then
-			pcall(vim.api.nvim_win_set_cursor, win, {
-				math.min(cursor_line, #lines),
-				math.max(0, cursor_col),
-			})
+	local first = positions[0]
+	local first_index = math.huge
+	for index, pos in pairs(positions) do
+		if index > 0 and index < first_index then
+			first = pos
+			first_index = index
 		end
+	end
+	local win = vim.fn.bufwinid(buf)
+	if first and win ~= -1 and vim.api.nvim_win_is_valid(win) then
+		pcall(vim.api.nvim_win_set_cursor, win, { first[1], first[2] })
 	end
 end
 
@@ -422,7 +442,7 @@ function M.offer_template(buf, filetype)
 	end
 
 	local cli = require("krs.lib.krsnvim.cli")
-	cli.menu(title, options, function(choice)
+	cli.menu({ title = title, compact_header = true, width = 96, min_height = 18 }, options, function(choice)
 		if not vim.api.nvim_buf_is_valid(buf) then
 			return
 		end

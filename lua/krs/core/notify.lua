@@ -148,7 +148,7 @@ function M.notify(msg, level, opts)
 	vim.keymap.set({ "n", "v", "i" }, "<2-LeftMouse>", copy_fn, { buffer = buf, silent = true, noremap = true })
 
 	-- Compute geometry
-	local is_mobile = false
+	local is_mobile
 	local env_ok, env_mod = pcall(require, "krs.core.environment")
 	if env_ok then
 		local env = env_mod.detect()
@@ -423,8 +423,10 @@ function M.finish_progress(id, custom_timeout)
 				end
 
 				if exit_step >= exit_steps then
-					exit_timer:stop()
-					exit_timer:close()
+					if not exit_timer:is_closing() then
+						exit_timer:stop()
+						exit_timer:close()
+					end
 					if win and vim.api.nvim_win_is_valid(win) then
 						pcall(vim.api.nvim_win_close, win, true)
 					end

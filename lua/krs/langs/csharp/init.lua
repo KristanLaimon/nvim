@@ -400,30 +400,34 @@ function M.new_type(buf)
 	vim.b[buf].csharp_template_pending = true
 	local filename = vim.api.nvim_buf_get_name(buf)
 	local tick = vim.api.nvim_buf_get_changedtick(buf)
-	require("krs.lib.krsnvim.cli").menu("C# Type", options, function(choice)
-		if not vim.api.nvim_buf_is_valid(buf) then
-			return
-		end
-		vim.b[buf].csharp_template_pending = nil
-		if
-			choice
-			and empty_csharp_buffer(buf)
-			and vim.api.nvim_buf_get_name(buf) == filename
-			and vim.api.nvim_buf_get_changedtick(buf) == tick
-		then
-			local choice_name = type(choice) == "table" and (choice.name or choice[1] or choice.label) or tostring(choice)
-			local matched = nil
-			for _, t in ipairs(available) do
-				if t.name:lower() == choice_name:lower() then
-					matched = t
-					break
+	require("krs.lib.krsnvim.cli").menu(
+		{ title = "C# Type", compact_header = true, width = 96, min_height = 18 },
+		options,
+		function(choice)
+			if not vim.api.nvim_buf_is_valid(buf) then
+				return
+			end
+			vim.b[buf].csharp_template_pending = nil
+			if
+				choice
+				and empty_csharp_buffer(buf)
+				and vim.api.nvim_buf_get_name(buf) == filename
+				and vim.api.nvim_buf_get_changedtick(buf) == tick
+			then
+				local choice_name = type(choice) == "table" and (choice.name or choice[1] or choice.label) or tostring(choice)
+				local matched = nil
+				for _, t in ipairs(available) do
+					if t.name:lower() == choice_name:lower() then
+						matched = t
+						break
+					end
+				end
+				if matched then
+					tmpl_mod.apply_template_to_buffer(buf, matched, filename)
 				end
 			end
-			if matched then
-				tmpl_mod.apply_template_to_buffer(buf, matched, filename)
-			end
 		end
-	end)
+	)
 end
 
 local recent_created = {}

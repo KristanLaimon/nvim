@@ -22,4 +22,6 @@ internal class <%filename%>
 
 `name`, `description`, and `index` set the label, description, and sort order. The text after the closing `---` is inserted into the new file. `$0` sets the cursor position. Common placeholders include `<%filename%>` (name without extension), `<%filename_ext%>`, `<%classname%>`, `<%filetype%>`, `<%date%>`, `<%year%>`, and `<%author%>`. C# also supplies `<%csharp_namespace%>` and `<%csharp_identifier%>`. An unavailable namespace removes a standalone `namespace <%csharp_namespace%>;` line.
 
+Use `$1`, `$2`, `$3`, and so on for editable fields. Tab moves to the next number, Shift-Tab moves back, and `$0` is the final cursor position. Repeated uses of the same number stay in sync: `${1:Name}` and another `$1` both show `Name` until you edit either one. Use `$0` once per template.
+
 The C# namespace comes from the nearest ancestor `.csproj` (`RootNamespace` or the project name), then adds the file's folder path. Without a project, a nearby `Program.cs` or other C# file with a namespace can supply the base namespace. Templates never replace a file after you type in its buffer while the menu is open.

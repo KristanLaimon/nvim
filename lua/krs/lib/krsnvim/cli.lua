@@ -440,9 +440,13 @@ function M.menu(title, options, callback)
 		local items = opts.items
 
 		local ascii_lines = {}
-		local raw_banner = M.ascii_title(opts.title, { subtitle = opts.subtitle })
-		for l in raw_banner:gmatch("([^\n]+)") do
-			table.insert(ascii_lines, M.strip_ansi(l))
+		if opts.compact_header then
+			ascii_lines[1] = " " .. opts.title
+		else
+			local raw_banner = M.ascii_title(opts.title, { subtitle = opts.subtitle })
+			for l in raw_banner:gmatch("([^\n]+)") do
+				table.insert(ascii_lines, M.strip_ansi(l))
+			end
 		end
 
 		local buf = vim.api.nvim_create_buf(false, true)
@@ -450,6 +454,7 @@ function M.menu(title, options, callback)
 		vim.bo[buf].bufhidden = "wipe"
 
 		local ns_id = vim.api.nvim_create_namespace("krs_cli_menu")
+		local win
 
 		local function render_menu()
 			local content = {}
@@ -498,16 +503,19 @@ function M.menu(title, options, callback)
 
 			pcall(vim.api.nvim_buf_add_highlight, buf, ns_id, "Comment", #content - 2, 0, -1)
 			pcall(vim.api.nvim_buf_add_highlight, buf, ns_id, "Comment", #content - 1, 0, -1)
+			if win and vim.api.nvim_win_is_valid(win) then
+				pcall(vim.api.nvim_win_set_cursor, win, { #ascii_lines + 2 + selected_idx, 0 })
+			end
 		end
 
 		render_menu()
 
-		local width = 64
-		local height = #ascii_lines + #items + 5
-		local win = vim.api.nvim_open_win(buf, true, {
+		local width = math.min(opts.width or 64, vim.o.columns - 4)
+		local height = math.min(math.max(#ascii_lines + #items + 5, opts.min_height or 0), vim.o.lines - 4)
+		win = vim.api.nvim_open_win(buf, true, {
 			relative = "editor",
-			width = math.min(width, vim.o.columns - 4),
-			height = math.min(height, vim.o.lines - 4),
+			width = width,
+			height = height,
 			row = math.floor((vim.o.lines - height) / 2),
 			col = math.floor((vim.o.columns - width) / 2),
 			style = "minimal",
@@ -515,6 +523,7 @@ function M.menu(title, options, callback)
 			title = " 🦊 KRS Interactive Menu ",
 			title_pos = "center",
 		})
+		pcall(vim.api.nvim_win_set_cursor, win, { #ascii_lines + 3, 0 })
 		active_menu_win = win
 		active_menu_buf = buf
 

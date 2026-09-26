@@ -26,6 +26,17 @@
 
 Open the Command Palette with `<C-S-p>` or `:CommandPalette` to discover actions. The [documentation index](docs/index.md) links to the full feature guides.
 
+
+
+<video src="https://github.com/user-attachments/assets/625c16aa-9ea5-4896-8821-a6766d1080ce"></video>
+<video src="https://github.com/user-attachments/assets/48f49970-2bd7-40a7-a8f3-1116a5d80e2a"></video>
+
+
+<video src="https://github.com/user-attachments/assets/ace791d2-96a6-4b3f-830b-345afa86391f"></video>
+
+
+
+
 ## Environment and terminal compatibility
 
 > 🦊 **Neovim Version:** Currently running on **NVIM v0.12.4** (requires Neovim >= 0.10).

@@ -12,11 +12,11 @@
 <img width="1703" height="807" alt="image" src="https://github.com/user-attachments/assets/aeefe6e7-1d6c-4af5-997d-dd3adc0e025f" />
 
 
-# Features
+# Main Features
 
-- Custom config & compatibility with `Neovide`
-<img width="1703" height="874" alt="image" src="https://github.com/user-attachments/assets/d31db9d2-ea1a-4d46-b17a-6c3f0d2a78b0" />
+<img  alt="Untitled-2026-09-13-2242" src="https://github.com/user-attachments/assets/2de88b62-7bcd-4851-9bbb-016d62820f69" />
 
+# Other features
 - Project environments with isolated buffers, layouts, LSPs, and terminal pools.
 - Nine persistent integrated terminals, task output slots, dev-server control, and launch profiles.
 - LSP, formatting, completion, Tree-sitter, DAP, language bundles, and a minimal fresh-install toolchain.
@@ -94,8 +94,6 @@ After cloning into `%LOCALAPPDATA%\nvim` (Windows) or `~/.config/nvim` (Linux, W
 
 - **Windows (PowerShell)**: `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1`
 - **Linux / WSL / Termux / Git Bash**: `./scripts/setup.sh`
-
-These idempotent scripts automatically install missing external dependencies (`ripgrep`, `fd`, `gcc`, `chafa`, Node.js, Bun, Go, .NET SDK). If you don't run them right away, FoxVim will still run with [graceful fallbacks](docs/installation.md#⚡-what-if-you-havent-run-setupps1-or-setupsh).
 
 ---
 

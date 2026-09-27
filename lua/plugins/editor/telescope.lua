@@ -465,7 +465,9 @@ return {
 			local pinned_tabs = require("plugins.fox.ui.pinned_tabs")
 			local has_pins = #pinned_tabs.load_pins() > 0
 			if not has_pins then
-				vim.cmd("Alpha")
+				if not pcall(vim.cmd, "Alpha") then
+					pcall(vim.cmd, "enew")
+				end
 			end
 			remember_project(dir)
 			if _G.AddOpenedFolder then

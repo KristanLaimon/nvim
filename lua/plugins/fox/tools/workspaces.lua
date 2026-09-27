@@ -567,7 +567,9 @@ function M.close_to_menu()
 		pcall(vim.cmd, "Neotree close")
 		purge_neotree_buffers()
 		pcall(vim.cmd, "only")
-		vim.cmd("Alpha")
+		if not pcall(vim.cmd, "Alpha") then
+			pcall(vim.cmd, "enew")
+		end
 
 		local alpha_buf = vim.api.nvim_get_current_buf()
 		for _, buf in ipairs(vim.api.nvim_list_bufs()) do

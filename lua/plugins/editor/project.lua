@@ -329,7 +329,9 @@ return {
 			local has_pins = #pinned_tabs.load_pins() > 0
 			if not has_pins then
 				if vim.bo.filetype ~= "alpha" then
-					vim.cmd("Alpha")
+					if not pcall(vim.cmd, "Alpha") then
+						pcall(vim.cmd, "enew")
+					end
 				end
 			end
 

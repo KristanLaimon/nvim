@@ -208,7 +208,9 @@ vim.api.nvim_create_autocmd("VimEnter", {
 				local pinned_tabs = require("plugins.fox.ui.pinned_tabs")
 				local has_pins = #pinned_tabs.load_pins() > 0
 				if not has_pins then
-					vim.cmd("Alpha")
+					if not pcall(vim.cmd, "Alpha") then
+						pcall(vim.cmd, "enew")
+					end
 				end
 				vim.cmd("silent! Neotree focus dir=" .. vim.fn.fnameescape(file))
 				if has_pins then

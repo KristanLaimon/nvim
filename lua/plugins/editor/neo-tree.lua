@@ -722,11 +722,9 @@ return {
 						visible = true,
 						hide_dotfiles = false,
 						hide_gitignored = false,
-						never_show = {
-							".git",
-							".DS_Store",
-							"thumbs.db",
-						},
+						hide_hidden = false,
+						hide_by_name = {},
+						never_show = {},
 					},
 				},
 				event_handlers = {

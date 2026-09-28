@@ -159,6 +159,21 @@ M.commands = {
 	{ name = "🩺 LSP Info (Active Clients & Interpreter Paths)", cmd = "LspInfo", category = "LSP" },
 	{ name = "💉 Modular Type Injector (Lua & TS/JS)", cmd = "TypeInjector", category = "LSP" },
 	{ name = "🚫 Add .foxnvim Ignore to .gitignore", cmd = "FoxGitignoreGenerated", category = "LSP" },
+	{
+		name = "🌐 Set Buffer Language / Filetype Override (Telescope)",
+		cmd = "SetBufferLanguage",
+		category = "Language",
+	},
+	{
+		name = "🔄 Reset Buffer Language Override to Default",
+		cmd = "ResetBufferLanguage",
+		category = "Language",
+	},
+	{
+		name = "📋 List Project Filetype Overrides (.foxnvim/filetypes.json)",
+		cmd = "ListBufferLanguages",
+		category = "Language",
+	},
 
 	-- --------------------------------------------------------------------------
 	-- 📋 Snippets & 📚 Offline Documentation

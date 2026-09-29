@@ -604,6 +604,9 @@ local function ensure_current_slot_initialized()
 end
 
 --- Saves the layout and state of the currently active environment to its session file.
+--- Captures the in-memory state of the currently active environment WITHOUT
+--- tearing down any UI. This is a fast, zero-I/O snapshot used during hot
+--- environment switches. Disk persistence is deferred to VimLeavePre / explicit save.
 --- @param env table|nil
 --- @return boolean ok
 local function snapshot_active_environment(env)
@@ -624,58 +627,7 @@ local function snapshot_active_environment(env)
 	-- Save the selected terminal slot so each environment has independent terminal selection
 	env.selected_terminal = _G._fox_selected_terminal or 1
 
-	vim.opt.sessionoptions = M.settings.session_options
-	local neotree_was_open = is_neotree_open()
-	purge_neotree()
-	dismiss_visible_terminals()
-
-	-- Check and snapshot active tools
-	local ok_ld, ld = pcall(require, "plugins.fox.git.log_diff")
-	local ld_open = ok_ld and ld.is_open and ld.is_open()
-	if ld_open then
-		env.log_diff_open = true
-		pcall(ld.close)
-	else
-		env.log_diff_open = false
-	end
-
-	local ok_cr, cr = pcall(require, "plugins.fox.git.conflict_resolver")
-	local cr_open = ok_cr and cr.is_open and cr.is_open()
-	if cr_open then
-		env.conflict_resolver_open = true
-		if cr.state and cr.state.active_file then
-			env.conflict_resolver_file = cr.state.active_file
-		end
-		pcall(cr.close)
-	else
-		env.conflict_resolver_open = false
-	end
-
-	local ok_dm, dm = pcall(require, "plugins.fox.git.diff_mode")
-	local dm_open = ok_dm and dm.is_open and dm.is_open()
-	if dm_open then
-		env.diff_mode_open = true
-		if dm.state then
-			env.diff_mode_state = {
-				mode = dm.state.mode,
-				target_ref = dm.state.target_ref,
-				base_ref = dm.state.base_ref,
-			}
-		end
-		pcall(dm.close)
-	else
-		env.diff_mode_open = false
-	end
-
-	local ok_gc, gc = pcall(require, "plugins.fox.git.git_center")
-	local gc_open = ok_gc and gc.is_open and gc.is_open()
-	if gc_open and not ld_open and not cr_open and not dm_open then
-		env.git_center_open = true
-		pcall(gc.close_git_center or gc.close)
-	else
-		env.git_center_open = false
-	end
-
+	-- Tag untagged buffers belonging to this environment
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		if vim.api.nvim_buf_is_valid(buf) and vim.fn.buflisted(buf) == 1 then
 			if vim.b[buf].fox_env_slot == nil or vim.b[buf].fox_env_slot == env.slot then
@@ -684,14 +636,88 @@ local function snapshot_active_environment(env)
 		end
 	end
 
-	env.session_file = env.session_file or session_path_for_slot(env.slot)
-	pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(env.session_file))
-
+	-- Capture state in memory (no disk I/O, no UI teardown)
 	env.updated_at = os.time()
 	env.buffers = get_listed_buffer_names()
 	env.terminals = vim.deepcopy(_G._fox_terminals or {})
-	env.neotree_open = neotree_was_open
+	env.neotree_open = is_neotree_open()
 
+	-- Snapshot active git tools state (read-only checks, no closing)
+	local ok_ld, ld = pcall(require, "plugins.fox.git.log_diff")
+	env.log_diff_open = (ok_ld and ld.is_open and ld.is_open()) or false
+
+	local ok_cr, cr = pcall(require, "plugins.fox.git.conflict_resolver")
+	local cr_open = ok_cr and cr.is_open and cr.is_open()
+	env.conflict_resolver_open = cr_open or false
+	if cr_open and cr.state and cr.state.active_file then
+		env.conflict_resolver_file = cr.state.active_file
+	end
+
+	local ok_dm, dm = pcall(require, "plugins.fox.git.diff_mode")
+	local dm_open = ok_dm and dm.is_open and dm.is_open()
+	env.diff_mode_open = dm_open or false
+	if dm_open and dm.state then
+		env.diff_mode_state = {
+			mode = dm.state.mode,
+			target_ref = dm.state.target_ref,
+			base_ref = dm.state.base_ref,
+		}
+	end
+
+	local ok_gc, gc = pcall(require, "plugins.fox.git.git_center")
+	local gc_open = ok_gc and gc.is_open and gc.is_open()
+	env.git_center_open = (gc_open and not env.log_diff_open and not cr_open and not dm_open) or false
+
+	return true
+end
+
+--- Full snapshot that tears down UI and writes to disk.
+--- Used only by save_all() and VimLeavePre, NOT during hot switches.
+--- @param env table|nil
+--- @return boolean ok
+local function snapshot_and_persist_environment(env)
+	env = env or M.get_active_environment()
+	if not env then
+		return false
+	end
+
+	-- First, capture in-memory state
+	snapshot_active_environment(env)
+
+	-- Now tear down UI for a clean session file
+	vim.opt.sessionoptions = M.settings.session_options
+	local neotree_was_open = env.neotree_open
+	purge_neotree()
+	dismiss_visible_terminals()
+
+	-- Close git tools for clean session
+	if env.log_diff_open then
+		pcall(function()
+			require("plugins.fox.git.log_diff").close()
+		end)
+	end
+	if env.conflict_resolver_open then
+		pcall(function()
+			require("plugins.fox.git.conflict_resolver").close()
+		end)
+	end
+	if env.diff_mode_open then
+		pcall(function()
+			require("plugins.fox.git.diff_mode").close()
+		end)
+	end
+	if env.git_center_open then
+		pcall(function()
+			local gc = require("plugins.fox.git.git_center")
+			;(gc.close_git_center or gc.close)()
+		end)
+	end
+
+	-- Write session file to disk
+	env.session_file = env.session_file or session_path_for_slot(env.slot)
+	pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(env.session_file))
+
+	-- Restore UI after disk write
 	if neotree_was_open then
 		pcall(vim.cmd, "Neotree focus dir=" .. vim.fn.fnameescape(env.cwd or vim.fn.getcwd()))
 	end
@@ -757,6 +783,7 @@ function M.create_environment(slot, dir, name, auto_switch)
 end
 
 --- Switches to the target environment slot.
+--- Optimized for speed: in-memory buffer swap with no disk I/O or window teardown.
 --- @param target_slot integer Target slot 1..9.
 --- @param callback function|nil
 --- @return boolean ok
@@ -781,14 +808,45 @@ function M.switch_environment(target_slot, callback)
 		return false
 	end
 
-	-- 1. Snapshot current active environment
+	-- 1. Fast in-memory snapshot of current environment (no disk I/O, no UI teardown)
 	ensure_current_slot_initialized()
 	local cur_env = _G._fox_environments[cur_slot]
 	if cur_env then
 		snapshot_active_environment(cur_env)
 	end
 
-	-- 2. Set directory with switching guard so DirChanged does not kill LSPs
+	-- 2. Close only active git tools (they need to release their windows)
+	--    Done synchronously but these are cheap in-memory operations
+	pcall(function()
+		local ld = package.loaded["plugins.fox.git.log_diff"]
+		if ld and ld.is_open and ld.is_open() then
+			pcall(ld.close)
+		end
+	end)
+	pcall(function()
+		local cr = package.loaded["plugins.fox.git.conflict_resolver"]
+		if cr and cr.is_open and cr.is_open() then
+			pcall(cr.close)
+		end
+	end)
+	pcall(function()
+		local dm = package.loaded["plugins.fox.git.diff_mode"]
+		if dm and dm.is_open and dm.is_open() then
+			pcall(dm.close)
+		end
+	end)
+	pcall(function()
+		local gc = package.loaded["plugins.fox.git.git_center"]
+		if gc and gc.is_open and gc.is_open() then
+			pcall(gc.close_git_center or gc.close)
+		end
+	end)
+
+	-- 3. Dismiss visible terminals and swap terminal pools
+	dismiss_visible_terminals()
+	swap_terminal_pool(target_env.terminals)
+
+	-- 4. Set directory with switching guard so DirChanged does not kill LSPs
 	vim.g._fox_environment_switching = true
 	if target_env.cwd and vim.fn.isdirectory(target_env.cwd) == 1 then
 		pcall(vim.api.nvim_set_current_dir, target_env.cwd)
@@ -796,49 +854,14 @@ function M.switch_environment(target_slot, callback)
 	_G._fox_active_env_slot = target_slot
 	vim.g._fox_environment_switching = false
 
-	-- 3. Swap terminal pools
-	swap_terminal_pool(target_env.terminals)
-
-	-- 4. Restore window layout & buffer isolation
-	purge_neotree()
-	pcall(vim.cmd, "silent! tabonly")
-	pcall(vim.cmd, "silent! only")
-
-	-- Hide/unlist buffers belonging to other environment slots, and re-list target slot buffers
+	-- 5. Single-pass buffer isolation: show target slot buffers, hide all others
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		if vim.api.nvim_buf_is_valid(buf) and not is_transient_buffer(buf) then
 			local b_slot = vim.b[buf].fox_env_slot
 			if b_slot ~= nil then
-				if b_slot == target_slot then
-					vim.bo[buf].buflisted = true
-				else
-					vim.bo[buf].buflisted = false
-				end
-			end
-		end
-	end
-
-	if target_env.session_file and path.is_file(target_env.session_file) then
-		local ok, err = pcall(vim.cmd, "source " .. vim.fn.fnameescape(target_env.session_file))
-		if not ok then
-			notify("Warning restoring environment session: " .. tostring(err), vim.log.levels.WARN)
-			vim.cmd("enew")
-			local cur_b = vim.api.nvim_get_current_buf()
-			vim.b[cur_b].fox_env_slot = target_slot
-			vim.bo[cur_b].buflisted = true
-		end
-	else
-		vim.cmd("enew")
-		local cur_b = vim.api.nvim_get_current_buf()
-		vim.b[cur_b].fox_env_slot = target_slot
-		vim.bo[cur_b].buflisted = true
-	end
-
-	-- Re-enforce buffer isolation on any buffers loaded by session
-	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_is_valid(buf) and not is_transient_buffer(buf) then
-			local b_slot = vim.b[buf].fox_env_slot
-			if b_slot == nil then
+				vim.bo[buf].buflisted = (b_slot == target_slot)
+			elseif vim.bo[buf].buftype == "" then
+				-- Untagged file buffer: assign by cwd matching
 				local name = vim.api.nvim_buf_get_name(buf)
 				if name ~= "" and target_env.cwd then
 					local norm_cwd = path.normalize(target_env.cwd)
@@ -847,110 +870,103 @@ function M.switch_environment(target_slot, callback)
 						vim.b[buf].fox_env_slot = target_slot
 						vim.bo[buf].buflisted = true
 					else
+						-- Check other environments
+						local matched = false
 						for s = 1, M.settings.max_slots do
 							if s ~= target_slot and _G._fox_environments[s] and _G._fox_environments[s].cwd then
 								local other_cwd = path.normalize(_G._fox_environments[s].cwd)
 								if path.relative_to(norm_name, other_cwd) ~= nil then
 									vim.b[buf].fox_env_slot = s
 									vim.bo[buf].buflisted = false
+									matched = true
 									break
 								end
 							end
+						end
+						if not matched then
+							vim.b[buf].fox_env_slot = target_slot
+							vim.bo[buf].buflisted = true
 						end
 					end
 				else
 					vim.b[buf].fox_env_slot = target_slot
 				end
-			elseif b_slot == target_slot then
-				vim.bo[buf].buflisted = true
-			else
-				vim.bo[buf].buflisted = false
 			end
 		end
 	end
 
-	-- Ensure current window displays the LAST ACTIVE buffer from the target environment,
-	-- falling back to any buffer belonging to that slot.
-	local current_buf = vim.api.nvim_get_current_buf()
-	if vim.b[current_buf].fox_env_slot ~= nil and vim.b[current_buf].fox_env_slot ~= target_slot then
-		local target_buf = nil
+	-- 6. Switch to the last active buffer (fast in-memory swap, no session sourcing)
+	local target_buf = nil
 
-		-- Prefer the last buffer the user was editing in this environment
-		if target_env.last_buffer and target_env.last_buffer ~= "" then
-			for _, b in ipairs(vim.api.nvim_list_bufs()) do
-				if
-					vim.api.nvim_buf_is_valid(b)
-					and not is_transient_buffer(b)
-					and vim.api.nvim_buf_get_name(b) == target_env.last_buffer
-				then
-					target_buf = b
-					vim.b[b].fox_env_slot = target_slot
-					vim.bo[b].buflisted = true
-					break
-				end
-			end
-
-			-- If the last buffer isn't loaded yet, try to open it
-			if not target_buf then
-				local last_path = target_env.last_buffer
-				if vim.fn.filereadable(last_path) == 1 then
-					pcall(vim.cmd, "edit " .. vim.fn.fnameescape(last_path))
-					target_buf = vim.api.nvim_get_current_buf()
-					vim.b[target_buf].fox_env_slot = target_slot
-					vim.bo[target_buf].buflisted = true
-				end
+	-- Prefer the last buffer the user was editing in this environment
+	if target_env.last_buffer and target_env.last_buffer ~= "" then
+		for _, b in ipairs(vim.api.nvim_list_bufs()) do
+			if
+				vim.api.nvim_buf_is_valid(b)
+				and not is_transient_buffer(b)
+				and vim.api.nvim_buf_get_name(b) == target_env.last_buffer
+			then
+				target_buf = b
+				vim.b[b].fox_env_slot = target_slot
+				vim.bo[b].buflisted = true
+				break
 			end
 		end
 
-		-- Fallback: any listed buffer from this slot
+		-- If the last buffer isn't loaded yet, try to open it
 		if not target_buf then
-			for _, b in ipairs(vim.api.nvim_list_bufs()) do
-				if
-					vim.api.nvim_buf_is_valid(b)
-					and vim.b[b].fox_env_slot == target_slot
-					and not is_transient_buffer(b)
-					and vim.bo[b].buflisted
-				then
-					target_buf = b
-					break
-				end
+			local last_path = target_env.last_buffer
+			if vim.fn.filereadable(last_path) == 1 then
+				pcall(vim.cmd, "edit " .. vim.fn.fnameescape(last_path))
+				target_buf = vim.api.nvim_get_current_buf()
+				vim.b[target_buf].fox_env_slot = target_slot
+				vim.bo[target_buf].buflisted = true
 			end
-		end
-
-		if target_buf then
-			pcall(vim.api.nvim_set_current_buf, target_buf)
-		else
-			vim.cmd("enew")
-			local fresh_b = vim.api.nvim_get_current_buf()
-			vim.b[fresh_b].fox_env_slot = target_slot
-			vim.bo[fresh_b].buflisted = true
 		end
 	end
 
-	-- Restore per-environment selected terminal slot
+	-- Fallback: any listed buffer from this slot
+	if not target_buf then
+		for _, b in ipairs(vim.api.nvim_list_bufs()) do
+			if
+				vim.api.nvim_buf_is_valid(b)
+				and vim.b[b].fox_env_slot == target_slot
+				and not is_transient_buffer(b)
+				and vim.bo[b].buflisted
+			then
+				target_buf = b
+				break
+			end
+		end
+	end
+
+	if target_buf then
+		pcall(vim.api.nvim_set_current_buf, target_buf)
+	else
+		vim.cmd("enew")
+		local fresh_b = vim.api.nvim_get_current_buf()
+		vim.b[fresh_b].fox_env_slot = target_slot
+		vim.bo[fresh_b].buflisted = true
+	end
+
+	-- 7. Restore per-environment selected terminal slot
 	if target_env.selected_terminal then
 		_G._fox_selected_terminal = target_env.selected_terminal
 	end
 
-	-- Drop any neo-tree buffers that might have been saved in session
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
-		if vim.api.nvim_win_is_valid(win) then
-			local b = vim.api.nvim_win_get_buf(win)
-			if vim.api.nvim_buf_is_valid(b) and vim.bo[b].filetype == "neo-tree" then
-				pcall(vim.api.nvim_win_close, win, true)
-			end
-		end
-	end
-
-	-- 5. Restore Neo-tree
-	if target_env.neotree_open ~= false then
-		pcall(vim.cmd, "Neotree focus dir=" .. vim.fn.fnameescape(target_env.cwd or vim.fn.getcwd()))
+	-- 8. Update Neo-tree root in-place (no close+reopen cycle)
+	if target_env.neotree_open ~= false and is_neotree_open() then
+		pcall(vim.cmd, "Neotree dir=" .. vim.fn.fnameescape(target_env.cwd or vim.fn.getcwd()))
 		pcall(function()
 			require("neo-tree.sources.manager").refresh("filesystem")
 		end)
+	elseif target_env.neotree_open ~= false and not is_neotree_open() then
+		pcall(vim.cmd, "Neotree focus dir=" .. vim.fn.fnameescape(target_env.cwd or vim.fn.getcwd()))
+	elseif target_env.neotree_open == false and is_neotree_open() then
+		pcall(vim.cmd, "Neotree close")
 	end
 
-	-- 6. Invalidate branch cache & refresh statusline / bufferline
+	-- 9. Refresh statusline / bufferline / pinned tabs
 	pcall(function()
 		local sl = package.loaded["plugins.fox.ui.statusline_picker"]
 		if sl and sl._branch_cache then
@@ -976,7 +992,7 @@ function M.switch_environment(target_slot, callback)
 	vim.cmd("redrawtabline")
 	vim.cmd("redrawstatus")
 
-	-- 7. Restore active tools (Git Diff Mode, Git Log Diff Dashboard, Conflict Resolver, Git Center)
+	-- 10. Restore active git tools in the target environment
 	if target_env.diff_mode_open then
 		vim.schedule(function()
 			local ok_dm, dm = pcall(require, "plugins.fox.git.diff_mode")
@@ -1008,7 +1024,11 @@ function M.switch_environment(target_slot, callback)
 	end
 
 	target_env.updated_at = os.time()
-	M.save_index()
+
+	-- 11. Defer disk persistence so the switch feels instant
+	vim.schedule(function()
+		M.save_index()
+	end)
 
 	pcall(function()
 		local ws = package.loaded["plugins.fox.tools.workspaces"] or _G.Workspaces
@@ -1166,7 +1186,7 @@ function M.save_all(silent)
 	ensure_current_slot_initialized()
 	local cur_env = M.get_active_environment()
 	if cur_env then
-		snapshot_active_environment(cur_env)
+		snapshot_and_persist_environment(cur_env)
 	end
 	M.save_index()
 	if not silent then

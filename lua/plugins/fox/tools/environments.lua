@@ -231,6 +231,8 @@ function M.save_index(data, root_dir)
 					created_at = env.created_at,
 					updated_at = env.updated_at,
 					buffers = env.buffers or {},
+					last_buffer = env.last_buffer,
+					selected_terminal = env.selected_terminal,
 					neotree_open = env.neotree_open,
 					git_center_open = env.git_center_open,
 					conflict_resolver_open = env.conflict_resolver_open,
@@ -610,6 +612,18 @@ local function snapshot_active_environment(env)
 		return false
 	end
 
+	-- Remember which buffer the user was editing so we can restore it on switch-back
+	local cur_buf = vim.api.nvim_get_current_buf()
+	if vim.api.nvim_buf_is_valid(cur_buf) and vim.bo[cur_buf].buftype == "" then
+		local buf_name = vim.api.nvim_buf_get_name(cur_buf)
+		if buf_name ~= "" then
+			env.last_buffer = buf_name
+		end
+	end
+
+	-- Save the selected terminal slot so each environment has independent terminal selection
+	env.selected_terminal = _G._fox_selected_terminal or 1
+
 	vim.opt.sessionoptions = M.settings.session_options
 	local neotree_was_open = is_neotree_open()
 	purge_neotree()
@@ -855,21 +869,54 @@ function M.switch_environment(target_slot, callback)
 		end
 	end
 
-	-- Ensure current window displays a buffer belonging to target_slot
+	-- Ensure current window displays the LAST ACTIVE buffer from the target environment,
+	-- falling back to any buffer belonging to that slot.
 	local current_buf = vim.api.nvim_get_current_buf()
 	if vim.b[current_buf].fox_env_slot ~= nil and vim.b[current_buf].fox_env_slot ~= target_slot then
 		local target_buf = nil
-		for _, b in ipairs(vim.api.nvim_list_bufs()) do
-			if
-				vim.api.nvim_buf_is_valid(b)
-				and vim.b[b].fox_env_slot == target_slot
-				and not is_transient_buffer(b)
-				and vim.bo[b].buflisted
-			then
-				target_buf = b
-				break
+
+		-- Prefer the last buffer the user was editing in this environment
+		if target_env.last_buffer and target_env.last_buffer ~= "" then
+			for _, b in ipairs(vim.api.nvim_list_bufs()) do
+				if
+					vim.api.nvim_buf_is_valid(b)
+					and not is_transient_buffer(b)
+					and vim.api.nvim_buf_get_name(b) == target_env.last_buffer
+				then
+					target_buf = b
+					vim.b[b].fox_env_slot = target_slot
+					vim.bo[b].buflisted = true
+					break
+				end
+			end
+
+			-- If the last buffer isn't loaded yet, try to open it
+			if not target_buf then
+				local last_path = target_env.last_buffer
+				if vim.fn.filereadable(last_path) == 1 then
+					pcall(vim.cmd, "edit " .. vim.fn.fnameescape(last_path))
+					target_buf = vim.api.nvim_get_current_buf()
+					vim.b[target_buf].fox_env_slot = target_slot
+					vim.bo[target_buf].buflisted = true
+				end
 			end
 		end
+
+		-- Fallback: any listed buffer from this slot
+		if not target_buf then
+			for _, b in ipairs(vim.api.nvim_list_bufs()) do
+				if
+					vim.api.nvim_buf_is_valid(b)
+					and vim.b[b].fox_env_slot == target_slot
+					and not is_transient_buffer(b)
+					and vim.bo[b].buflisted
+				then
+					target_buf = b
+					break
+				end
+			end
+		end
+
 		if target_buf then
 			pcall(vim.api.nvim_set_current_buf, target_buf)
 		else
@@ -878,6 +925,11 @@ function M.switch_environment(target_slot, callback)
 			vim.b[fresh_b].fox_env_slot = target_slot
 			vim.bo[fresh_b].buflisted = true
 		end
+	end
+
+	-- Restore per-environment selected terminal slot
+	if target_env.selected_terminal then
+		_G._fox_selected_terminal = target_env.selected_terminal
 	end
 
 	-- Drop any neo-tree buffers that might have been saved in session
@@ -1143,6 +1195,8 @@ function M.restore_all()
 				updated_at = data.updated_at,
 				session_file = data.session_file,
 				buffers = data.buffers or {},
+				last_buffer = data.last_buffer,
+				selected_terminal = data.selected_terminal,
 				terminals = {},
 				neotree_open = data.neotree_open,
 				git_center_open = data.git_center_open,

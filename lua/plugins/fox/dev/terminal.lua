@@ -281,6 +281,9 @@ local function adopt_buffer(bufnr, winid)
 			t.win = winid or t.win
 			vim.b[bufnr].fox_term_num = n
 			vim.b[bufnr].fox_is_multi_term = true
+			-- Tag with the active environment slot for isolation
+			local env_slot = _G._fox_active_env_slot or 1
+			vim.b[bufnr].fox_env_slot = env_slot
 			return n
 		end
 	end
@@ -288,20 +291,44 @@ local function adopt_buffer(bufnr, winid)
 end
 
 --- True for a terminal buffer this plugin may own (task outputs are excluded).
+--- Also excludes terminals tagged to a different environment slot.
 --- @param bufnr integer
 --- @return boolean
 local function is_adoptable(bufnr)
-	return vim.bo[bufnr].buftype == "terminal" and not vim.b[bufnr].fox_is_task
+	if vim.bo[bufnr].buftype ~= "terminal" or vim.b[bufnr].fox_is_task then
+		return false
+	end
+	-- If the buffer is tagged to a different environment, don't adopt it
+	local buf_env_slot = vim.b[bufnr].fox_env_slot
+	if buf_env_slot ~= nil then
+		local active_env_slot = _G._fox_active_env_slot or 1
+		if buf_env_slot ~= active_env_slot then
+			return false
+		end
+	end
+	return true
 end
 
 --- Reconciles the slot table with reality: drops dead handles, re-attaches
 --- tagged buffers, and adopts untagged terminals (from a session or `:terminal`).
+--- Respects environment scoping: only syncs terminals belonging to the active environment.
 local function sync_terminals()
+	local active_env_slot = _G._fox_active_env_slot or 1
+
 	for n = 1, M.settings.count do
 		local t = terminals[n]
 		if t then
 			t.win = is_valid_win(t.win) and t.win or nil
-			t.buf = is_valid_buf(t.buf) and t.buf or nil
+			if is_valid_buf(t.buf) then
+				-- Drop terminals that were re-tagged to a different environment
+				local buf_env_slot = vim.b[t.buf].fox_env_slot
+				if buf_env_slot ~= nil and buf_env_slot ~= active_env_slot then
+					t.buf = nil
+					t.win = nil
+				end
+			else
+				t.buf = nil
+			end
 		end
 	end
 
@@ -310,12 +337,18 @@ local function sync_terminals()
 		if vim.api.nvim_win_is_valid(winid) then
 			local bufnr = vim.api.nvim_win_get_buf(winid)
 			if vim.api.nvim_buf_is_valid(bufnr) then
-				local term_num = vim.b[bufnr].fox_term_num
-				if term_num and term_num >= 1 and term_num <= M.settings.count then
-					local t = get_term(term_num)
-					t.buf, t.win = bufnr, winid
-				elseif is_adoptable(bufnr) then
-					adopt_buffer(bufnr, winid)
+				-- Skip terminals belonging to other environments
+				local buf_env_slot = vim.b[bufnr].fox_env_slot
+				if buf_env_slot ~= nil and buf_env_slot ~= active_env_slot then
+					-- Do not adopt or sync this buffer
+				else
+					local term_num = vim.b[bufnr].fox_term_num
+					if term_num and term_num >= 1 and term_num <= M.settings.count then
+						local t = get_term(term_num)
+						t.buf, t.win = bufnr, winid
+					elseif is_adoptable(bufnr) then
+						adopt_buffer(bufnr, winid)
+					end
 				end
 			end
 		end
@@ -324,14 +357,20 @@ local function sync_terminals()
 	-- Then hidden terminal buffers, which have no window to record.
 	for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
 		if vim.api.nvim_buf_is_valid(bufnr) then
-			local term_num = vim.b[bufnr].fox_term_num
-			if term_num and term_num >= 1 and term_num <= M.settings.count then
-				local t = get_term(term_num)
-				if not is_valid_buf(t.buf) then
-					t.buf = bufnr
+			-- Skip terminals belonging to other environments
+			local buf_env_slot = vim.b[bufnr].fox_env_slot
+			if buf_env_slot ~= nil and buf_env_slot ~= active_env_slot then
+				-- Do not adopt or sync this buffer
+			else
+				local term_num = vim.b[bufnr].fox_term_num
+				if term_num and term_num >= 1 and term_num <= M.settings.count then
+					local t = get_term(term_num)
+					if not is_valid_buf(t.buf) then
+						t.buf = bufnr
+					end
+				elseif is_adoptable(bufnr) then
+					adopt_buffer(bufnr, nil)
 				end
-			elseif is_adoptable(bufnr) then
-				adopt_buffer(bufnr, nil)
 			end
 		end
 	end
@@ -396,6 +435,7 @@ local function fill_window(t, n, win)
 	vim.bo[t.buf].buflisted = false
 	vim.b[t.buf].fox_term_num = n
 	vim.b[t.buf].fox_is_multi_term = true
+	vim.b[t.buf].fox_env_slot = _G._fox_active_env_slot or 1
 end
 
 -- ============================================================================

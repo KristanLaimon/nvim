@@ -210,16 +210,11 @@ function M.open(opts)
 			vim.api.nvim_set_current_win(task_win)
 			vim.cmd("leftabove vsplit")
 		else
+			-- In normal editing: split below the code window so the terminal
+			-- sits under the buffer area and Neo-tree keeps its full height.
+			-- In dashboard layouts (diff, conflict, git center): no single code
+			-- window exists, so use botright for a full-width bottom strip.
 			local target_win = M.find_code_win()
-			if not target_win then
-				for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-					local buf = vim.api.nvim_win_get_buf(win)
-					if vim.bo[buf].filetype ~= "neo-tree" then
-						target_win = win
-						break
-					end
-				end
-			end
 			if target_win then
 				vim.api.nvim_set_current_win(target_win)
 				vim.cmd("rightbelow " .. height .. "split")
@@ -234,15 +229,6 @@ function M.open(opts)
 			vim.cmd("rightbelow vsplit")
 		else
 			local target_win = M.find_code_win()
-			if not target_win then
-				for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-					local buf = vim.api.nvim_win_get_buf(win)
-					if vim.bo[buf].filetype ~= "neo-tree" then
-						target_win = win
-						break
-					end
-				end
-			end
 			if target_win then
 				vim.api.nvim_set_current_win(target_win)
 				vim.cmd("rightbelow " .. height .. "split")

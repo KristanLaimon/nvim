@@ -1,0 +1,83 @@
+{
+  "$schema": "./snippets.schema.json",
+
+  "npm registry": {
+    "prefix": "registry",
+    "body": [
+      "registry=${1:https://registry.npmjs.org/}"
+    ],
+    "description": "Configure default npm registry URL"
+  },
+
+  "npm scoped registry": {
+    "prefix": "scoped-registry",
+    "body": [
+      "@${1:scope}:registry=${2:https://npm.pkg.github.com}"
+    ],
+    "description": "Configure scoped registry (e.g. GitHub Packages or private Verdaccio)"
+  },
+
+  "npm auth token": {
+    "prefix": "authToken",
+    "body": [
+      "//${1:registry.npmjs.org/}:_authToken=${2:NPM_TOKEN}"
+    ],
+    "description": "Authenticate to npm registry via token"
+  },
+
+  "npm save exact": {
+    "prefix": "save-exact",
+    "body": [
+      "save-exact=${1|true,false|}"
+    ],
+    "description": "Pin exact dependency versions in package.json on install"
+  },
+
+  "npm package lock": {
+    "prefix": "package-lock",
+    "body": [
+      "package-lock=${1|true,false|}"
+    ],
+    "description": "Enable or disable package-lock.json generation"
+  },
+
+  "npm legacy peer deps": {
+    "prefix": "legacy-peer-deps",
+    "body": [
+      "legacy-peer-deps=${1|true,false|}"
+    ],
+    "description": "Bypass peer dependency resolution conflicts"
+  },
+
+  "npm engine strict": {
+    "prefix": "engine-strict",
+    "body": [
+      "engine-strict=${1|true,false|}"
+    ],
+    "description": "Refuse to install if current Node/runtime version does not match engines field"
+  },
+
+  "npm strict ssl": {
+    "prefix": "strict-ssl",
+    "body": [
+      "strict-ssl=${1|true,false|}"
+    ],
+    "description": "Whether to perform SSL key validation on install"
+  },
+
+  "pnpm auto install peers": {
+    "prefix": "pnpm-peers",
+    "body": [
+      "auto-install-peers=${1|true,false|}"
+    ],
+    "description": "Automatically install peer dependencies (pnpm)"
+  },
+
+  "pnpm shamefully hoist": {
+    "prefix": "shamefully-hoist",
+    "body": [
+      "shamefully-hoist=${1|true,false|}"
+    ],
+    "description": "Hoist all dependencies to node_modules root for maximum compatibility (pnpm)"
+  }
+}

@@ -92,6 +92,10 @@ local function generic_servers()
 							systemId = vim.fn.stdpath("config") .. "/schemas/xml/msbuild.xsd",
 							pattern = "*.vbproj",
 						},
+						{
+							systemId = vim.fn.stdpath("config") .. "/schemas/xml/msbuild.xsd",
+							pattern = "*.slnx",
+						},
 					},
 				},
 			},
@@ -120,9 +124,17 @@ vim.filetype.add({
 		vbproj = "xml",
 		props = "xml",
 		targets = "xml",
+		slnx = "xml",
+		sln = "sln",
+	},
+	filename = {
+		[".npmrc"] = "dosini",
+		["npmrc"] = "dosini",
 	},
 	pattern = {
 		[".*%.blade%.php"] = "blade",
+		[".*%.npmrc.*"] = "dosini",
+		[".*%.sln"] = "sln",
 	},
 })
 

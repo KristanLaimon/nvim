@@ -37,8 +37,15 @@ local function find_hover_float_win()
 		if is_float_win(win) then
 			local b = vim.api.nvim_win_get_buf(win)
 			local ft = vim.bo[b].filetype
-			if ft == "markdown" or ft == "lspinfo" or ft == "" then
-				return win
+			local bt = vim.bo[b].buftype
+			local ok_cfg, cfg = pcall(vim.api.nvim_win_get_config, win)
+			local is_badge = vim.w[win].fox_workspace_badge or vim.b[b].fox_workspace_badge or ft == "foxworkspacebadge"
+			if not is_badge and (not ok_cfg or cfg.focusable ~= false) then
+				if ft == "markdown" or ft == "lspinfo" or vim.w[win].fox_is_hover or vim.b[b].fox_hover_doc then
+					return win
+				elseif ft == "" and (bt == "nofile" or bt == "") and ok_cfg and cfg.height and cfg.height > 1 then
+					return win
+				end
 			end
 		end
 	end
@@ -331,10 +338,16 @@ end
 function M.show_or_focus_hover()
 	local current_win = vim.api.nvim_get_current_win()
 
-	-- If already in a float window
+	-- If already in a float window (and not a workspace badge)
 	if is_float_win(current_win) then
-		M.follow_link_at_cursor()
-		return
+		local cur_buf = vim.api.nvim_win_get_buf(current_win)
+		local is_badge = vim.w[current_win].fox_workspace_badge
+			or vim.b[cur_buf].fox_workspace_badge
+			or vim.bo[cur_buf].filetype == "foxworkspacebadge"
+		if not is_badge then
+			M.follow_link_at_cursor()
+			return
+		end
 	end
 
 	-- If a hover float is open, move cursor into it

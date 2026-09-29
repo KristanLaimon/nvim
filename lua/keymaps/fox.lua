@@ -77,6 +77,8 @@ M.settings = {
 		run_script = { "<C-,>", "<C-comma>" },
 		--- Open the foxnvimscript wiki.
 		wiki = { "<C-S-,>", "<C-S-comma>", "<C-S-d>", "<C-S-D>" },
+		--- Focus top-right workspace badge.
+		focus_badge = { "<C-S-b>", "<C-S-B>", "<A-w>", "<M-w>", "<leader>wb", "<leader>wf" },
 	},
 
 	--- How many task output slots have a direct toggle.
@@ -233,6 +235,10 @@ end, "Run current .lua / .foxnvim file with Neovim runner")
 map_all_modes(M.settings.keys.wiki, function()
 	require("fox.lib.foxnvim").wiki.open()
 end, "Open Documentation Center Wiki")
+
+map_all_modes(M.settings.keys.focus_badge, function()
+	require("plugins.fox.tools.workspaces").focus_badge()
+end, "Focus Workspace / Environment Badge")
 
 -- ============================================================================
 -- TRANSPILER COMMANDS

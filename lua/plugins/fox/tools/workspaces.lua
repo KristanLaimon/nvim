@@ -75,6 +75,8 @@ M.settings = {
 		select = { "<C-S-w>", "<C-S-W>", "<leader>ws" },
 		--- Close everything and return to the dashboard.
 		menu = { "<leader>wm" },
+		--- Focus floating workspace indicator badge.
+		focus_badge = { "<C-S-b>", "<C-S-B>", "<leader>wb", "<leader>wf", "<A-w>", "<M-w>" },
 		--- Leader mappings: save, select, back to menu.
 		leader_save = nil,
 		leader_select = nil,
@@ -747,48 +749,49 @@ local badge_win = nil
 local badge_visible = true
 
 local function setup_badge_highlights()
-	local orange = "#ff8800"
-	local bg_col = "#1e1e2e"
-	local sep_col = "#585b70"
-	local dim_col = "#a6adc8"
-	local ok, colors = pcall(require, "nagatoro.colors")
-	if ok and type(colors) == "table" then
-		orange = colors.orange or colors.accent or orange
-		bg_col = colors.background or colors.dark_background or bg_col
-		sep_col = colors.comment or sep_col
-		dim_col = colors.foreground or dim_col
-	else
-		local ok_hl, tab_hl = pcall(vim.api.nvim_get_hl, 0, { name = "BufferLineFill" })
-		if ok_hl and tab_hl and tab_hl.bg then
-			bg_col = string.format("#%06x", tab_hl.bg)
-		end
-	end
-
+	-- Solid pill badge highlights matching Git Diff Dashboard (log_diff.lua)
 	vim.api.nvim_set_hl(0, "FoxWorkspaceBadge", {
-		fg = orange,
-		bg = bg_col,
+		fg = "#11111b",
+		bg = "#f9e2af",
 		bold = true,
 		default = true,
 	})
 	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeActive", {
-		fg = orange,
-		bg = bg_col,
+		fg = "#11111b",
+		bg = "#f9e2af",
 		bold = true,
 		default = true,
 	})
 	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeInactive", {
-		fg = dim_col,
-		bg = bg_col,
+		fg = "#11111b",
+		bg = "#cba6f7",
+		bold = true,
+		default = true,
+	})
+	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeTag", {
+		fg = "#11111b",
+		bg = "#f9e2af",
+		bold = true,
+		default = true,
+	})
+	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeHead", {
+		fg = "#11111b",
+		bg = "#a6e3a1",
+		bold = true,
+		default = true,
+	})
+	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeBranch", {
+		fg = "#11111b",
+		bg = "#cba6f7",
+		bold = true,
 		default = true,
 	})
 	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeSep", {
-		fg = sep_col,
-		bg = bg_col,
+		fg = "#585b70",
 		default = true,
 	})
 	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeBorder", {
-		fg = sep_col,
-		bg = bg_col,
+		fg = "#585b70",
 		default = true,
 	})
 end
@@ -836,7 +839,7 @@ function M.get_active_slot_number()
 end
 
 --- Constructs component chunks for the workspace badge (for bufferline custom_areas and float).
---- Formats as e.g. "/🦊1\" or "/🦊1\/2\" or "/1\/🦊2\" or "/1\/🦊2\/3\"
+--- Formats as styled tag badges matching Git Diff Dashboard tags (e.g. ` 🦊 1 ` and ` 2 `).
 --- @return table List of `{ text = string, hl = string }`
 function M.get_badge_components()
 	local active_slot = M.get_active_slot_number()
@@ -859,18 +862,16 @@ function M.get_badge_components()
 	total = math.max(total, active_slot)
 
 	local comps = {}
-	table.insert(comps, { text = "/", hl = "FoxWorkspaceBadgeSep" })
 	for i = 1, total do
 		if i > 1 then
-			table.insert(comps, { text = "\\/", hl = "FoxWorkspaceBadgeSep" })
+			table.insert(comps, { text = " ", hl = "Normal" })
 		end
 		if i == active_slot then
-			table.insert(comps, { text = "🦊" .. i, hl = "FoxWorkspaceBadgeActive" })
+			table.insert(comps, { text = " 🦊 " .. i .. " ", hl = "FoxWorkspaceBadgeActive" })
 		else
-			table.insert(comps, { text = tostring(i), hl = "FoxWorkspaceBadgeInactive" })
+			table.insert(comps, { text = " " .. i .. " ", hl = "FoxWorkspaceBadgeInactive" })
 		end
 	end
-	table.insert(comps, { text = "\\", hl = "FoxWorkspaceBadgeSep" })
 	return comps
 end
 
@@ -920,9 +921,11 @@ function M.update_badge()
 	if not (badge_buf and vim.api.nvim_buf_is_valid(badge_buf)) then
 		badge_buf = vim.api.nvim_create_buf(false, true)
 		vim.bo[badge_buf].buftype = "nofile"
+		vim.bo[badge_buf].filetype = "foxworkspacebadge"
 		vim.bo[badge_buf].bufhidden = "wipe"
 		vim.bo[badge_buf].swapfile = false
 		vim.bo[badge_buf].buflisted = false
+		vim.b[badge_buf].fox_workspace_badge = true
 	end
 
 	vim.bo[badge_buf].modifiable = true
@@ -962,9 +965,176 @@ function M.update_badge()
 		local ok_win, win = pcall(vim.api.nvim_open_win, badge_buf, false, win_opts)
 		if ok_win and win and vim.api.nvim_win_is_valid(win) then
 			badge_win = win
+			vim.w[win].fox_workspace_badge = true
 			pcall(vim.api.nvim_set_option_value, "winhighlight", "Normal:FoxWorkspaceBadge", { win = win })
 		end
 	end
+end
+
+local prev_editor_win = nil
+
+--- Sets up buffer-local keymaps in the workspace badge buffer for interactive navigation.
+local function setup_badge_keymaps()
+	if not (badge_buf and vim.api.nvim_buf_is_valid(badge_buf)) then
+		return
+	end
+
+	local function bmap(keys, fn, desc)
+		local key_list = type(keys) == "table" and keys or { keys }
+		for _, k in ipairs(key_list) do
+			vim.keymap.set("n", k, fn, { buffer = badge_buf, noremap = true, silent = true, nowait = true, desc = desc })
+		end
+	end
+
+	local function return_to_editor()
+		if badge_win and vim.api.nvim_win_is_valid(badge_win) then
+			pcall(vim.api.nvim_win_set_config, badge_win, { focusable = false })
+		end
+		if prev_editor_win and vim.api.nvim_win_is_valid(prev_editor_win) then
+			pcall(vim.api.nvim_set_current_win, prev_editor_win)
+		else
+			pcall(vim.cmd, "wincmd p")
+		end
+	end
+
+	local function re_focus_badge()
+		vim.schedule(function()
+			M.update_badge()
+			if badge_win and vim.api.nvim_win_is_valid(badge_win) then
+				pcall(vim.api.nvim_win_set_config, badge_win, { focusable = true })
+				pcall(vim.api.nvim_set_current_win, badge_win)
+			end
+		end)
+	end
+
+	local function prev_slot()
+		local env_ok, env_mod = pcall(require, "plugins.fox.tools.environments")
+		if env_ok and env_mod.has_multiple_environments and env_mod.has_multiple_environments() then
+			local cur_slot = env_mod.get_active_slot() or 1
+			local all_envs = _G._fox_environments or {}
+			local active_slots = {}
+			for s = 1, 9 do
+				if all_envs[s] then
+					table.insert(active_slots, s)
+				end
+			end
+			if #active_slots > 1 then
+				local idx = 1
+				for i, s in ipairs(active_slots) do
+					if s == cur_slot then
+						idx = i
+						break
+					end
+				end
+				local target_idx = (idx - 2) % #active_slots + 1
+				local target_slot = active_slots[target_idx]
+				env_mod.switch_environment(target_slot, re_focus_badge)
+				return
+			end
+		else
+			local idx_list = load_index()
+			if #idx_list > 1 then
+				local cur_slot = M.get_active_slot_number()
+				local target_idx = (cur_slot - 2) % #idx_list + 1
+				M.load_workspace(idx_list[target_idx])
+				re_focus_badge()
+				return
+			end
+		end
+		re_focus_badge()
+	end
+
+	local function next_slot()
+		local env_ok, env_mod = pcall(require, "plugins.fox.tools.environments")
+		if env_ok and env_mod.has_multiple_environments and env_mod.has_multiple_environments() then
+			local cur_slot = env_mod.get_active_slot() or 1
+			local all_envs = _G._fox_environments or {}
+			local active_slots = {}
+			for s = 1, 9 do
+				if all_envs[s] then
+					table.insert(active_slots, s)
+				end
+			end
+			if #active_slots > 1 then
+				local idx = 1
+				for i, s in ipairs(active_slots) do
+					if s == cur_slot then
+						idx = i
+						break
+					end
+				end
+				local target_idx = (idx % #active_slots) + 1
+				local target_slot = active_slots[target_idx]
+				env_mod.switch_environment(target_slot, re_focus_badge)
+				return
+			end
+		else
+			local idx_list = load_index()
+			if #idx_list > 1 then
+				local cur_slot = M.get_active_slot_number()
+				local target_idx = (cur_slot % #idx_list) + 1
+				M.load_workspace(idx_list[target_idx])
+				re_focus_badge()
+				return
+			end
+		end
+		re_focus_badge()
+	end
+
+	local function jump_to_slot(slot)
+		local env_ok, env_mod = pcall(require, "plugins.fox.tools.environments")
+		if env_ok and _G._fox_environments and _G._fox_environments[slot] then
+			env_mod.switch_environment(slot, re_focus_badge)
+		else
+			M.load_workspace(slot)
+			re_focus_badge()
+		end
+	end
+
+	bmap({ "<C-h>", "<C-H>", "h", "<Left>" }, prev_slot, "Previous workspace/environment slot")
+	bmap({ "<C-l>", "<C-L>", "l", "<Right>" }, next_slot, "Next workspace/environment slot")
+	for s = 1, 9 do
+		bmap(tostring(s), function()
+			jump_to_slot(s)
+		end, "Jump to workspace slot " .. s)
+	end
+	bmap({ "<CR>", "<Space>" }, return_to_editor, "Confirm workspace and return to editor")
+	bmap({ "<Esc>", "q", "<C-c>" }, return_to_editor, "Return to editor")
+end
+
+--- Focuses the top-right workspace badge, enabling slot switching via <C-h>/<C-l>/h/l/1..9
+function M.focus_badge()
+	if not badge_visible then
+		badge_visible = true
+	end
+	M.update_badge()
+
+	if not (badge_win and vim.api.nvim_win_is_valid(badge_win)) then
+		return
+	end
+
+	local cur_win = vim.api.nvim_get_current_win()
+	if cur_win ~= badge_win then
+		prev_editor_win = cur_win
+	end
+
+	setup_badge_keymaps()
+
+	-- Make badge window focusable and focus it
+	pcall(vim.api.nvim_win_set_config, badge_win, { focusable = true })
+	pcall(vim.api.nvim_set_current_win, badge_win)
+
+	-- Autocmd to reset focusable on leaving the badge window
+	local leave_group = vim.api.nvim_create_augroup("FoxWorkspaceBadgeFocus", { clear = true })
+	vim.api.nvim_create_autocmd({ "BufLeave", "WinLeave" }, {
+		group = leave_group,
+		buffer = badge_buf,
+		callback = function()
+			if badge_win and vim.api.nvim_win_is_valid(badge_win) then
+				pcall(vim.api.nvim_win_set_config, badge_win, { focusable = false })
+			end
+		end,
+	})
 end
 
 --- Toggles the floating workspace indicator badge on/off.
@@ -1269,6 +1439,8 @@ function M.setup()
 		WorkspaceMenu = { fn = M.close_to_menu, opts = { desc = "Close session and return to main menu" } },
 		WorkspaceBadgeToggle = { fn = M.toggle_badge, opts = { desc = "Toggle floating workspace indicator badge" } },
 		WorkspaceBadgeUpdate = { fn = M.update_badge, opts = { desc = "Update floating workspace indicator badge" } },
+		WorkspaceBadgeFocus = { fn = M.focus_badge, opts = { desc = "Focus floating workspace indicator badge" } },
+		WorkspaceFocus = { fn = M.focus_badge, opts = { desc = "Focus floating workspace indicator badge" } },
 	}
 
 	for name, spec in pairs(commands) do
@@ -1313,6 +1485,13 @@ function M.setup()
 			desc = "Close and return to Menu",
 		})
 	end
+	for _, key in ipairs(M.settings.keys.focus_badge or {}) do
+		vim.keymap.set({ "n", "i", "v" }, key, from_any_mode(M.focus_badge), {
+			noremap = true,
+			silent = true,
+			desc = "Focus Workspace / Environment Badge",
+		})
+	end
 
 	if M.settings.keys.leader_save then
 		vim.keymap.set("n", M.settings.keys.leader_save, function()
@@ -1353,11 +1532,18 @@ return setmetatable({
 		"WorkspaceManage",
 		"WorkspaceClose",
 		"WorkspaceMenu",
+		"WorkspaceBadgeFocus",
+		"WorkspaceFocus",
+		"WorkspaceBadgeToggle",
+		"WorkspaceBadgeUpdate",
 	},
 	keys = {
 		{ "<C-S-w>", mode = { "n", "i" }, desc = "Select Workspace" },
 		{ "<leader>ws", mode = { "n" }, desc = "Select Workspace" },
 		{ "<leader>wm", mode = { "n" }, desc = "Close Workspace" },
+		{ "<C-S-b>", mode = { "n", "i" }, desc = "Focus Workspace Badge" },
+		{ "<leader>wb", mode = { "n" }, desc = "Focus Workspace Badge" },
+		{ "<leader>wf", mode = { "n" }, desc = "Focus Workspace Badge" },
 	},
 	dependencies = {
 		"nvim-lua/plenary.nvim",

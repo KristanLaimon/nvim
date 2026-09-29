@@ -54,7 +54,20 @@ M.settings = {
 	session_options = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,localoptions",
 
 	--- Filetypes treated as transient UI: closed before saving layout.
-	transient_filetypes = { "TaskRunner", "toggleterm", "neo-tree", "alpha", "dashboard" },
+	transient_filetypes = {
+		"TaskRunner",
+		"toggleterm",
+		"neo-tree",
+		"alpha",
+		"dashboard",
+		"FoxGitCenter",
+		"FoxConflict",
+		"FoxConflictResult",
+		"FoxLogDiff",
+		"FoxDiffSidebar",
+		"FoxDiffMode",
+		"gitcommit",
+	},
 
 	keys = {
 		--- Open the Environments CRUD menu.
@@ -77,16 +90,44 @@ _G._fox_active_env_slot = _G._fox_active_env_slot or 1
 -- STORAGE & PATH HELPERS
 -- ============================================================================
 
-local function storage_dir()
-	return path.ensure_dir(M.settings.storage_dir)
+if not _G._fox_initial_cwd then
+	_G._fox_initial_cwd = vim.fn.getcwd()
 end
 
-local function index_path()
-	return path.join(storage_dir(), M.settings.index_file)
+--- Resolves the primary root cwd (slot 1 / initial project root).
+--- All environment slots and sessions are anchored and persisted in this first cwd.
+--- @return string
+local function get_primary_root_dir()
+	if _G._fox_environments and _G._fox_environments[1] and _G._fox_environments[1].cwd then
+		return _G._fox_environments[1].cwd
+	end
+
+	if _G._fox_initial_cwd and _G._fox_initial_cwd ~= "" then
+		return _G._fox_initial_cwd
+	end
+
+	if vim.g.fox_initial_cwd and vim.g.fox_initial_cwd ~= "" then
+		return vim.g.fox_initial_cwd
+	end
+
+	return vim.fn.getcwd()
 end
 
-local function session_path_for_slot(slot)
-	return path.join(storage_dir(), string.format("env_slot_%d.vim", slot))
+local function storage_dir(root_dir)
+	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/environments") then
+		return path.ensure_dir(M.settings.storage_dir)
+	end
+	local root = root_dir or get_primary_root_dir()
+	local p_dir = path.join(root, ".foxnvim", "environments")
+	return path.ensure_dir(p_dir)
+end
+
+local function index_path(root_dir)
+	return path.join(storage_dir(root_dir), M.settings.index_file)
+end
+
+local function session_path_for_slot(slot, root_dir)
+	return path.join(storage_dir(root_dir), string.format("env_slot_%d.vim", slot))
 end
 
 --- Notification helper.
@@ -126,20 +167,55 @@ end
 -- ============================================================================
 
 --- Loads persisted environments index.
+--- @param root_dir string|nil
 --- @return table
-function M.load_index()
-	local raw = store.load(index_path(), { active_slot = 1, slots = {} })
-	if type(raw) ~= "table" then
-		raw = { active_slot = 1, slots = {} }
+function M.load_index(root_dir)
+	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/environments") then
+		local raw = store.load(index_path(), { active_slot = 1, slots = {} })
+		if type(raw) ~= "table" then
+			raw = { active_slot = 1, slots = {} }
+		end
+		raw.slots = raw.slots or {}
+		return raw
 	end
-	raw.slots = raw.slots or {}
-	return raw
+
+	local root = root_dir or get_primary_root_dir()
+	local cur_path = index_path(root)
+	local local_entries = store.load(cur_path, nil)
+	if not local_entries then
+		local root_json = path.join(root, ".foxnvim", "environments.json")
+		local_entries = store.load(root_json, nil)
+	end
+
+	if
+		local_entries
+		and type(local_entries) == "table"
+		and local_entries.slots
+		and not vim.tbl_isempty(local_entries.slots)
+	then
+		return local_entries
+	end
+
+	-- Check legacy global storage fallback if local index does not exist yet
+	local global_path = path.join(vim.fn.stdpath("data"), "environments", M.settings.index_file)
+	local global_entries = store.load(global_path, nil)
+	if
+		global_entries
+		and type(global_entries) == "table"
+		and global_entries.slots
+		and not vim.tbl_isempty(global_entries.slots)
+	then
+		return global_entries
+	end
+
+	return local_entries or { active_slot = 1, slots = {} }
 end
 
---- Saves environments index to disk.
+--- Saves environments index to disk (per-project in .foxnvim/environments and global cache).
 --- @param data table|nil
+--- @param root_dir string|nil
 --- @return boolean ok
-function M.save_index(data)
+function M.save_index(data, root_dir)
 	if not data then
 		local slots_data = {}
 		for slot = 1, M.settings.max_slots do
@@ -151,11 +227,17 @@ function M.save_index(data)
 					name = env.name,
 					cwd = env.cwd,
 					cwd_name = env.cwd_name,
-					session_file = env.session_file,
+					session_file = env.session_file or session_path_for_slot(slot, root_dir),
 					created_at = env.created_at,
 					updated_at = env.updated_at,
 					buffers = env.buffers or {},
 					neotree_open = env.neotree_open,
+					git_center_open = env.git_center_open,
+					conflict_resolver_open = env.conflict_resolver_open,
+					conflict_resolver_file = env.conflict_resolver_file,
+					log_diff_open = env.log_diff_open,
+					diff_mode_open = env.diff_mode_open,
+					diff_mode_state = env.diff_mode_state,
 				}
 			end
 		end
@@ -164,7 +246,24 @@ function M.save_index(data)
 			slots = slots_data,
 		}
 	end
-	return store.save(index_path(), data)
+
+	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/environments") then
+		return store.save(index_path(), data)
+	end
+
+	local root = root_dir or get_primary_root_dir()
+	local cur_path = index_path(root)
+	local ok = store.save(cur_path, data)
+	pcall(store.save, path.join(root, ".foxnvim", "environments.json"), data)
+
+	-- Also maintain global index cache
+	pcall(function()
+		local global_path = path.join(vim.fn.stdpath("data"), "environments", M.settings.index_file)
+		path.ensure_dir(path.join(vim.fn.stdpath("data"), "environments"))
+		store.save(global_path, data)
+	end)
+
+	return ok
 end
 
 -- ============================================================================
@@ -466,6 +565,16 @@ local function ensure_current_slot_initialized()
 	if not _G._fox_environments[active_slot] then
 		local cwd = vim.fn.getcwd()
 		local cwd_name = vim.fn.fnamemodify(cwd, ":t")
+		local ok_cr, cr = pcall(require, "plugins.fox.git.conflict_resolver")
+		local ok_ld, ld = pcall(require, "plugins.fox.git.log_diff")
+		local ok_dm, dm = pcall(require, "plugins.fox.git.diff_mode")
+		local ok_gc, gc = pcall(require, "plugins.fox.git.git_center")
+
+		local ld_open = (ok_ld and ld.is_open and ld.is_open()) or false
+		local cr_open = (ok_cr and cr.is_open and cr.is_open()) or false
+		local dm_open = (ok_dm and dm.is_open and dm.is_open()) or false
+		local gc_open = (ok_gc and gc.is_open and gc.is_open()) or false
+
 		_G._fox_environments[active_slot] = {
 			slot = active_slot,
 			id = string.format("env_%d_%d", active_slot, os.time()),
@@ -478,6 +587,16 @@ local function ensure_current_slot_initialized()
 			buffers = get_listed_buffer_names(),
 			terminals = vim.deepcopy(_G._fox_terminals or {}),
 			neotree_open = is_neotree_open(),
+			git_center_open = gc_open and not ld_open and not cr_open and not dm_open,
+			conflict_resolver_open = cr_open,
+			conflict_resolver_file = (ok_cr and cr.state and cr.state.active_file) or nil,
+			log_diff_open = ld_open,
+			diff_mode_open = dm_open,
+			diff_mode_state = (ok_dm and dm.state and {
+				mode = dm.state.mode,
+				target_ref = dm.state.target_ref,
+				base_ref = dm.state.base_ref,
+			}) or nil,
 		}
 	end
 end
@@ -495,6 +614,53 @@ local function snapshot_active_environment(env)
 	local neotree_was_open = is_neotree_open()
 	purge_neotree()
 	dismiss_visible_terminals()
+
+	-- Check and snapshot active tools
+	local ok_ld, ld = pcall(require, "plugins.fox.git.log_diff")
+	local ld_open = ok_ld and ld.is_open and ld.is_open()
+	if ld_open then
+		env.log_diff_open = true
+		pcall(ld.close)
+	else
+		env.log_diff_open = false
+	end
+
+	local ok_cr, cr = pcall(require, "plugins.fox.git.conflict_resolver")
+	local cr_open = ok_cr and cr.is_open and cr.is_open()
+	if cr_open then
+		env.conflict_resolver_open = true
+		if cr.state and cr.state.active_file then
+			env.conflict_resolver_file = cr.state.active_file
+		end
+		pcall(cr.close)
+	else
+		env.conflict_resolver_open = false
+	end
+
+	local ok_dm, dm = pcall(require, "plugins.fox.git.diff_mode")
+	local dm_open = ok_dm and dm.is_open and dm.is_open()
+	if dm_open then
+		env.diff_mode_open = true
+		if dm.state then
+			env.diff_mode_state = {
+				mode = dm.state.mode,
+				target_ref = dm.state.target_ref,
+				base_ref = dm.state.base_ref,
+			}
+		end
+		pcall(dm.close)
+	else
+		env.diff_mode_open = false
+	end
+
+	local ok_gc, gc = pcall(require, "plugins.fox.git.git_center")
+	local gc_open = ok_gc and gc.is_open and gc.is_open()
+	if gc_open and not ld_open and not cr_open and not dm_open then
+		env.git_center_open = true
+		pcall(gc.close_git_center or gc.close)
+	else
+		env.git_center_open = false
+	end
 
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		if vim.api.nvim_buf_is_valid(buf) and vim.fn.buflisted(buf) == 1 then
@@ -669,6 +835,37 @@ function M.switch_environment(target_slot, callback)
 
 	vim.cmd("redrawtabline")
 	vim.cmd("redrawstatus")
+
+	-- 7. Restore active tools (Git Diff Mode, Git Log Diff Dashboard, Conflict Resolver, Git Center)
+	if target_env.diff_mode_open then
+		vim.schedule(function()
+			local ok_dm, dm = pcall(require, "plugins.fox.git.diff_mode")
+			if ok_dm and dm.open then
+				pcall(dm.open)
+			end
+		end)
+	elseif target_env.log_diff_open then
+		vim.schedule(function()
+			local ok_ld, ld = pcall(require, "plugins.fox.git.log_diff")
+			if ok_ld and ld.open then
+				pcall(ld.open)
+			end
+		end)
+	elseif target_env.conflict_resolver_open then
+		vim.schedule(function()
+			local ok_cr, cr = pcall(require, "plugins.fox.git.conflict_resolver")
+			if ok_cr and cr.open then
+				pcall(cr.open, target_env.conflict_resolver_file)
+			end
+		end)
+	elseif target_env.git_center_open then
+		vim.schedule(function()
+			local ok_gc, gc = pcall(require, "plugins.fox.git.git_center")
+			if ok_gc and gc.open_git_center then
+				pcall(gc.open_git_center)
+			end
+		end)
+	end
 
 	target_env.updated_at = os.time()
 	M.save_index()
@@ -860,6 +1057,12 @@ function M.restore_all()
 				buffers = data.buffers or {},
 				terminals = {},
 				neotree_open = data.neotree_open,
+				git_center_open = data.git_center_open,
+				conflict_resolver_open = data.conflict_resolver_open,
+				conflict_resolver_file = data.conflict_resolver_file,
+				log_diff_open = data.log_diff_open,
+				diff_mode_open = data.diff_mode_open,
+				diff_mode_state = data.diff_mode_state,
 			}
 		end
 	end

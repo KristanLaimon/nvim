@@ -77,6 +77,8 @@ M.commands = {
 	{ name = "➕ New Workspace", cmd = "WorkspaceNew", category = "Workspace" },
 	{ name = "💾 Save Current Workspace", cmd = "WorkspaceSave", category = "Workspace" },
 	{ name = "🚪 Close Workspace & Go to Main Menu", cmd = "WorkspaceClose", category = "Workspace" },
+	{ name = "🎯 Focus Workspace / Environment Badge (<C-S-b>)", cmd = "WorkspaceBadgeFocus", category = "Workspace" },
+	{ name = "🏷️ Toggle Workspace Badge Visibility", cmd = "WorkspaceBadgeToggle", category = "Workspace" },
 
 	-- --------------------------------------------------------------------------
 	-- 🌐 Environments (Concurrent Project Slots 1..9)

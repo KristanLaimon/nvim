@@ -100,6 +100,9 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | Shortcut / Command | Mode | Action |
 | :--- | :---: | :--- |
 | `<C-S-w>` | n, i, v, t | Open the Workspaces picker |
+| `<C-S-b>` / `<leader>wb` / `<leader>wf` / `:WorkspaceFocus` | n, i, v | Focus Workspace / Environment Badge section |
+| `<C-h>` / `<C-l>` / `1..9` | n (Badge) | Switch between workspace/environment slots while focused on badge |
+| `<CR>` / `<Space>` / `<Esc>` / `q` | n (Badge) | Return focus from badge to editor window |
 | `<leader>wm` | n | Close the session and return to the dashboard (with save prompt) |
 | `:WorkspaceSave [name]` / `:WorkspaceLoad [name\|slot]` | Cmd | Save / load workspace by name or slot |
 | `:WorkspaceDelete` / `:WorkspaceRename` | Cmd | Delete / rename workspace |

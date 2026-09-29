@@ -27,7 +27,6 @@ local git_lines = queries.git_lines
 local git_run = queries.git_run
 
 --- True when the Git Center or any of its modals is on screen.
---- True when the Git Center or any of its modals is on screen.
 --- @return boolean
 function M.is_open()
 	return (config.main_win ~= nil and vim.api.nvim_win_is_valid(config.main_win))
@@ -37,6 +36,31 @@ function M.is_open()
 		or (config.log_win ~= nil and vim.api.nvim_win_is_valid(config.log_win))
 		or (config.branch_win ~= nil and vim.api.nvim_win_is_valid(config.branch_win))
 		or (config.graph_win ~= nil and vim.api.nvim_win_is_valid(config.graph_win))
+end
+
+--- True when Git Center or any related Git tool (Diff Mode, Log Diff, Conflict Resolver) is active.
+--- @return boolean
+function M.is_any_git_tool_open()
+	if M.is_open() then
+		return true
+	end
+
+	local ok_ld, ld = pcall(require, "plugins.fox.git.log_diff")
+	if ok_ld and ld.is_open and ld.is_open() then
+		return true
+	end
+
+	local ok_dm, dm = pcall(require, "plugins.fox.git.diff_mode")
+	if ok_dm and dm.is_open and dm.is_open() then
+		return true
+	end
+
+	local ok_cr, cr = pcall(require, "plugins.fox.git.conflict_resolver")
+	if ok_cr and cr.is_open and cr.is_open() then
+		return true
+	end
+
+	return false
 end
 
 --- Resizes the horizontal split between the left panel and preview pane.
@@ -84,9 +108,90 @@ function M.close_git_center(opts)
 	end
 	is_closing = true
 
+	local ok_ld, ld = pcall(require, "plugins.fox.git.log_diff")
+	local log_diff_was_open = ok_ld and ld.is_open and ld.is_open()
+
+	local ok_dm, dm = pcall(require, "plugins.fox.git.diff_mode")
+	local diff_mode_was_open = ok_dm and dm.is_open and dm.is_open()
+
+	local ok_cr, cr = pcall(require, "plugins.fox.git.conflict_resolver")
+	local cr_was_open = ok_cr and cr.is_open and cr.is_open()
+
 	-- Update RAM cached screen state
 	if opts.keep_cached_view then
-		if config.log_win and vim.api.nvim_win_is_valid(config.log_win) then
+		config.cached_view_data = config.cached_view_data or {}
+		if log_diff_was_open then
+			config.cached_view = "log_diff"
+			config.cached_view_data = {
+				cwd = ld.state.cwd,
+				mode = ld.state.mode,
+				branch = ld.state.branch,
+				commit = (ld.state.active_commit and ld.state.active_commit.sha)
+					or (type(ld.state.active_commit) == "string" and ld.state.active_commit)
+					or nil,
+				file = ld.state.active_file,
+				commit_row = (
+					ld.state.logs_win
+					and vim.api.nvim_win_is_valid(ld.state.logs_win)
+					and vim.api.nvim_win_get_cursor(ld.state.logs_win)[1]
+				) or nil,
+				file_row = (
+					ld.state.files_win
+					and vim.api.nvim_win_is_valid(ld.state.files_win)
+					and vim.api.nvim_win_get_cursor(ld.state.files_win)[1]
+				) or nil,
+				before_cursor = (
+					ld.state.before_win
+					and vim.api.nvim_win_is_valid(ld.state.before_win)
+					and vim.api.nvim_win_get_cursor(ld.state.before_win)
+				) or nil,
+				after_cursor = (
+					ld.state.after_win
+					and vim.api.nvim_win_is_valid(ld.state.after_win)
+					and vim.api.nvim_win_get_cursor(ld.state.after_win)
+				) or nil,
+				focused_pane = (vim.api.nvim_get_current_win() == ld.state.files_win and "files")
+					or (vim.api.nvim_get_current_win() == ld.state.before_win and "before")
+					or (vim.api.nvim_get_current_win() == ld.state.after_win and "after")
+					or "logs",
+			}
+		elseif diff_mode_was_open then
+			config.cached_view = "diff_mode"
+			config.cached_view_data = {
+				cwd = dm.state.cwd,
+				mode = dm.state.mode,
+				base_ref = dm.state.base_ref,
+				target_ref = dm.state.target_ref,
+				commits_behind = dm.state.commits_behind,
+				include_worktree = dm.state.include_worktree,
+				active_file = dm.state.active_file,
+				selected_file_idx = dm.state.selected_file_idx,
+				sidebar_cursor = (
+					dm.state.file_list_win
+					and vim.api.nvim_win_is_valid(dm.state.file_list_win)
+					and vim.api.nvim_win_get_cursor(dm.state.file_list_win)
+				) or nil,
+				left_cursor = (
+					dm.state.dual_left_win
+					and vim.api.nvim_win_is_valid(dm.state.dual_left_win)
+					and vim.api.nvim_win_get_cursor(dm.state.dual_left_win)
+				) or nil,
+				right_cursor = (
+					dm.state.dual_right_win
+					and vim.api.nvim_win_is_valid(dm.state.dual_right_win)
+					and vim.api.nvim_win_get_cursor(dm.state.dual_right_win)
+				) or nil,
+				focused_win = (vim.api.nvim_get_current_win() == dm.state.file_list_win and "sidebar")
+					or (vim.api.nvim_get_current_win() == dm.state.dual_right_win and "dual_right")
+					or "dual_left",
+			}
+		elseif cr_was_open then
+			config.cached_view = "conflict_resolver"
+			config.cached_view_data = {
+				active_file = cr.state and cr.state.active_file,
+				active_index = cr.state and cr.state.active_index,
+			}
+		elseif config.log_win and vim.api.nvim_win_is_valid(config.log_win) then
 			config.cached_view = "log"
 			local ok, row = pcall(vim.api.nvim_win_get_cursor, config.log_win)
 			if ok and row then
@@ -101,11 +206,30 @@ function M.close_git_center(opts)
 		else
 			if not config.cached_view or config.cached_view == "panel" then
 				config.cached_view = "panel"
+				if config.main_win and vim.api.nvim_win_is_valid(config.main_win) then
+					local ok, cur = pcall(vim.api.nvim_win_get_cursor, config.main_win)
+					if ok and cur then
+						config.cached_view_data.main_cursor = cur
+					end
+				end
 			end
 		end
 	else
 		config.cached_view = "panel"
 		config.cached_view_data = {}
+	end
+
+	-- Close sub-tools if toggled closed
+	if opts.keep_cached_view then
+		if log_diff_was_open then
+			pcall(ld.close)
+		end
+		if diff_mode_was_open then
+			pcall(dm.close)
+		end
+		if cr_was_open then
+			pcall(cr.close)
+		end
 	end
 
 	config.refresh = nil
@@ -236,9 +360,9 @@ function M.open_file_in_tab(file_path, cwd, target_type)
 	end)
 end
 
---- Opens the Git Center, or closes it when it is already open.
+--- Opens the Git Center, or closes any active Git tool when one is open.
 function M.toggle_git_center()
-	if M.is_open() then
+	if M.is_any_git_tool_open() then
 		M.close_git_center({ keep_cached_view = true })
 	else
 		M.open_git_center()
@@ -261,21 +385,118 @@ function M.open_git_center()
 	config.root_dir = root
 
 	-- Restore RAM cached screen if user previously closed on another screen
-	if config.cached_view == "graph" then
-		local target_cwd = config.cached_view_data.cwd or root
+	local cached_view = config.cached_view
+	local cached_data = config.cached_view_data
+	config.cached_view = nil
+	config.cached_view_data = nil
+
+	if cached_view == "log_diff" and cached_data then
+		local d = cached_data
+		local ld = require("plugins.fox.git.log_diff")
+		ld.open({
+			cwd = d.cwd or root,
+			commit = d.commit,
+			mode = d.mode,
+			branch = d.branch,
+			file = d.file,
+		})
+		vim.schedule(function()
+			if not ld.is_open() then
+				return
+			end
+			if d.commit_row and ld.state.logs_win and vim.api.nvim_win_is_valid(ld.state.logs_win) then
+				pcall(vim.api.nvim_win_set_cursor, ld.state.logs_win, { d.commit_row, 0 })
+			end
+			if d.file_row and ld.state.files_win and vim.api.nvim_win_is_valid(ld.state.files_win) then
+				pcall(vim.api.nvim_win_set_cursor, ld.state.files_win, { d.file_row, 0 })
+			end
+			if d.before_cursor and ld.state.before_win and vim.api.nvim_win_is_valid(ld.state.before_win) then
+				pcall(vim.api.nvim_win_set_cursor, ld.state.before_win, d.before_cursor)
+			end
+			if d.after_cursor and ld.state.after_win and vim.api.nvim_win_is_valid(ld.state.after_win) then
+				pcall(vim.api.nvim_win_set_cursor, ld.state.after_win, d.after_cursor)
+			end
+			if d.focused_pane == "files" and ld.state.files_win and vim.api.nvim_win_is_valid(ld.state.files_win) then
+				pcall(vim.api.nvim_set_current_win, ld.state.files_win)
+			elseif d.focused_pane == "before" and ld.state.before_win and vim.api.nvim_win_is_valid(ld.state.before_win) then
+				pcall(vim.api.nvim_set_current_win, ld.state.before_win)
+			elseif d.focused_pane == "after" and ld.state.after_win and vim.api.nvim_win_is_valid(ld.state.after_win) then
+				pcall(vim.api.nvim_set_current_win, ld.state.after_win)
+			elseif ld.state.logs_win and vim.api.nvim_win_is_valid(ld.state.logs_win) then
+				pcall(vim.api.nvim_set_current_win, ld.state.logs_win)
+			end
+		end)
+		return
+	elseif cached_view == "diff_mode" and cached_data then
+		local d = cached_data
+		local dm = require("plugins.fox.git.diff_mode")
+		if d.mode == "between_branches" and d.base_ref and d.target_ref then
+			dm.start_between_branches(d.base_ref, d.target_ref, d.cwd or root)
+			if d.active_file then
+				dm.open_file_between_branches(d.active_file)
+			end
+		else
+			dm.start_same_branch({
+				cwd = d.cwd or root,
+				commits_behind = d.commits_behind,
+				include_worktree = d.include_worktree,
+				base_ref = d.base_ref,
+				target_ref = d.target_ref,
+			})
+			if d.active_file then
+				dm.open_file_same_branch(d.active_file)
+			end
+		end
+		vim.schedule(function()
+			if not dm.is_open() then
+				return
+			end
+			if d.sidebar_cursor and dm.state.file_list_win and vim.api.nvim_win_is_valid(dm.state.file_list_win) then
+				pcall(vim.api.nvim_win_set_cursor, dm.state.file_list_win, d.sidebar_cursor)
+			end
+			if d.left_cursor and dm.state.dual_left_win and vim.api.nvim_win_is_valid(dm.state.dual_left_win) then
+				pcall(vim.api.nvim_win_set_cursor, dm.state.dual_left_win, d.left_cursor)
+			end
+			if d.right_cursor and dm.state.dual_right_win and vim.api.nvim_win_is_valid(dm.state.dual_right_win) then
+				pcall(vim.api.nvim_win_set_cursor, dm.state.dual_right_win, d.right_cursor)
+			end
+			if
+				d.focused_win == "sidebar"
+				and dm.state.file_list_win
+				and vim.api.nvim_win_is_valid(dm.state.file_list_win)
+			then
+				pcall(vim.api.nvim_set_current_win, dm.state.file_list_win)
+			elseif
+				d.focused_win == "dual_right"
+				and dm.state.dual_right_win
+				and vim.api.nvim_win_is_valid(dm.state.dual_right_win)
+			then
+				pcall(vim.api.nvim_set_current_win, dm.state.dual_right_win)
+			elseif dm.state.dual_left_win and vim.api.nvim_win_is_valid(dm.state.dual_left_win) then
+				pcall(vim.api.nvim_set_current_win, dm.state.dual_left_win)
+			end
+		end)
+		return
+	elseif cached_view == "conflict_resolver" and cached_data then
+		local d = cached_data
+		local cr = require("plugins.fox.git.conflict_resolver")
+		cr.open(d.active_file)
+		return
+	elseif cached_view == "graph" and cached_data then
+		local target_cwd = cached_data.cwd or root
 		local gv = require("plugins.fox.git.git_center.graph_viewer")
-		gv.open(target_cwd, config.cached_view_data.mode)
+		gv.open(target_cwd, cached_data.mode)
 		return
-	elseif config.cached_view == "log" then
-		local target_cwd = config.cached_view_data.cwd or root
-		modals.open_commit_log_modal(target_cwd, config.cached_view_data.log_row)
+	elseif cached_view == "log" and cached_data then
+		local target_cwd = cached_data.cwd or root
+		modals.open_commit_log_modal(target_cwd, cached_data.log_row)
 		return
-	elseif config.cached_view == "branch" then
-		local target_cwd = config.cached_view_data.cwd or root
+	elseif cached_view == "branch" and cached_data then
+		local target_cwd = cached_data.cwd or root
 		modals.open_branch_modal(target_cwd)
 		return
-	elseif config.cached_view == "diff" and config.cached_view_data and config.cached_view_data.target_file then
-		local d = config.cached_view_data
+	elseif cached_view == "diff" and cached_data and cached_data.target_file then
+		local d = cached_data
 		modals.open_diff_modal(d.target_file, d.target_type, d.cwd or root, d.commit_hash, d.diff_index)
 	end
 
@@ -756,7 +977,18 @@ function M.open_git_center()
 		buffer = main_buf,
 		callback = update_preview,
 	})
-	update_preview()
+
+	if
+		config.cached_view_data
+		and config.cached_view_data.main_cursor
+		and config.main_win
+		and vim.api.nvim_win_is_valid(config.main_win)
+	then
+		pcall(vim.api.nvim_win_set_cursor, config.main_win, config.cached_view_data.main_cursor)
+		update_preview(true)
+	else
+		update_preview()
+	end
 
 	local function refresh(force_clear_cache)
 		if force_clear_cache then

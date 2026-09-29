@@ -666,4 +666,40 @@ describe("plugins.fox.git.git_center", function()
 
 		git_center.close_git_center()
 	end)
+
+	it("restores active diff_mode when closing and reopening via toggle_git_center()", function()
+		local diff_mode = require("plugins.fox.git.diff_mode")
+		diff_mode.start_same_branch()
+		expect(diff_mode.is_open()).toBeTruthy()
+
+		-- Toggle closed via toggle_git_center (Ctrl+Shift+G)
+		git_center.toggle_git_center()
+		expect(diff_mode.is_open()).toBeFalsy()
+		expect(git_center.cached_view).toBe("diff_mode")
+
+		-- Toggle reopened via toggle_git_center (Ctrl+Shift+G)
+		git_center.toggle_git_center()
+		expect(diff_mode.is_open()).toBeTruthy()
+
+		diff_mode.close()
+		expect(diff_mode.is_open()).toBeFalsy()
+	end)
+
+	it("restores active log_diff dashboard when closing and reopening via toggle_git_center()", function()
+		local log_diff = require("plugins.fox.git.log_diff")
+		log_diff.open()
+		expect(log_diff.is_open()).toBeTruthy()
+
+		-- Toggle closed via toggle_git_center (Ctrl+Shift+G)
+		git_center.toggle_git_center()
+		expect(log_diff.is_open()).toBeFalsy()
+		expect(git_center.cached_view).toBe("log_diff")
+
+		-- Toggle reopened via toggle_git_center (Ctrl+Shift+G)
+		git_center.toggle_git_center()
+		expect(log_diff.is_open()).toBeTruthy()
+
+		log_diff.close()
+		expect(log_diff.is_open()).toBeFalsy()
+	end)
 end)

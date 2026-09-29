@@ -1,0 +1,32 @@
+{
+  "$schema": "./snippets.schema.json",
+
+  "Solution Header": {
+    "prefix": "sln-header",
+    "body": [
+      "Microsoft Visual Studio Solution File, Format Version 12.00",
+      "# Visual Studio Version 17",
+      "VisualStudioVersion = 17.0.31903.59",
+      "MinimumVisualStudioVersion = 10.0.40219.1"
+    ],
+    "description": "Visual Studio Solution header"
+  },
+
+  "Solution C# Project Block": {
+    "prefix": "sln-csharp-project",
+    "body": [
+      "Project(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"${1:ProjectName}\", \"${2:path/to/project.csproj}\", \"{${3:GUID}}\"",
+      "EndProject"
+    ],
+    "description": "Add C# project entry to .sln"
+  },
+
+  "Solution Folder Block": {
+    "prefix": "sln-folder",
+    "body": [
+      "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"${1:FolderName}\", \"${1:FolderName}\", \"{${2:GUID}}\"",
+      "EndProject"
+    ],
+    "description": "Add solution folder entry to .sln"
+  }
+}

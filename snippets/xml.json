@@ -1,0 +1,41 @@
+{
+  "$schema": "./snippets.schema.json",
+
+  ".slnx Solution": {
+    "prefix": "slnx",
+    "body": [
+      "<Solution>",
+      "  <Folder Name=\"/${1:src}/\t\">",
+      "    <Project Path=\"${2:src/App/App.csproj}\" />",
+      "  </Folder>",
+      "</Solution>"
+    ],
+    "description": "Create a modern .NET Solution (.slnx) file"
+  },
+
+  ".slnx Project Entry": {
+    "prefix": "slnx-proj",
+    "body": [
+      "<Project Path=\"${1:path/to/project.csproj}\" />"
+    ],
+    "description": "Add a project entry to .slnx solution"
+  },
+
+  ".slnx Folder Block": {
+    "prefix": "slnx-folder",
+    "body": [
+      "<Folder Name=\"/${1:FolderName}/\">",
+      "  <Project Path=\"${2:path/to/project.csproj}\" />",
+      "</Folder>"
+    ],
+    "description": "Add a solution folder grouping to .slnx"
+  },
+
+  ".slnx Package Reference": {
+    "prefix": "slnx-pkg",
+    "body": [
+      "<Package Path=\"${1:path/to/package.pkgproj}\" />"
+    ],
+    "description": "Add a package reference to .slnx solution"
+  }
+}

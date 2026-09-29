@@ -14,9 +14,7 @@ local M = {}
 --- The lspconfig/mason server name(s) this language owns.
 M.lsp_server = { "omnisharp", "csharp_ls" }
 
---- lspconfig server settings, keyed by server name (see M.lsp_server). `csharp_ls`
---- is disabled: omnisharp is the one that runs, kept here only so a future switch
---- is a one-line `enabled` flip.
+--- lspconfig server settings, keyed by server name (see M.lsp_server).
 ---@type table<string, vim.lsp.Config>
 M.lsp_config = {
 	omnisharp = {
@@ -27,8 +25,10 @@ M.lsp_config = {
 		root_dir = function(bufnr, on_dir)
 			local util = require("lspconfig.util")
 			local fname = vim.api.nvim_buf_get_name(bufnr)
+			-- 1. Check for classic .sln
+			-- 2. Anchor to the closest .csproj (vital for .slnx and monorepo subprojects)
 			local root = util.root_pattern("*.sln")(fname)
-				or util.root_pattern("*.csproj", "omnisharp.json", "global.json", ".git")(fname)
+				or util.root_pattern("*.csproj", "omnisharp.json", "global.json")(fname)
 			if root then
 				on_dir(root)
 			else
@@ -73,7 +73,7 @@ M.lsp_config = {
 		root_dir = function(bufnr, on_dir)
 			local util = require("lspconfig.util")
 			local fname = vim.api.nvim_buf_get_name(bufnr)
-			local root = util.root_pattern("*.sln")(fname) or util.root_pattern("*.csproj", ".git")(fname)
+			local root = util.root_pattern("*.sln")(fname) or util.root_pattern("*.csproj")(fname)
 			if root then
 				on_dir(root)
 			else
@@ -83,8 +83,7 @@ M.lsp_config = {
 	},
 }
 
---- Mason package metadata, keyed by lspconfig/formatter name. `csharp_ls` has none:
---- it is disabled and never auto-installed.
+--- Mason package metadata, keyed by lspconfig/formatter name.
 M.mason = {
 	omnisharp = { mason = "omnisharp", lang = "C#", type = "lsp", cmd = "OmniSharp" },
 	netcoredbg = { mason = "netcoredbg", lang = "C# Debugger", type = "dap", cmd = "netcoredbg" },

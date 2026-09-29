@@ -154,4 +154,35 @@ describe("plugins.fox.tools.environments", function()
 	it("provides select_project_for_slot to configure environment slots", function()
 		expect(type(envs.select_project_for_slot)).toBe("function")
 	end)
+
+	it("snapshots and restores tool states (git center, diff dashboard, conflict resolver)", function()
+		local dir1 = vim.fn.stdpath("config")
+		local env = envs.create_environment(1, dir1, "ToolEnv", false)
+		env.git_center_open = true
+		env.log_diff_open = true
+		env.conflict_resolver_open = true
+		env.conflict_resolver_file = "test.txt"
+		env.diff_mode_open = true
+
+		envs.save_index()
+
+		local store = require("fox.core.store")
+		local index = store.load(temp_dir .. "/index.json", {})
+		expect(index.slots["1"].git_center_open).toBe(true)
+		expect(index.slots["1"].log_diff_open).toBe(true)
+		expect(index.slots["1"].conflict_resolver_open).toBe(true)
+		expect(index.slots["1"].conflict_resolver_file).toBe("test.txt")
+		expect(index.slots["1"].diff_mode_open).toBe(true)
+
+		_G._fox_environments = {}
+		envs.restore_all()
+
+		local restored = envs.get_environment(1)
+		expect(restored ~= nil).toBe(true)
+		expect(restored.git_center_open).toBe(true)
+		expect(restored.log_diff_open).toBe(true)
+		expect(restored.conflict_resolver_open).toBe(true)
+		expect(restored.conflict_resolver_file).toBe("test.txt")
+		expect(restored.diff_mode_open).toBe(true)
+	end)
 end)

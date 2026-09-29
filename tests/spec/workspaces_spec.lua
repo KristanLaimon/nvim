@@ -106,9 +106,18 @@ describe("plugins.fox.tools.workspaces", function()
 		expect(type(ws.get_badge_components)).toBe("function")
 
 		ws.set_active_workspace(nil)
-		expect(ws.get_badge_text()).toBe("/🦊1\\")
+		expect(ws.get_badge_text()).toBe(" 🦊 1 ")
 
 		-- Calling update_badge should not crash
 		pcall(ws.update_badge)
+	end)
+
+	it("provides focus_badge and does not interfere with hover_links", function()
+		expect(type(ws.focus_badge)).toBe("function")
+		pcall(ws.focus_badge)
+
+		-- Verify hover_links does not mistake the workspace badge for an LSP hover float
+		local hl = require("plugins.fox.editor.hover_links")
+		expect(type(hl.show_or_focus_hover)).toBe("function")
 	end)
 end)

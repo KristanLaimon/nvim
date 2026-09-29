@@ -598,7 +598,10 @@ function M.open(target_cwd, initial_mode)
 
 		local raw_diff = {}
 		if current_target_file then
-			raw_diff = queries.git_lines({ "show", "--format=", "--color=never", commit.full_hash, "--", current_target_file }, active_cwd)
+			raw_diff = queries.git_lines(
+				{ "show", "--format=", "--color=never", commit.full_hash, "--", current_target_file },
+				active_cwd
+			)
 		else
 			raw_diff = queries.git_lines({ "show", "--format=", "--color=never", commit.full_hash }, active_cwd)
 		end

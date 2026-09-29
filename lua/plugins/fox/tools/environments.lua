@@ -673,6 +673,13 @@ function M.switch_environment(target_slot, callback)
 	target_env.updated_at = os.time()
 	M.save_index()
 
+	pcall(function()
+		local ws = package.loaded["plugins.fox.tools.workspaces"] or _G.Workspaces
+		if ws and ws.update_badge then
+			ws.update_badge()
+		end
+	end)
+
 	notify(string.format("🌿 Active Environment: #%d (%s)", target_slot, target_env.name or target_env.cwd_name))
 	if callback then
 		callback()
@@ -767,6 +774,12 @@ function M.close_environment(slot, callback)
 	end
 
 	M.save_index()
+	pcall(function()
+		local ws = package.loaded["plugins.fox.tools.workspaces"] or _G.Workspaces
+		if ws and ws.update_badge then
+			ws.update_badge()
+		end
+	end)
 	notify(string.format("Environment #%d ('%s') closed.", slot, env.name))
 	if callback then
 		callback()

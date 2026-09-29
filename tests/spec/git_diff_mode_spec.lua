@@ -7,7 +7,10 @@ local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, 
 local diff_mode = require("plugins.fox.git.diff_mode")
 
 describe("plugins.fox.git.diff_mode", function()
+	local config_dir = vim.fn.stdpath("config")
+
 	beforeEach(function()
+		pcall(vim.api.nvim_set_current_dir, config_dir)
 		if diff_mode.is_open() then
 			diff_mode.close()
 		end
@@ -17,6 +20,7 @@ describe("plugins.fox.git.diff_mode", function()
 		if diff_mode.is_open() then
 			diff_mode.close()
 		end
+		pcall(vim.api.nvim_set_current_dir, config_dir)
 	end)
 
 	it("sanitizes commits_behind values to non-negative integers >= 0", function()
@@ -89,7 +93,7 @@ describe("plugins.fox.git.diff_mode", function()
 		local cfg = vim.api.nvim_win_get_config(win)
 		expect(cfg.split).toBe("right")
 		expect(cfg.relative).toBe("")
-		expect(cfg.width).toBeGreaterThan(20)
+		expect(cfg.width).toBeGreaterThanOrEqual(20)
 		expect(vim.wo[win].winfixwidth).toBeTruthy()
 
 		-- Check rendered lines contain file names and icons

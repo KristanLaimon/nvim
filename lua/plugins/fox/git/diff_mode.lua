@@ -1039,7 +1039,7 @@ function M.open_file_list_window(files, selected_idx)
 	end
 
 	local total_cols = vim.o.columns
-	local width = math.min(42, math.max(30, math.floor(total_cols * 0.28)))
+	local width = math.max(20, math.floor(total_cols * 0.25))
 
 	if M.state.file_list_win and vim.api.nvim_win_is_valid(M.state.file_list_win) then
 		pcall(vim.api.nvim_win_set_width, M.state.file_list_win, width)
@@ -1199,13 +1199,48 @@ function M.open_file_list_window(files, selected_idx)
 		end, opts)
 	end
 
-	for _, k in ipairs({ "i", "I" }) do
+	for _, k in ipairs({ "<", "," }) do
 		vim.keymap.set("n", k, function()
-			M.import_diff_prompt()
+			M.resize_sidebar(-2)
+		end, opts)
+	end
+
+	for _, k in ipairs({ ">", "." }) do
+		vim.keymap.set("n", k, function()
+			M.resize_sidebar(2)
 		end, opts)
 	end
 
 	return win, buf
+end
+
+--- Balances the 2 diff editor windows to 50% and 50% of the remaining space after the sidebar
+function M.balance_dual_windows()
+	local total_cols = vim.o.columns or 80
+	local sidebar_w = (M.state.file_list_win and vim.api.nvim_win_is_valid(M.state.file_list_win))
+			and vim.api.nvim_win_get_width(M.state.file_list_win)
+		or math.floor(total_cols * 0.25)
+	local remaining_w = total_cols - sidebar_w
+	local half_w = math.floor(remaining_w / 2)
+	if M.state.dual_right_win and vim.api.nvim_win_is_valid(M.state.dual_right_win) then
+		pcall(vim.api.nvim_win_set_width, M.state.dual_right_win, half_w)
+	end
+	if M.state.dual_left_win and vim.api.nvim_win_is_valid(M.state.dual_left_win) then
+		pcall(vim.api.nvim_win_set_width, M.state.dual_left_win, remaining_w - half_w)
+	end
+end
+
+--- Resizes the sidebar width and automatically adapts the other 2 columns to 50% and 50% of remaining space
+--- @param delta integer
+function M.resize_sidebar(delta)
+	if not (M.state.file_list_win and vim.api.nvim_win_is_valid(M.state.file_list_win)) then
+		return
+	end
+	local total_cols = vim.o.columns or 80
+	local cur_w = vim.api.nvim_win_get_width(M.state.file_list_win)
+	local new_w = math.max(18, math.min(total_cols - 30, cur_w + delta))
+	pcall(vim.api.nvim_win_set_width, M.state.file_list_win, new_w)
+	M.balance_dual_windows()
 end
 
 --- Toggles focus between the editor and the docked right sidebar
@@ -1316,7 +1351,20 @@ function M.start_same_branch(opts)
 	else
 		opts = opts or {}
 	end
-	local cwd = opts.cwd or path_util.normalize(project.root() or vim.fn.getcwd())
+	local cwd = opts.cwd
+	if not cwd then
+		local cur_cwd = vim.fn.getcwd()
+		if git.is_repository(cur_cwd) then
+			cwd = path_util.normalize(cur_cwd)
+		else
+			local p_root = project.root()
+			if p_root and git.is_repository(p_root) then
+				cwd = path_util.normalize(p_root)
+			else
+				cwd = path_util.normalize(cur_cwd)
+			end
+		end
+	end
 	if not git.is_repository(cwd) then
 		notify("Current directory is not a Git repository", vim.log.levels.WARN)
 		return
@@ -1463,6 +1511,8 @@ function M.open_file_between_branches(file_path, opts)
 		M.state.dual_right_buf = right_buf
 	end
 
+	M.balance_dual_windows()
+
 	-- Create scratch buffers
 	local left_buf = M.state.dual_left_buf
 	if not (left_buf and vim.api.nvim_buf_is_valid(left_buf)) then
@@ -1536,7 +1586,19 @@ end
 --- @param branch2 string
 --- @param cwd? string
 function M.start_between_branches(branch1, branch2, cwd)
-	cwd = cwd or path_util.normalize(project.root() or vim.fn.getcwd())
+	if not cwd then
+		local cur_cwd = vim.fn.getcwd()
+		if git.is_repository(cur_cwd) then
+			cwd = path_util.normalize(cur_cwd)
+		else
+			local p_root = project.root()
+			if p_root and git.is_repository(p_root) then
+				cwd = path_util.normalize(p_root)
+			else
+				cwd = path_util.normalize(cur_cwd)
+			end
+		end
+	end
 	if not git.is_repository(cwd) then
 		notify("Current directory is not a Git repository", vim.log.levels.WARN)
 		return

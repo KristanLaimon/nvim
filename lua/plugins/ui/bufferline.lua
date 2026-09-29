@@ -97,6 +97,20 @@ return {
 					end
 					return true
 				end,
+				custom_areas = {
+					right = function()
+						local result = {}
+						local ok, ws = pcall(require, "plugins.fox.tools.workspaces")
+						if ok and ws and ws.get_badge_components then
+							local comps = ws.get_badge_components()
+							for _, c in ipairs(comps) do
+								table.insert(result, { text = c.text, highlight = c.hl })
+							end
+							table.insert(result, { text = " " })
+						end
+						return result
+					end,
+				},
 			},
 			highlights = {
 				buffer_selected = { fg = "#ffffff", bold = true },

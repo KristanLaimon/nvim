@@ -90,4 +90,25 @@ describe("plugins.fox.tools.workspaces", function()
 		local index = store.load(temp_dir .. "/index.json", {})
 		expect(#index).toBe(0)
 	end)
+
+	it("returns 1 for active slot when only 1 or no workspace is active", function()
+		ws.set_active_workspace(nil)
+		expect(ws.get_active_slot_number()).toBe(1)
+
+		ws.save_workspace("Workspace 1")
+		expect(ws.get_active_slot_number()).toBe(1)
+	end)
+
+	it("updates and toggles floating workspace badge", function()
+		expect(type(ws.update_badge)).toBe("function")
+		expect(type(ws.toggle_badge)).toBe("function")
+		expect(type(ws.get_badge_text)).toBe("function")
+		expect(type(ws.get_badge_components)).toBe("function")
+
+		ws.set_active_workspace(nil)
+		expect(ws.get_badge_text()).toBe("/🦊1\\")
+
+		-- Calling update_badge should not crash
+		pcall(ws.update_badge)
+	end)
 end)

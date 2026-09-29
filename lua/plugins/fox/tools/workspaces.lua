@@ -27,6 +27,7 @@
 local lazy_req = require("fox.core.lazy_require")
 local store = lazy_req("fox.core.store")
 local path = lazy_req("fox.core.path")
+local project = lazy_req("fox.core.project")
 
 local M = {}
 
@@ -91,32 +92,158 @@ local function notify(msg, level)
 end
 
 -- ============================================================================
--- INDEX STORAGE
+-- ============================================================================
+-- INDEX STORAGE (Per-Project in .foxnvim/workspaces anchored to first workspace/cwd)
 -- ============================================================================
 
---- Session storage directory, created on first use.
+if not _G._fox_initial_cwd then
+	_G._fox_initial_cwd = vim.fn.getcwd()
+end
+
+--- Resolves the primary root cwd (the first workspace or first environment slot).
+--- Workspace information is anchored and saved in this first cwd.
+--- @return string
+local function get_primary_root_dir()
+	if _G._fox_initial_cwd and _G._fox_initial_cwd ~= "" then
+		return _G._fox_initial_cwd
+	end
+
+	if vim.g.fox_initial_cwd and vim.g.fox_initial_cwd ~= "" then
+		return vim.g.fox_initial_cwd
+	end
+
+	-- 1. Check if Environment slot 1 has a cwd
+	if _G._fox_environments and _G._fox_environments[1] and _G._fox_environments[1].cwd then
+		return _G._fox_environments[1].cwd
+	end
+
+	-- 2. Check global index cache to see if there is an existing workspace list with a first cwd
+	local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
+	local global_entries = store.load(global_path, {})
+	if type(global_entries) == "table" and #global_entries > 0 and global_entries[1].cwd then
+		return global_entries[1].cwd
+	end
+
+	-- 3. Check current workspace / project root
+	local p_root = project and project.root and project.root()
+	if p_root then
+		return p_root
+	end
+
+	-- 4. Default to current working directory
+	return vim.fn.getcwd()
+end
+
+--- Session storage directory for a specific project root, created on first use.
+--- Defaults to `<first_project_root>/.foxnvim/workspaces` unless `M.settings.storage_dir`
+--- is explicitly overridden (e.g. in unit tests).
+--- @param root_dir string|nil
 --- @return string dir
-local function storage_dir()
-	return path.ensure_dir(M.settings.storage_dir)
+local function storage_dir(root_dir)
+	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/workspaces") then
+		return path.ensure_dir(M.settings.storage_dir)
+	end
+	local root = root_dir or get_primary_root_dir()
+	local p_dir = path.join(root, ".foxnvim", "workspaces")
+	return path.ensure_dir(p_dir)
 end
 
---- Absolute path of the index file.
+--- Absolute path of the index file for a project root.
+--- @param root_dir string|nil
 --- @return string filepath
-local function index_path()
-	return path.join(storage_dir(), M.settings.index_file)
+local function index_path(root_dir)
+	return path.join(storage_dir(root_dir), M.settings.index_file)
 end
 
---- Loads the workspace index.
---- @return table[] index Possibly empty list of workspace records.
-local function load_index()
-	return store.load(index_path(), {})
+--- Loads the workspace index for the primary project root (and global fallback).
+--- @param root_dir string|nil
+--- @return table[] index List of workspace records.
+local function load_index(root_dir)
+	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/workspaces") then
+		local local_entries = store.load(index_path(), {})
+		return type(local_entries) == "table" and local_entries or {}
+	end
+
+	local root = root_dir or get_primary_root_dir()
+	local cur_path = index_path(root)
+	local local_entries = store.load(cur_path, nil)
+	if local_entries ~= nil and type(local_entries) == "table" then
+		return local_entries
+	end
+
+	-- Check legacy global storage fallback only if local .foxnvim index file does not exist yet
+	local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
+	local global_entries = store.load(global_path, {})
+	if type(global_entries) == "table" and #global_entries > 0 then
+		local filtered = {}
+		for _, item in ipairs(global_entries) do
+			if path.equals(item.cwd or "", root) then
+				table.insert(filtered, item)
+			end
+		end
+		if #filtered > 0 then
+			return filtered
+		end
+	end
+
+	return {}
 end
 
---- Writes the workspace index back.
+--- Writes the workspace index back to the project's `.foxnvim/workspaces/index.json`.
+--- Always saves to the first cwd or first workspace found in the list.
 --- @param index table[] Workspace records.
+--- @param root_dir string|nil
 --- @return boolean ok
-local function save_index(index)
-	return (store.save(index_path(), index))
+local function save_index(index, root_dir)
+	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/workspaces") then
+		return store.save(index_path(), index)
+	end
+
+	local root = root_dir
+	if not root then
+		if index and type(index) == "table" and #index > 0 and index[1].cwd then
+			root = index[1].cwd
+		else
+			root = get_primary_root_dir()
+		end
+	end
+	local cur_path = index_path(root)
+	local ok = store.save(cur_path, index)
+
+	-- Also maintain global index cache for cross-project telescope search
+	pcall(function()
+		local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
+		path.ensure_dir(path.join(vim.fn.stdpath("data"), "workspaces"))
+		store.save(global_path, index)
+	end)
+
+	return ok
+end
+
+--- Loads all workspaces across all known projects (for 'g' View All mode in Telescope).
+--- @return table[]
+local function load_all_workspaces()
+	local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
+	local all_entries = store.load(global_path, {})
+	local current_local = load_index()
+
+	local seen = {}
+	local merged = {}
+	for _, item in ipairs(current_local) do
+		if not seen[item.id] then
+			seen[item.id] = true
+			table.insert(merged, item)
+		end
+	end
+
+	for _, item in ipairs(all_entries) do
+		if not seen[item.id] then
+			seen[item.id] = true
+			table.insert(merged, item)
+		end
+	end
+
+	return merged
 end
 
 --- Finds a workspace by record, id, or (case-insensitive) name.
@@ -318,7 +445,6 @@ function M.save_workspace(name, callback)
 		else
 			table.insert(
 				index,
-				1,
 				vim.tbl_extend("force", {
 					id = id,
 					name = ws_name,
@@ -330,6 +456,8 @@ function M.save_workspace(name, callback)
 		end
 
 		save_index(index)
+		M.current_workspace = ws_item or index[#index]
+		pcall(M.update_badge)
 		notify("Workspace '" .. ws_name .. "' saved successfully!")
 		if callback then
 			callback()
@@ -398,6 +526,9 @@ local function resolve_load_target(index, identifier)
 	end
 
 	if type(identifier) == "number" then
+		if index[identifier] then
+			return index[identifier]
+		end
 		local cwd = vim.fn.getcwd()
 		local count = 0
 		for _, item in ipairs(index) do
@@ -492,6 +623,7 @@ function M.load_workspace(ws_or_identifier)
 		require("plugins.fox.ui.pinned_tabs").restore_pins()
 	end)
 
+	pcall(M.update_badge)
 	notify("Workspace '" .. target.name .. "' loaded!")
 	return true
 end
@@ -524,6 +656,11 @@ function M.delete_workspace(ws_or_id, callback)
 	table.remove(index, position)
 	save_index(index)
 
+	if M.current_workspace and (M.current_workspace.id == target.id or M.current_workspace.name == target.name) then
+		M.current_workspace = nil
+	end
+	pcall(M.update_badge)
+
 	notify("Workspace '" .. target.name .. "' deleted.")
 	if callback then
 		callback()
@@ -547,6 +684,7 @@ function M.rename_workspace(ws_or_id, callback)
 			target.name = new_name
 			target.updated_at = os.time()
 			save_index(index)
+			pcall(M.update_badge)
 			notify("Workspace renamed to '" .. new_name .. "'")
 			if callback then
 				callback()
@@ -564,6 +702,7 @@ function M.close_to_menu()
 
 	local function close_all_and_open_alpha()
 		M.current_workspace = nil
+		pcall(M.update_badge)
 		pcall(vim.cmd, "Neotree close")
 		purge_neotree_buffers()
 		pcall(vim.cmd, "only")
@@ -597,6 +736,242 @@ function M.close_to_menu()
 			close_all_and_open_alpha()
 		end
 	end)
+end
+
+-- ============================================================================
+-- TOP-RIGHT CORNER WORKSPACE BADGE
+-- ============================================================================
+
+local badge_buf = nil
+local badge_win = nil
+local badge_visible = true
+
+local function setup_badge_highlights()
+	local orange = "#ff8800"
+	local bg_col = "#1e1e2e"
+	local sep_col = "#585b70"
+	local dim_col = "#a6adc8"
+	local ok, colors = pcall(require, "nagatoro.colors")
+	if ok and type(colors) == "table" then
+		orange = colors.orange or colors.accent or orange
+		bg_col = colors.background or colors.dark_background or bg_col
+		sep_col = colors.comment or sep_col
+		dim_col = colors.foreground or dim_col
+	else
+		local ok_hl, tab_hl = pcall(vim.api.nvim_get_hl, 0, { name = "BufferLineFill" })
+		if ok_hl and tab_hl and tab_hl.bg then
+			bg_col = string.format("#%06x", tab_hl.bg)
+		end
+	end
+
+	vim.api.nvim_set_hl(0, "FoxWorkspaceBadge", {
+		fg = orange,
+		bg = bg_col,
+		bold = true,
+		default = true,
+	})
+	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeActive", {
+		fg = orange,
+		bg = bg_col,
+		bold = true,
+		default = true,
+	})
+	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeInactive", {
+		fg = dim_col,
+		bg = bg_col,
+		default = true,
+	})
+	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeSep", {
+		fg = sep_col,
+		bg = bg_col,
+		default = true,
+	})
+	vim.api.nvim_set_hl(0, "FoxWorkspaceBadgeBorder", {
+		fg = sep_col,
+		bg = bg_col,
+		default = true,
+	})
+end
+
+--- Returns the active workspace slot number (1..N). If none or 1, returns 1.
+--- @return integer
+function M.get_active_slot_number()
+	-- If Environments are active with multiple project slots, coordinate with active environment slot
+	if _G._fox_environments and _G._fox_active_env_slot then
+		local env_cnt = 0
+		for s = 1, 9 do
+			if _G._fox_environments[s] ~= nil then
+				env_cnt = env_cnt + 1
+			end
+		end
+		if env_cnt > 1 then
+			return _G._fox_active_env_slot or 1
+		end
+	end
+
+	local cur = M.get_active_workspace()
+	if not cur then
+		return 1
+	end
+
+	local index = load_index()
+	local cwd = vim.fn.getcwd()
+	local count = 0
+	for _, item in ipairs(index) do
+		if path.equals(item.cwd or "", cwd) then
+			count = count + 1
+			if item.id == cur.id or item.name == cur.name then
+				return count
+			end
+		end
+	end
+
+	for idx, item in ipairs(index) do
+		if item.id == cur.id or item.name == cur.name then
+			return idx
+		end
+	end
+
+	return 1
+end
+
+--- Constructs component chunks for the workspace badge (for bufferline custom_areas and float).
+--- Formats as e.g. "/🦊1\" or "/🦊1\/2\" or "/1\/🦊2\" or "/1\/🦊2\/3\"
+--- @return table List of `{ text = string, hl = string }`
+function M.get_badge_components()
+	local active_slot = M.get_active_slot_number()
+	local total = 1
+
+	if _G._fox_environments then
+		local env_cnt = 0
+		for s = 1, 9 do
+			if _G._fox_environments[s] ~= nil then
+				env_cnt = math.max(env_cnt, s)
+			end
+		end
+		total = math.max(total, env_cnt)
+	end
+
+	local ws_list = load_index()
+	if #ws_list > 0 then
+		total = math.max(total, #ws_list)
+	end
+	total = math.max(total, active_slot)
+
+	local comps = {}
+	table.insert(comps, { text = "/", hl = "FoxWorkspaceBadgeSep" })
+	for i = 1, total do
+		if i > 1 then
+			table.insert(comps, { text = "\\/", hl = "FoxWorkspaceBadgeSep" })
+		end
+		if i == active_slot then
+			table.insert(comps, { text = "🦊" .. i, hl = "FoxWorkspaceBadgeActive" })
+		else
+			table.insert(comps, { text = tostring(i), hl = "FoxWorkspaceBadgeInactive" })
+		end
+	end
+	table.insert(comps, { text = "\\", hl = "FoxWorkspaceBadgeSep" })
+	return comps
+end
+
+--- Lists all workspaces for the given or active project root.
+--- @param root_dir? string
+--- @return table
+function M.list_workspaces(root_dir)
+	return load_index(root_dir)
+end
+
+--- Returns the full string representation of the badge, e.g. "/🦊1\/2\" or "/🦊1\"
+--- @return string
+function M.get_badge_text()
+	local comps = M.get_badge_components()
+	local parts = {}
+	for _, c in ipairs(comps) do
+		table.insert(parts, c.text)
+	end
+	return table.concat(parts, "")
+end
+
+--- Updates or creates the floating workspace indicator badge in the top right corner.
+function M.update_badge()
+	pcall(vim.cmd, "redrawtabline")
+
+	if not badge_visible then
+		if badge_win and vim.api.nvim_win_is_valid(badge_win) then
+			pcall(vim.api.nvim_win_close, badge_win, true)
+			badge_win = nil
+		end
+		return
+	end
+
+	if (_G.fox_testing or vim.g.fox_testing) and vim.fn.has("nvim-0.10") == 0 then
+		return
+	end
+
+	setup_badge_highlights()
+
+	local text = M.get_badge_text()
+	local width = vim.fn.strdisplaywidth(text)
+	local height = 1
+	local total_cols = vim.o.columns or 80
+	local col = math.max(0, total_cols - width - 1)
+	local row = 0
+
+	if not (badge_buf and vim.api.nvim_buf_is_valid(badge_buf)) then
+		badge_buf = vim.api.nvim_create_buf(false, true)
+		vim.bo[badge_buf].buftype = "nofile"
+		vim.bo[badge_buf].bufhidden = "wipe"
+		vim.bo[badge_buf].swapfile = false
+		vim.bo[badge_buf].buflisted = false
+	end
+
+	vim.bo[badge_buf].modifiable = true
+	vim.api.nvim_buf_set_lines(badge_buf, 0, -1, false, { text })
+	vim.bo[badge_buf].modifiable = false
+
+	local ns_badge = vim.api.nvim_create_namespace("FoxWorkspaceBadgeNs")
+	vim.api.nvim_buf_clear_namespace(badge_buf, ns_badge, 0, -1)
+	local comps = M.get_badge_components()
+	local curr_col = 0
+	for _, comp in ipairs(comps) do
+		local comp_len = #comp.text
+		pcall(vim.api.nvim_buf_add_highlight, badge_buf, ns_badge, comp.hl, 0, curr_col, curr_col + comp_len)
+		curr_col = curr_col + comp_len
+	end
+
+	if badge_win and vim.api.nvim_win_is_valid(badge_win) then
+		pcall(vim.api.nvim_win_set_config, badge_win, {
+			relative = "editor",
+			row = row,
+			col = col,
+			width = width,
+			height = height,
+		})
+	else
+		local win_opts = {
+			relative = "editor",
+			row = row,
+			col = col,
+			width = width,
+			height = height,
+			style = "minimal",
+			border = "none",
+			focusable = false,
+			zindex = 100,
+		}
+		local ok_win, win = pcall(vim.api.nvim_open_win, badge_buf, false, win_opts)
+		if ok_win and win and vim.api.nvim_win_is_valid(win) then
+			badge_win = win
+			pcall(vim.api.nvim_set_option_value, "winhighlight", "Normal:FoxWorkspaceBadge", { win = win })
+		end
+	end
+end
+
+--- Toggles the floating workspace indicator badge on/off.
+function M.toggle_badge()
+	badge_visible = not badge_visible
+	M.update_badge()
+	notify("Workspace badge " .. (badge_visible and "enabled" or "disabled"))
 end
 
 -- ============================================================================
@@ -892,6 +1267,8 @@ function M.setup()
 		Workspaces = { fn = M.select_workspace, opts = { desc = "Open the workspace picker" } },
 		WorkspaceClose = { fn = M.close_to_menu, opts = { desc = "Close session and return to main menu" } },
 		WorkspaceMenu = { fn = M.close_to_menu, opts = { desc = "Close session and return to main menu" } },
+		WorkspaceBadgeToggle = { fn = M.toggle_badge, opts = { desc = "Toggle floating workspace indicator badge" } },
+		WorkspaceBadgeUpdate = { fn = M.update_badge, opts = { desc = "Update floating workspace indicator badge" } },
 	}
 
 	for name, spec in pairs(commands) do
@@ -899,6 +1276,17 @@ function M.setup()
 			vim.api.nvim_create_user_command(name, spec.fn, spec.opts)
 		end
 	end
+
+	-- Autocmds to keep floating corner workspace badge updated
+	local badge_group = vim.api.nvim_create_augroup("FoxWorkspaceBadgeUpdater", { clear = true })
+	vim.api.nvim_create_autocmd({ "VimEnter", "BufEnter", "DirChanged", "VimResized", "ColorScheme" }, {
+		group = badge_group,
+		callback = function()
+			vim.schedule(M.update_badge)
+		end,
+	})
+
+	vim.schedule(M.update_badge)
 
 	--- Leaves terminal mode first, so the mapping also works from a terminal.
 	local function from_any_mode(fn)

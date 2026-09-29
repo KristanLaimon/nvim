@@ -46,7 +46,7 @@ M.ns_diff = vim.api.nvim_create_namespace("fox_git_log_diff_content")
 M.GLOBAL_CONFIG_FILE = vim.fn.stdpath("data") .. "/fox_git_log_diff.json"
 
 M.settings = {
-	left_ratio = 0.28,
+	left_ratio = 0.25,
 	top_ratio = 0.40,
 	notify_title = "Git Log Diff",
 }
@@ -76,7 +76,7 @@ M.state = {
 	before_buf = nil,
 	after_win = nil,
 	after_buf = nil,
-	left_ratio = 0.28,
+	left_ratio = 0.25,
 	top_ratio = 0.40,
 	line_to_commit_idx = {},
 	commit_idx_to_line = {},
@@ -175,8 +175,8 @@ function M.resize_left(delta)
 		return
 	end
 	local total_w = vim.o.columns or 80
-	local cur_w = math.floor(total_w * (M.state.left_ratio or M.settings.left_ratio))
-	local new_w = math.max(22, math.min(total_w - 30, cur_w + delta))
+	local cur_w = math.floor(total_w * (M.state.left_ratio or M.settings.left_ratio or 0.25))
+	local new_w = math.max(20, math.min(total_w - 30, cur_w + delta))
 	M.state.left_ratio = new_w / total_w
 	if M.state.files_win and vim.api.nvim_win_is_valid(M.state.files_win) then
 		pcall(vim.api.nvim_win_set_width, M.state.files_win, new_w)
@@ -184,6 +184,17 @@ function M.resize_left(delta)
 	if M.state.logs_win and vim.api.nvim_win_is_valid(M.state.logs_win) then
 		pcall(vim.api.nvim_win_set_width, M.state.logs_win, new_w)
 	end
+
+	-- Balance remaining space evenly (50% / 50%) across Before and After diff panes
+	local remaining_w = total_w - new_w
+	local half_w = math.floor(remaining_w / 2)
+	if M.state.after_win and vim.api.nvim_win_is_valid(M.state.after_win) then
+		pcall(vim.api.nvim_win_set_width, M.state.after_win, half_w)
+	end
+	if M.state.before_win and vim.api.nvim_win_is_valid(M.state.before_win) then
+		pcall(vim.api.nvim_win_set_width, M.state.before_win, remaining_w - half_w)
+	end
+
 	M.save_session()
 end
 
@@ -1080,7 +1091,7 @@ function M.open(opts)
 
 	local total_w = vim.o.columns or 80
 	local total_h = vim.o.lines or 24
-	local left_w = math.max(24, math.floor(total_w * M.state.left_ratio))
+	local left_w = math.max(20, math.floor(total_w * (M.state.left_ratio or 0.25)))
 	local files_h = math.max(6, math.floor(total_h * M.state.top_ratio))
 
 	-- 1. Create Files Changed buffer & window (Top-Left)
@@ -1149,7 +1160,10 @@ function M.open(opts)
 	vim.wo[before_win].winbar =
 		"%#FoxLogDiffBadgeHead# ⏮️ Before (Parent Commit) %#GitCenterDiffFiller#│ %#FoxGitKrakenDim#[]c/[c: Hunk | q: Close]"
 
-	-- 4. Setup After Code (Right pane)
+	-- 4. Setup After Code (Right pane) - 1fr / 1fr (50% / 50% of remaining 75% space)
+	local remaining_w = total_w - left_w
+	local half_w = math.floor(remaining_w / 2)
+
 	local after_buf = vim.api.nvim_create_buf(false, true)
 	vim.bo[after_buf].buftype = "nofile"
 	vim.bo[after_buf].bufhidden = "wipe"
@@ -1159,7 +1173,9 @@ function M.open(opts)
 	local after_win = vim.api.nvim_open_win(after_buf, false, {
 		win = before_win,
 		split = "right",
+		width = half_w,
 	})
+	pcall(vim.api.nvim_win_set_width, before_win, remaining_w - half_w)
 	M.state.after_buf = after_buf
 	M.state.after_win = after_win
 	vim.wo[after_win].number = true

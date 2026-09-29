@@ -150,6 +150,21 @@ local function goto_definition()
 
 	local has_telescope, builtin = pcall(require, "telescope.builtin")
 
+	local clients = attached_clients()
+	for _, client in ipairs(clients) do
+		if client.name == "omnisharp" or client.name == "omnisharp_mono" then
+			local ok_oe, oe = pcall(require, "omnisharp_extended")
+			if ok_oe then
+				if has_telescope then
+					oe.telescope_lsp_definitions()
+				else
+					oe.lsp_definitions()
+				end
+				return
+			end
+		end
+	end
+
 	local status, err = pcall(function()
 		vim.lsp.buf.definition({
 			on_list = function(options)
@@ -248,6 +263,20 @@ local function show_symbol_usages()
 	end
 
 	local has_telescope, builtin = pcall(require, "telescope.builtin")
+
+	for _, client in ipairs(clients) do
+		if client.name == "omnisharp" or client.name == "omnisharp_mono" then
+			local ok_oe, oe = pcall(require, "omnisharp_extended")
+			if ok_oe then
+				if has_telescope then
+					oe.telescope_lsp_references()
+				else
+					oe.lsp_references()
+				end
+				return
+			end
+		end
+	end
 
 	local status, err = pcall(function()
 		vim.lsp.buf.references(nil, {

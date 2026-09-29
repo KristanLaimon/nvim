@@ -148,6 +148,10 @@ return {
 		opts = {},
 	},
 	{
+		"Hoffs/omnisharp-extended-lsp.nvim",
+		lazy = true,
+	},
+	{
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufReadPost", "BufNewFile", "FileType" },
 		cmd = { "LspInfo", "LspInstall", "LspStart" },
@@ -155,6 +159,7 @@ return {
 			"williamboman/mason.nvim",
 			"williamboman/mason-lspconfig.nvim",
 			"b0o/schemastore.nvim",
+			"Hoffs/omnisharp-extended-lsp.nvim",
 		},
 		opts = function()
 			return {
@@ -332,6 +337,12 @@ return {
 								{ "vim", "fetch", "console", "import", "foxnvim", "cli", "terminal", "fs" }
 							pcall(client.notify, "workspace/didChangeConfiguration", { settings = client.config.settings })
 						end
+					end
+
+					if client and (client.name == "omnisharp" or client.name == "omnisharp_mono") then
+						-- Disable semantic tokens to prevent OmniSharp crash / editor freeze:
+						-- "System.ArgumentOutOfRangeException: Range must not span multiple lines"
+						client.server_capabilities.semanticTokensProvider = nil
 					end
 
 					local env_ok, env_mod = pcall(require, "fox.core.environment")

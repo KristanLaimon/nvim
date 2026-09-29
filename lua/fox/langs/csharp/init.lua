@@ -22,6 +22,37 @@ M.lsp_config = {
 		enable_roslyn_analyzers = true,
 		organize_imports_on_format = true,
 		enable_import_completion = true,
+		enable_decompilation_support = true,
+		handlers = {
+			["textDocument/definition"] = function(...)
+				local ok, oe = pcall(require, "omnisharp_extended")
+				if ok then
+					return oe.handler(...)
+				end
+				return vim.lsp.handlers["textDocument/definition"](...)
+			end,
+			["textDocument/typeDefinition"] = function(...)
+				local ok, oe = pcall(require, "omnisharp_extended")
+				if ok then
+					return oe.type_definition_handler(...)
+				end
+				return vim.lsp.handlers["textDocument/typeDefinition"](...)
+			end,
+			["textDocument/references"] = function(...)
+				local ok, oe = pcall(require, "omnisharp_extended")
+				if ok then
+					return oe.references_handler(...)
+				end
+				return vim.lsp.handlers["textDocument/references"](...)
+			end,
+			["textDocument/implementation"] = function(...)
+				local ok, oe = pcall(require, "omnisharp_extended")
+				if ok then
+					return oe.implementation_handler(...)
+				end
+				return vim.lsp.handlers["textDocument/implementation"](...)
+			end,
+		},
 		root_dir = function(bufnr, on_dir)
 			local util = require("lspconfig.util")
 			local fname = vim.api.nvim_buf_get_name(bufnr)
@@ -44,6 +75,7 @@ M.lsp_config = {
 				LoadProjectsOnDemand = false,
 			},
 			RoslynExtensionsOptions = {
+				EnableDecompilationSupport = true,
 				EnableAnalyzersSupport = true,
 				EnableImportCompletion = true,
 				AnalyzeOpenDocumentsOnly = false,
@@ -281,6 +313,9 @@ M.identifier = identifier
 
 --- Infer the namespace following Visual Studio standards (.csproj or Program.cs upward).
 function M.file_namespace(filename)
+	if not filename or filename == "" or filename:find("%$metadata%$") or filename:find("omnisharp%-metadata") then
+		return nil
+	end
 	local dir = vim.fs.dirname(filename)
 	local project = vim.fs.find(function(name)
 		return name:match("%.csproj$") ~= nil
@@ -368,11 +403,16 @@ function M.type_lines(filename, template)
 end
 
 local function empty_csharp_buffer(buf)
-	return vim.api.nvim_buf_is_valid(buf)
-		and vim.api.nvim_buf_is_loaded(buf)
-		and vim.bo[buf].buftype == ""
+	if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+		return false
+	end
+	local name = vim.api.nvim_buf_get_name(buf)
+	if name:find("%$metadata%$") or name:find("omnisharp%-metadata") then
+		return false
+	end
+	return vim.bo[buf].buftype == ""
 		and vim.bo[buf].modifiable
-		and vim.api.nvim_buf_get_name(buf):match("%.cs$")
+		and name:match("%.cs$") ~= nil
 		and vim.api.nvim_buf_line_count(buf) == 1
 		and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
 end

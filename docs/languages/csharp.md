@@ -11,6 +11,7 @@ FoxVim provides a full **C#**, **.NET**, and **Blazor** development environment,
 | Feature | Tool / Package | Details |
 | :--- | :--- | :--- |
 | **Language Server (LSP)** | `omnisharp`, `lemminx` | `omnisharp` for C# source files; `lemminx` for XML validation in `.csproj`, `.props`, `.targets` |
+| **Metadata & Decompilation** | `omnisharp-extended-lsp` | Safe "Go to Definition" into external BCL/NuGet assemblies without UI freeze |
 | **Formatters (Conform)** | `csharpier` | Code formatting for `.cs` files |
 | **Treesitter Parsers** | `c_sharp` | Syntax highlighting for C# and Razor/Blazor constructs |
 | **Autocompletion** | `blink.cmp` | IntelliSense completion, Roslyn analyzers, and auto-imports |

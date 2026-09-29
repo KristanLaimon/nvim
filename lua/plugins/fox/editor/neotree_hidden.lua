@@ -340,7 +340,7 @@ end
 
 M.name = "fox_neotree_hidden"
 M.dir = require("fox.core.lazyspec").for_module()
-M.event = "VeryLazy"
+M.lazy = true
 M.config = M.setup
 
 return M

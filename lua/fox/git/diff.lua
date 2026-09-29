@@ -48,8 +48,23 @@ M.noise_patterns = {
 	"^index %x+%.%.%x+",
 	"^%-%-%- a/",
 	"^%+%+%+ b/",
+	"^%-%-%- /dev/null",
+	"^%+%+%+ /dev/null",
 	"^new file mode",
 	"^deleted file mode",
+	"^similarity index",
+	"^dissimilarity index",
+	"^rename from",
+	"^rename to",
+	"^copy from",
+	"^copy to",
+	"^old mode",
+	"^new mode",
+	"^commit %x+",
+	"^Author:%s*",
+	"^Date:%s*",
+	"^Merge:%s*",
+	"^\\ No newline at end of file",
 }
 
 --- Matches a hunk header, e.g. `@@ -1,7 +1,9 @@ function foo()`.

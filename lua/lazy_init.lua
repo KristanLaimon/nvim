@@ -100,6 +100,7 @@ end
 
 require("lazy").setup({
 	spec = spec,
+	defaults = { lazy = true },
 	-- Config files change constantly while working on them; the notification
 	-- every time would be noise.
 	change_detection = { notify = false },

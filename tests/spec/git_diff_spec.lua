@@ -288,4 +288,37 @@ describe("side-by-side git diff format", function()
 		expect(found_foo).toBeTruthy()
 		expect(found_bar).toBeTruthy()
 	end)
+
+	it("filters out git commit metadata header lines from diff output", function()
+		local RAW_WITH_COMMIT_METADATA = {
+			"commit 1234567890abcdef1234567890abcdef12345678",
+			"Author: Developer Name <dev@example.com>",
+			"Date:   Mon Sep 29 10:00:00 2026 -0600",
+			"Merge:  abc1234 def5678",
+			"",
+			"    feat: Some commit message",
+			"",
+			"diff --git a/app.lua b/app.lua",
+			"index 1111111..2222222 100644",
+			"--- a/app.lua",
+			"+++ b/app.lua",
+			"@@ -1,2 +1,2 @@",
+			"-local old = 1",
+			"+local new = 2",
+		}
+
+		local l_lines, _, r_lines, _ = diff.format_side_by_side_dual(RAW_WITH_COMMIT_METADATA, false, "app.lua")
+		for _, l in ipairs(l_lines) do
+			expect(l:match("^commit %x+")).toBeNil()
+			expect(l:match("^Author:")).toBeNil()
+			expect(l:match("^Date:")).toBeNil()
+			expect(l:match("^Merge:")).toBeNil()
+		end
+		for _, r in ipairs(r_lines) do
+			expect(r:match("^commit %x+")).toBeNil()
+			expect(r:match("^Author:")).toBeNil()
+			expect(r:match("^Date:")).toBeNil()
+			expect(r:match("^Merge:")).toBeNil()
+		end
+	end)
 end)

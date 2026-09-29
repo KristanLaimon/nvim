@@ -137,6 +137,7 @@ M.commands = {
 	{ name = "🧪 Dry-Run Git Merge Simulation (Predict Conflicts)", cmd = "GitDryRunMerge", category = "Git" },
 	{ name = "🧪 Dry-Run Git Rebase Simulation (Predict Conflicts)", cmd = "GitDryRunRebase", category = "Git" },
 	{ name = "📊 GitKraken Commit Graph Viewer (Current / --all)", cmd = "GitGraph", category = "Git" },
+	{ name = "📜 Git Log Diff Dashboard (4-Panel Commit History Diff)", cmd = "GitLogDiff", category = "Git" },
 	{ name = "👀 Toggle Git Blame Inline Virtual Text (VSCode Style)", cmd = "GitBlameToggle", category = "Git" },
 	{ name = "🌐 Open Git Blame Commit URL in Browser", cmd = "GitBlameOpenCommitURL", category = "Git" },
 	{ name = "📋 Copy Git Blame Commit SHA to Clipboard", cmd = "GitBlameCopySHA", category = "Git" },

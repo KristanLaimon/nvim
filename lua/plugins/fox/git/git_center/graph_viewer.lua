@@ -269,16 +269,33 @@ function M.fetch_commits(limit, cwd, mode)
 	local line_commits = {}
 	local commits = {}
 
-	for idx, raw_line in ipairs(raw_lines) do
+	for _, raw_line in ipairs(raw_lines) do
 		local parsed = M.parse_raw_graph_line(raw_line)
+
+		if parsed.is_commit and #rendered_lines > 0 then
+			local gap_raw = parsed.graph_raw and parsed.graph_raw:gsub("%*", "│") or "│"
+			local gap_parsed = {
+				is_commit = false,
+				graph_raw = gap_raw ~= "" and gap_raw or "│",
+			}
+			local gap_text, gap_spans = M.format_commit_line(gap_parsed)
+			table.insert(rendered_lines, gap_text)
+			table.insert(all_spans, gap_spans)
+			if #commits > 0 then
+				line_commits[#rendered_lines] = commits[#commits].hash
+			end
+		end
+
 		local line_text, spans = M.format_commit_line(parsed)
 
 		table.insert(rendered_lines, line_text)
 		table.insert(all_spans, spans)
 
 		if parsed.is_commit and parsed.hash and parsed.hash ~= "" then
-			line_commits[idx] = parsed.hash
+			line_commits[#rendered_lines] = parsed.hash
 			table.insert(commits, parsed)
+		elseif #commits > 0 then
+			line_commits[#rendered_lines] = commits[#commits].hash
 		end
 	end
 
@@ -389,7 +406,9 @@ function M.open(target_cwd, initial_mode)
 		title_pos = "center",
 	})
 	vim.api.nvim_set_option_value("cursorline", true, { win = left_win })
-	vim.api.nvim_set_option_value("wrap", false, { win = left_win })
+	vim.api.nvim_set_option_value("wrap", true, { win = left_win })
+	vim.api.nvim_set_option_value("linebreak", true, { win = left_win })
+	vim.api.nvim_set_option_value("breakindent", true, { win = left_win })
 
 	-- Create Right (Commit Details) Buffer & Window
 	local right_buf = vim.api.nvim_create_buf(false, true)
@@ -579,9 +598,9 @@ function M.open(target_cwd, initial_mode)
 
 		local raw_diff = {}
 		if current_target_file then
-			raw_diff = queries.git_lines({ "show", "--color=never", commit.full_hash, "--", current_target_file }, active_cwd)
+			raw_diff = queries.git_lines({ "show", "--format=", "--color=never", commit.full_hash, "--", current_target_file }, active_cwd)
 		else
-			raw_diff = queries.git_lines({ "show", "--color=never", commit.full_hash }, active_cwd)
+			raw_diff = queries.git_lines({ "show", "--format=", "--color=never", commit.full_hash }, active_cwd)
 		end
 		local combined_diff_lines, l_kinds, r_kinds, col_w = diff.format_side_by_side_single(raw_diff, false, right_w)
 
@@ -988,6 +1007,46 @@ function M.open(target_cwd, initial_mode)
 		end
 	end
 
+	local function focus_left()
+		if left_win and vim.api.nvim_win_is_valid(left_win) then
+			vim.api.nvim_set_current_win(left_win)
+		end
+	end
+
+	local function focus_right()
+		if right_win and vim.api.nvim_win_is_valid(right_win) then
+			vim.api.nvim_set_current_win(right_win)
+		end
+	end
+
+	local function scroll_right_preview(direction)
+		if right_win and vim.api.nvim_win_is_valid(right_win) then
+			vim.api.nvim_win_call(right_win, function()
+				vim.cmd("normal! " .. (direction == "down" and "\x04" or "\x15"))
+			end)
+		end
+	end
+
+	local function open_log_diff_dashboard()
+		local row = vim.api.nvim_win_get_cursor(left_win)[1]
+		local commit = get_commit_at_row(row)
+		if commit and commit.full_hash then
+			local commit_sha = commit.full_hash
+			local cur_mode = mode
+			local cur_branch = current_branch
+			close_viewer(false)
+			vim.schedule(function()
+				local log_diff = require("plugins.fox.git.log_diff")
+				log_diff.open({
+					cwd = active_cwd,
+					commit = commit_sha,
+					mode = cur_mode,
+					branch = cur_branch,
+				})
+			end)
+		end
+	end
+
 	local function show_help_modal()
 		local help_lines = {
 			" 📊 GitKraken Commit Graph Shortcuts",
@@ -998,8 +1057,10 @@ function M.open(target_cwd, initial_mode)
 			"  [u / <C-u>]    Half-Page Up",
 			"  [j / k]        Move down / up 1 commit (Auto-fetches)",
 			"  [G / gg]       Jump to Bottom (Fetch all) / Jump to Top",
-			"  [Tab]          Switch focus between Graph Tree & Details pane",
-			"  [<CR> / Enter] In Graph: Focus details │ In Details: File Diff",
+			"  [<C-h> / <C-l>] Focus Left Graph / Right Details pane",
+			"  [<C-k> / <C-j>] Scroll Details preview Up / Down",
+			"  [Tab]          Toggle focus between Graph Tree & Details pane",
+			"  [<CR> / Enter] Open Git Log Diff 4-Panel Dashboard",
 			"  [y]            Yank commit SHA to clipboard",
 			"  [K]            Checkout selected commit",
 			"  [D]            Open full-screen side-by-side diff modal",
@@ -1012,7 +1073,7 @@ function M.open(target_cwd, initial_mode)
 		ui.float({
 			title = " ❓ Help: GitKraken Graph Viewer ",
 			lines = help_lines,
-			width = 0.55,
+			width = 0.58,
 			height = #help_lines + 2,
 			zindex = graph_z + 20,
 			close_on_keys = { "q", "<Esc>", "<CR>", "<Space>" },
@@ -1074,6 +1135,34 @@ function M.open(target_cwd, initial_mode)
 	-- Mode toggle: 'a'
 	vim.keymap.set("n", "a", toggle_mode, opts)
 
+	-- Panel navigation: <C-h> / <C-l>
+	for _, key in ipairs({ "<C-h>", "<C-H>" }) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, focus_left, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, focus_left, right_opts)
+	end
+	for _, key in ipairs({ "<C-l>", "<C-L>" }) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, focus_right, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, focus_right, right_opts)
+	end
+
+	-- Scroll trap for <C-j> / <C-k> to prevent escaping to other windows / neo-tree
+	for _, key in ipairs({ "<C-j>", "<C-J>", "<C-S-j>", "<C-S-J>" }) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			scroll_right_preview("down")
+		end, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			scroll_right_preview("down")
+		end, right_opts)
+	end
+	for _, key in ipairs({ "<C-k>", "<C-K>", "<C-S-k>", "<C-S-K>" }) do
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			scroll_right_preview("up")
+		end, opts)
+		vim.keymap.set({ "n", "v", "i", "t" }, key, function()
+			scroll_right_preview("up")
+		end, right_opts)
+	end
+
 	-- Focus & Details navigation
 	vim.keymap.set({ "n", "v" }, "<Tab>", toggle_focus, opts)
 	vim.keymap.set({ "n", "v" }, "<Tab>", toggle_focus, right_opts)
@@ -1108,9 +1197,22 @@ function M.open(target_cwd, initial_mode)
 			end
 			return
 		end
-		toggle_focus()
+		open_log_diff_dashboard()
 	end, opts)
-	vim.keymap.set("n", "<CR>", handle_right_enter, right_opts)
+	vim.keymap.set("n", "<CR>", function()
+		local cursor_line = vim.api.nvim_win_get_cursor(right_win)[1]
+		local line_text = vim.api.nvim_buf_get_lines(right_buf, cursor_line - 1, cursor_line, false)[1] or ""
+		local filepath = line_text:match("•%s*%[[A-Z%d]+%]%s+(.+)$") or line_text:match("•%s*(.+)$")
+		if filepath then
+			filepath = filepath:gsub("^%s*", ""):gsub("%s*$", "")
+			local row = vim.api.nvim_win_get_cursor(left_win)[1]
+			local commit = get_commit_at_row(row)
+			local modals = require("plugins.fox.git.git_center.modals")
+			modals.open_diff_modal(filepath, "commit", active_cwd, commit and commit.full_hash)
+			return
+		end
+		open_log_diff_dashboard()
+	end, right_opts)
 
 	-- Canvas Mode
 	vim.keymap.set("n", "f", toggle_canvas_mode, opts)

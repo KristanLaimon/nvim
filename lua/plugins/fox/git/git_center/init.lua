@@ -10,6 +10,7 @@ local modals = lazy_req("plugins.fox.git.git_center.modals")
 local panel = lazy_req("plugins.fox.git.git_center.panel")
 local graph_viewer = lazy_req("plugins.fox.git.git_center.graph_viewer")
 local diff_mode = lazy_req("plugins.fox.git.diff_mode")
+local log_diff = lazy_req("plugins.fox.git.log_diff")
 
 local M = setmetatable({}, {
 	__index = function(_, k)
@@ -25,6 +26,10 @@ local M = setmetatable({}, {
 			return diff_mode.toggle
 		elseif k == "close_diff_mode" then
 			return diff_mode.close
+		elseif k == "log_diff" then
+			return log_diff
+		elseif k == "open_log_diff" then
+			return log_diff.open
 		elseif config[k] ~= nil then
 			return config[k]
 		elseif queries[k] ~= nil then
@@ -101,6 +106,27 @@ function M.setup()
 	pcall(vim.api.nvim_create_user_command, "GitDiffToggle", function()
 		diff_mode.toggle()
 	end, { desc = "Toggle Git Diff Mode (Same Branch)" })
+
+	pcall(vim.api.nvim_create_user_command, "GitLogDiff", function(cmd_opts)
+		local args = cmd_opts.fargs or {}
+		local commit = args[1] ~= "" and args[1] or nil
+		local mode = args[2] ~= "" and args[2] or nil
+		log_diff.open({ commit = commit, mode = mode })
+	end, { nargs = "*", desc = "Open Git Log Diff 4-Panel Dashboard" })
+
+	pcall(vim.api.nvim_create_user_command, "GitCenterLogDiff", function(cmd_opts)
+		local args = cmd_opts.fargs or {}
+		local commit = args[1] ~= "" and args[1] or nil
+		local mode = args[2] ~= "" and args[2] or nil
+		log_diff.open({ commit = commit, mode = mode })
+	end, { nargs = "*", desc = "Open Git Log Diff 4-Panel Dashboard" })
+
+	pcall(vim.api.nvim_create_user_command, "FoxGitLogDiff", function(cmd_opts)
+		local args = cmd_opts.fargs or {}
+		local commit = args[1] ~= "" and args[1] or nil
+		local mode = args[2] ~= "" and args[2] or nil
+		log_diff.open({ commit = commit, mode = mode })
+	end, { nargs = "*", desc = "Open Git Log Diff 4-Panel Dashboard" })
 
 	pcall(vim.api.nvim_create_user_command, "GitMergeSimulate", function(cmd_opts)
 		local args = cmd_opts.fargs or {}
@@ -234,6 +260,9 @@ return setmetatable({
 		"GitDiffToggle",
 		"GitGraph",
 		"GitCenterGraph",
+		"GitLogDiff",
+		"GitCenterLogDiff",
+		"FoxGitLogDiff",
 		"GitMergeSimulate",
 		"GitRebaseSimulate",
 		"GitDryRunMerge",

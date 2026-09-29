@@ -596,9 +596,9 @@ function M.open_commit_log_modal(target_cwd, initial_row)
 
 		local raw_diff = {}
 		if current_target_file then
-			raw_diff = git_lines({ "show", "--color=never", commit.hash, "--", current_target_file }, active_cwd)
+			raw_diff = git_lines({ "show", "--format=", "--color=never", commit.hash, "--", current_target_file }, active_cwd)
 		else
-			raw_diff = git_lines({ "show", "--color=never", commit.hash }, active_cwd)
+			raw_diff = git_lines({ "show", "--format=", "--color=never", commit.hash }, active_cwd)
 		end
 		local combined_diff_lines, l_kinds, r_kinds, col_w = diff.format_side_by_side_single(raw_diff, false, right_w)
 
@@ -860,9 +860,21 @@ function M.open_commit_log_modal(target_cwd, initial_row)
 	end
 
 	vim.keymap.set("n", "K", checkout_commit, opts)
-	vim.keymap.set("n", "d", open_left_commit_diff, opts)
-
-	vim.keymap.set("n", "<CR>", focus_log_right, opts)
+	vim.keymap.set("n", "<CR>", function()
+		local row = vim.api.nvim_win_get_cursor(left_win)[1]
+		local commit = get_commit_at_row(row)
+		if commit and commit.hash then
+			close_log_modal(false)
+			vim.schedule(function()
+				local log_diff = require("plugins.fox.git.log_diff")
+				log_diff.open({
+					cwd = active_cwd,
+					commit = commit.hash,
+					mode = "all",
+				})
+			end)
+		end
+	end, opts)
 	vim.keymap.set("n", "<CR>", handle_right_enter, right_opts)
 	vim.keymap.set("n", "d", open_right_file_diff, right_opts)
 

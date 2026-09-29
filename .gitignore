@@ -11,4 +11,5 @@ output_tests
 
 .foxnvim/
 PROMPT.md
+PROMPT2.md
 *.log

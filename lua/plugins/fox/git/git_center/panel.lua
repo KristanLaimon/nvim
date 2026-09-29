@@ -357,7 +357,7 @@ function M.open_git_center()
 		style = "minimal",
 		border = "rounded",
 		zindex = base_z,
-		title = " 🐙 Git Center | [t/T]: Dry-Run | [b]: Branch | [l]: Graph | [v/V]: Diff | [Esc]: Close ",
+		title = " 🐙 Git Center | [H]: Log Diff | [t/T]: Dry-Run | [b]: Branch | [l]: Graph | [v/V]: Diff | [Esc]: Close ",
 		title_pos = "center",
 	})
 
@@ -549,7 +549,7 @@ function M.open_git_center()
 					p_title = " 󰈔 Unstaged Files "
 				elseif cursor_row >= s5 and cursor_row < (s6 > 0 and s6 or 999999) then
 					msg =
-						" 💡 SECTION 5: COMMIT HISTORY LOG\n\n   • [Enter/d] Open full-screen commit diff modal\n   • [K]       Checkout selected commit"
+						" 💡 SECTION 5: COMMIT HISTORY LOG\n\n   • [Enter/d] Open Git Log Diff 4-Panel Dashboard\n   • [K]       Checkout selected commit"
 					p_title = " 📜 Commit History "
 				elseif cursor_row >= s1 and cursor_row < (s2 > 0 and s2 or 999999) then
 					msg =
@@ -1050,7 +1050,17 @@ function M.open_git_center()
 				end
 			end, get_active_target().full_path)
 		elseif item and item.type == "commit" and item.commit_hash then
-			modals.open_diff_modal(nil, "commit", get_active_target().full_path, item.commit_hash)
+			local commit_hash = item.commit_hash
+			local active_cwd = get_active_target().full_path
+			M.close_git_center({ keep_cached_view = false })
+			vim.schedule(function()
+				local log_diff = require("plugins.fox.git.log_diff")
+				log_diff.open({
+					cwd = active_cwd,
+					commit = commit_hash,
+					mode = "branch",
+				})
+			end)
 		elseif item and item.file then
 			modals.open_diff_modal(item.file, item.type, get_active_target().full_path)
 		else
@@ -1292,6 +1302,15 @@ function M.open_git_center()
 	vim.keymap.set("n", "L", function()
 		local gv = require("plugins.fox.git.git_center.graph_viewer")
 		gv.open(get_active_target().full_path, "all")
+	end, key_opts)
+
+	vim.keymap.set("n", "H", function()
+		local active_cwd = get_active_target().full_path
+		M.close_git_center({ keep_cached_view = false })
+		vim.schedule(function()
+			local log_diff = require("plugins.fox.git.log_diff")
+			log_diff.open({ cwd = active_cwd })
+		end)
 	end, key_opts)
 
 	local commit_fields = {
@@ -1566,7 +1585,17 @@ function M.open_git_center()
 		end
 
 		if item and item.type == "commit" and item.commit_hash then
-			modals.open_diff_modal(nil, "commit", get_active_target().full_path, item.commit_hash)
+			local commit_hash = item.commit_hash
+			local active_cwd = get_active_target().full_path
+			M.close_git_center({ keep_cached_view = false })
+			vim.schedule(function()
+				local log_diff = require("plugins.fox.git.log_diff")
+				log_diff.open({
+					cwd = active_cwd,
+					commit = commit_hash,
+					mode = "branch",
+				})
+			end)
 		else
 			modals.open_diff_modal(item and item.file or nil, item and item.type or nil, get_active_target().full_path)
 		end

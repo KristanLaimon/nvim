@@ -327,7 +327,7 @@ end
 
 M.name = "fox_neotree_mover"
 M.dir = require("fox.core.lazyspec").for_module()
-M.event = "VeryLazy"
+M.lazy = true
 M.config = function() end
 
 return M

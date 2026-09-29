@@ -536,6 +536,6 @@ _G.DapBreakpoints = M
 return setmetatable({
 	name = "fox_dap_breakpoints",
 	dir = require("fox.core.lazyspec").for_module(),
-	event = "VeryLazy",
+	event = { "BufReadPost", "BufNewFile" },
 	config = M.setup,
 }, { __index = M })

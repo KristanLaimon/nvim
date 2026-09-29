@@ -170,6 +170,10 @@ function M.float(buf_or_opts, maybe_opts)
 	local win = vim.api.nvim_open_win(buf, opts.focus ~= false, win_opts)
 	z_index.register(name, win, { zindex = z_val, parent = opts.parent, offset = opts.offset })
 
+	if opts.close_on_keys or opts.close_keys then
+		M.close_on_keys(buf, win, opts.close_on_keys or opts.close_keys)
+	end
+
 	return buf, win
 end
 

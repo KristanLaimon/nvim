@@ -38,19 +38,30 @@ The **Environments Manager** allows managing up to 9 concurrent, isolated projec
 ---
 
 ## 🎛️ Interactive CRUD Menu
+ 
+Open the menu with `<C-S-e>`, `:EnvironmentMenu`, or `:Environments`. The picker follows the exact Telescope design as the Workspaces screen (`<C-S-w>`), including live Markdown detail previews, normal-mode single-key shortcuts, and integrated project selection.
+ 
+| Key in Menu | Mode | Action |
+|---|---|---|
+| `<Esc>` | Insert Mode | Leaves insert mode into normal mode so single-key shortcuts can be used without closing the picker |
+| `<CR>` / `Enter` | Normal / Insert | **Switch** to the selected environment (or open **Recent Projects** selector if empty) |
+| `a` / `A` / `<C-a>` | Normal / Insert | **Add / Configure** a slot using the **Recent Projects** selector or **File Explorer** (`e`) |
+| `r` / `R` / `<C-r>` / `<F2>` | Normal / Insert | **Rename** the selected environment |
+| `d` / `D` / `<C-d>` / `<Del>` | Normal / Insert | **Close & Delete** the selected environment (stops scoped LSPs & terminals) |
+| `s` / `S` / `<C-s>` / `<C-S-s>` | Normal / Insert | **Save** all environments and session snapshots to disk |
+| `w` / `W` / `<C-w>` | Normal / Insert | **Export** the selected environment slot as a named Workspace |
+| `1` .. `9` | Normal | Directly switch to slot number 1..9 |
+| `q` / `<Esc>` | Normal | Close menu |
 
-Open the menu with `<C-S-e>`, `:EnvironmentMenu`, or `:Environments`.
+---
 
-| Key in Menu | Action |
-|---|---|
-| `<CR>` / `Enter` | **Switch** to the selected environment (or **Create** if slot is empty) |
-| `a` / `+` | **Add / Configure** a new environment in the selected slot (prompts for project directory) |
-| `r` / `<F2>` | **Rename** the selected environment |
-| `d` / `<Del>` | **Close & Delete** the selected environment (stops scoped LSPs & terminals) |
-| `s` | **Save** all environments and session snapshots to disk |
-| `w` | **Export** the selected environment slot as a named Workspace |
-| `1` .. `9` | Directly switch to slot number 1..9 |
-| `q` / `<Esc>` | Close menu |
+## 📁 Rich Project Selection (Recent Projects & File Explorer)
+
+When switching to an empty slot with `<C-S-1..9>` (or creating a slot via `a` / `<CR>` in `:EnvironmentMenu`):
+- Neovim opens the **Recent Projects** picker with devicons, favorite stars, and full project paths.
+- Press **`<CR>`** on any project to immediately assign it to that slot.
+- Press **`e`** (or `<C-e>` / `<C-o>`) to instantly transition to the **Floating File Explorer** window to browse the filesystem, desktop, or WSL folders. Select a folder with **`o`** / **`<CR>`** to assign it to the environment slot.
+- No need to ever manually type or paste absolute filesystem paths!
 
 ---
 

@@ -438,7 +438,7 @@ return {
 		end
 
 		--- Opens the recent projects picker.
-		--- @param opts table|nil Reserved; passed through on refresh.
+		--- @param opts table|nil Options such as { on_select = function(dir), slot = number, prompt_title = string, results_title = string }
 		open_projects_picker = function(opts)
 			opts = opts or {}
 
@@ -449,12 +449,17 @@ return {
 			local action_state = require("telescope.actions.state")
 			local themes = require("telescope.themes")
 
+			local prompt_title = opts.prompt_title
+				or " 📁 Recent Projects | [e] File Explorer | [f] Favorite | [r] Rename | [d] Delete "
+			local results_title = opts.results_title or "Recent Projects"
+
 			pickers
 				.new(
 					themes.get_dropdown({
-						prompt_title = " 📁 Recent Projects | [f] Favorite | [r] Rename | [d] Delete ",
+						prompt_title = prompt_title,
 						width = settings.picker.width,
 						layout_config = settings.picker,
+						results_title = results_title,
 						finder = finders.new_table({
 							results = build_entries(),
 							entry_maker = function(entry)
@@ -480,15 +485,63 @@ return {
 								end)
 							end
 
+							-- <Esc> in insert mode leaves insert mode so normal-mode shortcuts work
+							map("i", "<Esc>", function()
+								pcall(vim.cmd, "stopinsert")
+							end)
+							map("n", "<Esc>", actions.close)
+							map("n", "q", actions.close)
+
 							actions.select_default:replace(function()
 								local entry = selected()
 								actions.close(prompt_bufnr)
 								if entry then
 									vim.schedule(function()
-										open_project(entry.path)
+										if opts.on_select then
+											opts.on_select(entry.path)
+										else
+											open_project(entry.path)
+										end
 									end)
 								end
 							end)
+
+							-- 'e' / '<C-e>' / '<C-o>': Switch to File Explorer feature window
+							local function switch_to_explorer()
+								actions.close(prompt_bufnr)
+								vim.schedule(function()
+									local ok_fe, fe = pcall(require, "plugins.fox.tools.file_explorer")
+									if ok_fe and fe.open_folder_picker then
+										local fe_title = opts.slot
+												and string.format(" 📁 Browse Folder for Environment Slot #%d ", opts.slot)
+											or " 📁 Browse Folder "
+										fe.open_folder_picker({
+											prompt_title = fe_title,
+											on_select = function(chosen_dir)
+												if opts.on_select then
+													opts.on_select(chosen_dir)
+												else
+													open_project(chosen_dir)
+												end
+											end,
+										})
+									elseif ok_fe and fe.open_desktop_explorer then
+										fe.open_desktop_explorer({}, function(chosen_dir)
+											if opts.on_select then
+												opts.on_select(chosen_dir)
+											else
+												open_project(chosen_dir)
+											end
+										end)
+									end
+								end)
+							end
+
+							map("n", "e", switch_to_explorer)
+							map("n", "E", switch_to_explorer)
+							map("i", "<C-e>", switch_to_explorer)
+							map("n", "<C-o>", switch_to_explorer)
+							map("i", "<C-o>", switch_to_explorer)
 
 							map("n", "f", function()
 								local entry = selected()

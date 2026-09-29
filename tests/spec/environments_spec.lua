@@ -150,4 +150,8 @@ describe("plugins.fox.tools.environments", function()
 		expect(restored ~= nil).toBe(true)
 		expect(restored.name).toBe("PersistedEnv")
 	end)
+
+	it("provides select_project_for_slot to configure environment slots", function()
+		expect(type(envs.select_project_for_slot)).toBe("function")
+	end)
 end)

@@ -597,15 +597,7 @@ function M.switch_environment(target_slot, callback)
 
 	local target_env = _G._fox_environments[target_slot]
 	if not target_env then
-		-- Prompt user to create it
-		pcall(vim.ui.input, {
-			prompt = string.format("Environment Slot #%d is empty. Enter project path: ", target_slot),
-			default = vim.fn.getcwd(),
-		}, function(input_path)
-			if input_path and input_path ~= "" then
-				M.create_environment(target_slot, input_path, nil, true)
-			end
-		end)
+		M.select_project_for_slot(target_slot, callback)
 		return false
 	end
 
@@ -928,12 +920,92 @@ function M.load_from_workspace(slot, ws_identifier)
 end
 
 -- ============================================================================
+-- PROJECT SELECTOR INTEGRATION
+-- ============================================================================
+
+--- Opens the Recent Projects selector (with option to switch to File Explorer)
+--- to choose a project directory for a specific environment slot.
+--- @param slot integer Target slot 1..9.
+--- @param callback function|nil Callback after environment is created/selected.
+function M.select_project_for_slot(slot, callback)
+	slot = tonumber(slot) or 1
+	local ok_tel, _ = pcall(require, "telescope")
+	if not ok_tel then
+		pcall(vim.ui.input, {
+			prompt = string.format("Set Directory for Environment Slot #%d: ", slot),
+			default = vim.fn.getcwd(),
+		}, function(input_path)
+			if input_path and input_path ~= "" then
+				M.create_environment(slot, input_path, nil, true)
+				if callback then
+					callback()
+				end
+			end
+		end)
+		return
+	end
+
+	local on_project_selected = function(chosen_path)
+		if chosen_path and chosen_path ~= "" then
+			M.create_environment(slot, chosen_path, nil, true)
+			if callback then
+				callback()
+			end
+		end
+	end
+
+	local open_picker = _G.OpenRecentProjects
+	if not open_picker then
+		pcall(function()
+			local ok, tel = pcall(require, "telescope")
+			if ok then
+				tel.load_extension("projects")
+				open_picker = _G.OpenRecentProjects
+			end
+		end)
+	end
+
+	if open_picker then
+		open_picker({
+			slot = slot,
+			prompt_title = string.format(
+				" 🌐 Select Project for Environment Slot #%d | [e] File Explorer | [f] Favorite ",
+				slot
+			),
+			results_title = string.format(
+				"Recent Projects -> Slot #%d (Enter: Assign | e: Browse Folders | Esc: Cancel)",
+				slot
+			),
+			on_select = on_project_selected,
+		})
+	else
+		local ok_fe, fe = pcall(require, "plugins.fox.tools.file_explorer")
+		if ok_fe and fe.open_folder_picker then
+			fe.open_folder_picker({
+				prompt_title = string.format(" 📁 Select Project Folder for Environment Slot #%d ", slot),
+				on_select = on_project_selected,
+			})
+		else
+			pcall(vim.ui.input, {
+				prompt = string.format("Set Directory for Environment Slot #%d: ", slot),
+				default = vim.fn.getcwd(),
+			}, function(input_path)
+				if input_path and input_path ~= "" then
+					on_project_selected(input_path)
+				end
+			end)
+		end
+	end
+end
+
+-- ============================================================================
 -- INTERACTIVE CRUD MENU (Telescope)
 -- ============================================================================
 
 --- Generates formatted rows for the CRUD Telescope picker.
+--- @param current_cwd string
 --- @return table[]
-local function get_picker_entries()
+local function get_picker_entries(current_cwd)
 	ensure_current_slot_initialized()
 	local active_slot = M.get_active_slot()
 	local entries = {}
@@ -946,17 +1018,15 @@ local function get_picker_entries()
 			local buf_cnt = #(env.buffers or {})
 			local lsps = M.get_environment_lsps(env)
 			local lsp_str = #lsps > 0 and table.concat(lsps, ", ") or "none"
-			local term_cnt = 0
-			for _, _ in pairs(env.terminals or {}) do
-				term_cnt = term_cnt + 1
-			end
+			local is_curr_cwd = path.equals(env.cwd or "", current_cwd or "")
 
 			entry.is_active = is_active
 			entry.display = string.format(
-				"[%d] %s %-16s  📁 %-18s  •  %d buf%s, LSP: %s  (%s)",
+				"[%d] %s %-16s  %s %-18s  •  %d buffer%s, LSP: %s  (%s)",
 				slot,
 				is_active and "● [ACTIVE]" or "○ [IDLE]  ",
 				env.name,
+				is_curr_cwd and "📍" or "📁",
 				env.cwd_name or vim.fn.fnamemodify(env.cwd, ":t"),
 				buf_cnt,
 				buf_cnt == 1 and "" or "s",
@@ -986,8 +1056,10 @@ local function format_preview(entry)
 			"",
 			"This slot is currently empty.",
 			"",
-			"Press **<CR>** or **a** to assign a project directory to this slot.",
-			"Press **1..9** to switch between configured slots directly.",
+			"### ⌨️ Available Actions:",
+			"- **<CR>** / **Enter**: Configure & assign a project to this slot",
+			"- **a**: Add / Set project directory (select from Recent Projects or File Explorer)",
+			"- **1..9**: Quick switch to slot number",
 		}
 	end
 
@@ -1011,7 +1083,7 @@ local function format_preview(entry)
 		string.format("| **Last Updated** | %s |", os.date("%Y-%m-%d %H:%M:%S", env.updated_at or os.time())),
 		"",
 		"### 📄 Open Buffers (" .. #(env.buffers or {}) .. "):",
-		"---",
+		"----------------------------------------",
 	}
 
 	for i, bname in ipairs(env.buffers or {}) do
@@ -1023,8 +1095,8 @@ local function format_preview(entry)
 
 	table.insert(lines, "")
 	table.insert(lines, "### ⌨️ Available Actions:")
-	table.insert(lines, "- **<CR>** / **Enter**: Switch to this slot (or Create if empty)")
-	table.insert(lines, "- **a**: Add / Set project directory for this slot")
+	table.insert(lines, "- **<CR>** / **Enter**: Switch to this slot")
+	table.insert(lines, "- **a**: Set / Reassign project directory (Recent Projects / Explorer)")
 	table.insert(lines, "- **r** / **<F2>**: Rename this environment")
 	table.insert(lines, "- **d** / **<Del>**: Close & delete this environment")
 	table.insert(lines, "- **s**: Save all environments to disk")
@@ -1049,17 +1121,19 @@ function M.open_menu()
 	local previewers = require("telescope.previewers")
 	local themes = require("telescope.themes")
 
+	local current_cwd = vim.fn.getcwd()
+
 	local function open_picker()
 		pickers
 			.new(
 				themes.get_dropdown({
-					prompt_title = " 🌐 Environments (1..9) | <CR>: Switch | a: Add | r: Rename | d: Close | s: Save ",
-					width = 0.88,
-					results_title = "Active Project Slots",
+					prompt_title = " 🦊 Environments [Slots 1..9] (a: New | d: Close | r: Rename | s: Save | w: Workspace) ",
+					width = 0.85,
+					results_title = "Environment Slots",
 				}),
 				{
 					finder = finders.new_table({
-						results = get_picker_entries(),
+						results = get_picker_entries(current_cwd),
 						entry_maker = function(entry)
 							return {
 								value = entry,
@@ -1074,14 +1148,38 @@ function M.open_menu()
 						define_preview = function(self, entry)
 							vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, format_preview(entry.value))
 							vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })
+							if self.state.winid and vim.api.nvim_win_is_valid(self.state.winid) then
+								vim.wo[self.state.winid].conceallevel = 3
+								vim.wo[self.state.winid].concealcursor = "nvic"
+								local ok, rm_ui = pcall(require, "render-markdown.core.ui")
+								if ok and rm_ui and type(rm_ui.update) == "function" then
+									rm_ui.update(self.state.bufnr, self.state.winid, "UserCommand", true)
+								end
+							end
 						end,
 					}),
 					attach_mappings = function(prompt_bufnr, map)
+						--- Reopens the picker after an action that changed the list.
+						local function reopen()
+							vim.schedule(M.open_menu)
+						end
+
+						--- Binds one action to several key/mode pairs.
+						--- @param bindings table[] `{ mode, key }` pairs.
+						--- @param fn function
+						local function map_all(bindings, fn)
+							for _, binding in ipairs(bindings) do
+								map(binding[1], binding[2], fn)
+							end
+						end
+
+						--- Current selection, or nil.
 						local function selected()
 							local sel = action_state.get_selected_entry()
 							return sel and sel.value or nil
 						end
 
+						-- <Esc> in insert mode only leaves insert mode, so normal mode shortcuts work
 						map("i", "<Esc>", function()
 							pcall(vim.cmd, "stopinsert")
 						end)
@@ -1098,78 +1196,63 @@ function M.open_menu()
 							if val.env then
 								M.switch_environment(val.slot)
 							else
-								pcall(vim.ui.input, {
-									prompt = string.format("Configure Environment Slot #%d (Project Directory): ", val.slot),
-									default = vim.fn.getcwd(),
-								}, function(input_path)
-									if input_path and input_path ~= "" then
-										M.create_environment(val.slot, input_path, nil, true)
-									end
+								vim.schedule(function()
+									M.select_project_for_slot(val.slot, function() end)
 								end)
 							end
 						end)
 
-						-- 'a': Add / Configure slot
-						local function handle_add()
+						-- 'a' / 'A' / '<C-a>': Add / Configure slot
+						map_all({ { "i", "<C-a>" }, { "n", "a" }, { "n", "A" } }, function()
 							local val = selected()
-							local target_slot = val and val.slot or 1
+							local target_slot = val and val.slot or nil
+							if not target_slot then
+								for s = 1, M.settings.max_slots do
+									if _G._fox_environments[s] == nil then
+										target_slot = s
+										break
+									end
+								end
+							end
+							target_slot = target_slot or 1
 							actions.close(prompt_bufnr)
 							vim.schedule(function()
-								pcall(vim.ui.input, {
-									prompt = string.format("Set Directory for Environment Slot #%d: ", target_slot),
-									default = vim.fn.getcwd(),
-								}, function(input_path)
-									if input_path and input_path ~= "" then
-										M.create_environment(target_slot, input_path, nil, true)
-									end
-								end)
+								M.select_project_for_slot(target_slot, function() end)
 							end)
-						end
-						map("n", "a", handle_add)
-						map("i", "<C-a>", handle_add)
+						end)
 
-						-- 'd' / '<Del>': Close environment
-						local function handle_delete()
+						-- 'd' / 'D' / '<C-d>' / '<Del>': Close environment
+						map_all({ { "i", "<C-d>" }, { "n", "d" }, { "n", "D" }, { "i", "<Del>" } }, function()
 							local val = selected()
 							if val and val.env then
 								actions.close(prompt_bufnr)
 								vim.schedule(function()
-									M.close_environment(val.slot, M.open_menu)
+									M.close_environment(val.slot, reopen)
 								end)
 							end
-						end
-						map("n", "d", handle_delete)
-						map("n", "D", handle_delete)
-						map("i", "<C-d>", handle_delete)
-						map("n", "<Del>", handle_delete)
+						end)
 
-						-- 'r' / '<F2>': Rename environment
-						local function handle_rename()
+						-- 'r' / 'R' / '<C-r>' / '<F2>': Rename environment
+						map_all({ { "i", "<C-r>" }, { "n", "r" }, { "n", "R" }, { "n", "<F2>" } }, function()
 							local val = selected()
 							if val and val.env then
 								actions.close(prompt_bufnr)
 								vim.schedule(function()
-									M.rename_environment(val.slot, nil, M.open_menu)
+									M.rename_environment(val.slot, nil, reopen)
 								end)
 							end
-						end
-						map("n", "r", handle_rename)
-						map("n", "R", handle_rename)
-						map("n", "<F2>", handle_rename)
-						map("i", "<C-r>", handle_rename)
+						end)
 
-						-- 's': Save all environments
-						local function handle_save()
+						-- 's' / 'S' / '<C-s>' / '<C-S-s>': Save all environments
+						map_all({ { "i", "<C-s>" }, { "i", "<C-S-s>" }, { "n", "s" }, { "n", "S" } }, function()
 							actions.close(prompt_bufnr)
 							vim.schedule(function()
 								M.save_all()
 							end)
-						end
-						map("n", "s", handle_save)
-						map("i", "<C-s>", handle_save)
+						end)
 
-						-- 'w': Export slot as a Workspace
-						local function handle_ws_save()
+						-- 'w' / 'W' / '<C-w>': Export slot as a Workspace
+						map_all({ { "i", "<C-w>" }, { "n", "w" }, { "n", "W" } }, function()
 							local val = selected()
 							if val and val.env then
 								actions.close(prompt_bufnr)
@@ -1177,8 +1260,7 @@ function M.open_menu()
 									M.save_as_workspace(val.slot)
 								end)
 							end
-						end
-						map("n", "w", handle_ws_save)
+						end)
 
 						-- 1..9 numeric keys to switch directly
 						for slot = 1, M.settings.max_slots do
@@ -1227,7 +1309,7 @@ function M.setup()
 		},
 		EnvironmentNew = {
 			fn = function(opts)
-				local args = vim.split(opts.args, "%s+", { trimempty = true })
+				local args = vim.split(opts.args or "", "%s+", { trimempty = true })
 				local slot = tonumber(args[1])
 				local dir = args[2]
 				local name = args[3]
@@ -1240,7 +1322,11 @@ function M.setup()
 					end
 				end
 				slot = slot or 1
-				M.create_environment(slot, dir or vim.fn.getcwd(), name, true)
+				if dir and dir ~= "" then
+					M.create_environment(slot, dir, name, true)
+				else
+					M.select_project_for_slot(slot)
+				end
 			end,
 			opts = { nargs = "*", desc = "Create new environment in a slot [slot] [dir] [name]" },
 		},

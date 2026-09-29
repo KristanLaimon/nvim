@@ -785,18 +785,99 @@ function M.switch_environment(target_slot, callback)
 	-- 3. Swap terminal pools
 	swap_terminal_pool(target_env.terminals)
 
-	-- 4. Restore window layout
+	-- 4. Restore window layout & buffer isolation
 	purge_neotree()
+	pcall(vim.cmd, "silent! tabonly")
 	pcall(vim.cmd, "silent! only")
+
+	-- Hide/unlist buffers belonging to other environment slots, and re-list target slot buffers
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.api.nvim_buf_is_valid(buf) and not is_transient_buffer(buf) then
+			local b_slot = vim.b[buf].fox_env_slot
+			if b_slot ~= nil then
+				if b_slot == target_slot then
+					vim.bo[buf].buflisted = true
+				else
+					vim.bo[buf].buflisted = false
+				end
+			end
+		end
+	end
 
 	if target_env.session_file and path.is_file(target_env.session_file) then
 		local ok, err = pcall(vim.cmd, "source " .. vim.fn.fnameescape(target_env.session_file))
 		if not ok then
 			notify("Warning restoring environment session: " .. tostring(err), vim.log.levels.WARN)
 			vim.cmd("enew")
+			local cur_b = vim.api.nvim_get_current_buf()
+			vim.b[cur_b].fox_env_slot = target_slot
+			vim.bo[cur_b].buflisted = true
 		end
 	else
 		vim.cmd("enew")
+		local cur_b = vim.api.nvim_get_current_buf()
+		vim.b[cur_b].fox_env_slot = target_slot
+		vim.bo[cur_b].buflisted = true
+	end
+
+	-- Re-enforce buffer isolation on any buffers loaded by session
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.api.nvim_buf_is_valid(buf) and not is_transient_buffer(buf) then
+			local b_slot = vim.b[buf].fox_env_slot
+			if b_slot == nil then
+				local name = vim.api.nvim_buf_get_name(buf)
+				if name ~= "" and target_env.cwd then
+					local norm_cwd = path.normalize(target_env.cwd)
+					local norm_name = path.normalize(name)
+					if path.relative_to(norm_name, norm_cwd) ~= nil then
+						vim.b[buf].fox_env_slot = target_slot
+						vim.bo[buf].buflisted = true
+					else
+						for s = 1, M.settings.max_slots do
+							if s ~= target_slot and _G._fox_environments[s] and _G._fox_environments[s].cwd then
+								local other_cwd = path.normalize(_G._fox_environments[s].cwd)
+								if path.relative_to(norm_name, other_cwd) ~= nil then
+									vim.b[buf].fox_env_slot = s
+									vim.bo[buf].buflisted = false
+									break
+								end
+							end
+						end
+					end
+				else
+					vim.b[buf].fox_env_slot = target_slot
+				end
+			elseif b_slot == target_slot then
+				vim.bo[buf].buflisted = true
+			else
+				vim.bo[buf].buflisted = false
+			end
+		end
+	end
+
+	-- Ensure current window displays a buffer belonging to target_slot
+	local current_buf = vim.api.nvim_get_current_buf()
+	if vim.b[current_buf].fox_env_slot ~= nil and vim.b[current_buf].fox_env_slot ~= target_slot then
+		local target_buf = nil
+		for _, b in ipairs(vim.api.nvim_list_bufs()) do
+			if
+				vim.api.nvim_buf_is_valid(b)
+				and vim.b[b].fox_env_slot == target_slot
+				and not is_transient_buffer(b)
+				and vim.bo[b].buflisted
+			then
+				target_buf = b
+				break
+			end
+		end
+		if target_buf then
+			pcall(vim.api.nvim_set_current_buf, target_buf)
+		else
+			vim.cmd("enew")
+			local fresh_b = vim.api.nvim_get_current_buf()
+			vim.b[fresh_b].fox_env_slot = target_slot
+			vim.bo[fresh_b].buflisted = true
+		end
 	end
 
 	-- Drop any neo-tree buffers that might have been saved in session
@@ -826,6 +907,13 @@ function M.switch_environment(target_slot, callback)
 		local lualine = package.loaded["lualine"]
 		if lualine then
 			lualine.refresh()
+		end
+	end)
+
+	pcall(function()
+		local bui = package.loaded["bufferline.ui"]
+		if bui and bui.refresh then
+			bui.refresh()
 		end
 	end)
 

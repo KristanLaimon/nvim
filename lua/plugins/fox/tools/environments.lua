@@ -1866,28 +1866,27 @@ function M.setup()
 		end
 	end
 
-	-- Keymaps for switching slots: <C-S-1>..<C-S-9> and terminal symbols <C-!>..<C-(>
+	-- Keymaps for switching slots: <C-S-1>..<C-S-9>, terminal symbols <C-!>..<C-(>, <C-S-!>..<C-S-(>, CSI-u, and modifyOtherKeys
 	for slot = 1, M.settings.max_slots do
-		local key = M.settings.keys.slot_prefix .. slot .. ">"
-		vim.keymap.set(
-			{ "n", "i", "v", "t" },
-			key,
-			from_any_mode(function()
-				M.switch_environment(slot)
-			end),
-			{
-				noremap = true,
-				silent = true,
-				desc = "Switch to Environment #" .. slot,
-			}
-		)
+		local slot_keys = {
+			M.settings.keys.slot_prefix .. slot .. ">",
+		}
 
-		-- Terminal compatibility alias
 		local sym = M.settings.keys.symbols[slot]
 		if sym then
+			table.insert(slot_keys, "<C-" .. sym .. ">")
+			table.insert(slot_keys, "<C-S-" .. sym .. ">")
+		end
+
+		-- CSI-u terminal sequence alias (e.g. \x1b[49;6u for Ctrl+Shift+1)
+		table.insert(slot_keys, string.format("\x1b[%d;6u", 48 + slot))
+		-- xterm modifyOtherKeys alias (e.g. \x1b[27;6;49~ for Ctrl+Shift+1)
+		table.insert(slot_keys, string.format("\x1b[27;6;%d~", 48 + slot))
+
+		for _, k in ipairs(slot_keys) do
 			vim.keymap.set(
 				{ "n", "i", "v", "t" },
-				"<C-" .. sym .. ">",
+				k,
 				from_any_mode(function()
 					M.switch_environment(slot)
 				end),
@@ -1954,6 +1953,7 @@ package.loaded["plugins.fox.tools.environments"] = M
 return setmetatable({
 	name = "fox_environments",
 	dir = require("fox.core.lazyspec").for_module(),
+	event = "VeryLazy",
 	cmd = {
 		"EnvironmentMenu",
 		"Environments",
@@ -1979,6 +1979,15 @@ return setmetatable({
 		{ "<C-S-7>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #7" },
 		{ "<C-S-8>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #8" },
 		{ "<C-S-9>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #9" },
+		{ "<C-!>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #1" },
+		{ "<C-@>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #2" },
+		{ "<C-#>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #3" },
+		{ "<C-$>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #4" },
+		{ "<C-%>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #5" },
+		{ "<C-^>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #6" },
+		{ "<C-&>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #7" },
+		{ "<C-*>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #8" },
+		{ "<C-(>", mode = { "n", "i", "v", "t" }, desc = "Switch to Environment #9" },
 	},
 	dependencies = {
 		"nvim-lua/plenary.nvim",

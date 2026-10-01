@@ -79,10 +79,18 @@ M.settings = {
 		wiki = { "<C-S-,>", "<C-S-comma>", "<C-S-d>", "<C-S-D>" },
 		--- Focus top-right workspace badge.
 		focus_badge = { "<C-S-b>", "<C-S-B>", "<A-w>", "<M-w>", "<leader>wb", "<leader>wf" },
+		--- Open Environments CRUD menu.
+		environments_menu = { "<C-S-e>", "<C-S-E>", "<leader>ee" },
+		--- Switch environment slot prefix (<C-S-1>..<C-S-9>).
+		environments_slot_prefix = "<C-S-",
+		--- Terminal-compatible symbols when Shift+1..9 produces symbols with Ctrl.
+		environments_symbols = { "!", "@", "#", "$", "%", "^", "&", "*", "(" },
 	},
 
 	--- How many task output slots have a direct toggle.
 	task_slots = 4,
+	--- How many environment slots have a direct switch shortcut.
+	environment_slots = 9,
 }
 
 -- ============================================================================
@@ -239,6 +247,35 @@ end, "Open Documentation Center Wiki")
 map_all_modes(M.settings.keys.focus_badge, function()
 	require("plugins.fox.tools.workspaces").focus_badge()
 end, "Focus Workspace / Environment Badge")
+
+-- ============================================================================
+-- ENVIRONMENTS (Multi-Project Workspaces 1..9)
+-- ============================================================================
+
+map_all_modes(M.settings.keys.environments_menu, function()
+	require("plugins.fox.tools.environments").open_menu()
+end, "Open Environments Manager")
+
+for slot = 1, (M.settings.environment_slots or 9) do
+	local slot_keys = {
+		M.settings.keys.environments_slot_prefix .. slot .. ">",
+	}
+
+	local sym = M.settings.keys.environments_symbols and M.settings.keys.environments_symbols[slot]
+	if sym then
+		table.insert(slot_keys, "<C-" .. sym .. ">")
+		table.insert(slot_keys, "<C-S-" .. sym .. ">")
+	end
+
+	-- CSI-u terminal sequence alias (e.g. \x1b[49;6u for Ctrl+Shift+1)
+	table.insert(slot_keys, string.format("\x1b[%d;6u", 48 + slot))
+	-- xterm modifyOtherKeys alias (e.g. \x1b[27;6;49~ for Ctrl+Shift+1)
+	table.insert(slot_keys, string.format("\x1b[27;6;%d~", 48 + slot))
+
+	map_all_modes(slot_keys, function()
+		require("plugins.fox.tools.environments").switch_environment(slot)
+	end, "Switch to Environment #" .. slot)
+end
 
 -- ============================================================================
 -- TRANSPILER COMMANDS

@@ -38,10 +38,19 @@ M.settings = {
 			name = "git",
 			title = "🦊 Git Center",
 			detect = function(ft, buf_name)
-				return ft:find("Neogit") ~= nil
-					or ft:find("Diffview") ~= nil
-					or ft:find("git") ~= nil
-					or buf_name:find("Git") ~= nil
+				return (
+					ft
+					and (
+						ft == "NeogitStatus"
+						or ft:match("^Neogit") ~= nil
+						or ft:match("^Diffview") ~= nil
+						or ft:match("^FoxGit") ~= nil
+						or ft == "FoxConflict"
+						or ft == "FoxLogDiff"
+						or ft == "FoxDiffSidebar"
+						or ft == "FoxDiffMode"
+					)
+				) or (buf_name and (buf_name:match("^Neogit") ~= nil or buf_name:match("^Diffview") ~= nil))
 			end,
 			lines = {
 				"1..6: Jump to Sections (1 Commit, 2 Staged, 3 Changes, 4 Branches, 5 Commits, 6 Stash)",
@@ -62,8 +71,8 @@ M.settings = {
 			detect = function(ft, buf_name)
 				return ft == "TelescopePrompt"
 					or ft == "TaskRunner"
-					or buf_name:find("Telescope") ~= nil
-					or buf_name:find("project_tasks") ~= nil
+					or ft == "FoxDesktopExplorer"
+					or (buf_name and buf_name:match("^TaskRunner") ~= nil)
 			end,
 			lines = {
 				"a : Create (file.txt or folder/)",
@@ -83,6 +92,7 @@ M.settings = {
 				"Ctrl + Shift + H/J/K/L : Find File & Open in Split (← ↓ ↑ →)",
 				"Ctrl + F        : Live Grep Text in Project",
 				"Ctrl + Shift + F: Floating Desktop Explorer",
+				"Ctrl + Shift + 1..9 : Switch Environment Slot  |  Ctrl + Shift + E : Environments Menu",
 				"Ctrl + Shift + T: Project Task Menu",
 				"Ctrl + Shift + G: Git Control Center",
 				"Ctrl + Shift + Enter: Open Media with OS Default App",
@@ -97,11 +107,23 @@ M.settings = {
 --- Context entry matching the current buffer.
 --- @return table context Entry from `M.settings.contexts`.
 local function current_context()
-	local ft = vim.bo.filetype
+	local ft = vim.bo.filetype or ""
+	local bt = vim.bo.buftype or ""
 	local buf_name = vim.api.nvim_buf_get_name(0)
 
+	-- If it's an ordinary file/code buffer (buftype == ""), it's always the editor context
+	if
+		bt == ""
+		and ft ~= "neo-tree"
+		and not ft:match("^Neogit")
+		and not ft:match("^Diffview")
+		and not ft:match("^Fox")
+	then
+		return M.settings.contexts[#M.settings.contexts]
+	end
+
 	for _, context in ipairs(M.settings.contexts) do
-		if not context.detect or context.detect(ft, buf_name) then
+		if context.detect and context.detect(ft, buf_name) then
 			return context
 		end
 	end
@@ -117,11 +139,12 @@ end
 --- Notifies the shortcuts of the current context.
 function M.show_help()
 	local context = current_context()
-	vim.notify(table.concat(context.lines, "\n"), vim.log.levels.INFO, { title = context.title })
+	vim.schedule(function()
+		vim.notify(table.concat(context.lines, "\n"), vim.log.levels.INFO, { title = context.title })
+	end)
 end
 
---- Binds the help keys. `?` is an expression mapping so it can fall through to
---- the native backwards search in ordinary buffers.
+--- Binds the help keys. `?` falls through to the native backwards search in ordinary buffers.
 function M.setup()
 	pcall(vim.api.nvim_create_user_command, "ContextHelp", function()
 		M.show_help()
@@ -131,15 +154,24 @@ function M.setup()
 		M.show_help()
 	end, { desc = "Show Context-Aware Keyboard Shortcuts Help" })
 
+	-- Non-`?` keys show context help directly in normal mode
 	for _, key in ipairs(M.settings.keys.show) do
-		vim.keymap.set("n", key, function()
-			if key == "?" and M.get_context() == M.settings.passthrough_context then
-				return "?"
-			end
-			M.show_help()
-			return ""
-		end, { noremap = true, silent = true, expr = true, desc = "Context Help" })
+		if key ~= "?" then
+			vim.keymap.set("n", key, function()
+				M.show_help()
+			end, { noremap = true, silent = true, desc = "Context Help" })
+		end
 	end
+
+	-- `?` preserves native Vim backwards-search in editor/code buffers, and acts as help only in special UI buffers
+	vim.keymap.set("n", "?", function()
+		local ctx = current_context()
+		if ctx.name == M.settings.passthrough_context or vim.bo.buftype == "" then
+			return "?"
+		end
+		M.show_help()
+		return "<Ignore>"
+	end, { noremap = true, silent = true, expr = true, desc = "Context Help or Native Backwards Search" })
 end
 
 -- Legacy global kept for user scripts and older keybinds that reference it.

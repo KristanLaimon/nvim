@@ -64,6 +64,14 @@ describe("context_help.get_context", function()
 		expect(help.get_context()).toBe("editor")
 	end)
 
+	it("falls back to editor even if file path contains Git or Telescope", function()
+		open_buffer("lua", "/home/user/GitProjects/GitController.lua")
+		expect(help.get_context()).toBe("editor")
+
+		open_buffer("typescript", "/home/user/my-project/src/TelescopeWrapper.ts")
+		expect(help.get_context()).toBe("editor")
+	end)
+
 	it("gives every context a title and at least one line", function()
 		for _, context in ipairs(help.settings.contexts) do
 			expect(context.title).toBeDefined()

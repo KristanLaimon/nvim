@@ -1,10 +1,12 @@
 -- ============================================================================
--- FOX PLUGIN: LSP Function & Class Reference Counter (CodeLens).
+-- FOX PLUGIN: LSP Function & Class Reference / Symbol Usages Counter
 -- ============================================================================
 -- WHAT IT DOES
---   Displays LSP reference counts (e.g. "󰌹 3 references", "1 reference") above
---   functions, methods, classes, and structs across all supported languages.
---   Provides a toggle command `:FoxToggleReferences` (default: ON).
+--   Manages LSP symbol usages display (e.g. "󰌹 3 usages", "1 usage") powered by
+--   symbol-usage.nvim across all supported languages and theme styles.
+--   Suppresses duplicate raw builtin CodeLens overlays ("4 references") to keep
+--   the clean "Usages" UI consistent and deduplicated.
+--   Provides toggle command `:FoxToggleReferences` (default: ON).
 -- ============================================================================
 
 local store = require("fox.core.store")
@@ -27,7 +29,18 @@ function M.is_enabled()
 	return M.settings.default_enabled
 end
 
---- Refreshes LSP code lenses in the active buffer.
+local function disable_builtin_codelens(bufnr)
+	if vim.lsp.codelens then
+		if vim.lsp.codelens.enable then
+			pcall(vim.lsp.codelens.enable, false, { bufnr = bufnr })
+		elseif vim.lsp.codelens.clear then
+			pcall(vim.lsp.codelens.clear, nil, bufnr)
+		end
+	end
+end
+
+--- Refreshes symbol usages in the active buffer.
+--- Clears any duplicate raw CodeLens virtual text in favor of symbol-usage.
 --- @param bufnr number|nil
 function M.refresh(bufnr)
 	if not M.is_enabled() then
@@ -39,34 +52,27 @@ function M.refresh(bufnr)
 		return
 	end
 
-	local clients = (vim.lsp.get_clients or vim.lsp.get_active_clients)({ bufnr = bufnr })
-	if #clients == 0 then
-		return
-	end
+	-- Clear raw builtin codelens virtual text to prevent duplicate "4 references" above "4 usages"
+	disable_builtin_codelens(bufnr)
 
-	local has_codelens = false
-	for _, client in ipairs(clients) do
-		if client:supports_method("textDocument/codeLens") then
-			has_codelens = true
-			break
-		end
-	end
-
-	if has_codelens and vim.lsp.codelens then
-		pcall(vim.lsp.codelens.refresh, { bufnr = bufnr })
+	local ok_su, su = pcall(require, "symbol-usage")
+	if ok_su and su.refresh then
+		pcall(su.refresh)
 	end
 end
 
---- Clears all LSP code lenses from active buffer.
+--- Clears all LSP code lenses and symbol usages from active buffer.
 --- @param bufnr number|nil
 function M.clear(bufnr)
 	bufnr = bufnr or vim.api.nvim_get_current_buf()
-	if vim.lsp.codelens then
-		pcall(vim.lsp.codelens.clear, nil, bufnr)
+	disable_builtin_codelens(bufnr)
+	local ok_su, su = pcall(require, "symbol-usage")
+	if ok_su and su.clear then
+		pcall(su.clear)
 	end
 end
 
---- Toggles LSP reference counts on or off.
+--- Toggles LSP reference / symbol usage counts on or off.
 function M.toggle()
 	local new_state = not M.is_enabled()
 	store.save(M.settings.store_file, { enabled = new_state })
@@ -77,10 +83,10 @@ function M.toggle()
 	end
 
 	if new_state then
-		vim.notify("LSP Reference Counts: ENABLED", vim.log.levels.INFO, { title = "LSP CodeLens" })
+		vim.notify("Symbol Usages: ENABLED", vim.log.levels.INFO, { title = "Symbol Usages" })
 		M.refresh(0)
 	else
-		vim.notify("LSP Reference Counts: DISABLED", vim.log.levels.WARN, { title = "LSP CodeLens" })
+		vim.notify("Symbol Usages: DISABLED", vim.log.levels.WARN, { title = "Symbol Usages" })
 		M.clear(0)
 	end
 end
@@ -107,20 +113,24 @@ function M.setup()
 				vim.schedule(function()
 					M.refresh(args.buf)
 				end)
+			else
+				vim.schedule(function()
+					M.clear(args.buf)
+				end)
 			end
 		end,
 	})
 
 	vim.api.nvim_create_user_command("FoxToggleReferences", function()
 		M.toggle()
-	end, { desc = "Toggle LSP Reference Counts / CodeLens display" })
+	end, { desc = "Toggle Symbol Usages display" })
 
 	vim.api.nvim_create_user_command("FoxRunCodeLens", function()
 		M.run()
 	end, { desc = "Run LSP CodeLens / References under cursor" })
 
 	if M.settings.keymap then
-		vim.keymap.set("n", M.settings.keymap, M.toggle, { desc = "Toggle LSP Reference Counts" })
+		vim.keymap.set("n", M.settings.keymap, M.toggle, { desc = "Toggle Symbol Usages" })
 	end
 end
 

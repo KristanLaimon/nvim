@@ -213,6 +213,9 @@ function M.setup()
 	vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile", "DirChanged" }, {
 		group = group,
 		callback = function(args)
+			if args and args.event == "DirChanged" and vim.g._fox_environment_switching then
+				return
+			end
 			M.apply_settings(args.buf)
 		end,
 	})

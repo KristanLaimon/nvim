@@ -450,6 +450,9 @@ function M.setup()
 	vim.api.nvim_create_autocmd("DirChanged", {
 		group = vim.api.nvim_create_augroup("FOXTrackOpenedFolders", { clear = true }),
 		callback = function(ctx)
+			if vim.g._fox_environment_switching then
+				return
+			end
 			_G.AddOpenedFolder((ctx.file and ctx.file ~= "") and ctx.file or vim.fn.getcwd())
 		end,
 	})

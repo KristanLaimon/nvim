@@ -1453,7 +1453,10 @@ function M.setup()
 	local badge_group = vim.api.nvim_create_augroup("FoxWorkspaceBadgeUpdater", { clear = true })
 	vim.api.nvim_create_autocmd({ "VimEnter", "BufEnter", "DirChanged", "VimResized", "ColorScheme" }, {
 		group = badge_group,
-		callback = function()
+		callback = function(args)
+			if args and args.event == "DirChanged" and vim.g._fox_environment_switching then
+				return
+			end
 			vim.schedule(M.update_badge)
 		end,
 	})

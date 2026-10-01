@@ -303,6 +303,9 @@ function M.setup()
 	vim.api.nvim_create_autocmd("DirChanged", {
 		group = vim.api.nvim_create_augroup("NeoTreeCustomHiddenDir", { clear = true }),
 		callback = function()
+			if vim.g._fox_environment_switching then
+				return
+			end
 			local root = project.root()
 			M.ensure_loaded(root)
 			M.refresh_neotree()

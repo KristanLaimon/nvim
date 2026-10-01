@@ -53,11 +53,11 @@ vim.api.nvim_create_user_command("FoxTest", function(command)
 	runner.run(root, command.args ~= "" and command.args or nil)
 end, { nargs = "?", desc = "Run the FOX unit test suite (optionally filtered by spec name)" })
 
--- If nvim is being run inside Neovide GUI
+-- ============ NEOVIDE Exclusive config ==================================
 if vim.g.neovide then
 	-- vim.g.neovide_window_blurred = false
 	-- vim.g.neovide_opacity = 0.96
-	--vim.g.neovide_normal_opacity = 0.96
+	-- vim.g.neovide_normal_opacity = 0.96
 
 	-- Cursor Motion & Trail Animation (Time in seconds)
 	-- Try setting to 0.25 for slow motion, 0.05 for super snappy, or 0.0 to disable.
@@ -66,6 +66,19 @@ if vim.g.neovide then
 	vim.g.neovide_cursor_animate_in_insert_mode = true
 	vim.g.neovide_cursor_animate_command_line = true
 	vim.g.neovide_cursor_unfocused_outline = true -- Draw outline cursor when window loses focus
+
+	-- Windows Exclusive Configuration
+	vim.g.neovide_title_background_color =
+		string.format("%x", vim.api.nvim_get_hl(0, { id = vim.api.nvim_get_hl_id_by_name("Normal") }).bg)
+	vim.g.neovide_title_text_color = "white"
+	vim.g.neovide_corner_preference = "round"
+	-- End Windows Exclusive config
+
+	-- Progress bar
+	vim.g.neovide_progress_bar_enabled = true
+	vim.g.neovide_progress_bar_height = 5.0
+	vim.g.neovide_progress_bar_animation_speed = 200.0
+	vim.g.neovide_progress_bar_hide_delay = 0.2
 
 	vim.keymap.set("n", "<C-S-f>", function()
 		vim.g.neovide_fullscreen = not vim.g.neovide_fullscreen

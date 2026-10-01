@@ -124,7 +124,7 @@ function M.toggle_pin()
 		end
 	end
 
-	local is_now_pinned = false
+	local is_now_pinned
 	if existing_idx then
 		table.remove(pins, existing_idx)
 		is_now_pinned = false
@@ -286,7 +286,10 @@ function M.setup()
 
 	vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged" }, {
 		group = group,
-		callback = function()
+		callback = function(ev)
+			if ev and ev.event == "DirChanged" and vim.g._fox_environment_switching then
+				return
+			end
 			vim.schedule(M.restore_pins)
 		end,
 	})

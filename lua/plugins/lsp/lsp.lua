@@ -461,13 +461,16 @@ return {
 		-- main leaves Blink unable to determine which binary to download.
 		version = "1.*",
 		opts = function(_, opts)
-			local is_mobile = false
+			local is_native_termux
+			local is_mobile
 			local env_ok, env_mod = pcall(require, "fox.core.environment")
 			if env_ok then
 				local env = env_mod.detect()
-				is_mobile = env.is_termux or env.is_proot or env.is_mobile
+				is_native_termux = env.is_termux and not env.is_proot
+				is_mobile = env.is_mobile or env.is_termux or env.is_proot
 			else
-				is_mobile = vim.env.TERMUX_VERSION ~= nil or vim.fn.isdirectory("/data/data/com.termux") == 1
+				is_native_termux = vim.env.TERMUX_VERSION ~= nil or vim.fn.isdirectory("/data/data/com.termux") == 1
+				is_mobile = is_native_termux
 			end
 			-- Guard against malformed snippet entries (e.g. $schema keys without a body)
 			-- that cause table.concat(nil) errors in blink.cmp's default snippet registry.
@@ -579,9 +582,9 @@ return {
 					},
 				},
 				fuzzy = {
-					implementation = is_mobile and "lua" or "prefer_rust_with_warning",
+					implementation = is_native_termux and "lua" or "prefer_rust_with_warning",
 					prebuilt_binaries = {
-						download = not is_mobile,
+						download = not is_native_termux,
 					},
 					sorts = {
 						-- always rank snippets (LSP kind 15) below real completions, regardless of fuzzy score

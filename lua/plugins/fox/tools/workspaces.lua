@@ -95,104 +95,173 @@ end
 
 -- ============================================================================
 -- ============================================================================
--- INDEX STORAGE (Per-Project in .foxnvim/workspaces anchored to first workspace/cwd)
+-- INDEX STORAGE & SESSION DISCOVERY
 -- ============================================================================
 
-if not _G._fox_initial_cwd then
-	_G._fox_initial_cwd = vim.fn.getcwd()
-end
-
---- Resolves the primary root cwd (the first workspace or first environment slot).
---- Workspace information is anchored and saved in this first cwd.
---- @return string
-local function get_primary_root_dir()
-	if _G._fox_initial_cwd and _G._fox_initial_cwd ~= "" then
-		return _G._fox_initial_cwd
-	end
-
-	if vim.g.fox_initial_cwd and vim.g.fox_initial_cwd ~= "" then
-		return vim.g.fox_initial_cwd
-	end
-
-	-- 1. Check if Environment slot 1 has a cwd
-	if _G._fox_environments and _G._fox_environments[1] and _G._fox_environments[1].cwd then
-		return _G._fox_environments[1].cwd
-	end
-
-	-- 2. Check global index cache to see if there is an existing workspace list with a first cwd
-	local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
-	local global_entries = store.load(global_path, {})
-	if type(global_entries) == "table" and #global_entries > 0 and global_entries[1].cwd then
-		return global_entries[1].cwd
-	end
-
-	-- 3. Check current workspace / project root
-	local p_root = project and project.root and project.root()
-	if p_root then
-		return p_root
-	end
-
-	-- 4. Default to current working directory
-	return vim.fn.getcwd()
-end
-
---- Session storage directory for a specific project root, created on first use.
---- Defaults to `<first_project_root>/.foxnvim/workspaces` unless `M.settings.storage_dir`
---- is explicitly overridden (e.g. in unit tests).
+--- Session storage directory, created on first use.
+--- Defaults to `<data>/workspaces` unless explicitly overridden (e.g. in unit tests).
 --- @param root_dir string|nil
 --- @return string dir
-local function storage_dir(root_dir)
+local function storage_dir(_root_dir)
 	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/workspaces") then
 		return path.ensure_dir(M.settings.storage_dir)
 	end
-	local root = root_dir or get_primary_root_dir()
-	local p_dir = path.join(root, ".foxnvim", "workspaces")
-	return path.ensure_dir(p_dir)
+	return path.ensure_dir(path.join(vim.fn.stdpath("data"), "workspaces"))
 end
 
---- Absolute path of the index file for a project root.
+--- Absolute path of the index file.
 --- @param root_dir string|nil
 --- @return string filepath
 local function index_path(root_dir)
 	return path.join(storage_dir(root_dir), M.settings.index_file)
 end
 
---- Loads the workspace index for the primary project root (and global fallback).
+--- Parses a session file on disk to extract its metadata (cwd, buffers, name, created_at).
+--- @param filepath string
+--- @return table|nil
+local function parse_session_file(filepath)
+	if not path.is_file(filepath) then
+		return nil
+	end
+	local lines = vim.fn.readfile(filepath)
+	local cwd = ""
+	local bufs = {}
+	local custom_name = nil
+	for _, l in ipairs(lines) do
+		local m_ws = l:match('^"%s*FoxWorkspace:%s*name=(.+)') or l:match('^"%s*Workspace:%s*(.+)')
+		if m_ws and not custom_name then
+			custom_name = vim.trim(m_ws)
+		end
+		local cd = l:match("^cd%s+(.+)")
+		if cd and cwd == "" then
+			cwd = vim.fn.expand(vim.trim(cd))
+		end
+		local b = l:match("^badd%s+%+?%d*%s*(.+)")
+		if b then
+			b = vim.fn.expand(vim.trim(b))
+			if cwd ~= "" and b:sub(1, #cwd) == cwd then
+				b = b:sub(#cwd + 2)
+			end
+			table.insert(bufs, b)
+		end
+	end
+
+	local id = vim.fn.fnamemodify(filepath, ":t:r")
+	local ts = tonumber(id:match("ws_(%d+)_")) or os.time()
+	local cwd_name = cwd ~= "" and vim.fn.fnamemodify(cwd, ":t") or "Project"
+	local name = custom_name
+	if not name or name == "" then
+		if #bufs > 0 then
+			local first_buf_name = vim.fn.fnamemodify(bufs[1], ":t")
+			name = string.format("%s (%s)", cwd_name, first_buf_name)
+		else
+			name = string.format("%s (%s)", cwd_name, os.date("%b %d %H:%M", ts))
+		end
+	end
+
+	return {
+		id = id,
+		name = name,
+		cwd = cwd ~= "" and cwd or vim.fn.getcwd(),
+		cwd_name = cwd_name,
+		created_at = ts,
+		updated_at = ts,
+		session_file = filepath,
+		buffers = bufs,
+		tab_count = 1,
+		neotree_open = true,
+	}
+end
+
+--- Loads all workspaces across all known projects and reconciles orphaned sessions.
+--- @return table[]
+local function load_all_workspaces()
+	local sdir = storage_dir()
+	local ipath = index_path()
+
+	local entries = store.load(ipath, {})
+	if type(entries) ~= "table" then
+		entries = {}
+	end
+
+	local seen_ids = {}
+	local result = {}
+
+	for _, item in ipairs(entries) do
+		if item and item.id and not seen_ids[item.id] then
+			seen_ids[item.id] = true
+			table.insert(result, item)
+		end
+	end
+
+	-- Also check current project root or cwd .foxnvim/workspaces if present (when using default storage)
+	local is_custom = M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/workspaces")
+	if not is_custom then
+		local p_root = project and project.root and project.root()
+		local project_dirs = { vim.fn.getcwd(), p_root }
+		for _, pdir in ipairs(project_dirs) do
+			if pdir and pdir ~= "" then
+				local local_idx_file = path.join(pdir, ".foxnvim", "workspaces", M.settings.index_file)
+				if path.is_file(local_idx_file) then
+					local local_entries = store.load(local_idx_file, {})
+					if type(local_entries) == "table" then
+						for _, item in ipairs(local_entries) do
+							if item and item.id and not seen_ids[item.id] then
+								seen_ids[item.id] = true
+								table.insert(result, item)
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	-- Reconcile orphaned session files in session storage directory
+	if path.is_dir(sdir) then
+		local disk_files = vim.fn.glob(path.join(sdir, "*.vim"), false, true)
+		local recovered_any = false
+		for _, f in ipairs(disk_files) do
+			local id = vim.fn.fnamemodify(f, ":t:r")
+			if not seen_ids[id] then
+				local recovered = parse_session_file(f)
+				if recovered then
+					seen_ids[id] = true
+					table.insert(result, recovered)
+					recovered_any = true
+				end
+			end
+		end
+
+		if recovered_any then
+			pcall(function()
+				store.save(ipath, result)
+			end)
+		end
+	end
+
+	return result
+end
+
+--- Loads the workspace index for the given root_dir, or all workspaces if root_dir is nil.
 --- @param root_dir string|nil
 --- @return table[] index List of workspace records.
 local function load_index(root_dir)
-	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/workspaces") then
-		local local_entries = store.load(index_path(), {})
-		return type(local_entries) == "table" and local_entries or {}
+	local all = load_all_workspaces()
+	if not root_dir then
+		return all
 	end
 
-	local root = root_dir or get_primary_root_dir()
-	local cur_path = index_path(root)
-	local local_entries = store.load(cur_path, nil)
-	if local_entries ~= nil and type(local_entries) == "table" then
-		return local_entries
-	end
-
-	-- Check legacy global storage fallback only if local .foxnvim index file does not exist yet
-	local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
-	local global_entries = store.load(global_path, {})
-	if type(global_entries) == "table" and #global_entries > 0 then
-		local filtered = {}
-		for _, item in ipairs(global_entries) do
-			if path.equals(item.cwd or "", root) then
-				table.insert(filtered, item)
-			end
-		end
-		if #filtered > 0 then
-			return filtered
+	local filtered = {}
+	for _, item in ipairs(all) do
+		if path.equals(item.cwd or "", root_dir) then
+			table.insert(filtered, item)
 		end
 	end
-
-	return {}
+	return filtered
 end
 
---- Writes the workspace index back to the project's `.foxnvim/workspaces/index.json`.
---- Always saves to the first cwd or first workspace found in the list.
+--- Writes the workspace index back to disk, merging with the global index cache.
 --- @param index table[] Workspace records.
 --- @param root_dir string|nil
 --- @return boolean ok
@@ -201,51 +270,47 @@ local function save_index(index, root_dir)
 		return store.save(index_path(), index)
 	end
 
-	local root = root_dir
-	if not root then
-		if index and type(index) == "table" and #index > 0 and index[1].cwd then
-			root = index[1].cwd
-		else
-			root = get_primary_root_dir()
+	local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
+	local global_entries = store.load(global_path, {})
+	if type(global_entries) ~= "table" then
+		global_entries = {}
+	end
+
+	local by_id = {}
+	for i, entry in ipairs(global_entries) do
+		if entry.id then
+			by_id[entry.id] = i
 		end
 	end
-	local cur_path = index_path(root)
-	local ok = store.save(cur_path, index)
 
-	-- Also maintain global index cache for cross-project telescope search
+	for _, item in ipairs(index) do
+		if item.id and by_id[item.id] then
+			global_entries[by_id[item.id]] = item
+		elseif item.id then
+			table.insert(global_entries, item)
+			by_id[item.id] = #global_entries
+		end
+	end
+
+	path.ensure_dir(path.join(vim.fn.stdpath("data"), "workspaces"))
+	local ok = store.save(global_path, global_entries)
+
+	-- If project has a .foxnvim/workspaces dir, also save project-specific entries there
 	pcall(function()
-		local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
-		path.ensure_dir(path.join(vim.fn.stdpath("data"), "workspaces"))
-		store.save(global_path, index)
+		local p_root = root_dir or (project and project.root and project.root()) or vim.fn.getcwd()
+		local p_ws_dir = path.join(p_root, ".foxnvim", "workspaces")
+		if path.is_dir(p_ws_dir) then
+			local project_entries = {}
+			for _, item in ipairs(global_entries) do
+				if path.equals(item.cwd or "", p_root) then
+					table.insert(project_entries, item)
+				end
+			end
+			store.save(path.join(p_ws_dir, M.settings.index_file), project_entries)
+		end
 	end)
 
 	return ok
-end
-
---- Loads all workspaces across all known projects (for 'g' View All mode in Telescope).
---- @return table[]
-local function load_all_workspaces()
-	local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
-	local all_entries = store.load(global_path, {})
-	local current_local = load_index()
-
-	local seen = {}
-	local merged = {}
-	for _, item in ipairs(current_local) do
-		if not seen[item.id] then
-			seen[item.id] = true
-			table.insert(merged, item)
-		end
-	end
-
-	for _, item in ipairs(all_entries) do
-		if not seen[item.id] then
-			seen[item.id] = true
-			table.insert(merged, item)
-		end
-	end
-
-	return merged
 end
 
 --- Finds a workspace by record, id, or (case-insensitive) name.
@@ -367,7 +432,7 @@ end
 --- @return boolean ok
 --- @return string|nil err
 --- @return boolean neotree_was_open Whether neo-tree should reopen on load.
-local function save_session_file(session_path)
+local function save_session_file(session_path, ws_name)
 	vim.opt.sessionoptions = M.settings.session_options
 
 	local neotree_was_open = is_neotree_open()
@@ -381,6 +446,14 @@ local function save_session_file(session_path)
 	purge_neotree_buffers()
 
 	local ok, err = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(session_path))
+
+	if ok and ws_name and ws_name ~= "" then
+		pcall(function()
+			local lines = vim.fn.readfile(session_path)
+			table.insert(lines, 1, '" FoxWorkspace: name=' .. ws_name)
+			vim.fn.writefile(lines, session_path)
+		end)
+	end
 
 	if neotree_was_open then
 		show_neotree(vim.fn.getcwd())
@@ -402,13 +475,13 @@ end
 function M.save_workspace(name, callback)
 	local cwd = vim.fn.getcwd()
 	local cwd_name = vim.fn.fnamemodify(cwd, ":t")
-	local index = load_index()
+	local index = load_all_workspaces()
 
 	local function perform_save(ws_name)
 		if not ws_name or ws_name == "" then
 			local count = 1
 			for _, item in ipairs(index) do
-				if item.cwd == cwd then
+				if path.equals(item.cwd or "", cwd) then
 					count = count + 1
 				end
 			end
@@ -417,7 +490,7 @@ function M.save_workspace(name, callback)
 
 		local ws_item
 		for _, item in ipairs(index) do
-			if item.name:lower() == ws_name:lower() and item.cwd == cwd then
+			if item.name:lower() == ws_name:lower() and path.equals(item.cwd or "", cwd) then
 				ws_item = item
 				break
 			end
@@ -426,7 +499,7 @@ function M.save_workspace(name, callback)
 		local id = ws_item and ws_item.id or ("ws_" .. os.time() .. "_" .. math.random(1000, 9999))
 		local session_path = path.join(storage_dir(), id .. ".vim")
 
-		local ok, err, neotree_open = save_session_file(session_path)
+		local ok, err, neotree_open = save_session_file(session_path, ws_name)
 		if not ok then
 			vim.notify("Error saving workspace: " .. tostring(err), vim.log.levels.ERROR)
 			return
@@ -457,7 +530,7 @@ function M.save_workspace(name, callback)
 			)
 		end
 
-		save_index(index)
+		save_index(index, cwd)
 		M.current_workspace = ws_item or index[#index]
 		pcall(M.update_badge)
 		notify("Workspace '" .. ws_name .. "' saved successfully!")
@@ -472,7 +545,7 @@ function M.save_workspace(name, callback)
 	end
 
 	for _, item in ipairs(index) do
-		if item.cwd == cwd then
+		if path.equals(item.cwd or "", cwd) then
 			perform_save(item.name)
 			return
 		end
@@ -495,11 +568,11 @@ end
 function M.new_workspace(callback)
 	local cwd = vim.fn.getcwd()
 	local cwd_name = vim.fn.fnamemodify(cwd, ":t")
-	local index = load_index()
+	local index = load_all_workspaces()
 
 	local count = 1
 	for _, item in ipairs(index) do
-		if item.cwd == cwd then
+		if path.equals(item.cwd or "", cwd) then
 			count = count + 1
 		end
 	end
@@ -534,7 +607,7 @@ local function resolve_load_target(index, identifier)
 		local cwd = vim.fn.getcwd()
 		local count = 0
 		for _, item in ipairs(index) do
-			if item.cwd == cwd then
+			if path.equals(item.cwd or "", cwd) then
 				count = count + 1
 				if count == identifier then
 					return item
@@ -556,22 +629,43 @@ end
 --- @param ws_or_identifier table|string|number Record, id/name, or slot number.
 --- @return boolean loaded
 function M.load_workspace(ws_or_identifier)
-	local index = load_index()
-	local target = resolve_load_target(index, ws_or_identifier)
+	local all = load_all_workspaces()
+	local target = resolve_load_target(all, ws_or_identifier)
 
 	if not target then
 		notify("Workspace not found", vim.log.levels.WARN)
 		return false
 	end
-	if not path.is_file(target.session_file) then
-		notify("Session file does not exist: " .. target.session_file, vim.log.levels.ERROR)
+
+	local session_file = target.session_file
+	if not (session_file and path.is_file(session_file)) then
+		local filename = (target.id and (target.id .. ".vim")) or vim.fn.fnamemodify(session_file or "", ":t")
+		local candidates = {
+			path.join(storage_dir(), filename),
+			path.join(vim.fn.stdpath("data"), "workspaces", filename),
+			path.join(vim.fn.expand("~"), ".foxnvim", "workspaces", filename),
+		}
+		if target.cwd then
+			table.insert(candidates, path.join(target.cwd, ".foxnvim", "workspaces", filename))
+		end
+
+		for _, cand in ipairs(candidates) do
+			if path.is_file(cand) then
+				session_file = cand
+				target.session_file = cand
+				break
+			end
+		end
+	end
+
+	if not (session_file and path.is_file(session_file)) then
+		notify("Session file does not exist: " .. tostring(target.session_file), vim.log.levels.ERROR)
 		return false
 	end
 
 	-- Staying inside the same project keeps its terminals and task outputs alive;
 	-- switching projects clears them, because they belong to the old root.
 	local is_same_project = path.equals(vim.fn.getcwd(), target.cwd or vim.fn.getcwd())
-	local current_neotree_was_open = is_neotree_open()
 
 	if target.cwd and vim.fn.getcwd() ~= target.cwd then
 		pcall(vim.api.nvim_set_current_dir, target.cwd)
@@ -586,7 +680,7 @@ function M.load_workspace(ws_or_identifier)
 		end
 	end
 
-	local ok, err = pcall(vim.cmd, "source " .. vim.fn.fnameescape(target.session_file))
+	local ok, err = pcall(vim.cmd, "source " .. vim.fn.fnameescape(session_file))
 	if not ok then
 		notify("Error loading session: " .. tostring(err), vim.log.levels.ERROR)
 		return false
@@ -618,7 +712,7 @@ function M.load_workspace(ws_or_identifier)
 	end
 
 	target.updated_at = os.time()
-	save_index(index)
+	save_index(all, target.cwd)
 	M.current_workspace = target
 
 	pcall(function()
@@ -634,8 +728,8 @@ end
 --- @param ws_or_id table|string Record, id, or name.
 --- @param callback function|nil Called after deletion.
 function M.delete_workspace(ws_or_id, callback)
-	local index = load_index()
-	local target, position = find_workspace(index, ws_or_id)
+	local all = load_all_workspaces()
+	local target, position = find_workspace(all, ws_or_id)
 
 	if not target then
 		notify("Workspace not found to delete", vim.log.levels.WARN)
@@ -652,11 +746,34 @@ function M.delete_workspace(ws_or_id, callback)
 		return
 	end
 
-	if path.is_file(target.session_file) then
-		os.remove(target.session_file)
+	if target.session_file and path.is_file(target.session_file) then
+		pcall(os.remove, target.session_file)
 	end
-	table.remove(index, position)
-	save_index(index)
+	local fallback_file = path.join(storage_dir(), (target.id or "") .. ".vim")
+	if path.is_file(fallback_file) then
+		pcall(os.remove, fallback_file)
+	end
+
+	table.remove(all, position)
+	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/workspaces") then
+		store.save(index_path(), all)
+	else
+		local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
+		store.save(global_path, all)
+
+		if target.cwd then
+			local p_ws_idx = path.join(target.cwd, ".foxnvim", "workspaces", M.settings.index_file)
+			if path.is_file(p_ws_idx) then
+				local p_entries = {}
+				for _, it in ipairs(all) do
+					if path.equals(it.cwd or "", target.cwd) then
+						table.insert(p_entries, it)
+					end
+				end
+				store.save(p_ws_idx, p_entries)
+			end
+		end
+	end
 
 	if M.current_workspace and (M.current_workspace.id == target.id or M.current_workspace.name == target.name) then
 		M.current_workspace = nil
@@ -673,8 +790,8 @@ end
 --- @param ws_or_id table|string Record, id, or name.
 --- @param callback function|nil Called after renaming.
 function M.rename_workspace(ws_or_id, callback)
-	local index = load_index()
-	local target = find_workspace(index, ws_or_id)
+	local all = load_all_workspaces()
+	local target = find_workspace(all, ws_or_id)
 
 	if not target then
 		notify("Workspace not found to rename", vim.log.levels.WARN)
@@ -685,12 +802,14 @@ function M.rename_workspace(ws_or_id, callback)
 		if new_name and new_name ~= "" and new_name ~= target.name then
 			target.name = new_name
 			target.updated_at = os.time()
-			save_index(index)
+			save_index(all, target.cwd)
 			pcall(M.update_badge)
 			notify("Workspace renamed to '" .. new_name .. "'")
 			if callback then
 				callback()
 			end
+		elseif callback then
+			callback()
 		end
 	end)
 end
@@ -1196,7 +1315,7 @@ end
 --- Opens the workspace picker.
 --- Workspaces of the current project sort first; `g` toggles between showing only
 --- them and showing every workspace.
-function M.select_workspace()
+function M.select_workspace(initial_show_all)
 	if not pcall(require, "telescope") then
 		notify("Telescope is not available", vim.log.levels.ERROR)
 		return
@@ -1211,23 +1330,29 @@ function M.select_workspace()
 	local themes = require("telescope.themes")
 
 	local current_cwd = vim.fn.getcwd()
+	local all_workspaces = load_all_workspaces()
 
-	-- Nothing saved for this project yet: start on the full list, or the picker
-	-- would open empty.
-	local show_all = true
-	for _, item in ipairs(load_index()) do
-		if item.cwd == current_cwd then
-			show_all = false
+	local has_cwd_workspaces = false
+	for _, item in ipairs(all_workspaces) do
+		if item.cwd and path.equals(item.cwd, current_cwd) then
+			has_cwd_workspaces = true
 			break
 		end
 	end
 
+	-- If this project has saved workspaces, default to showing this project only.
+	-- If this project has no saved workspaces yet, default to showing all workspaces so the picker is never empty!
+	local show_all = initial_show_all
+	if show_all == nil then
+		show_all = not has_cwd_workspaces
+	end
+
 	--- Visible workspaces, current project first, newest first, slots assigned.
 	local function get_results()
-		local index = load_index()
-		table.sort(index, function(a, b)
-			local a_curr = a.cwd == current_cwd and 1 or 0
-			local b_curr = b.cwd == current_cwd and 1 or 0
+		local entries = load_all_workspaces()
+		table.sort(entries, function(a, b)
+			local a_curr = path.equals(a.cwd or "", current_cwd) and 1 or 0
+			local b_curr = path.equals(b.cwd or "", current_cwd) and 1 or 0
 			if a_curr ~= b_curr then
 				return a_curr > b_curr
 			end
@@ -1235,8 +1360,8 @@ function M.select_workspace()
 		end)
 
 		local results = {}
-		for _, item in ipairs(index) do
-			if show_all or item.cwd == current_cwd then
+		for _, item in ipairs(entries) do
+			if show_all or path.equals(item.cwd or "", current_cwd) then
 				item.slot_idx = #results + 1
 				table.insert(results, item)
 			end
@@ -1249,9 +1374,9 @@ function M.select_workspace()
 			.new(
 				themes.get_dropdown({
 					prompt_title = string.format(
-						" 🦊 Workspaces [%s] (a: New | d: Delete | r: Rename | s: Overwrite | g: %s) ",
+						" 🦊 Workspaces [%s] (a: New | d: Del | r: Rename | s: Save | g: %s) ",
 						vim.fn.fnamemodify(current_cwd, ":t"),
-						show_all and "Current Project Only" or "View All"
+						show_all and "Current Only" or "View All"
 					),
 					width = 0.85,
 					results_title = "Saved Workspaces",
@@ -1286,7 +1411,9 @@ function M.select_workspace()
 					attach_mappings = function(prompt_bufnr, map)
 						--- Reopens the picker after an action that changed the list.
 						local function reopen()
-							vim.schedule(M.select_workspace)
+							vim.schedule(function()
+								M.select_workspace(show_all)
+							end)
 						end
 
 						--- Binds one action to several key/mode pairs.
@@ -1325,7 +1452,7 @@ function M.select_workspace()
 							if value then
 								actions.close(prompt_bufnr)
 								vim.schedule(function()
-									M.delete_workspace(value, M.select_workspace)
+									M.delete_workspace(value, reopen)
 								end)
 							end
 						end)
@@ -1335,7 +1462,7 @@ function M.select_workspace()
 							if value then
 								actions.close(prompt_bufnr)
 								vim.schedule(function()
-									M.rename_workspace(value, M.select_workspace)
+									M.rename_workspace(value, reopen)
 								end)
 							end
 						end)
@@ -1343,7 +1470,7 @@ function M.select_workspace()
 						map_all({ { "i", "<C-a>" }, { "n", "a" }, { "n", "A" } }, function()
 							actions.close(prompt_bufnr)
 							vim.schedule(function()
-								M.new_workspace(M.select_workspace)
+								M.new_workspace(reopen)
 							end)
 						end)
 
@@ -1352,15 +1479,17 @@ function M.select_workspace()
 							if value then
 								actions.close(prompt_bufnr)
 								vim.schedule(function()
-									M.save_workspace(value.name, M.select_workspace)
+									M.save_workspace(value.name, reopen)
 								end)
 							end
 						end)
 
 						map_all({ { "i", "<C-g>" }, { "n", "g" }, { "n", "G" } }, function()
-							show_all = not show_all
+							local next_mode = not show_all
 							actions.close(prompt_bufnr)
-							reopen()
+							vim.schedule(function()
+								M.select_workspace(next_mode)
+							end)
 						end)
 
 						for slot = 1, M.settings.quick_slots do

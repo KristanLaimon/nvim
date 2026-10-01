@@ -64,6 +64,7 @@ M.commands = {
 	{ name = "🐧 Browse WSL Files", cmd = "TelescopeFileBrowserWSL", category = "Files" },
 	{ name = "🔄 Check & Reload External File Changes (SmartCheck)", cmd = "SmartCheck", category = "Files" },
 	{ name = "📄 Apply File Template (Language Creation Templates)", cmd = "FoxFileTemplate", category = "Files" },
+	{ name = "📋 Copy Current File Relative Path to Clipboard", cmd = "CopyRelativePath", category = "Files" },
 	{ name = "📝 Open Notes Folder (File Explorer)", cmd = "Notes", category = "Notes" },
 	{ name = "📁 Change Default Notes Folder", cmd = "NotesChangeFolder", category = "Notes" },
 	{ name = "📝 Toggle Todo & Comments Sidebar (Right)", cmd = "TodoToggle", category = "Files" },

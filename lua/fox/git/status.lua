@@ -133,9 +133,12 @@ function M.info_start(cwd, secondary_alias)
 	if secondary_alias then
 		local ok_sec, sec = pcall(require, "fox.git.secondary")
 		if ok_sec and sec then
-			local argv_status = sec.build_cmd_args(secondary_alias, { "status", "--porcelain=v1", "-b" }, cwd)
-			local argv_numstat = sec.build_cmd_args(secondary_alias, { "diff", "--numstat" }, cwd)
-			local argv_numstat_cached = sec.build_cmd_args(secondary_alias, { "diff", "--cached", "--numstat" }, cwd)
+			local argv_status =
+				sec.build_cmd_args(secondary_alias, { "status", "--porcelain=v1", "-b", "--ignore-submodules=dirty" }, cwd)
+			local argv_numstat =
+				sec.build_cmd_args(secondary_alias, { "diff", "--numstat", "--ignore-submodules=dirty" }, cwd)
+			local argv_numstat_cached =
+				sec.build_cmd_args(secondary_alias, { "diff", "--cached", "--numstat", "--ignore-submodules=dirty" }, cwd)
 			if argv_status then
 				return {
 					status_proc = vim.system(argv_status, { text = true }),
@@ -151,9 +154,9 @@ function M.info_start(cwd, secondary_alias)
 	end
 
 	return {
-		status_proc = git.spawn({ "status", "--porcelain=v1", "-b" }, cwd),
-		numstat_proc = git.spawn({ "diff", "--numstat" }, cwd),
-		numstat_cached_proc = git.spawn({ "diff", "--cached", "--numstat" }, cwd),
+		status_proc = git.spawn({ "status", "--porcelain=v1", "-b", "--ignore-submodules=dirty" }, cwd),
+		numstat_proc = git.spawn({ "diff", "--numstat", "--ignore-submodules=dirty" }, cwd),
+		numstat_cached_proc = git.spawn({ "diff", "--cached", "--numstat", "--ignore-submodules=dirty" }, cwd),
 	}
 end
 

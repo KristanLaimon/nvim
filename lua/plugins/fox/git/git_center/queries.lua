@@ -109,16 +109,53 @@ end
 function M.get_git_info(cwd)
 	local target = config.get_active_target()
 	cwd = cwd or (target and target.full_path) or vim.fn.getcwd()
-	local info
-	if target and target.is_secondary and target.repo_alias then
-		info = status.info(cwd, target.repo_alias)
-	else
-		info = status.info(cwd)
+	local is_sec = target and target.is_secondary and target.repo_alias
+	local alias = is_sec and target.repo_alias or nil
+
+	local status_handle = status.info_start(cwd, alias)
+	if not status_handle then
+		return nil
 	end
-	if info then
-		info.local_branches = M.get_local_branches(cwd)
-		info.commit_graph = M.get_commit_graph(cwd, 10)
+
+	local branch_proc = git.spawn({ "branch", "--sort=-committerdate" }, cwd)
+	local graph_proc = git.spawn({
+		"log",
+		"--graph",
+		"--color=always",
+		"--pretty=format:%C(yellow)%h%C(reset)%C(auto)%d%C(reset) %C(cyan)%an%C(reset) %C(green)(%cr)%C(reset) %s",
+		"-n",
+		"10",
+	}, cwd)
+	local stash_proc = git.spawn({ "stash", "list", "--pretty=format:%gd%x1f%s%x1f%gs" }, cwd)
+
+	local info = status.info_finish(status_handle)
+	if not info then
+		return nil
 	end
+
+	local branch_lines = git.collect(branch_proc)
+	local branches = {}
+	for _, line in ipairs(branch_lines) do
+		local is_current = line:sub(1, 1) == "*"
+		local name = line:gsub("^%*%s*", ""):gsub("^%s*", ""):gsub("%s*$", "")
+		if name ~= "" and not name:match("HEAD detached") and not name:match("no branch") then
+			table.insert(branches, { name = name, is_current = is_current })
+		end
+	end
+	info.local_branches = branches
+	info.commit_graph = git.collect(graph_proc)
+
+	local stash_lines = git.collect(stash_proc)
+	local stashes = {}
+	for _, line in ipairs(stash_lines) do
+		local index, subject, gs = line:match("([^\31]+)\31([^\31]*)\31?(.*)")
+		if index then
+			local branch = gs:match("on ([^:]+)") or ""
+			table.insert(stashes, { index = index, message = subject, branch = branch })
+		end
+	end
+	info.stash_list = stashes
+
 	return info
 end
 

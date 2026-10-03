@@ -500,8 +500,6 @@ function M.open_git_center()
 		modals.open_diff_modal(d.target_file, d.target_type, d.cwd or root, d.commit_hash, d.diff_index)
 	end
 
-	local root_status_handle = status.info_start(root)
-
 	local submodules_targets, finish_submodules = submodules.list_start(root)
 	config.submodules = submodules_targets or finish_submodules()
 
@@ -517,22 +515,14 @@ function M.open_git_center()
 	end
 
 	local active_target = get_active_target()
-	local info
-	if active_target and active_target.is_secondary then
-		info = queries.get_git_info()
-	elseif active_target and active_target.full_path == root then
-		info = status.info_finish(root_status_handle)
-	else
-		info = queries.get_git_info(active_target and active_target.full_path)
-	end
+	local info = queries.get_git_info(active_target and active_target.full_path)
 	if not info then
-		notify("Cannot read Git status for " .. active_target.name, vim.log.levels.WARN, "Git Center (FOX)")
+		notify(
+			"Cannot read Git status for " .. (active_target and active_target.name or "repository"),
+			vim.log.levels.WARN,
+			"Git Center (FOX)"
+		)
 		return
-	end
-
-	if info and not info.local_branches then
-		info.local_branches = queries.get_local_branches(active_target and active_target.full_path)
-		info.commit_graph = queries.get_commit_graph(active_target and active_target.full_path, 10)
 	end
 
 	if active_target and active_target.path then

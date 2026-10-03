@@ -134,8 +134,22 @@ end
 function M.git_dir(cwd)
 	cwd = cwd or vim.fn.getcwd()
 	local candidate = cwd .. "/.git"
-	if vim.fn.isdirectory(candidate) == 1 then
+	local stat = (vim.uv or vim.loop).fs_stat(candidate)
+	if stat and stat.type == "directory" then
 		return candidate
+	elseif stat and stat.type == "file" then
+		local f = io.open(candidate, "r")
+		if f then
+			local content = f:read("*all") or ""
+			f:close()
+			local gitdir = content:match("gitdir:%s*(%S+)")
+			if gitdir then
+				if not gitdir:match("^/") and not gitdir:match("^%a:") and not gitdir:match("^//") then
+					gitdir = cwd .. "/" .. gitdir
+				end
+				return gitdir
+			end
+		end
 	end
 
 	local result = M.spawn({ "rev-parse", "--git-dir" }, cwd):wait()
@@ -181,7 +195,8 @@ end
 --- @return boolean
 function M.is_repository(cwd)
 	cwd = cwd or vim.fn.getcwd()
-	if vim.fn.isdirectory(cwd .. "/.git") == 1 then
+	local stat = (vim.uv or vim.loop).fs_stat(cwd .. "/.git")
+	if stat then
 		return true
 	end
 	local out = M.lines({ "rev-parse", "--is-inside-work-tree" }, cwd)

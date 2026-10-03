@@ -26,14 +26,16 @@ M.cache_filename = "git-center.json"
 -- Parsing
 -- ---------------------------------------------------------------------------
 
---- Parses `git submodule status` lines into relative submodule paths.
+--- Parses `git submodule status`, `git config`, or raw `.gitmodules` lines into relative submodule paths.
 --- Output lines look like:
 ---   ` 68b5a03bf18274a2b130e9d57a91176b91176b91 path/to/submodule (heads/main)`
 ---   `-68b5a03bf18274a2b130e9d57a91176b91176b91 path/to/submodule`
 ---   `+68b5a03bf18274a2b130e9d57a91176b91176b91 path/to/submodule`
 ---   `U68b5a03bf18274a2b130e9d57a91176b91176b91 path/to/submodule`
+---   `submodule.foo.path path/to/submodule`
+---   `path = path/to/submodule`
 ---
---- @param lines string[] Output lines from `git submodule status`.
+--- @param lines string[] Output lines from `git submodule status`, config, or `.gitmodules`.
 --- @return string[] paths Clean list of relative submodule paths.
 function M.parse_submodules(lines)
 	local paths = {}
@@ -42,16 +44,21 @@ function M.parse_submodules(lines)
 	for _, line in ipairs(lines or {}) do
 		local clean_line = vim.trim(line)
 		if clean_line ~= "" then
-			-- Format: optional indicator [ + - U], commit hash, space, path
+			-- Format 1: submodule status: optional indicator [ + - U], commit hash, space, path
 			local rel_path = clean_line:match("^[%+%-U%s]?%x+%s+(%S+)")
 			if not rel_path then
-				-- Fallback for lines like "submodule.<name>.path <path>" from git config
+				-- Format 2: git config output: "submodule.<name>.path <path>"
 				rel_path = clean_line:match("^submodule%..*%.path%s+(.+)$")
+			end
+			if not rel_path then
+				-- Format 3: raw .gitmodules lines: "path = <path>"
+				rel_path = clean_line:match("^path%s*=%s*(.+)$")
 			end
 
 			if rel_path and rel_path ~= "" then
-				rel_path = path_util.normalize(rel_path)
-				if not seen[rel_path] then
+				rel_path = rel_path:gsub("^[\"']", ""):gsub("[\"']$", "")
+				rel_path = path_util.normalize(vim.trim(rel_path))
+				if rel_path ~= "" and not seen[rel_path] then
 					seen[rel_path] = true
 					table.insert(paths, rel_path)
 				end
@@ -80,18 +87,31 @@ local function gitmodules_fingerprint(root_cwd)
 	return string.format("%d:%d:%d", stat.mtime.sec, stat.mtime.nsec, stat.size)
 end
 
---- Runs the two possible git queries and parses their result. Blocking.
+--- Reads submodule paths from .gitmodules file or status_lines.
 --- @param root_cwd string
---- @param status_lines string[] Output of `git submodule status`.
+--- @param status_lines? string[] Optional output of git status or git config.
 --- @return string[] paths Alphabetically sorted relative submodule paths.
 local function finish_discovery(root_cwd, status_lines)
-	local lines = status_lines
+	local lines = status_lines or {}
 	if #lines == 0 then
-		-- Fallback check for .gitmodules config if status returned nothing.
-		lines = git.lines({ "config", "--file", ".gitmodules", "--get-regexp", "^submodule\\..*\\.path$" }, root_cwd)
+		-- Fast path: directly read .gitmodules from disk in pure Lua (0.01ms)
+		local gitmodules_path = root_cwd .. "/.gitmodules"
+		local f = io.open(gitmodules_path, "r")
+		if f then
+			for line in f:lines() do
+				table.insert(lines, line)
+			end
+			f:close()
+		end
 	end
 
 	local paths = M.parse_submodules(lines)
+	if #paths == 0 and git.is_repository(root_cwd) then
+		-- Fallback check for .gitmodules config if direct read returned nothing.
+		lines = git.lines({ "config", "--file", ".gitmodules", "--get-regexp", "^submodule\\..*\\.path$" }, root_cwd)
+		paths = M.parse_submodules(lines)
+	end
+
 	table.sort(paths, function(a, b)
 		return a:lower() < b:lower()
 	end)
@@ -102,10 +122,8 @@ end
 ---
 --- Returns the path list immediately -- no git call at all -- when there is
 --- no `.gitmodules`, or when a previous discovery already cached this exact
---- `.gitmodules` fingerprint. Otherwise starts (but does not wait for) the
---- `git submodule status` process and returns a finisher to call once other
---- work has been started too, so the two round trips overlap instead of
---- happening one after another.
+--- `.gitmodules` fingerprint. Otherwise returns a finisher that reads `.gitmodules`
+--- directly without spawning expensive git processes.
 ---
 --- @param root_cwd string|nil Repository root directory.
 --- @return string[]|nil paths Immediate result, or nil when a finisher follows.
@@ -127,11 +145,9 @@ function M.discover_start(root_cwd)
 		return cached.submodule_paths, nil
 	end
 
-	local proc = git.spawn({ "submodule", "status" }, root_cwd)
-
 	return nil,
 		function()
-			local paths = finish_discovery(root_cwd, git.collect(proc))
+			local paths = finish_discovery(root_cwd)
 
 			local data = store.load(cfg_path, {})
 			data.submodules_fingerprint = fingerprint

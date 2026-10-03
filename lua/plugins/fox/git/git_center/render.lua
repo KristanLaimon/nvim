@@ -17,42 +17,64 @@ M.submodule_statuses = {}
 M.fetching_submodules = {}
 
 --- Asynchronously fetches submodule status for non-active tab indicators in background.
+--- Uses a single lightweight status command with --ignore-submodules=dirty and never blocks the UI thread.
 --- @param target table
 function M.fetch_target_status_async(target)
 	if not target or not target.full_path or M.fetching_submodules[target.path] then
 		return
 	end
 	M.fetching_submodules[target.path] = true
-	local handle = status.info_start(target.full_path)
-	if not handle then
-		M.fetching_submodules[target.path] = nil
-		return
+
+	local argv
+	if target.is_secondary and target.repo_alias then
+		local sec_ok, sec = pcall(require, "fox.git.secondary")
+		if sec_ok and sec then
+			argv = sec.build_cmd_args(
+				target.repo_alias,
+				{ "status", "--porcelain=v1", "-b", "--ignore-submodules=dirty" },
+				target.full_path
+			)
+		end
 	end
 
-	vim.schedule(function()
-		local info = status.info_finish(handle)
-		M.fetching_submodules[target.path] = nil
-		if info and target and target.path then
-			M.submodule_statuses[target.path] = {
-				has_changes = info.has_changes or (#info.staged + #info.unstaged + #info.untracked > 0),
-				behind = info.behind or 0,
-				ahead = info.ahead or 0,
-			}
-			local gc = package.loaded["plugins.fox.git.git_center"]
-			if
-				M.render_tab_bar
-				and gc
-				and gc.is_open
-				and gc.is_open()
-				and config.tab_buf
-				and vim.api.nvim_buf_is_valid(config.tab_buf)
-				and config.main_win
-				and vim.api.nvim_win_is_valid(config.main_win)
-			then
-				M.render_tab_bar(math.floor(vim.o.columns * config.settings.width_ratio))
+	if not argv then
+		local git_cmd = require("fox.git.cmd")
+		argv = git_cmd.build({ "status", "--porcelain=v1", "-b", "--ignore-submodules=dirty" }, target.full_path)
+	end
+
+	vim.system(
+		argv,
+		{ text = true },
+		vim.schedule_wrap(function(result)
+			M.fetching_submodules[target.path] = nil
+			if result and result.code == 0 and result.stdout then
+				local stdout = result.stdout or ""
+				local lines = vim.split(stdout, "[\r\n]+", { trimempty = true })
+				local _, _, ahead, behind = status.parse_branch(lines[1] or "")
+				local has_changes = #lines > 1
+
+				M.submodule_statuses[target.path] = {
+					has_changes = has_changes,
+					behind = behind or 0,
+					ahead = ahead or 0,
+				}
+
+				local gc = package.loaded["plugins.fox.git.git_center"]
+				if
+					M.render_tab_bar
+					and gc
+					and gc.is_open
+					and gc.is_open()
+					and config.tab_buf
+					and vim.api.nvim_buf_is_valid(config.tab_buf)
+					and config.main_win
+					and vim.api.nvim_win_is_valid(config.main_win)
+				then
+					M.render_tab_bar(math.floor(vim.o.columns * config.settings.width_ratio))
+				end
 			end
-		end
-	end)
+		end)
+	)
 end
 
 --- Returns submodule status info from cache or triggers background fetch.
@@ -627,11 +649,15 @@ function M.build_panel_content(info, width)
 	separator("─")
 
 	-- Section 6: Stash
-	local stash_list = {}
-	local q = require("plugins.fox.git.git_center.queries")
-	local ok_stash, sl = pcall(q.get_stash_list, nil)
-	if ok_stash and sl then
-		stash_list = sl
+	local stash_list = info and info.stash_list
+	if not stash_list then
+		local q = require("plugins.fox.git.git_center.queries")
+		local ok_stash, sl = pcall(q.get_stash_list, nil)
+		if ok_stash and sl then
+			stash_list = sl
+		else
+			stash_list = {}
+		end
 	end
 
 	section_lines[6] = add(string.format(" 6 Stash (%d)", #stash_list))

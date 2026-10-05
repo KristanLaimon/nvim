@@ -10,8 +10,8 @@ local settings = {
 
 	--- Menu entries, in order: { key, icon, label, command }.
 	buttons = {
-		{ "f", "📁", "File Explorer", ":TelescopeFileBrowserDesktop<CR>" },
 		{ "p", "💼", "Recent projects", ":RecentProjects<CR>" },
+		{ "f", "📁", "File Explorer", ":TelescopeFileBrowserDesktop<CR>" },
 		{ "n", "📝", "Notes", ":Notes<CR>" },
 		{ "s", "📦", "Dependencies & Toolchains", ":FoxInstallDependencies<CR>" },
 		{ "h", "🩺", "Health Check", ":FoxHealthCheck<CR>" },

@@ -498,6 +498,35 @@ local function clear_blame_column(win)
 	end
 end
 
+--- Splitting a window copies its window-local options, 'statuscolumn' included,
+--- so a split made while the gutter is active (neo-tree, a terminal, ...) would
+--- inherit the renderer and echo authors on unrelated buffers. Scrub any
+--- inherited renderer from windows that are not the ones we installed.
+local blame_guard = vim.api.nvim_create_augroup("FoxGitDiffBlameGuard", { clear = true })
+
+local function scrub_foreign_statuscolumn()
+	local cols = M.state.blame_columns
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+		local col = cols and cols[win]
+		if col then
+			-- The window was repurposed (e.g. turned into a terminal).
+			if col.buf and vim.api.nvim_buf_is_valid(col.buf) and vim.api.nvim_win_get_buf(win) ~= col.buf then
+				clear_blame_column(win)
+			end
+		else
+			local sc = vim.api.nvim_get_option_value("statuscolumn", { win = win })
+			if type(sc) == "string" and sc:find("_blame_statuscolumn", 1, true) then
+				pcall(vim.api.nvim_set_option_value, "statuscolumn", "", { win = win })
+			end
+		end
+	end
+end
+
+vim.api.nvim_create_autocmd({ "WinNew", "WinEnter", "BufWinEnter", "TabEnter" }, {
+	group = blame_guard,
+	callback = scrub_foreign_statuscolumn,
+})
+
 --- Shows or refreshes the blame gutter for the single code window (same branch).
 --- @param anchor_win integer Code window.
 --- @param code_buf integer Buffer whose line count drives the gutter.

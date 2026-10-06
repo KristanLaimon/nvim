@@ -26,6 +26,7 @@
 local lazy_req = require("fox.core.lazy_require")
 local git = lazy_req("fox.git.cmd")
 local diff = lazy_req("fox.git.diff")
+local blame = lazy_req("fox.git.blame")
 local ui = lazy_req("fox.core.ui")
 local path_util = lazy_req("fox.core.path")
 local project = lazy_req("fox.core.project")
@@ -67,6 +68,12 @@ M.state = {
 
 	-- Line modifications in active file for jumping
 	current_modifications = {},
+
+	-- Blame author column (only exists while diff mode is active)
+	show_blame = true,
+	blame_left_linenos = nil,
+	blame_right_linenos = nil,
+	blame_columns = nil,
 
 	-- Diff statistics
 	stats = nil,
@@ -361,6 +368,213 @@ local function get_valid_editor_win()
 	end
 	M.state.editor_win = new_win
 	return new_win
+end
+
+-- ---------------------------------------------------------------------------
+-- Blame author column (diff mode only)
+-- ---------------------------------------------------------------------------
+-- The author gutter is rendered through the code window's own 'statuscolumn',
+-- so it lives inside the code buffer and can never fall out of sync. An earlier
+-- separate gutter window looked right but drifted on every scroll: soft-wrap and
+-- the deletion virtual lines make the two windows' screen rows differ, and
+-- 'scrollbind' aligns by screen rows.
+
+--- Returns the configured git user.name, used to mark the reader's own lines.
+--- @param cwd string
+--- @return string
+local function git_user_name(cwd)
+	local ok, lines = pcall(git.lines, { "config", "user.name" }, cwd)
+	if ok and lines and lines[1] then
+		return vim.trim(lines[1])
+	end
+	return ""
+end
+
+--- Builds a per-row author map (keyed by buffer line) and the widest name.
+--- @param authors table<integer,string>|nil Authors keyed by source line number.
+--- @param linenos integer[]|nil Source line per row (same-branch omits it: row == line).
+--- @param row_count integer
+--- @return table<integer,string> by_row
+--- @return integer max_len
+local function build_blame_col(authors, linenos, row_count)
+	local by_row = {}
+	local max_len = 0
+	for i = 1, row_count do
+		local src = linenos and linenos[i] or i
+		local author = (src and authors and authors[src]) or ""
+		by_row[i] = author
+		if #author > max_len then
+			max_len = #author
+		end
+	end
+	return by_row, max_len
+end
+
+--- Renders one statuscolumn cell: line number (when enabled) plus the author.
+--- Called by Neovim for every visible line, so it stays a plain table lookup.
+--- @param win integer
+--- @return string
+function M._blame_statuscolumn(win)
+	local col = M.state.blame_columns and M.state.blame_columns[win]
+	if not col then
+		return ""
+	end
+	if col.buf and vim.api.nvim_buf_is_valid(col.buf) and vim.api.nvim_win_get_buf(win) ~= col.buf then
+		return ""
+	end
+
+	local lnum = vim.v.lnum
+	local relnum = vim.v.relnum or 0
+	local out = {}
+
+	if col.number or col.relnumber then
+		local num = (col.relnumber and relnum ~= 0) and relnum or lnum
+		local numhl = (relnum == 0) and "CursorLineNr" or "LineNr"
+		out[#out + 1] = string.format("%%#%s#%" .. col.numw .. "d %%*", numhl, num)
+	end
+
+	local author = col.authors[lnum] or ""
+	if author == "" then
+		out[#out + 1] = string.rep(" ", col.width)
+		return table.concat(out)
+	end
+
+	local hl = "GitDiffBlameAuthor"
+	if author:lower():match("not committed") then
+		hl = "GitDiffBlameUncommitted"
+	elseif col.user ~= "" and author == col.user then
+		hl = "GitDiffBlameSelf"
+	end
+	local text = author:gsub("%%", "%%%%")
+	if #author > col.width then
+		text = text:sub(1, math.max(1, col.width - 1)) .. "…"
+	elseif #author < col.width then
+		text = text .. string.rep(" ", col.width - #author)
+	end
+	out[#out + 1] = "%#" .. hl .. "#" .. text .. "%*"
+
+	return table.concat(out)
+end
+
+--- Installs (or refreshes) the blame gutter on a window.
+--- @param win integer Code window.
+--- @param code_buf integer Buffer shown in that window.
+--- @param authors table<integer,string>|nil Authors keyed by source line number.
+--- @param linenos integer[]|nil Source line per row (nil for same-branch).
+--- @param row_count integer
+local function install_blame_column(win, code_buf, authors, linenos, row_count)
+	if not (win and vim.api.nvim_win_is_valid(win)) then
+		return
+	end
+	M.state.blame_columns = M.state.blame_columns or {}
+	local existing = M.state.blame_columns[win]
+	local default_sc = (existing and existing.default_sc) or vim.api.nvim_get_option_value("statuscolumn", { win = win })
+
+	local by_row, max_len = build_blame_col(authors, linenos, row_count)
+	local numberwidth = vim.api.nvim_get_option_value("numberwidth", { win = win }) or 4
+	M.state.blame_columns[win] = {
+		authors = by_row,
+		width = math.max(3, max_len + 1),
+		user = git_user_name(M.state.cwd),
+		number = vim.api.nvim_get_option_value("number", { win = win }),
+		relnumber = vim.api.nvim_get_option_value("relativenumber", { win = win }),
+		numw = math.max(numberwidth, #tostring(row_count)),
+		buf = code_buf,
+		default_sc = default_sc,
+	}
+	local expr = "%!v:lua.require'plugins.fox.git.diff_mode'._blame_statuscolumn(" .. win .. ")"
+	pcall(vim.api.nvim_set_option_value, "statuscolumn", expr, { win = win })
+end
+
+--- Removes the blame gutter from a window and restores its statuscolumn.
+--- @param win integer
+local function clear_blame_column(win)
+	local col = M.state.blame_columns and M.state.blame_columns[win]
+	if col and win and vim.api.nvim_win_is_valid(win) then
+		pcall(vim.api.nvim_set_option_value, "statuscolumn", col.default_sc or "", { win = win })
+	end
+	if M.state.blame_columns then
+		M.state.blame_columns[win] = nil
+	end
+end
+
+--- Shows or refreshes the blame gutter for the single code window (same branch).
+--- @param anchor_win integer Code window.
+--- @param code_buf integer Buffer whose line count drives the gutter.
+--- @param file_path string Path relative to the repository.
+function M.ensure_blame_same_branch(anchor_win, code_buf, file_path)
+	if not M.state.show_blame or not M.state.is_active then
+		return
+	end
+	if
+		not (anchor_win and vim.api.nvim_win_is_valid(anchor_win))
+		or not (code_buf and vim.api.nvim_buf_is_valid(code_buf))
+	then
+		return
+	end
+	local authors = blame.query(file_path, nil, M.state.cwd)
+	install_blame_column(anchor_win, code_buf, authors, nil, vim.api.nvim_buf_line_count(code_buf))
+end
+
+--- Shows or refreshes the two blame gutters for the side-by-side mode.
+--- @param file_path string Path relative to the repository.
+function M.ensure_blame_between(file_path)
+	if not M.state.show_blame or not M.state.is_active then
+		return
+	end
+
+	if M.state.dual_left_win and vim.api.nvim_win_is_valid(M.state.dual_left_win) and M.state.dual_left_buf then
+		local authors = blame.query(file_path, M.state.base_ref, M.state.cwd)
+		install_blame_column(
+			M.state.dual_left_win,
+			M.state.dual_left_buf,
+			authors,
+			M.state.blame_left_linenos,
+			vim.api.nvim_buf_line_count(M.state.dual_left_buf)
+		)
+	end
+
+	if M.state.dual_right_win and vim.api.nvim_win_is_valid(M.state.dual_right_win) and M.state.dual_right_buf then
+		local authors = blame.query(file_path, M.state.target_ref, M.state.cwd)
+		install_blame_column(
+			M.state.dual_right_win,
+			M.state.dual_right_buf,
+			authors,
+			M.state.blame_right_linenos,
+			vim.api.nvim_buf_line_count(M.state.dual_right_buf)
+		)
+	end
+end
+
+--- Toggles the blame author gutter on or off.
+function M.toggle_blame()
+	M.state.show_blame = not M.state.show_blame
+	if not M.state.show_blame then
+		M.close_blame()
+		notify("Blame column hidden")
+		return
+	end
+
+	if M.state.mode == "between_branches" and M.state.active_file then
+		M.ensure_blame_between(M.state.active_file)
+	elseif M.state.active_file then
+		local win = M.state.editor_win
+		if not (win and vim.api.nvim_win_is_valid(win)) then
+			win = vim.api.nvim_get_current_win()
+		end
+		if win and vim.api.nvim_win_is_valid(win) then
+			M.ensure_blame_same_branch(win, vim.api.nvim_win_get_buf(win), M.state.active_file)
+		end
+	end
+	notify("Blame column shown")
+end
+
+--- Removes every blame gutter and restores the original statuscolumns.
+function M.close_blame()
+	for win, _ in pairs(M.state.blame_columns or {}) do
+		clear_blame_column(win)
+	end
+	M.state.blame_columns = nil
 end
 
 --- Moves cursor to next modification in active file
@@ -719,6 +933,8 @@ render_file_list = function()
 	elseif M.state.target_ref == "WORKTREE" then
 		if M.state.commits_behind > 0 then
 			header_title = string.format(" 🔍 Diff: Worktree + HEAD~%d (%s)", M.state.commits_behind, M.state.base_ref)
+		elseif M.state.base_ref and M.state.base_ref ~= "HEAD" then
+			header_title = string.format(" 🔍 Diff: Worktree + commits until %s", M.state.base_ref)
 		else
 			header_title = " 🔍 Diff: Worktree (Staged/Unstaged) vs HEAD"
 		end
@@ -833,6 +1049,7 @@ render_file_list = function()
 	table.insert(lines, " [J/K / ]c/[c]: Jump Diff")
 	table.insert(lines, " [Enter/Space]: Select | [h/Esc]: Code")
 	table.insert(lines, " [c]: Range | [e]: Export | [i]: Import")
+	table.insert(lines, " [B]: Toggle Blame Author Column")
 	table.insert(lines, " [q]: Close")
 
 	vim.bo[M.state.file_list_buf].modifiable = true
@@ -1193,6 +1410,10 @@ function M.open_file_list_window(files, selected_idx)
 		M.open_config_dialog()
 	end, opts)
 
+	vim.keymap.set("n", "B", function()
+		M.toggle_blame()
+	end, opts)
+
 	for _, k in ipairs({ "e", "E", "z" }) do
 		vim.keymap.set("n", k, function()
 			M.export_diff_prompt()
@@ -1338,6 +1559,8 @@ function M.open_file_same_branch(file_path, opts)
 		M.state.current_mod_idx = 0
 	end
 
+	M.ensure_blame_same_branch(vim.api.nvim_get_current_win(), cur_buf, file_path)
+
 	if stay_in_sidebar and M.state.file_list_win and vim.api.nvim_win_is_valid(M.state.file_list_win) then
 		pcall(vim.api.nvim_set_current_win, M.state.file_list_win)
 	end
@@ -1368,6 +1591,10 @@ function M.start_same_branch(opts)
 	if not git.is_repository(cwd) then
 		notify("Current directory is not a Git repository", vim.log.levels.WARN)
 		return
+	end
+
+	if M.state.mode == "between_branches" then
+		M.close_blame()
 	end
 
 	M.state.cwd = cwd
@@ -1433,6 +1660,12 @@ function M.start_same_branch(opts)
 						for _, item in ipairs(M.state.files) do
 							if item.file == rel then
 								M.apply_same_branch_highlights(b, rel, M.state.base_ref, M.state.target_ref, M.state.cwd)
+								if M.state.show_blame then
+									local w = vim.fn.win_findbuf(b)[1]
+									if w and vim.api.nvim_win_is_valid(w) then
+										M.ensure_blame_same_branch(w, b, rel)
+									end
+								end
 								if render_file_list then
 									render_file_list()
 								end
@@ -1543,7 +1776,10 @@ function M.open_file_between_branches(file_path, opts)
 
 	-- Compute side-by-side diff
 	local raw_diff = git.lines({ "diff", "-U0", "--no-ext-diff", base_b, target_b, "--", file_path }, cwd)
-	local l_lines, left_kinds, r_lines, right_kinds = diff.format_side_by_side_dual(raw_diff, false, file_path)
+	local l_lines, left_kinds, r_lines, right_kinds, left_linenos, right_linenos =
+		diff.format_side_by_side_dual(raw_diff, false, file_path)
+	M.state.blame_left_linenos = left_linenos
+	M.state.blame_right_linenos = right_linenos
 
 	vim.bo[left_buf].modifiable = true
 	vim.api.nvim_buf_set_lines(left_buf, 0, -1, false, l_lines)
@@ -1571,6 +1807,8 @@ function M.open_file_between_branches(file_path, opts)
 	end
 	M.state.current_modifications = mods
 	M.state.current_mod_idx = #mods > 0 and 1 or 0
+
+	M.ensure_blame_between(file_path)
 
 	if not stay_in_sidebar then
 		M.focus_editor()
@@ -1603,6 +1841,8 @@ function M.start_between_branches(branch1, branch2, cwd)
 		notify("Current directory is not a Git repository", vim.log.levels.WARN)
 		return
 	end
+
+	M.close_blame()
 
 	M.state.cwd = cwd
 	M.state.mode = "between_branches"
@@ -1669,6 +1909,9 @@ function M.close(opts)
 
 		-- Clear diff highlights & extmarks from ALL open buffers in Neovim
 		M.clear_all_diff_highlights()
+
+		-- Tear down blame author columns (diff-mode only surface)
+		M.close_blame()
 
 		-- Determine target editor window to restore focus to
 		local target_win = M.state.editor_win or M.state.prev_win
@@ -2022,6 +2265,7 @@ function M.open_config_dialog()
 			math.max(1, M.state.commits_behind)
 		),
 		"4. 📜 Compare 2 Specific Commits (Commit Graph)",
+		"5. 🌳 Working Tree + Commits until a Branch (ancestor of current branch)",
 	}
 
 	vim.ui.select(choices, { prompt = "⚡ Select Diff Scope / Range:" }, function(choice, idx)
@@ -2075,7 +2319,51 @@ function M.open_config_dialog()
 			})
 		elseif idx == 4 then
 			M.open_two_commits_picker(M.state.cwd)
+		elseif idx == 5 then
+			M.pick_ancestor_branch_and_start(M.state.cwd)
 		end
+	end)
+end
+
+--- Opens a picker of branches that are ancestors of the current branch and
+--- starts a same-branch diff covering the working tree plus every commit made
+--- since the chosen branch (i.e. `git diff <branch>` against the working tree).
+--- Only branches merged into HEAD are offered, so an unrelated branch can never
+--- be selected.
+--- @param cwd string|nil
+function M.pick_ancestor_branch_and_start(cwd)
+	cwd = cwd or M.state.cwd or vim.fn.getcwd()
+	if not git.is_repository(cwd) then
+		notify("Current directory is not a Git repository", vim.log.levels.WARN)
+		return
+	end
+
+	local current = vim.trim(git.lines({ "branch", "--show-current" }, cwd)[1] or "")
+	local raw = git.lines({ "branch", "--merged", "HEAD", "--format=%(refname:short)" }, cwd)
+	local branches = {}
+	for _, name in ipairs(raw) do
+		name = vim.trim(name)
+		if name ~= "" and name ~= current then
+			table.insert(branches, name)
+		end
+	end
+
+	if #branches == 0 then
+		notify("No ancestor branch found: the current branch has no other branch in its history", vim.log.levels.WARN)
+		return
+	end
+
+	vim.ui.select(branches, {
+		prompt = "🌳 Select ancestor branch (working tree + all commits until it):",
+	}, function(choice)
+		if not choice then
+			return
+		end
+		M.state.commits_behind = 0
+		M.state.include_worktree = true
+		M.state.custom_commits = false
+		notify(string.format("Diff scope: Working Tree + commits until branch '%s'", choice))
+		M.start_same_branch({ base_ref = choice, target_ref = "WORKTREE", cwd = cwd })
 	end)
 end
 
@@ -2087,6 +2375,9 @@ function M.open()
 		if M.state.commits_behind > 0 then
 			same_branch_title =
 				string.format("1. 🔍 Same Branch Diff (Worktree + HEAD~%d) [%s]", M.state.commits_behind, status_label)
+		elseif M.state.base_ref and M.state.base_ref ~= "HEAD" then
+			same_branch_title =
+				string.format("1. 🔍 Same Branch Diff (Worktree + until %s) [%s]", M.state.base_ref, status_label)
 		else
 			same_branch_title = string.format("1. 🔍 Same Branch Diff (Worktree vs HEAD) [%s]", status_label)
 		end
@@ -2972,6 +3263,10 @@ function M.setup()
 		M.close()
 	end, { desc = "Close Git Diff Mode" })
 
+	pcall(vim.api.nvim_create_user_command, "GitDiffBlame", function()
+		M.toggle_blame()
+	end, { desc = "Toggle the blame author column in Git Diff Mode" })
+
 	pcall(vim.api.nvim_create_user_command, "GitDiffExportZip", function()
 		M.export_diff_prompt()
 	end, { desc = "Export currently diffed files to a zip archive" })
@@ -2995,6 +3290,7 @@ return setmetatable({
 		"GitDiffBetweenBranches",
 		"GitDiffToggle",
 		"GitDiffClose",
+		"GitDiffBlame",
 		"GitDiffExportZip",
 		"GitDiffImportZip",
 	},

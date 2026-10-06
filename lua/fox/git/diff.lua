@@ -40,6 +40,10 @@ M.highlights = {
 	header = { name = "GitCenterDiffHeader", opts = { bg = "#1e293b", fg = "#89dceb", bold = true, default = true } },
 	context = { name = "GitCenterDiffContext", opts = { fg = "#cdd6f4", default = true } },
 	filler = { name = "GitCenterDiffFiller", opts = { bg = "#181825", fg = "#45475a", default = true } },
+	blame_author = { name = "GitDiffBlameAuthor", opts = { fg = "#7f849c", default = true } },
+	blame_self = { name = "GitDiffBlameSelf", opts = { fg = "#89dceb", bold = true, default = true } },
+	blame_uncommitted = { name = "GitDiffBlameUncommitted", opts = { fg = "#f9e2af", italic = true, default = true } },
+	blame_header = { name = "GitDiffBlameHeader", opts = { fg = "#11111b", bg = "#89dceb", bold = true, default = true } },
 }
 
 --- Diff lines that carry no information for a reader.
@@ -504,15 +508,19 @@ end
 --- @return string[] left_kinds ("delete" | "context" | "header" | "filler")
 --- @return string[] right_lines
 --- @return string[] right_kinds ("add" | "context" | "header" | "filler")
+--- @return integer[] left_linenos Source line number per left row (nil for filler/header).
+--- @return integer[] right_linenos Source line number per right row (nil for filler/header).
 function M.format_side_by_side_dual(raw_lines, is_untracked, filename)
-	local left_lines, left_kinds = {}, {}
-	local right_lines, right_kinds = {}, {}
+	local left_lines, left_kinds, left_linenos = {}, {}, {}
+	local right_lines, right_kinds, right_linenos = {}, {}, {}
 
-	local function push(l_text, l_kind, r_text, r_kind)
+	local function push(l_text, l_kind, r_text, r_kind, l_no, r_no)
 		table.insert(left_lines, l_text)
 		table.insert(left_kinds, l_kind)
+		left_linenos[#left_lines] = l_no
 		table.insert(right_lines, r_text)
 		table.insert(right_kinds, r_kind)
+		right_linenos[#right_lines] = r_no
 	end
 
 	if (filename and M.is_binary_file(filename)) or M.is_binary_diff(raw_lines) then
@@ -528,7 +536,7 @@ function M.format_side_by_side_dual(raw_lines, is_untracked, filename)
 		local msg = " [ Binary file - preview and diff analysis disabled ]"
 		push(banner_l, "header", banner_r, "header")
 		push(msg, "context", msg, "context")
-		return left_lines, left_kinds, right_lines, right_kinds
+		return left_lines, left_kinds, right_lines, right_kinds, left_linenos, right_linenos
 	end
 
 	if is_untracked then
@@ -538,10 +546,10 @@ function M.format_side_by_side_dual(raw_lines, is_untracked, filename)
 			" ─── 📄 After (New Untracked File) ──────────────────",
 			"header"
 		)
-		for _, line in ipairs(raw_lines) do
-			push("", "filler", "+ " .. line, "add")
+		for i, line in ipairs(raw_lines) do
+			push("", "filler", "+ " .. line, "add", nil, i)
 		end
-		return left_lines, left_kinds, right_lines, right_kinds
+		return left_lines, left_kinds, right_lines, right_kinds, left_linenos, right_linenos
 	end
 
 	local in_header = true
@@ -549,6 +557,7 @@ function M.format_side_by_side_dual(raw_lines, is_untracked, filename)
 	local current_file = nil
 	local idx = 1
 	local total = #raw_lines
+	local old_line, new_line = 1, 1
 
 	while idx <= total do
 		local line = raw_lines[idx]
@@ -569,6 +578,9 @@ function M.format_side_by_side_dual(raw_lines, is_untracked, filename)
 		elseif line:match(M.hunk_pattern) then
 			in_header = false
 			hunk_count = hunk_count + 1
+			local old_start, new_start = line:match("@@ %-(%d+),?%d* %+(%d+),?%d* @@")
+			old_line = tonumber(old_start) or 1
+			new_line = tonumber(new_start) or 1
 			local context = line:match("@@ %-%d+,?%d* %+%d+,?%d* @@(.*)") or ""
 			local range = line:match("(@@ %-%d+,?%d* %+%d+,?%d* @@)") or line
 			local header = string.format(
@@ -615,14 +627,26 @@ function M.format_side_by_side_dual(raw_lines, is_untracked, filename)
 
 				local max_count = math.max(#dels, #adds)
 				for i = 1, max_count do
+					local has_l = dels[i] ~= nil
+					local has_r = adds[i] ~= nil
+					local l_no = has_l and old_line or nil
+					local r_no = has_r and new_line or nil
+					if has_l then
+						old_line = old_line + 1
+					end
+					if has_r then
+						new_line = new_line + 1
+					end
 					local l_txt = dels[i] or ""
-					local l_k = dels[i] and "delete" or "filler"
+					local l_k = has_l and "delete" or "filler"
 					local r_txt = adds[i] or ""
-					local r_k = adds[i] and "add" or "filler"
-					push(l_txt, l_k, r_txt, r_k)
+					local r_k = has_r and "add" or "filler"
+					push(l_txt, l_k, r_txt, r_k, l_no, r_no)
 				end
 			else
-				push(line, "context", line, "context")
+				push(line, "context", line, "context", old_line, new_line)
+				old_line = old_line + 1
+				new_line = new_line + 1
 				idx = idx + 1
 			end
 		else
@@ -634,7 +658,7 @@ function M.format_side_by_side_dual(raw_lines, is_untracked, filename)
 		push(M.empty_message, "context", M.empty_message, "context")
 	end
 
-	return left_lines, left_kinds, right_lines, right_kinds
+	return left_lines, left_kinds, right_lines, right_kinds, left_linenos, right_linenos
 end
 
 --- Formats side-by-side lines into a single buffer line array with dual columns separated by `│`.

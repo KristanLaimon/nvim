@@ -150,6 +150,7 @@ function M.parse_raw_graph_line(raw_line)
 		is_commit = true,
 		graph_raw = graph_prefix or "",
 		hash = hash,
+		full_hash = parts[5] or hash,
 		refs = parts[1] or "",
 		author = parts[2] or "",
 		date = parts[3] or "",
@@ -165,6 +166,7 @@ function M.format_commit_line(parsed)
 	local line_text = ""
 	local byte_len = 0
 	local spans = {}
+	local dim = parsed.dim == true
 
 	local function append(chunk, hl_group)
 		if not chunk or chunk == "" then
@@ -186,7 +188,7 @@ function M.format_commit_line(parsed)
 	for col = 1, #raw do
 		local c = raw:sub(col, col)
 		local lane_idx = ((col - 1) % #LANE_COLORS) + 1
-		local hl = LANE_COLORS[lane_idx].name
+		local hl = dim and "FoxGitKrakenDim" or LANE_COLORS[lane_idx].name
 
 		if c == "*" then
 			append("●", hl)
@@ -214,7 +216,7 @@ function M.format_commit_line(parsed)
 	append(" ")
 
 	-- Short commit hash
-	append(parsed.hash, "FoxGitKrakenSha")
+	append(parsed.hash, dim and "FoxGitKrakenDim" or "FoxGitKrakenSha")
 	append(" ")
 
 	-- Ref badges
@@ -226,17 +228,17 @@ function M.format_commit_line(parsed)
 
 	-- Commit subject
 	if parsed.subject and parsed.subject ~= "" then
-		append(parsed.subject, "FoxGitKrakenSubject")
+		append(parsed.subject, dim and "FoxGitKrakenDim" or "FoxGitKrakenSubject")
 	else
 		append("(no commit message)", "FoxGitKrakenDim")
 	end
 
 	-- Author & Relative date
 	if parsed.author and parsed.author ~= "" then
-		append("  👤 " .. parsed.author, "FoxGitKrakenAuthor")
+		append("  👤 " .. parsed.author, dim and "FoxGitKrakenDim" or "FoxGitKrakenAuthor")
 	end
 	if parsed.date and parsed.date ~= "" then
-		append("  🕒 " .. parsed.date, "FoxGitKrakenDate")
+		append("  🕒 " .. parsed.date, dim and "FoxGitKrakenDim" or "FoxGitKrakenDate")
 	end
 
 	return line_text, spans
@@ -246,24 +248,53 @@ end
 --- @param limit integer Number of commits to request.
 --- @param cwd string Repository directory.
 --- @param mode "branch"|"all" Mode to run git log in.
+--- @param opts table|nil Optional rendering/selection options:
+---   refs?             string[]      Explicit refs to log (overrides --all in "all" mode).
+---   order?            "topo"|"date" Commit ordering (`--topo-order` when "topo").
+---   connector_mode?   "dim"|"hidden" Whether to insert the synthetic lane spacer rows.
+---   current_branch?   string        Branch whose reachable commits stay bright.
+---   highlight_current? boolean      Dim commits not reachable from current_branch (default true).
 --- @return table result
-function M.fetch_commits(limit, cwd, mode)
+function M.fetch_commits(limit, cwd, mode, opts)
+	opts = opts or {}
 	local cmd = {
 		"log",
 		"--graph",
 		"--color=never",
-		"--pretty=format:%h%x1f%d%x1f%an%x1f%cr%x1f%s",
+		"--pretty=format:%h%x1f%d%x1f%an%x1f%cr%x1f%s%x1f%H",
 		"-n",
 		tostring(limit),
 	}
+	if opts.order == "topo" then
+		table.insert(cmd, 2, "--topo-order")
+	end
 	if mode == "all" then
-		table.insert(cmd, 2, "--all")
+		if opts.refs and #opts.refs > 0 then
+			for _, ref in ipairs(opts.refs) do
+				table.insert(cmd, ref)
+			end
+		else
+			table.insert(cmd, "--all")
+		end
 	else
 		table.insert(cmd, "HEAD")
 	end
 
 	local raw_lines = queries.git_lines(cmd, cwd)
 
+	-- Commits reachable from the current branch; used to dim unrelated branches.
+	-- Fetching the same limit is enough: every current-branch commit in the top
+	-- `limit` of --all is also in the top `limit` of the branch itself.
+	local current_set = nil
+	if opts.current_branch and opts.current_branch ~= "" and opts.highlight_current ~= false then
+		current_set = {}
+		local hashes = queries.git_lines({ "rev-list", "-n", tostring(limit + 1), opts.current_branch }, cwd)
+		for _, h in ipairs(hashes) do
+			current_set[h] = true
+		end
+	end
+
+	local show_connectors = opts.connector_mode ~= "hidden"
 	local rendered_lines = {}
 	local all_spans = {}
 	local line_commits = {}
@@ -272,17 +303,22 @@ function M.fetch_commits(limit, cwd, mode)
 	for _, raw_line in ipairs(raw_lines) do
 		local parsed = M.parse_raw_graph_line(raw_line)
 
-		if parsed.is_commit and #rendered_lines > 0 then
+		if parsed.is_commit then
+			parsed.dim = current_set ~= nil and not current_set[parsed.full_hash]
+		end
+
+		if parsed.is_commit and show_connectors and #rendered_lines > 0 then
 			local gap_raw = parsed.graph_raw and parsed.graph_raw:gsub("%*", "│") or "│"
 			local gap_parsed = {
 				is_commit = false,
 				graph_raw = gap_raw ~= "" and gap_raw or "│",
+				dim = true,
 			}
 			local gap_text, gap_spans = M.format_commit_line(gap_parsed)
 			table.insert(rendered_lines, gap_text)
 			table.insert(all_spans, gap_spans)
 			if #commits > 0 then
-				line_commits[#rendered_lines] = commits[#commits].hash
+				line_commits[#rendered_lines] = commits[#commits].full_hash
 			end
 		end
 
@@ -292,10 +328,10 @@ function M.fetch_commits(limit, cwd, mode)
 		table.insert(all_spans, spans)
 
 		if parsed.is_commit and parsed.hash and parsed.hash ~= "" then
-			line_commits[#rendered_lines] = parsed.hash
+			line_commits[#rendered_lines] = parsed.full_hash or parsed.hash
 			table.insert(commits, parsed)
 		elseif #commits > 0 then
-			line_commits[#rendered_lines] = commits[#commits].hash
+			line_commits[#rendered_lines] = commits[#commits].full_hash
 		end
 	end
 
@@ -310,6 +346,35 @@ function M.fetch_commits(limit, cwd, mode)
 		total_commits = #commits,
 		all_fetched = all_fetched,
 	}
+end
+
+--- Lists branches for the graph filter/legend, newest first.
+--- @param cwd string Repository directory.
+--- @return table[] { name = string, current = boolean }
+function M.get_branch_list(cwd)
+	local names = {}
+	local seen = {}
+	for _, ref in
+		ipairs(
+			queries.git_lines(
+				{ "for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads", "refs/remotes" },
+				cwd
+			)
+		)
+	do
+		local name = vim.trim(ref)
+		if name ~= "" and name ~= "origin" and not name:match("/HEAD$") and not seen[name] then
+			seen[name] = true
+			table.insert(names, name)
+		end
+	end
+
+	local current = vim.trim(queries.git_lines({ "branch", "--show-current" }, cwd)[1] or "")
+	local branches = {}
+	for _, name in ipairs(names) do
+		table.insert(branches, { name = name, current = (name == current) })
+	end
+	return branches
 end
 
 --- Opens the full-screen GitKraken-style Commit Graph Viewer.
@@ -335,11 +400,23 @@ function M.open(target_cwd, initial_mode)
 	local batch_size = 50
 	local is_fetching = false
 	local all_fetched = false
+	local refs_filter = nil -- nil = every branch (--all); otherwise a list of refs
+	local order = "topo" -- "topo" | "date"
+	local connector_mode = "dim" -- "dim" | "hidden"
 
 	local current_branch = (info.branch and info.branch ~= "") and info.branch
 		or (queries.git_lines({ "branch", "--show-current" }, active_cwd)[1] or "HEAD")
 
-	local initial_data = M.fetch_commits(current_limit, active_cwd, mode)
+	local function fetch_opts()
+		return {
+			refs = refs_filter,
+			order = order,
+			connector_mode = connector_mode,
+			current_branch = current_branch,
+		}
+	end
+
+	local initial_data = M.fetch_commits(current_limit, active_cwd, mode, fetch_opts())
 	if #initial_data.lines == 0 then
 		config.notify("No commit history found in repository", vim.log.levels.INFO)
 		return
@@ -385,12 +462,29 @@ function M.open(target_cwd, initial_mode)
 	end
 
 	local function format_title(loading)
-		local mode_str = mode == "all" and "🌐 All Branches (--all) [a: Switch to Current]"
-			or string.format("🌿 Current Branch (%s) [a: Switch to --all]", current_branch)
+		local mode_str
+		if mode == "all" then
+			if refs_filter and #refs_filter > 0 then
+				mode_str = string.format("🎯 %d branch(es) [b: Edit Filter]", #refs_filter)
+			else
+				mode_str = "🌐 All Branches (--all) [a: Switch to Current]"
+			end
+		else
+			mode_str = string.format("🌿 Current Branch (%s) [a: Switch to --all]", current_branch)
+		end
 		local count_str = all_fetched and string.format("(All %d commits)", total_commits_count)
 			or string.format("(%d commits)", total_commits_count)
+		local order_str = order == "topo" and "topo" or "date"
+		local conn_str = connector_mode == "hidden" and "no-gaps" or "gaps"
 		local load_str = loading and " ⏳ Loading..." or ""
-		return string.format(" 📊 GitKraken Graph │ Mode: %s │ %s%s ", mode_str, count_str, load_str)
+		return string.format(
+			" 📊 GitKraken Graph │ Mode: %s │ %s │ %s/%s%s ",
+			mode_str,
+			count_str,
+			order_str,
+			conn_str,
+			load_str
+		)
 	end
 
 	local left_win = vim.api.nvim_open_win(left_buf, true, {
@@ -458,6 +552,22 @@ function M.open(target_cwd, initial_mode)
 				title = format_title(loading),
 				title_pos = "center",
 			})
+		end
+	end
+
+	local function render_left_buffer()
+		if not (left_buf and vim.api.nvim_buf_is_valid(left_buf)) then
+			return
+		end
+		vim.bo[left_buf].modifiable = true
+		vim.api.nvim_buf_set_lines(left_buf, 0, -1, false, rendered_lines)
+		vim.bo[left_buf].modifiable = false
+
+		vim.api.nvim_buf_clear_namespace(left_buf, M.ns_graph, 0, -1)
+		for row_idx, spans in ipairs(all_spans) do
+			for _, s in ipairs(spans) do
+				pcall(vim.api.nvim_buf_add_highlight, left_buf, M.ns_graph, s.hl_group, row_idx - 1, s.col_start, s.col_end)
+			end
 		end
 	end
 
@@ -662,6 +772,32 @@ function M.open(target_cwd, initial_mode)
 		end
 	end
 
+	-- Full refresh: re-fetches from scratch respecting the current mode, order,
+	-- branch filter and connector setting.
+	local function reload()
+		current_limit = 50
+		all_fetched = false
+		is_fetching = true
+		update_window_title(true)
+
+		vim.schedule(function()
+			local result = M.fetch_commits(current_limit, active_cwd, mode, fetch_opts())
+			is_fetching = false
+			commits_data = result.commits
+			total_commits_count = result.total_commits
+			all_fetched = result.all_fetched
+			rendered_lines = result.lines
+			all_spans = result.spans
+			line_commits = result.line_commits
+			render_left_buffer()
+			if left_win and vim.api.nvim_win_is_valid(left_win) then
+				pcall(vim.api.nvim_win_set_cursor, left_win, { 1, 0 })
+			end
+			update_window_title(false)
+			update_commit_details(nil)
+		end)
+	end
+
 	-- On-the-fly fetch implementation
 	local function fetch_more(target_row)
 		if is_fetching or all_fetched then
@@ -677,7 +813,7 @@ function M.open(target_cwd, initial_mode)
 		update_window_title(true)
 
 		vim.schedule(function()
-			local ok, result = pcall(M.fetch_commits, current_limit, active_cwd, mode)
+			local ok, result = pcall(M.fetch_commits, current_limit, active_cwd, mode, fetch_opts())
 			is_fetching = false
 			if ok and result then
 				if result.total_commits <= #commits_data then
@@ -689,27 +825,7 @@ function M.open(target_cwd, initial_mode)
 					rendered_lines = result.lines
 					all_spans = result.spans
 					line_commits = result.line_commits
-
-					if left_buf and vim.api.nvim_buf_is_valid(left_buf) then
-						vim.bo[left_buf].modifiable = true
-						vim.api.nvim_buf_set_lines(left_buf, 0, -1, false, rendered_lines)
-						vim.bo[left_buf].modifiable = false
-
-						vim.api.nvim_buf_clear_namespace(left_buf, M.ns_graph, 0, -1)
-						for row_idx, spans in ipairs(all_spans) do
-							for _, s in ipairs(spans) do
-								pcall(
-									vim.api.nvim_buf_add_highlight,
-									left_buf,
-									M.ns_graph,
-									s.hl_group,
-									row_idx - 1,
-									s.col_start,
-									s.col_end
-								)
-							end
-						end
-					end
+					render_left_buffer()
 				end
 			end
 
@@ -807,45 +923,166 @@ function M.open(target_cwd, initial_mode)
 	-- Toggle mode (Current Branch <-> All Branches)
 	local function toggle_mode()
 		mode = (mode == "branch") and "all" or "branch"
-		current_limit = 50
-		all_fetched = false
-		commits_data = {}
-		rendered_lines = {}
-		all_spans = {}
-		line_commits = {}
+		if mode == "branch" then
+			refs_filter = nil
+		end
+		reload()
 
-		update_window_title(true)
+		local mode_name = (mode == "all") and "🌐 All Branches (--all)"
+			or ("🌿 Current Branch (" .. current_branch .. ")")
+		config.notify("Switched Git Graph Mode: " .. mode_name)
+	end
 
-		vim.schedule(function()
-			local result = M.fetch_commits(current_limit, active_cwd, mode)
-			commits_data = result.commits
-			total_commits_count = result.total_commits
-			all_fetched = result.all_fetched
-			rendered_lines = result.lines
-			all_spans = result.spans
-			line_commits = result.line_commits
+	-- Toggle commit ordering (topological <-> date)
+	local function toggle_order()
+		order = (order == "topo") and "date" or "topo"
+		reload()
+		config.notify("Commit order: " .. (order == "topo" and "--topo-order" or "--date-order"))
+	end
 
-			if left_buf and vim.api.nvim_buf_is_valid(left_buf) then
-				vim.bo[left_buf].modifiable = true
-				vim.api.nvim_buf_set_lines(left_buf, 0, -1, false, rendered_lines)
-				vim.bo[left_buf].modifiable = false
+	-- Toggle the synthetic lane spacer rows that keep merges connected
+	local function toggle_connectors()
+		connector_mode = (connector_mode == "dim") and "hidden" or "dim"
+		reload()
+		config.notify("Lane spacers: " .. (connector_mode == "hidden" and "hidden" or "dimmed"))
+	end
 
-				vim.api.nvim_buf_clear_namespace(left_buf, M.ns_graph, 0, -1)
-				for row_idx, spans in ipairs(all_spans) do
-					for _, s in ipairs(spans) do
-						pcall(vim.api.nvim_buf_add_highlight, left_buf, M.ns_graph, s.hl_group, row_idx - 1, s.col_start, s.col_end)
-					end
+	-- Stable colour index per branch name, so a branch keeps the same colour.
+	local function branch_color_idx(name)
+		local h = 5381
+		for i = 1, #name do
+			h = (h * 33 + name:byte(i)) % 2147483647
+		end
+		return (h % #LANE_COLORS) + 1
+	end
+
+	-- Branch filter: choose which branches the graph logs.
+	local function open_branch_filter()
+		local branches = M.get_branch_list(active_cwd)
+		if #branches == 0 then
+			config.notify("No branches found to filter", vim.log.levels.WARN)
+			return
+		end
+
+		local selected = {}
+		for _, b in ipairs(branches) do
+			if refs_filter == nil then
+				selected[b.name] = true
+			else
+				selected[b.name] = vim.tbl_contains(refs_filter, b.name)
+			end
+		end
+
+		local buf = vim.api.nvim_create_buf(false, true)
+		vim.bo[buf].buftype = "nofile"
+		vim.bo[buf].bufhidden = "wipe"
+
+		local function paint()
+			local lines = {}
+			for _, b in ipairs(branches) do
+				local box = selected[b.name] and "[x]" or "[ ]"
+				local cur = b.current and "  (current)" or ""
+				table.insert(lines, string.format(" %s %s%s", box, b.name, cur))
+			end
+			vim.bo[buf].modifiable = true
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+			vim.bo[buf].modifiable = false
+		end
+		paint()
+
+		local _, win = ui.float({
+			buf = buf,
+			width = 0.5,
+			height = math.min(#branches + 1, math.floor(vim.o.lines * 0.7)),
+			title = " 🎯 Branch Filter │ Space: Toggle │ a: All │ n: None │ s: Apply │ q: Cancel ",
+			zindex = graph_z + 25,
+		})
+		vim.api.nvim_set_option_value("cursorline", true, { win = win })
+
+		local opts = { buffer = buf, noremap = true, silent = true, nowait = true }
+		local function toggle_current()
+			local row = vim.api.nvim_win_get_cursor(win)[1]
+			local b = branches[row]
+			if b then
+				selected[b.name] = not selected[b.name]
+				paint()
+			end
+		end
+		local function set_all(val)
+			for _, b in ipairs(branches) do
+				selected[b.name] = val
+			end
+			paint()
+		end
+		local function apply()
+			local refs = {}
+			for _, b in ipairs(branches) do
+				if selected[b.name] then
+					table.insert(refs, b.name)
 				end
 			end
+			ui.close(win)
+			if #refs == 0 or #refs == #branches then
+				refs_filter = nil
+				config.notify("Showing all branches")
+			else
+				refs_filter = refs
+				mode = "all"
+				config.notify(string.format("Filtering %d branch(es)", #refs))
+			end
+			reload()
+		end
 
-			pcall(vim.api.nvim_win_set_cursor, left_win, { 1, 0 })
-			update_window_title(false)
-			update_commit_details(nil)
+		vim.keymap.set("n", "<Space>", toggle_current, opts)
+		vim.keymap.set("n", "<CR>", toggle_current, opts)
+		vim.keymap.set("n", "a", function()
+			set_all(true)
+		end, opts)
+		vim.keymap.set("n", "n", function()
+			set_all(false)
+		end, opts)
+		vim.keymap.set("n", "s", apply, opts)
+		for _, k in ipairs({ "q", "<Esc>" }) do
+			vim.keymap.set("n", k, function()
+				ui.close(win)
+			end, opts)
+		end
+	end
 
-			local mode_name = (mode == "all") and "🌐 All Branches (--all)"
-				or ("🌿 Current Branch (" .. current_branch .. ")")
-			config.notify("Switched Git Graph Mode: " .. mode_name)
-		end)
+	-- Colour legend mapping branches to their stable colours.
+	local function open_legend()
+		local branches = M.get_branch_list(active_cwd)
+		local lines = {
+			" 🎨 Branch Colour Legend — commits not on the current branch are dimmed",
+			" ──────────────────────────────────────────────────────────",
+		}
+		local swatches = {}
+		for _, b in ipairs(branches) do
+			local mark = b.current and "▶" or " "
+			table.insert(lines, string.format(" %s ● %s%s", mark, b.name, b.current and "  (current)" or ""))
+			table.insert(swatches, { row = #lines - 1, idx = b.current and 1 or branch_color_idx(b.name) })
+		end
+		table.insert(
+			lines,
+			" ──────────────────────────────────────────────────────────"
+		)
+		table.insert(lines, " ● commit node   │ lane   ╱╲ merge   ⬝ gap")
+		table.insert(lines, " 🌿 HEAD   ☁️ remote   🏷️ tag   🌲 branch")
+		table.insert(lines, "")
+		table.insert(lines, " Press any key to dismiss")
+
+		local buf = ui.float({
+			lines = lines,
+			width = 0.55,
+			height = #lines + 1,
+			title = " 🗂️ Git Graph Legend ",
+			zindex = graph_z + 20,
+			close_on_keys = { "q", "<Esc>", "<CR>", "<Space>" },
+		})
+		local ns = vim.api.nvim_create_namespace("FoxGitKrakenLegend")
+		for _, s in ipairs(swatches) do
+			pcall(vim.api.nvim_buf_add_highlight, buf, ns, LANE_COLORS[s.idx].name, s.row, 3, 4)
+		end
 	end
 
 	-- Canvas Mode Toggle
@@ -1056,6 +1293,10 @@ function M.open(target_cwd, initial_mode)
 			" ──────────────────────────────────────────────────────────",
 			"  [f]            Toggle Canvas Mode (fullscreen graph)",
 			"  [a]            Toggle Mode (🌿 Current Branch <-> 🌐 --all)",
+			"  [b]            Branch Filter (choose which branches to show)",
+			"  [L]            Colour Legend (branch -> colour)",
+			"  [t]            Toggle Commit Order (--topo-order <-> --date-order)",
+			"  [m]            Toggle Lane Spacers (dimmed <-> hidden)",
 			"  [d / <C-d>]    Half-Page Down (Fetches on the fly)",
 			"  [u / <C-u>]    Half-Page Up",
 			"  [j / k]        Move down / up 1 commit (Auto-fetches)",
@@ -1137,6 +1378,12 @@ function M.open(target_cwd, initial_mode)
 
 	-- Mode toggle: 'a'
 	vim.keymap.set("n", "a", toggle_mode, opts)
+
+	-- Multi-branch clarity: filter branches, legend, order, lane spacers
+	vim.keymap.set("n", "b", open_branch_filter, opts)
+	vim.keymap.set("n", "L", open_legend, opts)
+	vim.keymap.set("n", "t", toggle_order, opts)
+	vim.keymap.set("n", "m", toggle_connectors, opts)
 
 	-- Panel navigation: <C-h> / <C-l>
 	for _, key in ipairs({ "<C-h>", "<C-H>" }) do

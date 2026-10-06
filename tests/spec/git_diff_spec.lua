@@ -220,6 +220,26 @@ describe("side-by-side git diff format", function()
 		expect(right_lines[2]).toBe("+ line1")
 	end)
 
+	it("reports per-side source line numbers for blame alignment", function()
+		local raw = {
+			"diff --git a/f.lua b/f.lua",
+			"@@ -10,1 +10,1 @@",
+			"-old",
+			"+new",
+		}
+		local l_lines, _, r_lines, _, l_no, r_no = diff.format_side_by_side_dual(raw, false, "f.lua")
+
+		expect(#l_lines).toBe(#r_lines)
+		-- Header and file-banner rows carry no source line
+		expect(l_no[1]).toBeNil()
+		expect(r_no[1]).toBeNil()
+		expect(l_no[2]).toBeNil()
+		expect(r_no[2]).toBeNil()
+		-- Deletion maps to the old file, addition to the new file
+		expect(l_no[3]).toBe(10)
+		expect(r_no[3]).toBe(10)
+	end)
+
 	it("formats side-by-side dual column into single combined buffer lines", function()
 		local combined, l_kinds, r_kinds, col_w = diff.format_side_by_side_single(SAMPLE, false, 80)
 

@@ -71,6 +71,35 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		expect(parsed.graph_raw).toBe("|/| ")
 	end)
 
+	it("captures the full commit hash for current-branch membership checks", function()
+		local raw =
+			"* 87a6e94\x1f (HEAD -> main)\x1fFoxDeveloper\x1f25 hours ago\x1ffeat: x\x1f87a6e94abcdef0123456789abcdef0123456789"
+		local parsed = graph_viewer.parse_raw_graph_line(raw)
+
+		expect(parsed.hash).toBe("87a6e94")
+		expect(parsed.full_hash).toBe("87a6e94abcdef0123456789abcdef0123456789")
+		expect(parsed.subject).toBe("feat: x")
+	end)
+
+	it("fetches commits honouring order and connector options", function()
+		local cwd = vim.fn.getcwd()
+		local res = graph_viewer.fetch_commits(10, cwd, "all", {
+			order = "topo",
+			connector_mode = "hidden",
+			highlight_current = false,
+		})
+		expect(res).toBeDefined()
+		expect(res.total_commits).toBeGreaterThan(0)
+		expect(#res.lines).toBeGreaterThan(0)
+	end)
+
+	it("lists branches for the filter/legend", function()
+		local branches = graph_viewer.get_branch_list(vim.fn.getcwd())
+		expect(type(branches)).toBe("table")
+		expect(#branches).toBeGreaterThan(0)
+		expect(type(branches[1].name)).toBe("string")
+	end)
+
 	it("formats commit lines with GitKraken lane highlights and badges", function()
 		graph_viewer.setup_highlights()
 		local parsed = {

@@ -39,6 +39,18 @@ local function disable_builtin_codelens(bufnr)
 	end
 end
 
+--- True when symbol-usage already has workers for this buffer.
+--- @param bufnr integer
+--- @return boolean
+local function symbol_usage_attached(bufnr)
+	local ok, state = pcall(require, "symbol-usage.state")
+	if not ok or not state or not state.get_buf_workers then
+		return false
+	end
+	local workers = state.get_buf_workers(bufnr)
+	return workers ~= nil and next(workers) ~= nil
+end
+
 --- Refreshes symbol usages in the active buffer.
 --- Clears any duplicate raw CodeLens virtual text in favor of symbol-usage.
 --- @param bufnr number|nil
@@ -55,9 +67,19 @@ function M.refresh(bufnr)
 	-- Clear raw builtin codelens virtual text to prevent duplicate "4 references" above "4 usages"
 	disable_builtin_codelens(bufnr)
 
-	local ok_su, su = pcall(require, "symbol-usage")
-	if ok_su and su.refresh then
-		pcall(su.refresh)
+	-- symbol-usage already refreshes itself (its own LspAttach plus per-buffer
+	-- TextChanged/InsertLeave/BufEnter autocmds). Calling a full clear+re-attach
+	-- on every event is what duplicated the label: reference requests still in
+	-- flight resolve after the clear and `set_extmark` resurrects their deleted
+	-- marks, stacking "# usages" many times over. Only attach when the buffer has
+	-- no workers yet; otherwise leave the plugin's own lifecycle in charge.
+	if symbol_usage_attached(bufnr) then
+		return
+	end
+
+	local ok_buf, su_buf = pcall(require, "symbol-usage.buf")
+	if ok_buf and su_buf.attach_buffer then
+		pcall(su_buf.attach_buffer, bufnr)
 	end
 end
 
@@ -66,9 +88,9 @@ end
 function M.clear(bufnr)
 	bufnr = bufnr or vim.api.nvim_get_current_buf()
 	disable_builtin_codelens(bufnr)
-	local ok_su, su = pcall(require, "symbol-usage")
-	if ok_su and su.clear then
-		pcall(su.clear)
+	local ok_buf, su_buf = pcall(require, "symbol-usage.buf")
+	if ok_buf and su_buf.clear_buffer then
+		pcall(su_buf.clear_buffer, bufnr)
 	end
 end
 

@@ -1,21 +1,13 @@
 -- ============================================================================
--- COLORSCHEME: dark-fox-night -- Vantablack base, colored symbols.
+-- COLORSCHEME: dark-fox-night -- Omarchy Vantablack.
 -- ============================================================================
--- Built on top of Omarchy's current theme (vantablack): pure-black background
--- and grayscale UI. Vantablack is intentionally monochrome, which makes the
--- small glyphs (git signs, diagnostics, expander/indent markers, completion
--- kind badges, blame authors) impossible to tell apart.
---
--- This theme keeps the vantablack background/foreground but paints every
--- SYMBOL with the fox-night hue palette, so the UI reads at a glance while the
--- code area stays high-contrast and calm.
+-- Copy of Omarchy's Vantablack Neovim palette. It is intentionally grayscale.
 --
 -- USAGE
 --   :colorscheme dark-fox-night    (or pick it in :FoxThemePicker)
 --
 -- HOW TO RETHEME
---   `p` is the vantablack base, `s` the fox-night symbol hues. Highlights only
---   reference those names; change one entry and everything follows.
+--   `p` is Omarchy's base, `s` is its Aether syntax palette.
 -- ============================================================================
 
 vim.cmd("highlight clear")
@@ -32,32 +24,32 @@ local p = {
 	bg_dark = "#090909",
 	bg_darker = "#070707",
 	bg_highlight = "#1a1a1a",
-	bg_selected = "#2a2a2a",
+	bg_selected = "#1a1a1a",
 	fg = "#ffffff",
 	fg_muted = "#ececec",
-	comment = "#8a8a8a",
-	line_nr = "#6a6a6a",
-	sep = "#262626",
-	accent = "#d96a25",
+	comment = "#505050",
+	line_nr = "#7a7a7a",
+	sep = "#070707",
+	accent = "#8d8d8d",
 	none = "NONE",
 }
 
--- Fox-night symbol hues: the only saturated colors in the theme.
+-- Omarchy Aether syntax palette. Keep this grayscale to match Vantablack.
 local s = {
-	green = "#a8b86a",
-	bright_green = "#c9d985",
-	yellow = "#e8a34b",
-	bright_yellow = "#ffc76b",
-	orange = "#d96a25",
-	bright_orange = "#f08a45",
-	red = "#d85a4a",
-	bright_red = "#ff7662",
-	blue = "#7aa2c8",
-	bright_blue = "#a4caee",
-	cyan = "#79b8b5",
-	bright_cyan = "#9cd9d4",
-	magenta = "#c58aa7",
-	bright_magenta = "#e4acc5",
+	green = "#b6b6b6",
+	bright_green = "#b6b6b6",
+	yellow = "#cecece",
+	bright_yellow = "#cecece",
+	orange = "#8d8d8d",
+	bright_orange = "#8d8d8d",
+	red = "#a4a4a4",
+	bright_red = "#a4a4a4",
+	blue = "#8d8d8d",
+	bright_blue = "#8d8d8d",
+	cyan = "#b0b0b0",
+	bright_cyan = "#b0b0b0",
+	magenta = "#9b9b9b",
+	bright_magenta = "#9b9b9b",
 }
 
 local highlights = {
@@ -139,6 +131,32 @@ local highlights = {
 	Italic = { italic = true },
 	Error = { fg = s.bright_red, bold = true },
 	Todo = { fg = p.bg, bg = s.bright_yellow, bold = true },
+	WarningMsg = { fg = s.bright_yellow },
+	NonText = { fg = p.comment },
+	Directory = { fg = s.blue },
+	ErrorMsg = { fg = s.bright_red },
+	MoreMsg = { fg = s.cyan },
+	ModeMsg = { fg = s.green },
+	Question = { fg = s.cyan },
+	Title = { fg = p.fg, bold = true },
+	SpellBad = { undercurl = true, sp = s.bright_red },
+	SpellCap = { undercurl = true, sp = s.bright_yellow },
+	SpellRare = { undercurl = true, sp = s.cyan },
+	SpellLocal = { undercurl = true, sp = s.green },
+	QuickFixLine = { fg = s.cyan, bg = p.bg_highlight },
+	WinBar = { fg = p.fg_muted, bg = p.bg_dark },
+	WinBarNC = { fg = p.fg_muted, bg = p.bg_dark },
+	OkMsg = { fg = s.green },
+	Added = { fg = s.green },
+	Changed = { fg = s.cyan },
+	Removed = { fg = s.red },
+	Conceal = { fg = p.comment },
+	FloatShadow = { bg = p.bg_dark },
+	FloatShadowThrough = { bg = p.bg_dark },
+	RedrawDebugClear = { bg = p.bg_highlight },
+	RedrawDebugComposed = { bg = p.bg_highlight },
+	RedrawDebugRecompose = { bg = p.bg_highlight },
+	NvimInternalError = { fg = s.bright_red, bg = s.bright_red },
 
 	-- Treesitter Captures
 	["@comment"] = { fg = p.comment, italic = true },
@@ -181,14 +199,15 @@ local highlights = {
 	DiagnosticSignInfo = { fg = s.bright_blue, bold = true },
 	DiagnosticSignHint = { fg = s.bright_cyan, bold = true },
 	DiagnosticSignOk = { fg = s.bright_green, bold = true },
-	DiagnosticVirtualTextError = { fg = s.bright_red, bg = "#2a1414" },
-	DiagnosticVirtualTextWarn = { fg = s.bright_yellow, bg = "#2a2410" },
-	DiagnosticVirtualTextInfo = { fg = s.bright_blue, bg = "#101c2a" },
-	DiagnosticVirtualTextHint = { fg = s.bright_cyan, bg = "#0f2323" },
+	DiagnosticVirtualTextError = { fg = s.bright_red, bg = p.bg_highlight },
+	DiagnosticVirtualTextWarn = { fg = s.bright_yellow, bg = p.bg_highlight },
+	DiagnosticVirtualTextInfo = { fg = s.bright_blue, bg = p.bg_highlight },
+	DiagnosticVirtualTextHint = { fg = s.bright_cyan, bg = p.bg_highlight },
 	DiagnosticUnderlineError = { underline = true, sp = s.bright_red },
 	DiagnosticUnderlineWarn = { underline = true, sp = s.bright_yellow },
 	DiagnosticUnderlineInfo = { underline = true, sp = s.bright_blue },
 	DiagnosticUnderlineHint = { underline = true, sp = s.bright_cyan },
+	DiagnosticUnderlineOk = { underline = true, sp = s.bright_green },
 
 	-- Git Signs & Diff (colored symbols)
 	GitSignsAdd = { fg = s.bright_green, bold = true },
@@ -200,13 +219,13 @@ local highlights = {
 	GitSignsAddNr = { fg = s.green },
 	GitSignsChangeNr = { fg = s.yellow },
 	GitSignsDeleteNr = { fg = s.red },
-	GitSignsAddLn = { bg = "#14200f" },
-	GitSignsChangeLn = { bg = "#241d0e" },
-	GitSignsDeleteLn = { bg = "#261312" },
-	DiffAdd = { bg = "#14200f", fg = s.bright_green },
-	DiffChange = { bg = "#241d0e", fg = s.bright_yellow },
-	DiffDelete = { bg = "#261312", fg = s.bright_red },
-	DiffText = { bg = "#3a2f12", fg = s.bright_yellow, bold = true },
+	GitSignsAddLn = { bg = p.bg_highlight },
+	GitSignsChangeLn = { bg = p.bg_highlight },
+	GitSignsDeleteLn = { bg = p.bg_highlight },
+	DiffAdd = { bg = p.bg_highlight, fg = s.bright_green },
+	DiffChange = { bg = p.bg_highlight, fg = s.bright_yellow },
+	DiffDelete = { bg = p.bg_highlight, fg = s.bright_red },
+	DiffText = { bg = p.bg_selected, fg = s.bright_yellow, bold = true },
 
 	-- Blame author gutter
 	GitDiffBlameAuthor = { fg = s.bright_blue },

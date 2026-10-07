@@ -117,6 +117,32 @@ local function index_path(root_dir)
 	return path.join(storage_dir(root_dir), M.settings.index_file)
 end
 
+-- ---------------------------------------------------------------------------
+-- Index memoization
+-- ---------------------------------------------------------------------------
+-- `load_all_workspaces` reads the index JSON, `glob`s the session directory and
+-- walks the filesystem for the project root. It is hit from render paths
+-- (bufferline `custom_areas`, the corner badge) several times per redraw, so the
+-- result is cached and only re-read when the backing index file changes or this
+-- module writes. The fingerprint is a cheap `fs_stat`, not a full decode.
+
+local _index_cache = nil
+local _index_cache_key = nil
+
+--- Cheap change-detection key for the index file (path + mtime + size).
+--- @return string
+local function index_cache_key()
+	local ipath = index_path()
+	local st = (vim.uv or vim.loop).fs_stat(ipath)
+	return string.format("%s:%d:%d:%d", ipath, st and st.mtime.sec or 0, st and st.mtime.nsec or 0, st and st.size or 0)
+end
+
+--- Drops the memoized workspace index. Call after any write to the index file.
+local function invalidate_index_cache()
+	_index_cache = nil
+	_index_cache_key = nil
+end
+
 --- Parses a session file on disk to extract its metadata (cwd, buffers, name, created_at).
 --- @param filepath string
 --- @return table|nil
@@ -177,6 +203,11 @@ end
 --- Loads all workspaces across all known projects and reconciles orphaned sessions.
 --- @return table[]
 local function load_all_workspaces()
+	local cache_key = index_cache_key()
+	if _index_cache and _index_cache_key == cache_key then
+		return _index_cache
+	end
+
 	local sdir = storage_dir()
 	local ipath = index_path()
 
@@ -241,6 +272,8 @@ local function load_all_workspaces()
 		end
 	end
 
+	_index_cache = result
+	_index_cache_key = index_cache_key()
 	return result
 end
 
@@ -268,7 +301,9 @@ end
 --- @return boolean ok
 local function save_index(index, root_dir)
 	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/workspaces") then
-		return store.save(index_path(), index)
+		local ok = store.save(index_path(), index)
+		invalidate_index_cache()
+		return ok
 	end
 
 	local global_path = path.join(vim.fn.stdpath("data"), "workspaces", M.settings.index_file)
@@ -311,6 +346,7 @@ local function save_index(index, root_dir)
 		end
 	end)
 
+	invalidate_index_cache()
 	return ok
 end
 
@@ -729,14 +765,21 @@ function M.load_workspace(ws_or_identifier)
 		end
 	end
 
-	-- Workspaces open neo-tree by default unless explicitly disabled.
+	-- Workspaces open neo-tree by default unless explicitly disabled. Deferred so
+	-- the directory scan does not block the switch (mirrors the environment switcher).
 	if target.neotree_open ~= false then
-		show_neotree(target.cwd or vim.fn.getcwd())
+		local nt_dir = target.cwd or vim.fn.getcwd()
+		vim.schedule(function()
+			show_neotree(nt_dir)
+		end)
 	end
 
 	target.updated_at = os.time()
-	save_index(all, target.cwd)
 	M.current_workspace = target
+	-- Persist off the critical path: the in-memory record is already authoritative.
+	vim.schedule(function()
+		pcall(save_index, all, target.cwd)
+	end)
 
 	pcall(function()
 		require("plugins.fox.ui.pinned_tabs").restore_pins()
@@ -804,6 +847,8 @@ function M.delete_workspace(ws_or_id, callback)
 			end
 		end
 	end
+
+	invalidate_index_cache()
 
 	if M.current_workspace and (M.current_workspace.id == target.id or M.current_workspace.name == target.name) then
 		M.current_workspace = nil
@@ -946,8 +991,9 @@ local function setup_badge_highlights()
 end
 
 --- Returns the active workspace slot number (1..N). If none or 1, returns 1.
+--- @param preloaded_index table[]|nil Already-resolved index, to skip a reload.
 --- @return integer
-function M.get_active_slot_number()
+function M.get_active_slot_number(preloaded_index)
 	-- If Environments are active with multiple project slots, coordinate with active environment slot
 	if _G._fox_environments and _G._fox_active_env_slot then
 		local env_cnt = 0
@@ -966,7 +1012,7 @@ function M.get_active_slot_number()
 		return 1
 	end
 
-	local index = load_index()
+	local index = preloaded_index or load_index()
 	local cwd = vim.fn.getcwd()
 	local count = 0
 	for _, item in ipairs(index) do
@@ -991,7 +1037,8 @@ end
 --- Formats as styled tag badges matching Git Diff Dashboard tags (e.g. ` 🦊 1 ` and ` 2 `).
 --- @return table List of `{ text = string, hl = string }`
 function M.get_badge_components()
-	local active_slot = M.get_active_slot_number()
+	local ws_list = load_index()
+	local active_slot = M.get_active_slot_number(ws_list)
 	local total = 1
 
 	if _G._fox_environments then
@@ -1004,7 +1051,6 @@ function M.get_badge_components()
 		total = math.max(total, env_cnt)
 	end
 
-	local ws_list = load_index()
 	if #ws_list > 0 then
 		total = math.max(total, #ws_list)
 	end
@@ -1060,7 +1106,14 @@ function M.update_badge()
 
 	setup_badge_highlights()
 
-	local text = M.get_badge_text()
+	-- Compute the component chunks once: the text, width and highlight spans all
+	-- derive from the same list, so resolving the index a second time is wasted work.
+	local comps = M.get_badge_components()
+	local parts = {}
+	for i, comp in ipairs(comps) do
+		parts[i] = comp.text
+	end
+	local text = table.concat(parts, "")
 	local width = vim.fn.strdisplaywidth(text)
 	local height = 1
 	local total_cols = vim.o.columns or 80
@@ -1083,7 +1136,6 @@ function M.update_badge()
 
 	local ns_badge = vim.api.nvim_create_namespace("FoxWorkspaceBadgeNs")
 	vim.api.nvim_buf_clear_namespace(badge_buf, ns_badge, 0, -1)
-	local comps = M.get_badge_components()
 	local curr_col = 0
 	for _, comp in ipairs(comps) do
 		local comp_len = #comp.text

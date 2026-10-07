@@ -39,6 +39,15 @@ function M.normalize(p)
 	if not p or p == "" then
 		return ""
 	end
+	-- Fast path: already canonical (no backslashes, no trailing slash to strip).
+	-- Avoids the two `gsub` allocations that dominate hot comparison loops.
+	if not p:find("\\", 1, true) then
+		local last = p:sub(-1)
+		if last ~= "/" or #p == 1 or p:match("^%a:/$") then
+			return p
+		end
+		return p:sub(1, -2)
+	end
 	local clean = p:gsub("\\", "/")
 	if #clean > 1 and not clean:match("^%a:/$") then
 		clean = clean:gsub("/$", "")

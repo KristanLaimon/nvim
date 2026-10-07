@@ -137,6 +137,7 @@ $KeyMatrix = @(
     @{ Key = "ctrl+."; Code = 46; Mod = "5u"; CSI = "\x1b[46;5u"; Label = "Code Actions / Next" }
     @{ Key = "ctrl+/"; Code = 47; Mod = "5u"; CSI = "\x1b[47;5u"; Label = "Toggle Comment" }
     @{ Key = "ctrl+shift+space"; Code = 32; Mod = "6u"; CSI = "\x1b[32;6u"; Label = "Trigger Completion" }
+    @{ Key = "ctrl+shift+enter"; Code = 13; Mod = "6u"; CSI = "\x1b[13;6u"; Label = "Open file/folder with OS default app" }
 )
 
 # Number bindings: 0..9 (Ctrl+Number for Tasks, Ctrl+Shift+Number for Environments)

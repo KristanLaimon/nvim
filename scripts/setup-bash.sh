@@ -129,6 +129,7 @@ map ctrl+, send_text all \x1b[44;5u
 map ctrl+. send_text all \x1b[46;5u
 map ctrl+/ send_text all \x1b[47;5u
 map ctrl+shift+space send_text all \x1b[32;6u
+map ctrl+shift+enter send_text all \x1b[13;6u
 # <<< FOX NEOVIM CONSISTENT KEYBINDINGS <<<
 EOF
     echo -e "   ${COLOR_GREEN}[+] Kitty configuration written to $config_file${COLOR_NC}"

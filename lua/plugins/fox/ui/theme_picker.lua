@@ -32,7 +32,7 @@ function M.discover_themes()
 			if has_omarchy and omarchy_mod.is_omarchy_available() then
 				table.insert(themes, name)
 			end
-		elseif name:match("%-fox$") or name:match("^nagatoro%-") then
+		elseif name:match("%-fox$") or name:match("^nagatoro%-") or name == "dark-fox-night" then
 			table.insert(themes, name)
 		end
 	end

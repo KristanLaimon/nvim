@@ -51,6 +51,61 @@ describe("plugins.fox.git.diff_mode", function()
 		expect(type(diff_mode.pick_ancestor_branch_and_start)).toBe("function")
 	end)
 
+	it("exposes the Git Enhanced Mode API", function()
+		expect(type(diff_mode.toggle_enhanced_mode)).toBe("function")
+		expect(type(diff_mode.set_enhanced_mode)).toBe("function")
+		expect(type(diff_mode.refresh_enhanced)).toBe("function")
+		expect(type(diff_mode.enhanced_candidate)).toBe("function")
+		expect(type(diff_mode._blame_statuscolumn)).toBe("function")
+	end)
+
+	it("rejects non-file buffers as enhanced-mode candidates", function()
+		local scratch = vim.api.nvim_create_buf(false, true)
+		local win = vim.api.nvim_open_win(scratch, true, {
+			relative = "editor",
+			width = 10,
+			height = 3,
+			row = 1,
+			col = 1,
+		})
+		local buf = diff_mode.enhanced_candidate(win)
+		expect(buf).toBeNil()
+		pcall(vim.api.nvim_win_close, win, true)
+	end)
+
+	it("registers the GitEnhancedMode user commands", function()
+		diff_mode.setup()
+		local commands = vim.api.nvim_get_commands({})
+		expect(commands.GitEnhancedMode).toBeDefined()
+		expect(commands.GitEnhancedModeOn).toBeDefined()
+		expect(commands.GitEnhancedModeOff).toBeDefined()
+		expect(vim.fn.maparg("<F8>", "n")).not_.toBe("")
+	end)
+
+	it("installs and removes the Enhanced Mode gutter on a real file buffer", function()
+		diff_mode.setup()
+		vim.cmd("edit " .. vim.fn.fnameescape(vim.fn.getcwd() .. "/README.md"))
+		local win = vim.api.nvim_get_current_win()
+
+		diff_mode.set_enhanced_mode(true, { quiet = true })
+		expect(vim.wo.statuscolumn:match("__fox_git_blame_render") ~= nil).toBeTruthy()
+
+		diff_mode.set_enhanced_mode(false, { quiet = true })
+		expect(vim.wo.statuscolumn:match("__fox_git_blame_render")).toBeNil()
+		expect(win).toBeDefined()
+	end)
+
+	it("persists the Enhanced Mode preference across restarts", function()
+		local store = require("fox.core.store")
+		local state_file = vim.fn.stdpath("data") .. "/fox_git_enhanced.json"
+
+		diff_mode.set_enhanced_mode(true)
+		expect(store.load(state_file, {}).enabled).toBe(true)
+
+		diff_mode.set_enhanced_mode(false)
+		expect(store.load(state_file, {}).enabled).toBe(false)
+	end)
+
 	it("retrieves changed files between refs in git repository", function()
 		local cwd = vim.fn.getcwd()
 		local files = diff_mode.get_changed_files("HEAD~1", "HEAD", cwd)

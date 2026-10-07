@@ -41,6 +41,7 @@ $Atajos = @(
     @{ Codigo = 44; Mod = "5u"; Tecla = "ctrl+," }
     @{ Codigo = 46; Mod = "5u"; Tecla = "ctrl+." }
     @{ Codigo = 32; Mod = "6u"; Tecla = "ctrl+shift+space" }
+    @{ Codigo = 13; Mod = "6u"; Tecla = "ctrl+shift+enter" }
     @{ Codigo = 47; Mod = "5u"; Tecla = "ctrl+/" }
     @{ Codigo = 63; Mod = "6u"; Tecla = "ctrl+shift+/" }
     @{ Codigo = 63; Mod = "5u"; Tecla = "ctrl+?" }

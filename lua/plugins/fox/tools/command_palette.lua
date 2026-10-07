@@ -133,6 +133,7 @@ M.commands = {
 	{ name = "📦 Export Changed Diff Files to Zip Archive", cmd = "GitDiffExportZip", category = "Git" },
 	{ name = "📥 Import Changed Diff Files from Zip Archive", cmd = "GitDiffImportZip", category = "Git" },
 	{ name = "❌ Close Git Diff Mode", cmd = "GitDiffClose", category = "Git" },
+	{ name = "✨ Toggle Git Enhanced Mode (Per-Line Authors in Every File)", cmd = "GitEnhancedMode", category = "Git" },
 	{ name = "🐙 Toggle Git Panel (Neogit)", cmd = "Neogit", category = "Git" },
 	{ name = "👤 Git Accounts Manager (Select Identity)", cmd = "GitAccounts", category = "Git" },
 	{ name = "⚔️ Resolve Merge Conflicts (3-Way VSCode Merge Editor)", cmd = "GitConflictResolve", category = "Git" },

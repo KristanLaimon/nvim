@@ -225,6 +225,40 @@ function M.raw_diff_for(file, file_type, cwd, commit_hash)
 	return { "[ Empty or New File ]" }, true
 end
 
+--- Counts files with unstaged/untracked changes, without paying for the full
+--- snapshot (branch list, commit graph, stash). Used by "stage all".
+--- @param cwd string|nil Repository directory.
+--- @return integer pending
+function M.pending_count(cwd)
+	local target = config.get_active_target()
+	cwd = cwd or (target and target.full_path) or vim.fn.getcwd()
+
+	local raw
+	if target and target.is_secondary and target.repo_alias then
+		local sec_ok, sec = pcall(require, "fox.git.secondary")
+		if sec_ok and sec then
+			raw = sec.lines(target.repo_alias, { "status", "--porcelain=v1", "--ignore-submodules=dirty" }, cwd)
+		end
+	end
+	if not raw then
+		raw = git.lines({ "status", "--porcelain=v1", "--ignore-submodules=dirty" }, cwd)
+	end
+
+	local pending = 0
+	for _, line in ipairs(raw) do
+		if #line >= 3 then
+			local index_state = line:sub(1, 1)
+			local worktree_state = line:sub(2, 2)
+			-- Same rule as status.parse_files: count unstaged and untracked,
+			-- never a file that is only staged.
+			if (index_state == "?" and worktree_state == "?") or (worktree_state ~= " " and worktree_state ~= "?") then
+				pending = pending + 1
+			end
+		end
+	end
+	return pending
+end
+
 --- Stages every unstaged and untracked change, reporting how many files moved.
 --- Retries once after clearing a stale `index.lock`.
 --- @param cwd string|nil Repository directory.
@@ -232,13 +266,7 @@ function M.stage_all_with_modal(cwd)
 	cwd = cwd or (config.get_active_target() and config.get_active_target().full_path) or vim.fn.getcwd()
 	git.clean_stale_lock(cwd)
 
-	local info = M.get_git_info(cwd)
-	if not info then
-		config.notify("❌ Not inside a valid Git repository.", vim.log.levels.ERROR, config.settings.control_title)
-		return
-	end
-
-	local pending = #info.unstaged + #info.untracked
+	local pending = M.pending_count(cwd)
 	if pending == 0 then
 		config.notify(
 			"ℹ️ Nothing to stage: no unstaged or untracked changes found.",

@@ -1655,8 +1655,7 @@ function M.open_git_center()
 
 	vim.keymap.set({ "n", "v" }, "S", function()
 		local cur_target = get_active_target()
-		local current = queries.get_git_info(cur_target.full_path)
-		if current and (#current.unstaged > 0 or #current.untracked > 0) then
+		if queries.pending_count(cur_target.full_path) > 0 then
 			local args = { "add", "-A" }
 			if cur_target and cur_target.is_secondary then
 				args = { "add", "-u" }

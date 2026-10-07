@@ -21,7 +21,8 @@
 --   [{ "id": "ws_1712345678_4821", "name": "API work", "cwd": "C:/proj",
 --      "cwd_name": "proj", "created_at": 0, "updated_at": 0,
 --      "session_file": "<data>/workspaces/ws_....vim",
---      "buffers": ["src/app.ts"], "tab_count": 2, "neotree_open": true }]
+--      "buffers": ["src/app.ts"], "tab_count": 2, "neotree_open": true,
+--      "terminal_open": true, "terminal_slot": 1 }]
 -- ============================================================================
 
 local lazy_req = require("fox.core.lazy_require")
@@ -425,6 +426,23 @@ local function is_transient_buffer(buf)
 	return vim.tbl_contains(M.settings.transient_filetypes, vim.bo[buf].filetype)
 end
 
+--- Slot number of a terminal currently shown on screen, if any.
+--- Terminals are closed before `mksession!`, so this has to be read first.
+--- @return integer|nil slot
+local function open_terminal_slot()
+	local terms = _G._fox_terminals or {}
+	local selected = _G._fox_selected_terminal
+	if selected and terms[selected] and terms[selected].win and vim.api.nvim_win_is_valid(terms[selected].win) then
+		return selected
+	end
+	for n, t in pairs(terms) do
+		if t.win and vim.api.nvim_win_is_valid(t.win) then
+			return n
+		end
+	end
+	return nil
+end
+
 --- Writes the current layout to `session_path`.
 --- Neo-tree and terminals are closed first and restored afterwards.
 ---
@@ -499,6 +517,9 @@ function M.save_workspace(name, callback)
 		local id = ws_item and ws_item.id or ("ws_" .. os.time() .. "_" .. math.random(1000, 9999))
 		local session_path = path.join(storage_dir(), id .. ".vim")
 
+		-- Read the terminal state before save_session_file closes its window.
+		local terminal_slot = open_terminal_slot()
+
 		local ok, err, neotree_open = save_session_file(session_path, ws_name)
 		if not ok then
 			vim.notify("Error saving workspace: " .. tostring(err), vim.log.levels.ERROR)
@@ -511,6 +532,8 @@ function M.save_workspace(name, callback)
 			tab_count = #vim.api.nvim_list_tabpages(),
 			session_file = session_path,
 			neotree_open = neotree_open,
+			terminal_open = terminal_slot ~= nil,
+			terminal_slot = terminal_slot or 1,
 		}
 
 		if ws_item then
@@ -718,6 +741,13 @@ function M.load_workspace(ws_or_identifier)
 	pcall(function()
 		require("plugins.fox.ui.pinned_tabs").restore_pins()
 	end)
+
+	-- Bring back the terminal that was on screen when this workspace was saved.
+	if target.terminal_open then
+		pcall(function()
+			require("plugins.fox.dev.terminal").open_terminal(target.terminal_slot or 1)
+		end)
+	end
 
 	pcall(M.update_badge)
 	notify("Workspace '" .. target.name .. "' loaded!")

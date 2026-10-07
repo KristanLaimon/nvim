@@ -73,7 +73,6 @@ M.state = {
 	show_blame = true,
 	blame_left_linenos = nil,
 	blame_right_linenos = nil,
-	blame_columns = nil,
 
 	-- Diff statistics
 	stats = nil,
@@ -379,6 +378,64 @@ end
 -- the deletion virtual lines make the two windows' screen rows differ, and
 -- 'scrollbind' aligns by screen rows.
 
+-- Lazy.nvim evaluates this file once to read its spec and `require` evaluates it
+-- again, so two module instances can coexist (each with its own `M.state`). The
+-- gutter must therefore keep its bookkeeping and its renderer in a single global
+-- registry: the instance that installs a column and the instance Neovim calls at
+-- render time are not guaranteed to be the same.
+local FOX_BLAME = _G.__fox_git_blame or { columns = {}, enhanced = false, cache = {} }
+_G.__fox_git_blame = FOX_BLAME
+
+if not rawget(_G, "__fox_git_blame_render") then
+	_G.__fox_git_blame_render = function(win)
+		local state = rawget(_G, "__fox_git_blame")
+		local col = state and state.columns[win]
+		if not col then
+			return ""
+		end
+		if col.buf and vim.api.nvim_buf_is_valid(col.buf) and vim.api.nvim_win_get_buf(win) ~= col.buf then
+			return ""
+		end
+
+		local lnum = vim.v.lnum
+		local relnum = vim.v.relnum or 0
+		local out = {}
+
+		-- A custom 'statuscolumn' replaces Neovim's automatic one, so the sign
+		-- column (gitsigns, diagnostics) has to be asked for explicitly or the
+		-- gutter would hide every sign.
+		out[#out + 1] = "%s"
+
+		if col.number or col.relnumber then
+			local num = (col.relnumber and relnum ~= 0) and relnum or lnum
+			local numhl = (relnum == 0) and "CursorLineNr" or "LineNr"
+			out[#out + 1] = string.format("%%#%s#%" .. col.numw .. "d %%*", numhl, num)
+		end
+
+		local author = col.authors[lnum] or ""
+		if author == "" then
+			out[#out + 1] = string.rep(" ", col.width)
+			return table.concat(out)
+		end
+
+		local hl = "GitDiffBlameAuthor"
+		if author:lower():match("not committed") then
+			hl = "GitDiffBlameUncommitted"
+		elseif col.user ~= "" and author == col.user then
+			hl = "GitDiffBlameSelf"
+		end
+		local text = author:gsub("%%", "%%%%")
+		if #author > col.width then
+			text = text:sub(1, math.max(1, col.width - 1)) .. "…"
+		elseif #author < col.width then
+			text = text .. string.rep(" ", col.width - #author)
+		end
+		out[#out + 1] = "%#" .. hl .. "#" .. text .. "%*"
+
+		return table.concat(out)
+	end
+end
+
 --- Returns the configured git user.name, used to mark the reader's own lines.
 --- @param cwd string
 --- @return string
@@ -411,49 +468,11 @@ local function build_blame_col(authors, linenos, row_count)
 end
 
 --- Renders one statuscolumn cell: line number (when enabled) plus the author.
---- Called by Neovim for every visible line, so it stays a plain table lookup.
+--- Delegates to the global renderer so any module instance agrees on the data.
 --- @param win integer
 --- @return string
 function M._blame_statuscolumn(win)
-	local col = M.state.blame_columns and M.state.blame_columns[win]
-	if not col then
-		return ""
-	end
-	if col.buf and vim.api.nvim_buf_is_valid(col.buf) and vim.api.nvim_win_get_buf(win) ~= col.buf then
-		return ""
-	end
-
-	local lnum = vim.v.lnum
-	local relnum = vim.v.relnum or 0
-	local out = {}
-
-	if col.number or col.relnumber then
-		local num = (col.relnumber and relnum ~= 0) and relnum or lnum
-		local numhl = (relnum == 0) and "CursorLineNr" or "LineNr"
-		out[#out + 1] = string.format("%%#%s#%" .. col.numw .. "d %%*", numhl, num)
-	end
-
-	local author = col.authors[lnum] or ""
-	if author == "" then
-		out[#out + 1] = string.rep(" ", col.width)
-		return table.concat(out)
-	end
-
-	local hl = "GitDiffBlameAuthor"
-	if author:lower():match("not committed") then
-		hl = "GitDiffBlameUncommitted"
-	elseif col.user ~= "" and author == col.user then
-		hl = "GitDiffBlameSelf"
-	end
-	local text = author:gsub("%%", "%%%%")
-	if #author > col.width then
-		text = text:sub(1, math.max(1, col.width - 1)) .. "…"
-	elseif #author < col.width then
-		text = text .. string.rep(" ", col.width - #author)
-	end
-	out[#out + 1] = "%#" .. hl .. "#" .. text .. "%*"
-
-	return table.concat(out)
+	return _G.__fox_git_blame_render(win)
 end
 
 --- Installs (or refreshes) the blame gutter on a window.
@@ -462,39 +481,46 @@ end
 --- @param authors table<integer,string>|nil Authors keyed by source line number.
 --- @param linenos integer[]|nil Source line per row (nil for same-branch).
 --- @param row_count integer
-local function install_blame_column(win, code_buf, authors, linenos, row_count)
+--- @param source? "diff"|"enhanced" Who owns this gutter (default "diff").
+--- @param user? string Author name to highlight as "self".
+local function install_blame_column(win, code_buf, authors, linenos, row_count, source, user)
 	if not (win and vim.api.nvim_win_is_valid(win)) then
 		return
 	end
-	M.state.blame_columns = M.state.blame_columns or {}
-	local existing = M.state.blame_columns[win]
+	FOX_BLAME.columns = FOX_BLAME.columns or {}
+	local existing = FOX_BLAME.columns[win]
 	local default_sc = (existing and existing.default_sc) or vim.api.nvim_get_option_value("statuscolumn", { win = win })
 
 	local by_row, max_len = build_blame_col(authors, linenos, row_count)
 	local numberwidth = vim.api.nvim_get_option_value("numberwidth", { win = win }) or 4
-	M.state.blame_columns[win] = {
+	FOX_BLAME.columns[win] = {
 		authors = by_row,
 		width = math.max(3, max_len + 1),
-		user = git_user_name(M.state.cwd),
+		user = user or git_user_name(M.state.cwd),
 		number = vim.api.nvim_get_option_value("number", { win = win }),
 		relnumber = vim.api.nvim_get_option_value("relativenumber", { win = win }),
 		numw = math.max(numberwidth, #tostring(row_count)),
 		buf = code_buf,
 		default_sc = default_sc,
+		source = source or "diff",
 	}
-	local expr = "%!v:lua.require'plugins.fox.git.diff_mode'._blame_statuscolumn(" .. win .. ")"
+	local expr = "%!v:lua.__fox_git_blame_render(" .. win .. ")"
 	pcall(vim.api.nvim_set_option_value, "statuscolumn", expr, { win = win })
 end
 
 --- Removes the blame gutter from a window and restores its statuscolumn.
 --- @param win integer
-local function clear_blame_column(win)
-	local col = M.state.blame_columns and M.state.blame_columns[win]
+--- @param only_source? "diff"|"enhanced" Restrict the removal to one owner.
+local function clear_blame_column(win, only_source)
+	local col = FOX_BLAME.columns and FOX_BLAME.columns[win]
+	if col and only_source and col.source ~= only_source then
+		return
+	end
 	if col and win and vim.api.nvim_win_is_valid(win) then
 		pcall(vim.api.nvim_set_option_value, "statuscolumn", col.default_sc or "", { win = win })
 	end
-	if M.state.blame_columns then
-		M.state.blame_columns[win] = nil
+	if FOX_BLAME.columns then
+		FOX_BLAME.columns[win] = nil
 	end
 end
 
@@ -505,7 +531,7 @@ end
 local blame_guard = vim.api.nvim_create_augroup("FoxGitDiffBlameGuard", { clear = true })
 
 local function scrub_foreign_statuscolumn()
-	local cols = M.state.blame_columns
+	local cols = FOX_BLAME.columns
 	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		local col = cols and cols[win]
 		if col then
@@ -515,7 +541,7 @@ local function scrub_foreign_statuscolumn()
 			end
 		else
 			local sc = vim.api.nvim_get_option_value("statuscolumn", { win = win })
-			if type(sc) == "string" and sc:find("_blame_statuscolumn", 1, true) then
+			if type(sc) == "string" and sc:find("__fox_git_blame_render", 1, true) then
 				pcall(vim.api.nvim_set_option_value, "statuscolumn", "", { win = win })
 			end
 		end
@@ -525,6 +551,16 @@ end
 vim.api.nvim_create_autocmd({ "WinNew", "WinEnter", "BufWinEnter", "TabEnter" }, {
 	group = blame_guard,
 	callback = scrub_foreign_statuscolumn,
+})
+
+vim.api.nvim_create_autocmd("WinClosed", {
+	group = blame_guard,
+	callback = function(args)
+		local win = tonumber(args.match)
+		if win and FOX_BLAME.columns then
+			FOX_BLAME.columns[win] = nil
+		end
+	end,
 })
 
 --- Shows or refreshes the blame gutter for the single code window (same branch).
@@ -598,13 +634,188 @@ function M.toggle_blame()
 	notify("Blame column shown")
 end
 
---- Removes every blame gutter and restores the original statuscolumns.
+--- Removes the diff-owned blame gutters (Enhanced Mode columns are untouched).
 function M.close_blame()
-	for win, _ in pairs(M.state.blame_columns or {}) do
-		clear_blame_column(win)
+	for win, _ in pairs(FOX_BLAME.columns or {}) do
+		clear_blame_column(win, "diff")
 	end
-	M.state.blame_columns = nil
 end
+
+-- ---------------------------------------------------------------------------
+-- Git Enhanced Mode: per-line authors everywhere, independent of diff mode
+-- ---------------------------------------------------------------------------
+
+--- Where the Enhanced Mode on/off choice is remembered across restarts.
+local ENHANCED_STATE_FILE = vim.fn.stdpath("data") .. "/fox_git_enhanced.json"
+
+local ENHANCED_SKIP_FT = {
+	["neo-tree"] = true,
+	["NvimTree"] = true,
+	["fox_diff_sidebar"] = true,
+	["help"] = true,
+	["terminal"] = true,
+	["TelescopePrompt"] = true,
+	["lazy"] = true,
+	["mason"] = true,
+	["qf"] = true,
+	["fugitive"] = true,
+	["gitcommit"] = true,
+	["Oil"] = true,
+}
+
+--- `git rev-parse --show-toplevel` for a directory, memoized per directory so
+--- entering buffers never spawns a blocking git process more than once.
+local root_by_dir = {}
+local function resolve_root(dir)
+	local cached = root_by_dir[dir]
+	if cached ~= nil then
+		return cached ~= false and cached or nil
+	end
+	local ok, lines = pcall(git.lines, { "rev-parse", "--show-toplevel" }, dir)
+	local root = ok and lines and lines[1] and vim.trim(lines[1]) or ""
+	if root == "" then
+		root_by_dir[dir] = false
+		return nil
+	end
+	root_by_dir[dir] = root
+	return root
+end
+
+--- Resolves the blame-able file shown by a window.
+--- @param win integer
+--- @return integer|nil buf
+--- @return string|nil rel_path
+--- @return string|nil root
+function M.enhanced_candidate(win)
+	if not (win and vim.api.nvim_win_is_valid(win)) then
+		return nil
+	end
+	local buf = vim.api.nvim_win_get_buf(win)
+	if vim.bo[buf].buftype ~= "" or ENHANCED_SKIP_FT[vim.bo[buf].filetype] then
+		return nil
+	end
+	if win == M.state.file_list_win or win == M.state.dual_left_win or win == M.state.dual_right_win then
+		return nil
+	end
+	local name = vim.api.nvim_buf_get_name(buf)
+	if name == "" or vim.fn.filereadable(name) ~= 1 then
+		return nil
+	end
+	local dir = vim.fn.fnamemodify(name, ":h")
+	local root = resolve_root(dir)
+	if not root then
+		return nil
+	end
+	local rel = path_util.relative_to(name, root)
+	if not rel or rel == "" or rel:sub(1, 2) == ".." or diff.is_binary_file(rel) then
+		return nil
+	end
+	return buf, rel, root
+end
+
+--- Applies or clears the Enhanced Mode gutter on a single window.
+--- @param win integer
+local function refresh_enhanced_win(win)
+	if not FOX_BLAME.enhanced then
+		clear_blame_column(win, "enhanced")
+		return
+	end
+	-- Diff mode owns the gutter on the windows it drives; don't fight it.
+	local existing = FOX_BLAME.columns[win]
+	if existing and existing.source == "diff" then
+		return
+	end
+	local buf, rel, root = M.enhanced_candidate(win)
+	if not buf then
+		clear_blame_column(win, "enhanced")
+		return
+	end
+
+	local tick = vim.api.nvim_buf_get_changedtick(buf)
+	FOX_BLAME.cache = FOX_BLAME.cache or {}
+	local cached = FOX_BLAME.cache[buf]
+	if not (cached and cached.tick == tick and cached.root == root) then
+		local authors = blame.query(rel, nil, root)
+		cached = { tick = tick, root = root, authors = authors }
+		FOX_BLAME.cache[buf] = cached
+	end
+	install_blame_column(win, buf, cached.authors, nil, vim.api.nvim_buf_line_count(buf), "enhanced", git_user_name(root))
+end
+
+--- Refreshes Enhanced Mode gutters across the current tab.
+function M.refresh_enhanced()
+	if not FOX_BLAME.enhanced then
+		return
+	end
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+		refresh_enhanced_win(win)
+	end
+end
+
+--- Turns Git Enhanced Mode on or off.
+--- @param on boolean
+--- @param opts? { quiet?: boolean } Skip the notification and persistence (restore path).
+function M.set_enhanced_mode(on, opts)
+	opts = opts or {}
+	FOX_BLAME.enhanced = on
+	if not opts.quiet then
+		pcall(function()
+			require("fox.core.store").save(ENHANCED_STATE_FILE, { enabled = on == true })
+		end)
+	end
+	if on then
+		M.refresh_enhanced()
+		if not opts.quiet then
+			notify("✨ Git Enhanced Mode ON — per-line authors everywhere")
+		end
+	else
+		for win, _ in pairs(FOX_BLAME.columns or {}) do
+			clear_blame_column(win, "enhanced")
+		end
+		FOX_BLAME.cache = nil
+		if not opts.quiet then
+			notify("Git Enhanced Mode OFF")
+		end
+	end
+end
+
+--- Toggles Git Enhanced Mode.
+function M.toggle_enhanced_mode()
+	M.set_enhanced_mode(not FOX_BLAME.enhanced)
+end
+
+local enhanced_augroup = vim.api.nvim_create_augroup("FoxGitEnhancedMode", { clear = true })
+
+vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter", "BufWritePost" }, {
+	group = enhanced_augroup,
+	callback = function()
+		if not FOX_BLAME.enhanced then
+			return
+		end
+		local win = vim.api.nvim_get_current_win()
+		vim.schedule(function()
+			refresh_enhanced_win(win)
+		end)
+	end,
+})
+
+--- Re-applies a previously enabled Enhanced Mode after Neovim restarts.
+local function restore_enhanced()
+	local ok, data = pcall(function()
+		return require("fox.core.store").load(ENHANCED_STATE_FILE, {})
+	end)
+	if ok and type(data) == "table" and data.enabled == true then
+		M.set_enhanced_mode(true, { quiet = true })
+	end
+end
+
+vim.api.nvim_create_autocmd("VimEnter", {
+	group = enhanced_augroup,
+	once = true,
+	callback = function()
+		vim.schedule(restore_enhanced)
+	end,
+})
 
 --- Moves cursor to next modification in active file
 --- @param target_win? integer Window to move cursor in (defaults to editor window if in sidebar, else current window)
@@ -2016,6 +2227,11 @@ function M.close(opts)
 	if not status then
 		error(err)
 	end
+
+	-- Enhanced Mode keeps working after leaving diff mode.
+	if FOX_BLAME.enhanced then
+		vim.schedule(M.refresh_enhanced)
+	end
 end
 
 --- Opens two vertical menus to select Base Branch (left) and Target Branch (right)
@@ -3296,6 +3512,24 @@ function M.setup()
 		M.toggle_blame()
 	end, { desc = "Toggle the blame author column in Git Diff Mode" })
 
+	pcall(vim.api.nvim_create_user_command, "GitEnhancedMode", function()
+		M.toggle_enhanced_mode()
+	end, { desc = "Toggle Git Enhanced Mode (per-line authors in every file)" })
+
+	pcall(vim.api.nvim_create_user_command, "GitEnhancedModeOn", function()
+		M.set_enhanced_mode(true)
+	end, { desc = "Enable Git Enhanced Mode (per-line authors in every file)" })
+
+	pcall(vim.api.nvim_create_user_command, "GitEnhancedModeOff", function()
+		M.set_enhanced_mode(false)
+	end, { desc = "Disable Git Enhanced Mode" })
+
+	for _, mode in ipairs({ "n", "i", "v", "t" }) do
+		vim.keymap.set(mode, "<F8>", function()
+			M.toggle_enhanced_mode()
+		end, { desc = "Toggle Git Enhanced Mode (per-line authors)", silent = true })
+	end
+
 	pcall(vim.api.nvim_create_user_command, "GitDiffExportZip", function()
 		M.export_diff_prompt()
 	end, { desc = "Export currently diffed files to a zip archive" })
@@ -3320,8 +3554,14 @@ return setmetatable({
 		"GitDiffToggle",
 		"GitDiffClose",
 		"GitDiffBlame",
+		"GitEnhancedMode",
+		"GitEnhancedModeOn",
+		"GitEnhancedModeOff",
 		"GitDiffExportZip",
 		"GitDiffImportZip",
+	},
+	keys = {
+		{ "<F8>", mode = { "n", "i", "v", "t" }, desc = "Toggle Git Enhanced Mode (per-line authors)" },
 	},
 	config = function()
 		M.setup()

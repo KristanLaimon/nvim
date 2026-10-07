@@ -280,6 +280,7 @@ function M.save_index(data, root_dir)
 					buffers = env.buffers or {},
 					last_buffer = env.last_buffer,
 					selected_terminal = env.selected_terminal,
+					terminal_open = env.terminal_open,
 					neotree_open = env.neotree_open,
 					git_center_open = env.git_center_open,
 					conflict_resolver_open = env.conflict_resolver_open,
@@ -554,6 +555,19 @@ local function dismiss_visible_terminals()
 	end
 end
 
+--- True when an environment-owned terminal is currently visible.
+local function is_terminal_open()
+	for _, win in ipairs(vim.api.nvim_list_wins()) do
+		if vim.api.nvim_win_is_valid(win) then
+			local buf = vim.api.nvim_win_get_buf(win)
+			if vim.api.nvim_buf_is_valid(buf) and (vim.bo[buf].buftype == "terminal" or vim.b[buf].fox_is_multi_term) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 --- Swaps global multi-terminal pool `_G._fox_terminals` in place with shallow clone.
 --- Avoids heavy deepcopies and GC pressure.
 --- @param target_pool table|nil
@@ -669,6 +683,7 @@ local function snapshot_active_environment(env)
 
 	-- Save the selected terminal slot so each environment has independent terminal selection
 	env.selected_terminal = _G._fox_selected_terminal or 1
+	env.terminal_open = is_terminal_open()
 
 	-- Capture state in memory (0 disk I/O, 0 UI teardown, shallow terminal copy)
 	env.updated_at = os.time()
@@ -823,7 +838,7 @@ function M.create_environment(slot, dir, name, auto_switch)
 		session_file = session_path_for_slot(slot),
 		buffers = {},
 		terminals = {},
-		neotree_open = true,
+		neotree_open = false,
 	}
 
 	_G._fox_environments[slot] = env
@@ -1004,14 +1019,19 @@ function M.switch_environment(target_slot, callback)
 	if target_env.selected_terminal then
 		_G._fox_selected_terminal = target_env.selected_terminal
 	end
+	if target_env.terminal_open and _G.TerminalManager and _G.TerminalManager.open_terminal then
+		vim.schedule(function()
+			_G.TerminalManager.open_terminal(target_env.selected_terminal)
+		end)
+	end
 
 	-- 9. Async Neo-tree root navigation (does NOT freeze viewport or keystrokes)
 	local neotree_open_now = is_neotree_open()
-	if target_env.neotree_open ~= false and neotree_open_now then
+	if target_env.neotree_open and neotree_open_now then
 		vim.schedule(function()
 			pcall(vim.cmd, "Neotree dir=" .. vim.fn.fnameescape(target_env.cwd or vim.fn.getcwd()))
 		end)
-	elseif target_env.neotree_open ~= false and not neotree_open_now then
+	elseif target_env.neotree_open and not neotree_open_now then
 		vim.schedule(function()
 			pcall(vim.cmd, "Neotree focus dir=" .. vim.fn.fnameescape(target_env.cwd or vim.fn.getcwd()))
 		end)
@@ -1270,6 +1290,7 @@ function M.restore_all()
 				buffers = data.buffers or {},
 				last_buffer = data.last_buffer,
 				selected_terminal = data.selected_terminal,
+				terminal_open = data.terminal_open,
 				terminals = {},
 				neotree_open = data.neotree_open,
 				git_center_open = data.git_center_open,

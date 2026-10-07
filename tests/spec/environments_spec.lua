@@ -40,6 +40,7 @@ describe("plugins.fox.tools.environments", function()
 		expect(env1 ~= nil).toBe(true)
 		expect(env1.slot).toBe(1)
 		expect(env1.name).toBe("MyConfig")
+		expect(env1.neotree_open).toBe(false)
 
 		local fetched = envs.get_environment(1)
 		expect(fetched ~= nil).toBe(true)
@@ -163,6 +164,7 @@ describe("plugins.fox.tools.environments", function()
 		env.conflict_resolver_open = true
 		env.conflict_resolver_file = "test.txt"
 		env.diff_mode_open = true
+		env.terminal_open = true
 
 		envs.save_index()
 
@@ -173,6 +175,7 @@ describe("plugins.fox.tools.environments", function()
 		expect(index.slots["1"].conflict_resolver_open).toBe(true)
 		expect(index.slots["1"].conflict_resolver_file).toBe("test.txt")
 		expect(index.slots["1"].diff_mode_open).toBe(true)
+		expect(index.slots["1"].terminal_open).toBe(true)
 
 		_G._fox_environments = {}
 		envs.restore_all()
@@ -184,5 +187,6 @@ describe("plugins.fox.tools.environments", function()
 		expect(restored.conflict_resolver_open).toBe(true)
 		expect(restored.conflict_resolver_file).toBe("test.txt")
 		expect(restored.diff_mode_open).toBe(true)
+		expect(restored.terminal_open).toBe(true)
 	end)
 end)

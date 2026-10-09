@@ -97,6 +97,10 @@ function M.resize_split(delta)
 end
 
 local is_closing = false
+-- In-flight snapshots belong to one floating-panel lifetime.  A user can
+-- close and reopen the panel before a slow Git command completes, so callbacks
+-- need an identity stronger than `M.is_open()` alone.
+local panel_session_id = 0
 
 --- Closes every window this module owns and forgets their handles.
 --- Caches active screen in RAM so it can be restored on reopen.
@@ -383,6 +387,8 @@ function M.open_git_center()
 	end
 
 	config.root_dir = root
+	panel_session_id = panel_session_id + 1
+	local session_id = panel_session_id
 
 	-- Restore RAM cached screen if user previously closed on another screen
 	local cached_view = config.cached_view
@@ -515,23 +521,22 @@ function M.open_git_center()
 	end
 
 	local active_target = get_active_target()
-	local info = queries.get_git_info(active_target and active_target.full_path)
-	if not info then
-		notify(
-			"Cannot read Git status for " .. (active_target and active_target.name or "repository"),
-			vim.log.levels.WARN,
-			"Git Center (FOX)"
-		)
-		return
-	end
-
-	if active_target and active_target.path then
-		render.submodule_statuses[active_target.path] = {
-			has_changes = info.has_changes or (#info.staged + #info.unstaged + #info.untracked > 0),
-			behind = info.behind or 0,
-			ahead = info.ahead or 0,
-		}
-	end
+	-- Do not wait for Git here.  On a large repository over a mounted
+	-- filesystem, status and numstat can take several seconds.  The windows are
+	-- useful immediately and `refresh` below replaces this placeholder when its
+	-- asynchronous snapshot is ready.
+	local info = {
+		branch = "Loading Git status…",
+		added = 0,
+		deleted = 0,
+		staged = {},
+		unstaged = {},
+		untracked = {},
+		conflicted = {},
+		local_branches = {},
+		commit_graph = {},
+		stash_list = {},
+	}
 
 	diff.setup_highlights()
 	config.diff_cache = {}
@@ -980,6 +985,7 @@ function M.open_git_center()
 		update_preview()
 	end
 
+	local refresh_generation = 0
 	local function refresh(force_clear_cache)
 		if force_clear_cache then
 			render.submodule_statuses = {}
@@ -987,39 +993,55 @@ function M.open_git_center()
 		end
 
 		local cur_target = get_active_target()
-		local current = queries.get_git_info(cur_target.full_path)
-		if not current or not M.is_open() then
+		if not cur_target then
 			return
 		end
+		refresh_generation = refresh_generation + 1
+		local generation = refresh_generation
+		local target_path = cur_target.path
+		queries.get_git_info_async(cur_target.full_path, function(current)
+			-- A later tab switch / refresh supersedes this response.  Never paint a
+			-- slow repository's result into another tab.
+			if
+				panel_session_id ~= session_id
+				or generation ~= refresh_generation
+				or not current
+				or not M.is_open()
+			then
+				return
+			end
+			local active = get_active_target()
+			if not active or active.path ~= target_path then
+				return
+			end
 
-		if cur_target and cur_target.path then
-			render.submodule_statuses[cur_target.path] = {
+			render.submodule_statuses[target_path] = {
 				has_changes = current.has_changes or (#current.staged + #current.unstaged + #current.untracked > 0),
 				behind = current.behind or 0,
 				ahead = current.ahead or 0,
 			}
-		end
 
-		local l_width = (config.main_win and vim.api.nvim_win_is_valid(config.main_win))
-				and vim.api.nvim_win_get_width(config.main_win)
-			or left_width
-		local new_lines, new_line_map, new_sections, new_highlights = render.build_panel_content(current, l_width)
-		config.line_map = new_line_map
-		section_lines = new_sections
+			local l_width = (config.main_win and vim.api.nvim_win_is_valid(config.main_win))
+					and vim.api.nvim_win_get_width(config.main_win)
+				or left_width
+			local new_lines, new_line_map, new_sections, new_highlights = render.build_panel_content(current, l_width)
+			config.line_map = new_line_map
+			section_lines = new_sections
 
-		local cursor = vim.api.nvim_win_get_cursor(config.main_win)
-		vim.bo[main_buf].modifiable = true
-		vim.api.nvim_buf_set_lines(main_buf, 0, -1, false, new_lines)
-		render.apply_panel_highlights(main_buf, new_highlights)
-		vim.bo[main_buf].modifiable = false
-		pcall(vim.api.nvim_win_set_cursor, config.main_win, { math.min(cursor[1], #new_lines), cursor[2] })
+			local cursor = vim.api.nvim_win_get_cursor(config.main_win)
+			vim.bo[main_buf].modifiable = true
+			vim.api.nvim_buf_set_lines(main_buf, 0, -1, false, new_lines)
+			render.apply_panel_highlights(main_buf, new_highlights)
+			vim.bo[main_buf].modifiable = false
+			pcall(vim.api.nvim_win_set_cursor, config.main_win, { math.min(cursor[1], #new_lines), cursor[2] })
 
-		render.render_tab_bar(math.floor(vim.o.columns * config.settings.width_ratio))
-
-		config.diff_cache = {}
-		update_preview()
+			render.render_tab_bar(math.floor(vim.o.columns * config.settings.width_ratio))
+			config.diff_cache = {}
+			update_preview()
+		end)
 	end
 	config.refresh = refresh
+	refresh()
 
 	local function switch_tab(delta)
 		if not config.submodules or #config.submodules <= 1 then
@@ -1655,23 +1677,20 @@ function M.open_git_center()
 
 	vim.keymap.set({ "n", "v" }, "S", function()
 		local cur_target = get_active_target()
-		if queries.pending_count(cur_target.full_path) > 0 then
-			local args = { "add", "-A" }
-			if cur_target and cur_target.is_secondary then
-				args = { "add", "-u" }
-			end
-			git_run(args, function(ok, output)
-				if not ok and output ~= "" then
-					local out_str = #output > 500 and (output:sub(1, 500) .. "...\n[Truncated]") or output
-					notify("❌ Error staging files: " .. out_str, vim.log.levels.ERROR)
-				else
-					notify("🟢 Staged all tracked files in " .. cur_target.name)
-				end
-				refresh()
-			end)
-		else
-			notify("ℹ️ Nothing to stage: working tree is clean.", vim.log.levels.WARN)
+		local args = { "add", "-A" }
+		if cur_target and cur_target.is_secondary then
+			args = { "add", "-u" }
 		end
+		notify("🟡 Staging all changes in " .. cur_target.name .. "…")
+		git_run(args, function(ok, output)
+			if not ok and output ~= "" then
+				local out_str = #output > 500 and (output:sub(1, 500) .. "...\n[Truncated]") or output
+				notify("❌ Error staging files: " .. out_str, vim.log.levels.ERROR)
+			else
+				notify("🟢 Stage all completed in " .. cur_target.name)
+			end
+			refresh()
+		end)
 	end, key_opts)
 
 	vim.keymap.set("n", "u", function()

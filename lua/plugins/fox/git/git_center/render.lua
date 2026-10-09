@@ -131,9 +131,9 @@ function M.get_target_status(target)
 	if M.submodule_statuses[target.path] then
 		return M.submodule_statuses[target.path]
 	end
-	if not is_mobile_or_proot then
-		M.fetch_target_status_async(target)
-	end
+	-- The panel refresh owns the active tab's full snapshot.  Starting separate
+	-- probes here used to launch one status process per tab (and a duplicate for
+	-- the active tab), which overwhelms slow mounted worktrees.
 	return { has_changes = false, behind = 0, ahead = 0 }
 end
 

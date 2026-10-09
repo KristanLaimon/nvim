@@ -159,6 +159,88 @@ function M.get_git_info(cwd)
 	return info
 end
 
+--- Gets the panel snapshot without blocking Neovim.  Network mounts and large
+--- worktrees can make even `git status` take seconds; callers must therefore
+--- render a cheap placeholder first and apply this result when it arrives.
+---@param cwd string|nil
+---@param on_done fun(info: table|nil)
+function M.get_git_info_async(cwd, on_done)
+	local target = config.get_active_target()
+	cwd = cwd or (target and target.full_path) or vim.fn.getcwd()
+	local is_sec = target and target.is_secondary and target.repo_alias
+
+	local function argv(args)
+		if is_sec then
+			local sec_ok, sec = pcall(require, "fox.git.secondary")
+			if sec_ok and sec then
+				return sec.build_cmd_args(target.repo_alias, args, cwd)
+			end
+		end
+		return git.build(args, cwd)
+	end
+
+	if not is_sec and not git.is_repository(cwd) then
+		on_done(nil)
+		return
+	end
+
+	local commands = {
+		status = { "status", "--porcelain=v1", "-b", "--ignore-submodules=dirty" },
+		numstat = { "diff", "--numstat", "--ignore-submodules=dirty" },
+		numstat_cached = { "diff", "--cached", "--numstat", "--ignore-submodules=dirty" },
+		branches = { "branch", "--sort=-committerdate" },
+		graph = {
+			"log", "--graph", "--color=always",
+			"--pretty=format:%C(yellow)%h%C(reset)%C(auto)%d%C(reset) %C(cyan)%an%C(reset) %C(green)(%cr)%C(reset) %s",
+			"-n", "10",
+		},
+		stash = { "stash", "list", "--pretty=format:%gd%x1f%s%x1f%gs" },
+	}
+	local results, remaining = {}, 0
+
+	local function lines(result)
+		return vim.split((result and result.stdout) or "", "[\r\n]+", { trimempty = true })
+	end
+	local function finish()
+		local info = status.info_from_outputs(results.status or {}, results.numstat or {}, results.numstat_cached or {})
+		local branches = {}
+		for _, line in ipairs(results.branches or {}) do
+			local is_current = line:sub(1, 1) == "*"
+			local name = line:gsub("^%*%s*", ""):gsub("^%s*", ""):gsub("%s*$", "")
+			if name ~= "" and not name:match("HEAD detached") and not name:match("no branch") then
+				table.insert(branches, { name = name, is_current = is_current })
+			end
+		end
+		info.local_branches = branches
+		info.commit_graph = results.graph or {}
+		info.stash_list = {}
+		for _, line in ipairs(results.stash or {}) do
+			local index, subject, gs = line:match("([^\31]+)\31([^\31]*)\31?(.*)")
+			if index then
+				table.insert(info.stash_list, { index = index, message = subject, branch = gs:match("on ([^:]+)") or "" })
+			end
+		end
+		on_done(info)
+	end
+
+	for name, args in pairs(commands) do
+		local command = argv(args)
+		if command then
+			remaining = remaining + 1
+			vim.system(command, { text = true }, vim.schedule_wrap(function(result)
+				results[name] = lines(result)
+				remaining = remaining - 1
+				if remaining == 0 then
+					finish()
+				end
+			end))
+		end
+	end
+	if remaining == 0 then
+		on_done(nil)
+	end
+end
+
 --- Raw diff lines for one file, or its contents when it is untracked.
 --- @param file string Path relative to the repository.
 --- @param file_type string "staged" | "unstaged" | "untracked" | "commit".
@@ -259,22 +341,14 @@ function M.pending_count(cwd)
 	return pending
 end
 
---- Stages every unstaged and untracked change, reporting how many files moved.
+--- Stages every unstaged and untracked change without first doing a blocking
+--- status scan.  `git add -A` already determines whether there is work, while
+--- a separate `git status` doubles the delay on large worktrees.
 --- Retries once after clearing a stale `index.lock`.
 --- @param cwd string|nil Repository directory.
 function M.stage_all_with_modal(cwd)
 	cwd = cwd or (config.get_active_target() and config.get_active_target().full_path) or vim.fn.getcwd()
 	git.clean_stale_lock(cwd)
-
-	local pending = M.pending_count(cwd)
-	if pending == 0 then
-		config.notify(
-			"ℹ️ Nothing to stage: no unstaged or untracked changes found.",
-			vim.log.levels.WARN,
-			config.settings.control_title
-		)
-		return
-	end
 
 	local target = config.get_active_target()
 	local args = { "add", "-A" }
@@ -296,12 +370,7 @@ function M.stage_all_with_modal(cwd)
 		run_fn(args, function(ok, output)
 			if ok then
 				config.notify(
-					string.format(
-						"✅ Successfully staged %d file%s in %s!",
-						pending,
-						pending == 1 and "" or "s",
-						target.name or "repository"
-					),
+					"✅ Stage all completed in " .. ((target and target.name) or "repository") .. "!",
 					vim.log.levels.INFO,
 					config.settings.control_title
 				)

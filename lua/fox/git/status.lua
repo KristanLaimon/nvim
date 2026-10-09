@@ -168,7 +168,21 @@ function M.info_finish(handle)
 		return nil
 	end
 
-	local status_lines = git.collect(handle.status_proc)
+	return M.info_from_outputs(
+		git.collect(handle.status_proc),
+		git.collect(handle.numstat_proc),
+		git.collect(handle.numstat_cached_proc)
+	)
+end
+
+--- Builds a snapshot from already-collected command output.  Keeping this
+--- separate from `info_finish` lets UI callers collect the same snapshot in
+--- the background without ever calling `process:wait()` on Neovim's UI loop.
+---@param status_lines string[]
+---@param numstat_lines string[]
+---@param numstat_cached_lines string[]
+---@return table
+function M.info_from_outputs(status_lines, numstat_lines, numstat_cached_lines)
 	local branch, upstream, ahead, behind = M.detached_label, nil, 0, 0
 	local files = { staged = {}, unstaged = {}, untracked = {} }
 
@@ -179,7 +193,7 @@ function M.info_finish(handle)
 
 	local added, deleted = 0, 0
 	if #files.staged > 0 or #files.unstaged > 0 then
-		added, deleted = M.sum_numstat(git.collect(handle.numstat_proc), git.collect(handle.numstat_cached_proc))
+		added, deleted = M.sum_numstat(numstat_lines or {}, numstat_cached_lines or {})
 	end
 	local has_conflicts = (#(files.conflicted or {}) > 0)
 	local has_changes = (#files.staged + #files.unstaged + #files.untracked + #(files.conflicted or {}) > 0)

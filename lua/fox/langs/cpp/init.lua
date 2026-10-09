@@ -4,10 +4,13 @@
 -- WHAT IT DOES
 --   Configures clangd LSP server, clang-format, cpplint, cppcheck static checkers,
 --   codelldb DAP debugger, and launch profile runtimes for C/C++.
+--   Integrates with fox.cmeta for per-project C standard via .krsnvim/c.json.
 -- ============================================================================
 
 ---@type FoxLangModule
 local M = {}
+
+local cmeta = require("fox.cmeta")
 
 M.lsp_server = { "clangd" }
 
@@ -18,6 +21,33 @@ M.lsp_config = {
 		capabilities = {
 			offsetEncoding = { "utf-16" },
 		},
+		before_init = function(_, config)
+			-- Inject per-project C standard and extra args from .krsnvim/c.json
+			local args = cmeta.get_clangd_extra_args()
+			if #args > 0 then
+				config.cmd = config.cmd or { "clangd" }
+				-- Avoid duplicating --std= if already present
+				local has_std = false
+				for _, a in ipairs(config.cmd) do
+					if a:match("^%-%-std=") then
+						has_std = true
+						break
+					end
+				end
+				for _, arg in ipairs(args) do
+					local dup = false
+					for _, a in ipairs(config.cmd) do
+						if a == arg then
+							dup = true
+							break
+						end
+					end
+					if not dup then
+						table.insert(config.cmd, arg)
+					end
+				end
+			end
+		end,
 	},
 }
 
@@ -133,6 +163,8 @@ function M.setup()
 			M.apply_defaults(args.buf)
 		end,
 	})
+	cmeta.setup_commands()
+	cmeta.register_palette()
 end
 
 return M

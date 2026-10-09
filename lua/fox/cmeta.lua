@@ -26,14 +26,28 @@ local defaults = {
 }
 
 local standards = {
-	"c89", "c90", "c95", "c99", "c11", "c17", "c23",
-	"gnu89", "gnu90", "gnu99", "gnu11", "gnu17", "gnu23",
+	"c89",
+	"c90",
+	"c95",
+	"c99",
+	"c11",
+	"c17",
+	"c23",
+	"gnu89",
+	"gnu90",
+	"gnu99",
+	"gnu11",
+	"gnu17",
+	"gnu23",
 }
 
 ---Find project root by looking for markers.
 ---@return string
 local function project_root()
-	local root = vim.fs.root(0, { ".git", ".krsnvim", "Makefile", "CMakeLists.txt", "compile_commands.json", "meson.build", "build.ninja" })
+	local root = vim.fs.root(
+		0,
+		{ ".git", ".krsnvim", "Makefile", "CMakeLists.txt", "compile_commands.json", "meson.build", "build.ninja" }
+	)
 	if not root then
 		root = vim.fn.getcwd()
 	end
@@ -59,10 +73,18 @@ function M.load()
 		return vim.deepcopy(defaults)
 	end
 	data.c = data.c or {}
-	if not data.c.standard then data.c.standard = defaults.c.standard end
-	if not data.c.compiler then data.c.compiler = defaults.c.compiler end
-	if not data.c.include_dirs then data.c.include_dirs = defaults.c.include_dirs end
-	if not data.c.defines then data.c.defines = defaults.c.defines end
+	if not data.c.standard then
+		data.c.standard = defaults.c.standard
+	end
+	if not data.c.compiler then
+		data.c.compiler = defaults.c.compiler
+	end
+	if not data.c.include_dirs then
+		data.c.include_dirs = defaults.c.include_dirs
+	end
+	if not data.c.defines then
+		data.c.defines = defaults.c.defines
+	end
 	return data
 end
 
@@ -248,11 +270,17 @@ function M.setup_commands()
 end
 
 ---Register command palette entries.
+---Safe to call more than once: entries are only added the first time.
 function M.register_palette()
-	local ok, palette = pcall(require, "plugins.fox.tools.command_palette")
-	if not ok then
+	if M._palette_registered then
 		return
 	end
+
+	local ok, palette = pcall(require, "plugins.fox.tools.command_palette")
+	if not ok or type(palette.add_command) ~= "function" then
+		return
+	end
+
 	palette.add_command({
 		name = "⚙️ C Project Metadata (Standard, Compiler, Includes)",
 		category = "C / C++",
@@ -261,8 +289,14 @@ function M.register_palette()
 	palette.add_command({
 		name = "📋 Show C Project Metadata",
 		category = "C / C++",
-		cmd = "CProjectMeta",
+		fn = M.show,
 	})
+	palette.add_command({
+		name = "📝 Open .krsnvim/c.json (Project C Metadata)",
+		category = "C / C++",
+		fn = M.open,
+	})
+	M._palette_registered = true
 end
 
 return M

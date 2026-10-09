@@ -190,9 +190,12 @@ function M.get_git_info_async(cwd, on_done)
 		numstat_cached = { "diff", "--cached", "--numstat", "--ignore-submodules=dirty" },
 		branches = { "branch", "--sort=-committerdate" },
 		graph = {
-			"log", "--graph", "--color=always",
+			"log",
+			"--graph",
+			"--color=always",
 			"--pretty=format:%C(yellow)%h%C(reset)%C(auto)%d%C(reset) %C(cyan)%an%C(reset) %C(green)(%cr)%C(reset) %s",
-			"-n", "10",
+			"-n",
+			"10",
 		},
 		stash = { "stash", "list", "--pretty=format:%gd%x1f%s%x1f%gs" },
 	}
@@ -227,13 +230,17 @@ function M.get_git_info_async(cwd, on_done)
 		local command = argv(args)
 		if command then
 			remaining = remaining + 1
-			vim.system(command, { text = true }, vim.schedule_wrap(function(result)
-				results[name] = lines(result)
-				remaining = remaining - 1
-				if remaining == 0 then
-					finish()
-				end
-			end))
+			vim.system(
+				command,
+				{ text = true },
+				vim.schedule_wrap(function(result)
+					results[name] = lines(result)
+					remaining = remaining - 1
+					if remaining == 0 then
+						finish()
+					end
+				end)
+			)
 		end
 	end
 	if remaining == 0 then

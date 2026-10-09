@@ -1002,12 +1002,7 @@ function M.open_git_center()
 		queries.get_git_info_async(cur_target.full_path, function(current)
 			-- A later tab switch / refresh supersedes this response.  Never paint a
 			-- slow repository's result into another tab.
-			if
-				panel_session_id ~= session_id
-				or generation ~= refresh_generation
-				or not current
-				or not M.is_open()
-			then
+			if panel_session_id ~= session_id or generation ~= refresh_generation or not current or not M.is_open() then
 				return
 			end
 			local active = get_active_target()

@@ -14,16 +14,19 @@
 --
 -- FROM ANOTHER MODULE
 --   require("plugins.fox.tools.command_palette").add_command({ name = ..., cmd = ... })
+--
+-- WHY `M` LIVES ON `_G`
+--   lazy.nvim imports this file as a spec through `loadfile()` (see
+--   lazy/core/plugin.lua: "unload the module so we get a clean slate"), while
+--   every other module reaches it through `require()`. Both paths execute this
+--   chunk, so without a shared handle each execution would build its own `M` --
+--   the keymaps/config would read one `M.commands` and `add_command()` would
+--   write into another, making runtime-registered entries invisible. The first
+--   execution builds the state; later ones only hand back a spec pointing at it.
 -- ============================================================================
 
 local lazy_req = require("fox.core.lazy_require")
 local store = lazy_req("fox.core.store")
-
-local M = {}
-
--- ============================================================================
--- CONFIGURATION
--- ============================================================================
 
 local is_mobile_cp
 local env_ok_cp, env_mod_cp = pcall(require, "fox.core.environment")
@@ -33,6 +36,44 @@ if env_ok_cp then
 else
 	is_mobile_cp = vim.env.TERMUX_VERSION ~= nil or vim.fn.isdirectory("/data/data/com.termux") == 1
 end
+
+--- Builds the lazy.nvim spec for this module, pointing at the shared state.
+--- @param mod table Module state table holding settings/commands/functions.
+--- @return table spec
+local function build_spec(mod)
+	-- Legacy global kept for user scripts and older keybinds that reference it.
+	_G.CommandPalette = mod
+	return setmetatable({
+		name = "fox_command_palette",
+		dir = require("fox.core.lazyspec").for_module(),
+		cmd = "CommandPalette",
+		keys = is_mobile_cp and {
+			{ "<C-p>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette (Mobile)" },
+			{ "<C-P>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette (Mobile)" },
+			{ "<C-S-p>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette" },
+			{ "<leader>cp", mode = { "n", "v" }, desc = "Open Command Palette" },
+		} or {
+			{ "<C-S-p>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette" },
+			{ "<C-S-P>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette" },
+			{ "<leader>cp", mode = { "n", "v" }, desc = "Open Command Palette" },
+		},
+		dependencies = { "nvim-telescope/telescope.nvim" },
+		config = mod.setup,
+	}, { __index = mod })
+end
+
+-- Reuse the state built by the first execution of this chunk instead of
+-- rebuilding it (which would discard every runtime `add_command()` entry).
+local M = rawget(_G, "FOX_COMMAND_PALETTE")
+if M then
+	return build_spec(M)
+end
+M = {}
+rawset(_G, "FOX_COMMAND_PALETTE", M)
+
+-- ============================================================================
+-- CONFIGURATION
+-- ============================================================================
 
 M.settings = {
 	picker_width = 0.75,
@@ -598,27 +639,8 @@ function M.setup()
 	end
 end
 
--- Legacy global kept for user scripts and older keybinds that reference it.
-_G.CommandPalette = M
-
 -- ============================================================================
 -- LAZY.NVIM SPEC
 -- ============================================================================
 
-return setmetatable({
-	name = "fox_command_palette",
-	dir = require("fox.core.lazyspec").for_module(),
-	cmd = "CommandPalette",
-	keys = is_mobile_cp and {
-		{ "<C-p>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette (Mobile)" },
-		{ "<C-P>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette (Mobile)" },
-		{ "<C-S-p>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette" },
-		{ "<leader>cp", mode = { "n", "v" }, desc = "Open Command Palette" },
-	} or {
-		{ "<C-S-p>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette" },
-		{ "<C-S-P>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette" },
-		{ "<leader>cp", mode = { "n", "v" }, desc = "Open Command Palette" },
-	},
-	dependencies = { "nvim-telescope/telescope.nvim" },
-	config = M.setup,
-}, { __index = M })
+return build_spec(M)

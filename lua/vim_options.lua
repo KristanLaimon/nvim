@@ -43,6 +43,7 @@ local settings = {
 	--- Editor options, applied through `vim.opt`.
 	options = {
 		-- Appearance
+		termguicolors = true, -- Use the full Ryoku/Kitty RGB palette.
 		background = "dark", -- Explicitly set dark background to avoid terminal DSR query timeout on startup.
 		number = true,
 		relativenumber = true,

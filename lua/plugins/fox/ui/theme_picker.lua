@@ -27,7 +27,11 @@ function M.discover_themes()
 
 	for _, file in ipairs(files) do
 		local name = vim.fn.fnamemodify(file, ":t:r")
-		if name == "omarchy-fox" then
+		if name == "ryoku-fox" then
+			if require("plugins.fox.ui.ryoku_theme").is_available() then
+				table.insert(themes, name)
+			end
+		elseif name == "omarchy-fox" then
 			local has_omarchy, omarchy_mod = pcall(require, "plugins.fox.ui.omarchy_theme")
 			if has_omarchy and omarchy_mod.is_omarchy_available() then
 				table.insert(themes, name)
@@ -58,6 +62,14 @@ function M.set_theme(name)
 	if not name or name == "" then
 		return
 	end
+	if name == "ryoku-fox" then
+		require("plugins.fox.ui.ryoku_theme").set_sync_enabled(true)
+		return
+	end
+	local ryoku = require("plugins.fox.ui.ryoku_theme")
+	if ryoku.is_sync_enabled() then
+		ryoku.set_sync_enabled(false, { restore_theme = false })
+	end
 	local ok, err = pcall(vim.cmd.colorscheme, name)
 	if ok then
 		local data = store.load(M.settings.store_file, {})
@@ -85,6 +97,12 @@ end
 
 --- Restores persisted theme on startup.
 function M.restore_saved_theme()
+	local ryoku = require("plugins.fox.ui.ryoku_theme")
+	if ryoku.is_sync_enabled() and ryoku.apply({ quiet = true }) then
+		ryoku.setup()
+		ryoku.start_watcher()
+		return
+	end
 	local has_omarchy, omarchy_mod = pcall(require, "plugins.fox.ui.omarchy_theme")
 	if has_omarchy and omarchy_mod.is_sync_enabled() and omarchy_mod.is_omarchy_available() then
 		omarchy_mod.apply_omarchy_theme({ quiet = true })
@@ -221,6 +239,10 @@ function M.setup()
 		group = vim.api.nvim_create_augroup("fox_theme_user_change", { clear = true }),
 		callback = function(args)
 			local name = args.match
+			local ryoku = require("plugins.fox.ui.ryoku_theme")
+			if name ~= "ryoku-fox" and ryoku.is_sync_enabled() then
+				ryoku.set_sync_enabled(false, { restore_theme = false })
+			end
 			if not name or name == "" or name == "default" then
 				return
 			end

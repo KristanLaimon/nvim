@@ -300,6 +300,9 @@ M.commands = {
 	{ name = "💡 Open Help Menu & Cheatsheet Manager (<F1>)", cmd = "FoxHelp", category = "UI" },
 	{ name = "⌨️ View Active Runtime Shortcuts Cheatsheet", cmd = "Cheatsheet", category = "UI" },
 	{ name = "📚 Open Documentation Center & Wiki (Ctrl+Shift+D)", cmd = "FoxWiki", category = "UI" },
+	{ name = "🎨 Toggle Ryoku Theme Auto Sync", cmd = "FoxRyokuSyncToggle", category = "UI" },
+	{ name = "🎨 Sync Colors with Ryoku Theme Now", cmd = "FoxRyokuSyncNow", category = "UI" },
+	{ name = "🎨 Ryoku Theme Sync Status", cmd = "FoxRyokuSyncStatus", category = "UI" },
 	{ name = "🎨 Open Nagatoro & NvChad Theme Picker", cmd = "FoxThemePicker", category = "UI" },
 	{
 		name = "🎨 Toggle Omarchy Theme Sync (Adapt colors to Omarchy - Default: OFF)",

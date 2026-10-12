@@ -404,7 +404,16 @@ end
 local function terminal_open_cmd()
 	local ok, wsl = pcall(require, "plugins.fox.tools.wsl")
 	local wsl_cmd = ok and wsl.shell_command_for_cwd(vim.fn.getcwd()) or nil
-	return wsl_cmd and ("terminal " .. wsl_cmd) or "terminal"
+	if wsl_cmd then
+		return "terminal " .. wsl_cmd
+	end
+	-- Kitty starts the user's interactive shell; use the same initialization
+	-- inside Neovim while keeping Bash for POSIX tool/task commands.
+	local shell = vim.env.SHELL
+	if vim.fn.has("unix") == 1 and shell and vim.fn.executable(shell) == 1 then
+		return "terminal " .. vim.fn.fnameescape(shell) .. " -il"
+	end
+	return "terminal"
 end
 
 --- Shows terminal `n` in `win`, spawning the shell when the slot has no buffer.

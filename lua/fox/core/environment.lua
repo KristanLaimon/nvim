@@ -26,6 +26,7 @@ function M.detect()
 		is_linux = vim.fn.has("unix") == 1 and vim.fn.has("mac") == 0 and vim.fn.has("macunix") == 0,
 		is_mobile = false,
 		is_omarchy = false,
+		is_ryoku = false,
 		label = "",
 	}
 
@@ -61,6 +62,9 @@ function M.detect()
 		end
 	end
 
+	-- Ryoku ships its own desktop marker; Arch alone is not enough.
+	env.is_ryoku = env.is_linux and not env.is_termux and (vim.uv or vim.loop).fs_stat("/usr/share/ryoku") ~= nil
+
 	-- Check WSL
 	if vim.fn.has("wsl") == 1 then
 		env.is_wsl = true
@@ -95,6 +99,8 @@ function M.detect()
 		table.insert(layers, "Termux Native (Android)")
 	elseif env.is_wsl then
 		table.insert(layers, "WSL Linux")
+	elseif env.is_ryoku then
+		table.insert(layers, "Ryoku - Arch Linux")
 	elseif env.is_omarchy then
 		table.insert(layers, "Omarchy")
 	elseif env.is_ubuntu then

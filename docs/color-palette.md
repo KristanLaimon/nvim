@@ -69,3 +69,20 @@ Completion items in `blink.cmp` use NvChad layout:
 ## 📦 How to Add a New Theme
 
 To add a custom theme, create a new file `colors/mytheme-fox.lua` adhering to the `nagatoro-fox.lua` palette format. See [`how-to-customize-editor.md#5-how-to-customize-statusline--themes`](how-to-customize-editor.md#5-how-to-customize-statusline--themes) for full step-by-step instructions and code examples.
+
+### Ryoku (Arch Linux)
+
+On Ryoku, the dashboard shows `FOX Neovim (Ryoku - Arch Linux)`.
+Choose **Toggle Ryoku Theme Auto Sync** in `:CommandPalette`, or run
+`:FoxRyokuSyncToggle`, to enable or disable persistent desktop theme sync.
+`:FoxRyokuSyncNow` applies the current palette once; `:FoxRyokuSyncStatus`
+shows whether automatic sync is enabled. Sync follows wallpaper and theme
+changes by reading `~/.cache/ryoku/colors.json` every second, including atomic
+file replacements. No Ryoku configuration is modified. Turning sync off restores
+the previous editor theme; selecting an editor theme disables desktop sync.
+
+Kitty sessions are supported through Neovim's terminal UI. FoxVim's managed
+terminals start `$SHELL -il` on Unix, loading the same Fish/Zsh/Bash login and
+interactive setup used by the desktop (including the Ryoku prompt and greeting).
+Tool commands continue using the configured command shell. Existing terminal
+slots need to be closed and reopened to pick up the new initialization.

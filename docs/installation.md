@@ -14,10 +14,10 @@ FoxVim includes idempotent setup scripts for both Windows and Unix-like environm
 Open PowerShell in your `%LOCALAPPDATA%\nvim` directory and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\dependencies\install.ps1
 ```
 
-*If Scoop is not installed, `setup.ps1` automatically installs Scoop for your user account, adds the `main` and `extras` buckets, and installs all required CLI tools.*
+*If Scoop is not installed, `install.ps1` automatically installs Scoop for your user account, adds the `main` and `extras` buckets, and installs all required CLI tools.*
 
 ---
 
@@ -25,15 +25,27 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 Open a terminal in `~/.config/nvim` (or your Windows config directory in Git Bash) and run:
 
 ```bash
-chmod +x scripts/setup.sh
-./scripts/setup.sh
+chmod +x scripts/dependencies/install.sh
+./scripts/dependencies/install.sh
 ```
 
-*`setup.sh` detects your operating system and package manager (`apt`, `dnf`, `pacman`, `brew`, or `scoop` via Git Bash) and installs the required packages automatically.*
+*`install.sh` detects your operating system and package manager (`apt`, `dnf`, `pacman`, `brew`, or `scoop` via Git Bash) and installs the required packages automatically.*
+
+### Terminal shortcut setup
+
+These scripts configure terminal emulator shortcuts for FoxVim; they do not configure Bash, Fish, or your shell profile.
+
+| Script | Purpose |
+|---|---|
+| `scripts/setup-kitty.sh` / `scripts/unsetup-kitty.sh` | Enable or undo Ctrl+Shift+1..9 passthrough in Kitty |
+| `scripts/setup-bash.sh` / `scripts/unsetup-bash.sh` | Configure or undo shortcuts across supported terminals using Bash |
+| `scripts/setup-powershell.ps1` / `scripts/unsetup-powershell.ps1` | Windows Terminal shortcuts and PSReadLine key handlers |
+
+For Kitty environment switching, run `bash scripts/setup-kitty.sh`. Dependency installers live separately in `scripts/dependencies/`. The additional PowerShell configurator for multiple terminal emulators is preserved in `scripts/extra/setup-terminals.ps1`. See [the scripts guide](../scripts/README.md) for the layout.
 
 ---
 
-## ⚡ What if you haven't run `setup.ps1` or `setup.sh`?
+## ⚡ What if you haven't run `install.ps1` or `install.sh`?
 
 **Don't worry! You can run Neovim immediately.**
 
@@ -42,7 +54,7 @@ When you launch `nvim` for the first time:
 2. **Mason auto-installs LSPs**: Language servers, formatters, and debug adapters configured in FoxVim will be managed in the background.
 
 ### 🛡️ Graceful Degradation Matrix
-If you skip running `setup.ps1` or `setup.sh`, FoxVim handles missing external CLIs gracefully:
+If you skip running `install.ps1` or `install.sh`, FoxVim handles missing external CLIs gracefully:
 
 | Missing CLI | Affected Feature | Graceful Fallback Behavior |
 | :--- | :--- | :--- |
@@ -56,7 +68,7 @@ If you skip running `setup.ps1` or `setup.sh`, FoxVim handles missing external C
 | **`rustc` / `cargo` / `rustfmt`** | Rust LSP and formatting | The Rust bundle needs the Rust toolchain; install it with rustup before selecting the bundle. |
 | **`dotnet`** | C# LSP & Nuget manager | Nuget manager (`:NugetManager`) notifies if `dotnet` CLI is missing. |
 
-> 💡 **Tip:** You can run `setup.ps1` or `setup.sh` at any time after using Neovim to instantly fill in any missing dependencies!
+> 💡 **Tip:** You can run `install.ps1` or `install.sh` at any time after using Neovim to instantly fill in any missing dependencies!
 
 ---
 

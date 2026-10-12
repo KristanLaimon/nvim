@@ -69,7 +69,7 @@ FoxVim follows a modular four-layer design:
 Refer to the specific wiki documentation page for each feature or development use case:
 
 ### 🏁 Getting Started & System Setup
-* ⚙️ [**Installation & System Dependencies**](docs/installation.md) — Setup scripts (`setup.ps1` / `setup.sh`), Scoop/APT commands, health checks & fallbacks.
+* ⚙️ [**Installation & System Dependencies**](docs/installation.md) — Setup scripts (`install.ps1` / `install.sh`), Scoop/APT commands, health checks & fallbacks.
 * 🌱 [**Neovim Basics**](docs/neovim-basics.md) — Buffers, windows, tabs, and VSCode-style editing fundamentals.
 * 🎓 [**How-To & Customization Guide**](docs/how-to-customize-editor.md) — Step-by-step guide for adding plugins, local modules, and custom themes.
 * 🛠️ [**Languages, LSP & Formatting**](docs/languages.md) — Mason package definitions, Conform formatter pipelines & Treesitter parser setup.

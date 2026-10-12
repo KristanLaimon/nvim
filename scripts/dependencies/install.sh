@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# setup.sh - System Dependency & Toolchain Installer for FOX Neovim
+# install.sh - System Dependency & Toolchain Installer for FOX Neovim
 # Supports: Termux (Android), Debian/Ubuntu/WSL, Fedora, Arch, macOS, Alpine
 # ==============================================================================
 
@@ -54,9 +54,9 @@ elif command -v apk >/dev/null 2>&1; then
   PKG_MANAGER="apk"
   echo -e "${GREEN}[+] Environment detected: Alpine Linux (apk)${NC}"
 elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "mingw"* ]]; then
-  echo -e "${YELLOW}[*] Windows environment detected. Delegating to setup.ps1...${NC}"
+  echo -e "${YELLOW}[*] Windows environment detected. Delegating to install.ps1...${NC}"
   if command -v powershell.exe >/dev/null 2>&1; then
-    exec powershell.exe -ExecutionPolicy Bypass -File "$(dirname "$0")/setup.ps1"
+    exec powershell.exe -ExecutionPolicy Bypass -File "$(dirname "$0")/install.ps1"
   else
     echo -e "${RED}[!] powershell.exe not found.${NC}"
     exit 1

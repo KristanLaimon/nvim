@@ -110,8 +110,8 @@ Return to the dashboard from anywhere with `<leader>wm`; closing the last open b
 
 After cloning into `%LOCALAPPDATA%\nvim` (Windows) or `~/.config/nvim` (Linux, WSL, Termux, or macOS):
 
-- **Windows (PowerShell)**: `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1`
-- **Linux / WSL / Termux / Git Bash**: `./scripts/setup.sh`
+- **Windows (PowerShell)**: `powershell -ExecutionPolicy Bypass -File .\scripts\dependencies\install.ps1`
+- **Linux / WSL / Termux / Git Bash**: `./scripts/dependencies/install.sh`
 
 ---
 

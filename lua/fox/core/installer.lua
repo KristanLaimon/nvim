@@ -413,24 +413,24 @@ function M.ensure_sudo_pass(callback)
 	end)
 end
 
---- Prompts user for root/sudo password in UI prompt if non-root, then executes setup.sh.
+--- Prompts user for root/sudo password in UI prompt if non-root, then executes install.sh.
 function M.run_system_setup_interactive()
 	M.ensure_sudo_pass(function(pass)
 		M.run_setup_script(pass)
 	end)
 end
 
---- Executes setup.sh (or setup.ps1) with live activity modal feed and optional sudo password.
+--- Executes install.sh (or install.ps1) with live activity modal feed and optional sudo password.
 --- @param sudo_pass string|nil
 function M.run_setup_script(sudo_pass)
 	M.open_ui()
 	add_log("Starting system dependency setup via setup script...")
 
-	local script_path = vim.fn.stdpath("config") .. "/scripts/setup.sh"
+	local script_path = vim.fn.stdpath("config") .. "/scripts/dependencies/install.sh"
 	local cmd
 
 	if vim.fn.has("win32") == 1 then
-		script_path = vim.fn.stdpath("config") .. "/scripts/setup.ps1"
+		script_path = vim.fn.stdpath("config") .. "/scripts/dependencies/install.ps1"
 		cmd = { "powershell.exe", "-ExecutionPolicy", "Bypass", "-File", script_path }
 	else
 		if sudo_pass and sudo_pass ~= "" then

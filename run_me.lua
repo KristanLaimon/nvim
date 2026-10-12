@@ -16,7 +16,7 @@ local schema = {
 	options = {
 		["tests"] = "Run project test suite (run_tests)",
 		["syntax"] = "Run syntax check on all Lua files (run_sintaxcheck)",
-		["setup"] = "Run dependency setup script (setup.ps1 / setup.sh)",
+		["setup"] = "Run dependency setup script (install.ps1 / install.sh)",
 		["setup-ps"] = "Configure Windows Terminal keymaps (setup-powershell.ps1)",
 		["unsetup-ps"] = "Restore Windows Terminal keymaps (unsetup-powershell.ps1)",
 		["example"] = "Run example script (example.foxnvim)",
@@ -67,9 +67,9 @@ end
 local function run_setup()
 	console.log("[run_me] Running Setup Dependencies...")
 	if vim.fn.has("win32") == 1 then
-		terminal.run("powershell.exe -ExecutionPolicy Bypass -File " .. vim.fn.shellescape(root .. "/scripts/setup.ps1"))
+		terminal.run("powershell.exe -ExecutionPolicy Bypass -File " .. vim.fn.shellescape(root .. "/scripts/dependencies/install.ps1"))
 	else
-		terminal.run("bash " .. vim.fn.shellescape(root .. "/scripts/setup.sh"))
+		terminal.run("bash " .. vim.fn.shellescape(root .. "/scripts/dependencies/install.sh"))
 	end
 	return true
 end
@@ -151,7 +151,7 @@ local function show_menu()
 	local options = {
 		"Run Test Suite (tests/run.lua)",
 		"Run Syntax Check (tests/syntax_check.lua)",
-		"Run Setup Dependencies (setup.ps1 / setup.sh)",
+		"Run Setup Dependencies (install.ps1 / install.sh)",
 		"Setup Windows Terminal Keymaps (setup-powershell.ps1)",
 		"Unsetup Windows Terminal Keymaps (unsetup-powershell.ps1)",
 		"Run Example Script (scripts/example.foxnvim)",

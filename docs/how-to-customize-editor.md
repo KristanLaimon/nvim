@@ -288,8 +288,8 @@ Per-project build tasks and debugging launch profiles live in `.foxnvim/` inside
   - C Compiler (`gcc`, `clang`, or `zig`) for Treesitter parser compilation.
 
 ### Automated Setup Scripts:
-- **Windows**: `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1`
-- **Linux / WSL**: `./scripts/setup.sh`
+- **Windows**: `powershell -ExecutionPolicy Bypass -File .\scripts\dependencies\install.ps1`
+- **Linux / WSL**: `./scripts/dependencies/install.sh`
 
 *(If external tools are missing, FoxVim degrades gracefully with clear notifications instead of crashing).*
 

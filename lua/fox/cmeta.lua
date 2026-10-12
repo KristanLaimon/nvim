@@ -41,6 +41,55 @@ local standards = {
 	"gnu23",
 }
 
+---Auto-detect system include directories from compiler.
+---@param compiler string
+---@return string[]
+local function detect_system_includes(compiler)
+	local cmd = compiler
+	if vim.fn.executable(cmd) == 0 then
+		-- Fallbacks
+		for _, c in ipairs({ "gcc", "clang", "cc" }) do
+			if vim.fn.executable(c) == 1 then
+				cmd = c
+				break
+			end
+		end
+	end
+	if vim.fn.executable(cmd) == 0 then
+		vim.notify("[fox.cmeta] No C compiler found in PATH", vim.log.levels.WARN)
+		return {}
+	end
+
+	-- Query compiler for built-in include paths
+	-- gcc/clang: -v -E -x c NUL (Windows) or /dev/null (Unix)
+	local null_dev = (vim.fn.has("win32") == 1) and "NUL" or "/dev/null"
+	local output = vim.fn.system(cmd .. " -v -E -x c " .. null_dev .. " 2>&1")
+	if vim.v.shell_error ~= 0 then
+		vim.notify("[fox.cmeta] Failed to query " .. cmd .. " for includes", vim.log.levels.WARN)
+		return {}
+	end
+
+	local includes = {}
+	local in_search = false
+	for line in output:gmatch("[^\r\n]+") do
+		if line:match("#include <%.%.%.> search starts here:") then
+			in_search = true
+		elseif in_search and line:match("End of search list") then
+			break
+		elseif in_search then
+			local path = line:match("^%s*(.+)")
+			if path and path ~= "" and not path:match("^%(") then
+				-- Normalize path
+				path = vim.fs.normalize(path)
+				if vim.fn.isdirectory(path) == 1 then
+					table.insert(includes, path)
+				end
+			end
+		end
+	end
+	return includes
+end
+
 ---Find project root by looking for markers.
 ---@return string
 local function project_root()
@@ -186,6 +235,44 @@ function M.show()
 	vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO, { title = "C Project Metadata" })
 end
 
+---Auto-detect and apply system includes from compiler.
+function M.auto_detect_includes()
+	local cfg = M.load()
+	local compiler = cfg.c.compiler or "gcc"
+	vim.notify("Detecting system includes from " .. compiler .. "...", vim.log.levels.INFO)
+
+	local includes = detect_system_includes(compiler)
+	if #includes == 0 then
+		vim.notify("No system includes detected", vim.log.levels.WARN)
+		return
+	end
+
+	-- Merge with existing, avoiding duplicates
+	local existing = cfg.c.include_dirs or {}
+	local seen = {}
+	for _, dir in ipairs(existing) do
+		seen[dir] = true
+	end
+	local added = 0
+	for _, dir in ipairs(includes) do
+		if not seen[dir] then
+			table.insert(existing, dir)
+			seen[dir] = true
+			added = added + 1
+		end
+	end
+
+	cfg.c.include_dirs = existing
+	M.save(cfg)
+	vim.notify("Added " .. added .. " system include directories to .krsnvim/c.json", vim.log.levels.INFO)
+
+	-- Restart clangd
+	local clients = vim.lsp.get_clients({ bufnr = 0, name = "clangd" })
+	if #clients > 0 then
+		vim.cmd.LspRestart("clangd")
+	end
+end
+
 ---Interactive command palette for C Project Metadata.
 function M.open_palette()
 	local cfg = M.load()
@@ -194,6 +281,7 @@ function M.open_palette()
 	vim.ui.select({
 		{ label = "Set C Standard (" .. current .. ")", value = "std" },
 		{ label = "Set Compiler (" .. (cfg.c.compiler or "clang") .. ")", value = "compiler" },
+		{ label = "Auto-detect System Includes (from compiler)", value = "auto_includes" },
 		{ label = "Open .krsnvim/c.json", value = "open" },
 		{ label = "Create .krsnvim/c.json with defaults", value = "init" },
 		{ label = "Show current metadata", value = "show" },
@@ -219,6 +307,11 @@ function M.open_palette()
 
 		if choice.value == "init" then
 			M.init()
+			return
+		end
+
+		if choice.value == "auto_includes" then
+			M.auto_detect_includes()
 			return
 		end
 
@@ -290,6 +383,11 @@ function M.register_palette()
 		name = "📋 Show C Project Metadata",
 		category = "C / C++",
 		fn = M.show,
+	})
+	palette.add_command({
+		name = "🔍 Auto-detect System Includes (from gcc/clang)",
+		category = "C / C++",
+		fn = M.auto_detect_includes,
 	})
 	palette.add_command({
 		name = "📝 Open .krsnvim/c.json (Project C Metadata)",

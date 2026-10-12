@@ -163,8 +163,10 @@ function M.setup()
 			M.apply_defaults(args.buf)
 		end,
 	})
-	cmeta.setup_commands()
-	cmeta.register_palette()
 end
+
+-- Register C metadata commands globally (always available)
+cmeta.setup_commands()
+cmeta.register_palette()
 
 return M

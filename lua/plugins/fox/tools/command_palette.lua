@@ -47,6 +47,7 @@ local function build_spec(mod)
 		name = "fox_command_palette",
 		dir = require("fox.core.lazyspec").for_module(),
 		cmd = "CommandPalette",
+		event = "VimEnter",
 		keys = is_mobile_cp and {
 			{ "<C-p>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette (Mobile)" },
 			{ "<C-P>", mode = { "n", "i", "v", "t" }, desc = "Open Command Palette (Mobile)" },

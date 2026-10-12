@@ -9,6 +9,9 @@
   <a href="https://github.com/KristanLaimon/nvim/stargazers"><img src="https://img.shields.io/github/stars/KristanLaimon/nvim?style=flat-square" alt="GitHub Stars"></a>
 </p>
 
+<img src="./.github/kitty_support.png"></img>
+<em>Native support for Kitty terminal, arch-linux (omarchy & ryoku)</em>
+
 <video src="https://github.com/user-attachments/assets/ace791d2-96a6-4b3f-830b-345afa86391f"></video>
 
 This is intended for my own usage, but wanted to share as a public repo in case someone founds this config useful. You can fork-it, clone it, break it, do as you please.

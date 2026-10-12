@@ -80,9 +80,41 @@ See [Color Palette](color-palette.md) for the palette itself.
 
 ## 🖼️ Image Viewer (`image_viewer.lua`)
 
-`:ImageViewer` renders an image as terminal pixel art through `chafa`, in a floating window — enough to answer "is this the right asset?" without leaving the editor.
+In a Kitty terminal, opening an image automatically shows it using Kitty's native
+`icat` graphics, including GIF animation. Videos show a frame preview; PDFs show
+the first page. Other binary files show their size and a hex preview of the first
+4 KiB. Ordinary text files continue opening in the editor.
 
-`<C-S-Enter>` hands the file to the OS default application instead, which is what you want for anything `chafa` can't do (video, PSD, a real look at a photo). `:OpenRootInExplorer` opens the project root in the system file manager.
+Media previews use the full editor window. File details and shortcuts appear in
+a brief toast (900 ms). Alt+H/Alt+L cycles media tabs and restores their previews.
+
+For image zoom, use the **mouse wheel**, **Ctrl+wheel**, or **`+` / `-`**.
+Pan a zoomed image with **`h/j/k/l`**, arrow keys, or **left-button drag**.
+Press **`0`** to reset to fit. Each media tab remembers its view. The image stays visible while the next zoom or
+pan frame renders, and while focus moves to Neo-tree. Zoom and pan use
+ImageMagick (`magick`); GIFs show a still frame while zoomed, and reset-to-fit
+restores animation. Controls apply only to previews, so raw text keeps its normal
+editing keys.
+
+Press **`F4`** to toggle between the preview and the original file's byte/text
+content. The preview is read-only; switching to bytes loads the full original file
+in binary mode. The same action is available through `:MediaPreviewToggle` and
+the Command Palette. `:ImageViewer` previews the current media file explicitly.
+
+For video playback, use `:MediaPlay` (or **Play Video in Kitty** in the palette).
+It runs mpv with its Kitty graphics output; **`q`** returns to the editor preview.
+`<C-S-Enter>` opens the original file in its OS default app from either view.
+`:OpenRootInExplorer` opens the project root in the system file manager.
+
+Native previews require Neovim 0.12+, Kitty/`kitten`. Python 3 is used when available to read terminal pixel
+geometry via ioctl, without competing for keyboard input. If the TTY or pixel
+dimensions are unavailable, previews use Neovim screen dimensions with estimated
+cell pixels; image sizing may be less precise. Video frames use
+FFmpeg, PDF pages use `pdftoppm`, and playback uses mpv with Kitty output. No tools
+are installed automatically. Missing renderers or unsupported formats leave a
+readable preview message with the byte-view and external-app actions. Native
+previews are enabled only for a direct Kitty TUI, not Neovide, headless sessions,
+or tmux. Other terminals retain the Chafa floating preview.
 
 ---
 

@@ -19,6 +19,7 @@
 --- usable state, and falls back to a plain delete before it has loaded.
 --- @param bufnr integer Buffer behind the tab.
 local function close_buffer(bufnr)
+	bufnr = vim.b[bufnr].fox_media_source or bufnr
 	if _G.Smart_Close_Buffer then
 		_G.Smart_Close_Buffer(bufnr, false)
 	else
@@ -69,6 +70,10 @@ return {
 					{ filetype = "neo-tree", text = "🦊 Explorer", highlight = "Directory", text_align = "left" },
 				},
 				name_formatter = function(buf)
+					local source = vim.b[buf.bufnr].fox_media_source
+					if source and vim.api.nvim_buf_is_valid(source) then
+						return vim.fn.fnamemodify(vim.api.nvim_buf_get_name(source), ":t")
+					end
 					if _G.Is_File_Deleted and _G.Is_File_Deleted(buf.bufnr) then
 						return "[D] " .. buf.name
 					end
@@ -80,6 +85,11 @@ return {
 				-- with node internals, dap-src:// frames and the term:// console.
 				-- Only real files on disk are tabs.
 				custom_filter = function(bufnr)
+					-- A media preview represents its real file in the tab bar.
+					bufnr = vim.b[bufnr].fox_media_source or bufnr
+					if not vim.api.nvim_buf_is_valid(bufnr) then
+						return false
+					end
 					if vim.bo[bufnr].buftype ~= "" then
 						return false
 					end

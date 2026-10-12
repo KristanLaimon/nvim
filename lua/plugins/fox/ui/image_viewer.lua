@@ -2,18 +2,10 @@
 -- FOX PLUGIN: Media Viewer -- open media outside nvim, or preview it inside.
 -- ============================================================================
 -- WHAT IT DOES
---   <C-S-CR>   Opens the current file (or the project root) with the OS default
---              application -- the reliable way to view images and video.
---   <leader>i  Renders the image inside a floating terminal with `chafa`, for a
---              quick look without leaving the editor.
---   Opening a media file also notifies you that <C-S-CR> exists.
---
--- PLATFORMS
---   Windows `cmd /c start`, WSL `explorer.exe` (with a UNC path rewrite),
---   macOS `open`, everything else `xdg-open`.
---
--- REQUIREMENTS
---   `chafa` on PATH, for the in-terminal preview only.
+--   Kitty: automatic native media previews, F4 byte-view toggle, mpv playback.
+--   Other terminals: manual Chafa preview in a floating terminal.
+--   <C-S-CR> opens the original file with its OS default application.
+--   :ImageViewer and the Command Palette provide explicit preview actions.
 -- ============================================================================
 
 local lazy_req = require("fox.core.lazy_require")
@@ -21,6 +13,7 @@ local ui = lazy_req("fox.core.ui")
 local path = lazy_req("fox.core.path")
 
 local M = {}
+local kitty_media = require("fox.media.kitty")
 
 -- ============================================================================
 -- CONFIGURATION
@@ -161,7 +154,7 @@ end
 function M.open_with_system_app(filepath)
 	local ok, err = pcall(function()
 		if not filepath or filepath == "" then
-			filepath = vim.api.nvim_buf_get_name(0)
+			filepath = kitty_media.current_path() or vim.api.nvim_buf_get_name(0)
 		end
 		if not filepath or filepath == "" or not path_exists(filepath) then
 			filepath = first_visible_file()
@@ -203,6 +196,10 @@ end
 
 --- Renders the current image inside a floating terminal using chafa.
 function M.view_current_image()
+	if kitty_media.is_available() then
+		kitty_media.preview()
+		return
+	end
 	local filepath = vim.api.nvim_buf_get_name(0)
 	if filepath == "" or not path.is_file(filepath) or vim.bo.filetype == "neo-tree" then
 		filepath = first_visible_file()
@@ -237,6 +234,12 @@ end
 
 --- Registers `:OpenRootInExplorer`, the keymaps, and the media-file hint.
 function M.setup()
+	kitty_media.setup()
+	vim.api.nvim_create_user_command(
+		"ImageViewer",
+		M.view_current_image,
+		{ desc = "Preview media (native Kitty graphics when available)" }
+	)
 	vim.api.nvim_create_user_command("OpenRootInExplorer", function()
 		M.open_project_root_in_explorer()
 	end, { desc = "Open current project root in the OS file explorer" })
@@ -262,7 +265,7 @@ function M.setup()
 		pattern = "*",
 		callback = function(ev)
 			local name = vim.api.nvim_buf_get_name(ev.buf)
-			if is_media_file(name) then
+			if is_media_file(name) and not kitty_media.is_available() then
 				vim.notify(
 					"🖼️ Media file opened: "
 						.. vim.fn.fnamemodify(name, ":t")
@@ -285,6 +288,6 @@ _G.ImageViewer = M
 return setmetatable({
 	name = "image_viewer",
 	dir = require("fox.core.lazyspec").for_module(),
-	event = "VeryLazy",
+	lazy = false, -- Install media read hooks before the first command-line file is read.
 	config = M.setup,
 }, { __index = M })

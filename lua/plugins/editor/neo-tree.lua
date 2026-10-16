@@ -76,6 +76,7 @@ local settings = {
 		["<C-;>"] = "toggle_selected_terminal",
 		["H"] = "toggle_custom_hidden",
 		["gh"] = "toggle_custom_hidden",
+		["gw"] = "toggle_word_wrap",
 	},
 
 	--- Keys that toggle the sidebar.
@@ -457,6 +458,7 @@ return {
 			"NeotreeRescan",
 			"NeotreeMove",
 			"NeotreeCancelMove",
+			"NeotreeToggleWordWrap",
 		},
 		keys = (function()
 			local k = {}
@@ -483,8 +485,10 @@ return {
 
 			local neotree_hidden = require("plugins.fox.editor.neotree_hidden")
 			neotree_hidden.setup()
+			local neotree_wrap = require("plugins.fox.editor.neotree_wrap")
 
 			local user_cmds = {
+				NeotreeToggleWordWrap = { neotree_wrap.toggle, "Toggle Neo-tree word wrap and entry spacing" },
 				NeotreeCreateFile = {
 					function()
 						add_file_prompt()
@@ -562,6 +566,7 @@ return {
 					mappings = settings.mappings,
 				},
 				commands = {
+					toggle_word_wrap = neotree_wrap.toggle,
 					toggle_selected_terminal = function()
 						-- Calling the command lets lazy.nvim load the terminal manager on
 						-- demand if Neo-tree is the first component opened this session.
@@ -733,6 +738,8 @@ return {
 					},
 				},
 				event_handlers = {
+					{ event = "before_render", handler = neotree_wrap.prepare },
+					{ event = "after_render", handler = neotree_wrap.apply },
 					{
 						event = "file_added",
 						handler = function(filename)

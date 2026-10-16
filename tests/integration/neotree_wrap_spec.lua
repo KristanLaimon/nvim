@@ -1,0 +1,50 @@
+local t = require("fox.lib.foxnvim.test")
+local wrap = require("plugins.fox.editor.neotree_wrap")
+
+require("lazy").load({ plugins = { "neo-tree.nvim" } })
+
+t.describe("Neo-tree word wrap", function()
+	t.it("keeps long Unicode names, node actions and spacing through toggles and redraws", function()
+		vim.cmd("Neotree show")
+		local state = require("neo-tree.sources.manager").get_state("filesystem")
+		local renderer = require("neo-tree.ui.renderer")
+		local name = string.rep("long filename 日本語 ", 8) .. ".lua"
+		renderer.show_nodes({ { id = "wrap-test", name = name, type = "file", path = name } }, state)
+		vim.wait(1000, function()
+			return state.tree and state.tree:get_node("wrap-test") ~= nil
+		end)
+		local ns = vim.api.nvim_get_namespaces().FoxNeoTreeWrap
+		local function marks()
+			return vim.api.nvim_buf_get_extmarks(state.bufnr, ns, 0, -1, {})
+		end
+		local ok, err = pcall(function()
+			vim.api.nvim_set_current_win(state.winid)
+			t.expect(vim.fn.maparg("gw", "n", false, true).buffer).toBe(1)
+			vim.cmd("NeotreeToggleWordWrap")
+			t.expect(vim.wo[state.winid].wrap).toBe(true)
+			t.expect(vim.wo[state.winid].linebreak).toBe(true)
+			local lines = vim.api.nvim_buf_get_lines(state.bufnr, 0, -1, false)
+			t.expect(table.concat(lines):find(name, 1, true) ~= nil).toBe(true)
+			t.expect(#marks()).toBeGreaterThan(0)
+			local node, line = state.tree:get_node("wrap-test")
+			t.expect(state.tree:get_node(line):get_id()).toBe(node:get_id())
+			renderer.redraw(state)
+			wrap.apply(state)
+			t.expect(#marks()).toBeGreaterThan(0)
+			vim.cmd("Neotree close")
+			vim.cmd("Neotree show")
+			state = require("neo-tree.sources.manager").get_state("filesystem")
+			t.expect(vim.wait(1000, function()
+				return state.winid and vim.api.nvim_win_is_valid(state.winid) and vim.wo[state.winid].wrap and #marks() > 0
+			end)).toBe(true)
+			vim.cmd("NeotreeToggleWordWrap")
+			t.expect(vim.wo[state.winid].wrap).toBe(false)
+			t.expect(#marks()).toBe(0)
+		end)
+		if wrap.enabled then
+			wrap.toggle()
+		end
+		vim.cmd("Neotree close")
+		assert(ok, err)
+	end)
+end)

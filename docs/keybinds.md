@@ -134,6 +134,7 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `r` | Neo-tree | Rename via the input modal |
 | `d` | Neo-tree | Delete |
 | `c` | Neo-tree | Copy |
+| `gw` | Neo-tree | Toggle word wrap and spacing between entries |
 | `m` | Neo-tree | Move via the floating explorer (`O` confirms the destination) |
 
 ---

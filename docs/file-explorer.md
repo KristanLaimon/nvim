@@ -25,6 +25,7 @@ FOX Neovim includes native floating file explorers for Desktop, WSL, folder pick
    - Toggle visibility of all marked hidden items via Command Palette (`<C-S-p>` -> `NeotreeToggleCustomHiddenVisibility`) or `:NeotreeToggleCustomHiddenVisibility`.
    - When marked items are set to visible, they are rendered using a theme-derived color (`NeoTreeCustomHidden`, linked to active theme's `Comment` group).
 7. **Terminal from Neo-tree (`<C-;>`)**: Opens or toggles the selected multi-terminal slot. This intentionally replaces Neo-tree's default `clear_selection` action for that key.
+8. **Word wrap (`gw`, only while Neo-tree is focused)**: Toggle full names wrapping onto additional screen lines, with one visual blank line between entries. Also available as `:NeotreeToggleWordWrap` and **Toggle Word Wrap & Entry Spacing in Neo-tree (gw)** in the Command Palette. Disabled by default; applies to Neo-tree views for the current session, including reopened panels.
 
 ---
 

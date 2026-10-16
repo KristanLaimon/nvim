@@ -1,19 +1,27 @@
 #!/usr/bin/env bash
-# Remove only the FoxVim environment shortcut overrides.
+# Remove only the FoxVim Kitty shortcut overrides.
 set -euo pipefail
 
 python3 - <<'PY'
 import os
+import re
 from pathlib import Path
 import shutil
 import time
 
 config = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / 'kitty/kitty.conf'
+main_text = config.read_text() if config.exists() else ''
+# Ryoku loads this dedicated, unshipped override last.
+if re.search(r'^\s*(?:globinclude|include)\s+user\.conf\s*$', main_text, re.M):
+    config = config.with_name('user.conf')
 text = config.read_text() if config.exists() else ''
 maps = ''.join(f'map ctrl+shift+{slot}\n' for slot in range(1, 10))
 legacy = '# Pass environment shortcuts through to Neovim instead of focusing Kitty windows.\n' + maps
-block = '# >>> FOXVIM KITTY ENVIRONMENTS >>>\n' + maps + '# <<< FOXVIM KITTY ENVIRONMENTS <<<\n'
-updated = text.replace(block, '').replace(legacy, '')
+old_block = '# >>> FOXVIM KITTY ENVIRONMENTS >>>\n' + maps + '# <<< FOXVIM KITTY ENVIRONMENTS <<<\n'
+# Unmapping preserves Kitty's negotiated keyboard protocol in Neovim.
+shortcuts = maps + 'map ctrl+shift+enter\nmap ctrl+shift+p\n'
+block = '# >>> FOXVIM KITTY SHORTCUTS >>>\n' + shortcuts + '# <<< FOXVIM KITTY SHORTCUTS <<<\n'
+updated = text.replace(block, '').replace(old_block, '').replace(legacy, '')
 if updated == text:
     print('No FoxVim Kitty shortcut overrides found.')
 else:

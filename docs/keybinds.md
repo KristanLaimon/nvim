@@ -24,7 +24,7 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `<C-+>` / `<C-=>` | n, i, v, t | Increase font size (persisted) |
 | `<C-->` | n, i, v, t | Decrease font size |
 | `<C-0>` | n, i, v, t | Reset font size |
-| `<C-S-Enter>` | n | Open image/video with the OS default app |
+| `<C-S-Enter>` | n | Open file/folder with the OS default app (`:OpenWithSystemApp`) |
 | `<C-S-d>` / `:FoxWiki` | n, i, v, t | Open Documentation Center & Wiki Modal |
 | `<C-LeftMouse>` | all | Open the URL under the cursor in a browser |
 | `<S-LeftMouse>` | n, i, v | Shift + Click symbol: Move cursor and jump to definition |

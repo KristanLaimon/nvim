@@ -1,22 +1,30 @@
 #!/usr/bin/env bash
-# Pass Ctrl+Shift+1..9 through Kitty to FoxVim.
+# Pass FoxVim shortcuts through Kitty without terminal interception.
 set -euo pipefail
 
 python3 - <<'PY'
 import os
+import re
 from pathlib import Path
 import shutil
 import time
 
 config = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / 'kitty/kitty.conf'
+main_text = config.read_text() if config.exists() else ''
+# Ryoku loads this dedicated, unshipped override last.
+if re.search(r'^\s*(?:globinclude|include)\s+user\.conf\s*$', main_text, re.M):
+    config = config.with_name('user.conf')
 text = config.read_text() if config.exists() else ''
 maps = ''.join(f'map ctrl+shift+{slot}\n' for slot in range(1, 10))
 legacy = '# Pass environment shortcuts through to Neovim instead of focusing Kitty windows.\n' + maps
-block = '# >>> FOXVIM KITTY ENVIRONMENTS >>>\n' + maps + '# <<< FOXVIM KITTY ENVIRONMENTS <<<\n'
+old_block = '# >>> FOXVIM KITTY ENVIRONMENTS >>>\n' + maps + '# <<< FOXVIM KITTY ENVIRONMENTS <<<\n'
+# Unmapping preserves Kitty's negotiated keyboard protocol in Neovim.
+shortcuts = maps + 'map ctrl+shift+enter\nmap ctrl+shift+p\n'
+block = '# >>> FOXVIM KITTY SHORTCUTS >>>\n' + shortcuts + '# <<< FOXVIM KITTY SHORTCUTS <<<\n'
 if block in text:
     print('FoxVim Kitty shortcuts are already set up.')
 else:
-    updated = text.replace(legacy, '')
+    updated = text.replace(old_block, '').replace(legacy, '')
     if updated and not updated.endswith('\n'):
         updated += '\n'
     updated += block
@@ -26,7 +34,7 @@ else:
         shutil.copy2(config, backup)
         print(f'Backup: {backup}')
     config.write_text(updated)
-    print(f'Enabled Ctrl+Shift+1..9 passthrough in {config}')
+    print(f'Enabled Ctrl+Shift+Enter, Ctrl+Shift+P and Ctrl+Shift+1..9 passthrough in {config}')
 PY
 
 if command -v pkill >/dev/null && pkill -USR1 -u "$(id -u)" -x kitty; then

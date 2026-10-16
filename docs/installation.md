@@ -37,11 +37,11 @@ These scripts configure terminal emulator shortcuts for FoxVim; they do not conf
 
 | Script | Purpose |
 |---|---|
-| `scripts/setup-kitty.sh` / `scripts/unsetup-kitty.sh` | Enable or undo Ctrl+Shift+1..9 passthrough in Kitty |
+| `scripts/setup-kitty.sh` / `scripts/unsetup-kitty.sh` | Enable or undo Ctrl+Shift+Enter, Ctrl+Shift+P and Ctrl+Shift+1..9 passthrough in Kitty |
 | `scripts/setup-bash.sh` / `scripts/unsetup-bash.sh` | Configure or undo shortcuts across supported terminals using Bash |
 | `scripts/setup-powershell.ps1` / `scripts/unsetup-powershell.ps1` | Windows Terminal shortcuts and PSReadLine key handlers |
 
-For Kitty environment switching, run `bash scripts/setup-kitty.sh`. Dependency installers live separately in `scripts/dependencies/`. The additional PowerShell configurator for multiple terminal emulators is preserved in `scripts/extra/setup-terminals.ps1`. See [the scripts guide](../scripts/README.md) for the layout.
+For Kitty shortcuts, run `bash scripts/setup-kitty.sh`. Dependency installers live separately in `scripts/dependencies/`. The additional PowerShell configurator for multiple terminal emulators is preserved in `scripts/extra/setup-terminals.ps1`. See [the scripts guide](../scripts/README.md) for the layout.
 
 ---
 

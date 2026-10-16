@@ -105,6 +105,7 @@ M.commands = {
 	{ name = "🖼️ Toggle Media Preview / File Bytes (F4)", cmd = "MediaPreviewToggle", category = "Files" },
 	{ name = "🎬 Play Video in Kitty", cmd = "MediaPlay", category = "Files" },
 	{ name = "📂 Open Project Root in File Explorer", cmd = "OpenRootInExplorer", category = "Files" },
+	{ name = "Open File or Folder with OS Default App", cmd = "OpenWithSystemApp", category = "Files" },
 	{ name = "📁 Select Recent Project (Ctrl+Shift+R)", cmd = "RecentProjects", category = "Files" },
 	{ name = "🐧 Browse WSL Files", cmd = "TelescopeFileBrowserWSL", category = "Files" },
 	{ name = "🔄 Check & Reload External File Changes (SmartCheck)", cmd = "SmartCheck", category = "Files" },

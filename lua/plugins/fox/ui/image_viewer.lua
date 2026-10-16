@@ -134,7 +134,9 @@ local function system_open_command(filepath)
 
 	if vim.fn.has("win32") == 1 then
 		local win_path = abs_path:gsub("/", "\\")
-		return { "cmd.exe", "/c", "start", "", win_path }
+		-- Avoid cmd's special quoting/title rules for `start`, especially for
+		-- paths containing spaces or shell metacharacters. Independent of &shell.
+		return { "explorer.exe", win_path }
 	end
 	if vim.fn.has("wsl") == 1 then
 		return { "explorer.exe", windows_path_for_wsl(abs_path) or abs_path }
@@ -153,6 +155,11 @@ end
 --- @param filepath string|nil Defaults to the current buffer, then any open file.
 function M.open_with_system_app(filepath)
 	local ok, err = pcall(function()
+		if (not filepath or filepath == "") and vim.bo.filetype == "neo-tree" then
+			local state = require("neo-tree.sources.manager").get_state("filesystem")
+			local node = state.tree and state.tree:get_node()
+			filepath = node and node.path
+		end
 		if not filepath or filepath == "" then
 			filepath = kitty_media.current_path() or vim.api.nvim_buf_get_name(0)
 		end
@@ -173,7 +180,20 @@ function M.open_with_system_app(filepath)
 
 		local is_directory = path.is_dir(abs_path)
 		local cmd = system_open_command(abs_path)
-		vim.system(cmd, { detach = true, stdout = false, stderr = false })
+		vim.system(cmd, { detach = true, text = true }, function(result)
+			-- Explorer can return 1 after successfully handing off to an existing
+			-- process (also under WSL).
+			if result.code == 0 or (cmd[1] == "explorer.exe" and result.code == 1) then
+				return
+			end
+			vim.schedule(function()
+				vim.notify(
+					"Failed to open " .. abs_path .. ": " .. ((result.stderr or ""):match("%S.*") or ("exit " .. result.code)),
+					vim.log.levels.ERROR,
+					{ title = M.settings.notify_title }
+				)
+			end)
+		end)
 
 		local name = vim.fn.fnamemodify(abs_path, ":t")
 		if name == "" then
@@ -243,6 +263,9 @@ function M.setup()
 	vim.api.nvim_create_user_command("OpenRootInExplorer", function()
 		M.open_project_root_in_explorer()
 	end, { desc = "Open current project root in the OS file explorer" })
+	vim.api.nvim_create_user_command("OpenWithSystemApp", function()
+		M.open_with_system_app()
+	end, { desc = "Open current file or folder with the OS default application" })
 
 	if M.settings.keys.preview and M.settings.keys.preview ~= "" then
 		vim.keymap.set("n", M.settings.keys.preview, M.view_current_image, {

@@ -1,0 +1,24 @@
+#!/bin/sh
+# Neovim's terminal cannot render Fastfetch's native image protocols.
+# Find the real program through PATH, skipping this wrapper (also in nested Nvim).
+remaining_path=${PATH:-}
+while :; do
+    entry=${remaining_path%%:*}
+    candidate=${entry:-.}/fastfetch
+    if [ -f "$candidate" ] && [ -x "$candidate" ] && ! [ "$candidate" -ef "$0" ]; then
+        if [ -n "${NVIM:-}" ] || [ -n "${NVIM_LISTEN_ADDRESS:-}" ]; then
+            if "$candidate" --list-features 2>/dev/null | grep -qx chafa; then
+                exec "$candidate" "$@" --logo-type chafa
+            fi
+            # Clear any image source so Fastfetch can select the distro ASCII art.
+            exec "$candidate" "$@" --logo '' --logo-type builtin
+        fi
+        exec "$candidate" "$@"
+    fi
+    case $remaining_path in
+        *:*) remaining_path=${remaining_path#*:} ;;
+        *) break ;;
+    esac
+done
+printf '%s\n' 'fastfetch: not installed or not found in PATH' >&2
+exit 127

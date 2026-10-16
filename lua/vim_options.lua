@@ -259,3 +259,6 @@ end
 
 -- Initialize per-language internal configurations (e.g. PHP Composer vendor bin)
 require("fox.langs").setup()
+
+-- Fastfetch images as colored text in embedded Unix terminals.
+require("fox.core.terminal_fastfetch").setup()

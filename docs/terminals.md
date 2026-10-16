@@ -39,3 +39,23 @@ Terminal preferences are persisted globally in Neovim's state directory (`stdpat
 - Docked height: `terminal_height`
 - Bottom floating height: `terminal_bottom_float_height`
 - Centered floating height: `terminal_float_height`
+
+
+## Fastfetch images in Unix terminals
+
+Neovim prepends `scripts/terminal-bin` from this config to its own `PATH` via
+`fox.core.terminal_fastfetch`. The bundled `fastfetch` wrapper finds the real
+Fastfetch executable through `PATH`; it needs no machine-specific binary path.
+Inside Neovim, it uses Fastfetch's Chafa renderer when `--list-features` lists
+`chafa`, otherwise it clears the image source and uses the distro's built-in
+ASCII logo. Fastfetch must be installed separately; the standalone `chafa`
+command is not required. The wrapper does not start Fastfetch automatically.
+
+This covers `:terminal`, Alt + number terminal slots, and shell startup greetings
+that invoke `fastfetch` through `PATH` (including `ryoku-fastfetch`). It leaves
+Fastfetch's global configuration and terminals launched outside Neovim alone.
+Restart Neovim after installing or updating this integration. Keep the wrapper
+executable when copying this config to another Unix system. Native Windows and
+WSL sessions launched from Windows Neovim are not configured by this integration.
+Shell startup files that replace `PATH` must preserve `scripts/terminal-bin` for
+the wrapper to be used. Absolute calls to a different Fastfetch binary bypass it.

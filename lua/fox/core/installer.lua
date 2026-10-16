@@ -159,6 +159,17 @@ M.health_categories = {
 	},
 }
 
+-- Per-language system checks stay in their owning language modules.
+do
+	local langs_mod = require("fox.langs")
+	for _, key in ipairs(langs_mod.lang_order) do
+		local lang = langs_mod.langs[key]
+		if lang.health_tools then
+			table.insert(M.health_categories, { label = lang.bundle_name or key, tools = lang.health_tools })
+		end
+	end
+end
+
 --- Flattened `{cmd, alt}` view of `M.health_categories`, for the compact
 --- bundle-manager footer's single-line pass/fail row.
 M.cli_healthcheck = {}

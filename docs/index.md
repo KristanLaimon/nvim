@@ -40,6 +40,7 @@ If you have just installed or launched FoxVim for the first time, follow these s
 | 🪐 **Web Frameworks** | [**Astro Guide**](languages/astro.md) | Astro LSP and Prettier |
 | 🧩 **Web UI** | [**Web UI Guide**](languages/web-ui.md) | Svelte, Angular, React/TSX, TypeScript LSP |
 | 🦀 **Rust** | [**Rust Guide**](languages/rust.md) | rust-analyzer, rustfmt, Cargo |
+| 📄 **LaTeX / BibTeX** | [**LaTeX Guide**](languages/latex.md) | Texlab, latexindent, LaTeX/BibTeX parsers |
 | 🐳 **Docker & Proto** | [**Docker & Proto Guide**](languages/docker-proto.md) | dockerls, dockerfmt, protolint |
 | 🐚 **Shell / Bash** | [**Shell & Bash Guide**](languages/bash.md) | bashls, bash-debug-adapter, beautysh, shellcheck |
 

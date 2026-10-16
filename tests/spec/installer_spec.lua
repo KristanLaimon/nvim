@@ -33,6 +33,25 @@ describe("fox.core.installer", function()
 		expect(health_tools.luacheck).toBe(true)
 	end)
 
+	it("aggregates LaTeX build dependencies into the full and compact health checks", function()
+		local latex = require("fox.langs.latex")
+		local category
+		local compact = {}
+		for _, entry in ipairs(installer.health_categories) do
+			if entry.label == latex.bundle_name then
+				category = entry
+			end
+		end
+		for _, tool in ipairs(installer.cli_healthcheck) do
+			compact[tool.cmd] = true
+		end
+		expect(category).toBeDefined()
+		expect(category.tools).toEqual(latex.health_tools)
+		for _, cmd in ipairs({ "latexmk", "pdflatex", "perl" }) do
+			expect(compact[cmd]).toBe(true)
+		end
+	end)
+
 	it("renders unicode progress bar correctly", function()
 		expect(installer.render_bar(0, 10)).toBe("░░░░░░░░░░")
 		expect(installer.render_bar(50, 10)).toBe("█████░░░░░")
@@ -127,6 +146,27 @@ describe("fox.core.installer", function()
 			expect(type(comp.type)).toBe("string")
 			expect(type(comp.label)).toBe("string")
 		end
+	end)
+
+	it("registers LaTeX tooling as an optional bundle and keeps Lua as the only minimal bundle", function()
+		local latex = require("fox.langs").langs.latex
+		local bundle
+		local minimal = {}
+		for _, entry in ipairs(installer.language_bundles) do
+			if entry.name == latex.bundle_name then
+				bundle = entry
+			end
+			if entry.is_minimal then
+				table.insert(minimal, entry.mason_pkgs)
+			end
+		end
+
+		expect(bundle).toBeDefined()
+		expect(bundle.is_minimal == true).toBe(false)
+		expect(bundle.mason_pkgs).toEqual({ "texlab", "latexindent" })
+		expect(bundle.treesitter).toEqual({ "latex", "bibtex" })
+		expect(bundle.mason_components[2].type).toBe("formatter")
+		expect(minimal).toEqual({ { "lua-language-server", "stylua" } })
 	end)
 
 	it("computes bundle status as a pure read of on-disk/PATH state", function()

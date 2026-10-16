@@ -2,6 +2,9 @@
 
 [← Back to Wiki Index](index.md)
 
+For LaTeX and BibTeX, see the [LaTeX Guide](languages/latex.md). The optional
+bundle includes Texlab, latexindent and LaTeX/BibTeX Treesitter parsers.
+
 Nothing below installs automatically on first start: `mason-lspconfig` is configured with `automatic_installation = false, ensure_installed = {}` (`lua/plugins/lsp/lsp.lua`), and Treesitter only auto-installs the fresh-install `core_parsers` (`lua`, `vim`, `vimdoc`, `markdown`, `markdown_inline`). Everything else — LSP/DAP/formatter Mason packages and non-core Treesitter parsers — installs per language via the opt-in **Language Bundle** picker: run `:LanguageManager`.
 
 **Where a language's actual settings live**: `lua/fox/langs/<language>/init.lua` — LSP server settings, Mason package names, formatter assignment, debugger config and launch-profile runtimes are all defined there, one file per language. `lua/plugins/lsp/lsp.lua` (servers + completion), `lua/plugins/lsp/formatting.lua` (Conform), `lua/plugins/lsp/treesitter.lua` (parsers), `lua/plugins/editor/dap.lua` (debug adapters), and `lua/fox/core/installer.lua` (Mason install list) only *aggregate* what every language module exports — swapping a tool means editing the one language file, not four.

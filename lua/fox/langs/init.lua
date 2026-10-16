@@ -90,6 +90,7 @@
 ---@field is_minimal? boolean Marks the always-on core bundle (Lua only); pre-selected and excluded from the "pending" count.
 ---@field requires? FoxLangRequirement[] System runtimes the bundle needs before Mason packages can install; missing ones block the bundle with a lock icon.
 ---@field treesitter? string[] Treesitter parser names the Language Tooling Manager installs alongside this language's Mason packages.
+---@field health_tools? {cmd: string, name: string, alt?: string, note?: string}[] Optional system tools reported by FoxHealthCheck, without blocking editor tooling installation.
 ---@field bundle_extra_mason_pkgs? string[] Mason package names the bundle installs beyond what `mason_order` resolves -- for tools intentionally absent from `M.mason` (e.g. a DAP tool installed through a different mechanism, a standalone linter).
 ---@field PRETTIER_CONFIG_FILES? string[] Prettier config file patterns indicating project-managed formatting style.
 ---@field BIOME_CONFIG_FILES? string[] Biome config file patterns.
@@ -175,6 +176,7 @@ M.langs = {
 	teal = require("fox.langs.teal"),
 	github = require("fox.langs.github"),
 	zig = require("fox.langs.zig"),
+	latex = require("fox.langs.latex"),
 }
 
 --- Display order for `M.langs` in the Language Tooling Manager (`:LanguageManager`)
@@ -191,6 +193,7 @@ M.lang_order = {
 	"csharp",
 	"cpp",
 	"zig",
+	"latex",
 	"ruby",
 	"haskell",
 	"teal",

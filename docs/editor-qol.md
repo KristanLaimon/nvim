@@ -4,6 +4,18 @@
 
 The small modules — each one file in `lua/plugins/fox/`, each fixing one specific annoyance.
 
+## Markdown browser preview
+
+With a Markdown file open, select **Toggle Live Markdown Browser Preview** in
+`:CommandPalette`, or run `:MarkdownPreviewToggle`. Use `:MarkdownPreviewStop`
+to stop the server.
+
+FoxVim opens the system browser through its native handler (Explorer on Windows,
+`open` on macOS, `xdg-open` on Linux, or `wslview` when available under WSL).
+The preview URL is also printed in `:messages`. If the handler fails, FoxVim
+reports the error with that URL so you can open it manually. Explicit
+`g:mkdp_browser` and `g:mkdp_browserfunc` overrides are respected.
+
 ---
 
 ## 🚪 Buffer Cleaner & Smart Quit (`buffer_cleaner.lua`)

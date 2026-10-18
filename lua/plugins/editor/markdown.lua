@@ -115,5 +115,11 @@ return {
 		cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
 		ft = { "markdown" },
 		build = "cd app && npm install",
+		init = function()
+			require("fox.markdown.browser").setup()
+		end,
+		config = function()
+			require("fox.markdown.browser").setup_commands()
+		end,
 	},
 }

@@ -134,6 +134,7 @@ function M.close_git_center(opts)
 					or (type(ld.state.active_commit) == "string" and ld.state.active_commit)
 					or nil,
 				file = ld.state.active_file,
+				history_file = ld.state.history_file,
 				commit_row = (
 					ld.state.logs_win
 					and vim.api.nvim_win_is_valid(ld.state.logs_win)
@@ -405,6 +406,7 @@ function M.open_git_center()
 			mode = d.mode,
 			branch = d.branch,
 			file = d.file,
+			history_file = d.history_file,
 		})
 		vim.schedule(function()
 			if not ld.is_open() then
@@ -1390,6 +1392,7 @@ function M.open_git_center()
 			"  K            Checkout commit",
 			"  b            Branch manager",
 			"  l / L        Git Graph (current / all branches)",
+			"  H / h        Log Diff / Pick file history",
 			"  v / V        Diff mode / Toggle diff mode",
 			"  M            Merge conflict resolver",
 			"  z            Stash menu",
@@ -1551,6 +1554,16 @@ function M.open_git_center()
 			log_diff.open({ cwd = active_cwd })
 		end)
 	end, key_opts)
+
+	local function pick_file_history()
+		local cwd = get_active_target().full_path
+		M.close_git_center({ keep_cached_view = false })
+		vim.schedule(function()
+			require("plugins.fox.git.log_diff").pick_file_history(cwd)
+		end)
+	end
+	vim.keymap.set("n", "h", pick_file_history, key_opts)
+	vim.keymap.set("n", "h", pick_file_history, preview_opts)
 
 	local commit_fields = {
 		{ key = "c", field = "title", label = "Commit Title" },

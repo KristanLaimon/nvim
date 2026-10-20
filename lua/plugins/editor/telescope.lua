@@ -269,29 +269,30 @@ return {
 		--- Finds files, respecting .gitignore.
 		--- Uses rg/fd with --no-require-git so ignore rules are strictly honored
 		--- in git repos, non-git repos, subfolders, and WSL workspaces alike.
-		local function find_files_gitignore()
+		local function find_files_gitignore(opts)
 			ensure_code_window()
+			opts = opts or {}
 			if vim.fn.executable("rg") == 1 then
-				builtin.find_files({
+				builtin.find_files(vim.tbl_extend("force", {
 					find_command = { "rg", "--files", "--color=never", "--hidden", "--no-require-git", "--glob", "!**/.git/*" },
 					file_ignore_patterns = default_ignore_patterns,
-				})
+				}, opts))
 			elseif vim.fn.executable("fd") == 1 then
-				builtin.find_files({
+				builtin.find_files(vim.tbl_extend("force", {
 					find_command = { "fd", "--type", "f", "--hidden", "--no-require-git", "--exclude", ".git" },
 					file_ignore_patterns = default_ignore_patterns,
-				})
+				}, opts))
 			elseif in_git_repo() then
-				builtin.git_files({
+				builtin.git_files(vim.tbl_extend("force", {
 					recurse_submodules = true,
 					file_ignore_patterns = default_ignore_patterns,
-				})
+				}, opts))
 			else
-				builtin.find_files({
+				builtin.find_files(vim.tbl_extend("force", {
 					no_ignore = false,
 					hidden = true,
 					file_ignore_patterns = default_ignore_patterns,
-				})
+				}, opts))
 			end
 		end
 
@@ -319,7 +320,9 @@ return {
 		_G.FindFilesGitignore = find_files_gitignore
 		_G.FindFilesNoIgnore = find_files_no_ignore
 
-		vim.api.nvim_create_user_command("TelescopeFindFilesGitignore", find_files_gitignore, {
+		vim.api.nvim_create_user_command("TelescopeFindFilesGitignore", function()
+			find_files_gitignore()
+		end, {
 			desc = "Find files respecting .gitignore",
 		})
 

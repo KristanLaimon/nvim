@@ -41,6 +41,8 @@ The **Git Control Center** (`<C-S-g>`) is a high-speed, interactive floating Git
 | `<leader>gm` | Normal | Open 3-Way Merge Conflict Resolver from anywhere |
 | `b` | Normal | Open Branch Management Modal (Create, Delete, Switch, Rename, Dry-Run) |
 | `l` / `L` | Normal | Open GitKraken Commit Graph Viewer (`:GitGraph`, 2 modes: Current / `--all`, on-the-fly fetch) |
+| `H` | Normal | Open the Log Diff dashboard for the repository |
+| `h` | Normal | Pick a file with the Ctrl+k file finder and open its commit history in Log Diff |
 | `t` | Normal | 🧪 Dry-Run Merge simulation (predict conflicts between branches without touching CWD) |
 | `T` | Normal | 🧪 Dry-Run Rebase simulation (predict conflicts between branches without touching CWD) |
 | `<CR>` (Commit Log) | Normal | Press Enter on file in "Files Changed" to jump directly to its diff |
@@ -70,6 +72,20 @@ The **Git Control Center** (`<C-S-g>`) is a high-speed, interactive floating Git
 | `<F5>` / `<C-r>` | Normal | Refresh Git status |
 
 ---
+
+## File history
+
+In Neo-tree, press `gH` on a file to open its commit history in the existing
+four-panel Log Diff dashboard. Directories are ignored. In Git Center, `h`
+opens the same file finder as `Ctrl+k`, rooted at the active repository or
+submodule. Select a file with Enter to open its history.
+
+The Command Palette also provides **Git File History (Select File)**.
+Use `:GitFileHistory` to pick a file, or `:GitFileHistory path/to/file` directly.
+History is limited to commits touching that exact path (up to 120 commits,
+matching Log Diff); it does not follow earlier names after a rename. Branch
+selection, all-branches mode, refresh, and commit navigation retain the file filter.
+Files without commits show an informational message.
 
 ## 🔧 Customizing
 

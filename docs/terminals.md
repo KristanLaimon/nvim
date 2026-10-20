@@ -13,6 +13,7 @@ The **Lazy-Loading Multi-Terminal Manager** manages up to 9 independent terminal
 3. **Floating & Docked Layouts**: Toggle between Docked Split (bottom, default on fresh install) and Floating Overlay ("on top", centered popup or bottom overlay) so the buffers and dashboard above do not resize or shift.
 4. **Height & Layout Persistence**: Remembers mouse-dragged split height (`terminal_height`) and layout selection (`terminal_layout`).
 5. **WSL Interop**: Automatically spawns terminal in WSL when working inside a WSL filesystem path.
+6. **Return Focus**: Hiding the terminal returns to the window used to enter it, including Git Center, even when the terminal was already visible.
 
 ---
 

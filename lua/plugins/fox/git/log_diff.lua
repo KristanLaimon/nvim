@@ -66,6 +66,7 @@ M.state = {
 	files = {},
 	active_file_idx = 1,
 	active_file = nil,
+	history_file = nil,
 	last_left_win = nil,
 	last_right_win = nil,
 	files_win = nil,
@@ -281,8 +282,9 @@ end
 --- @param mode "branch"|"all"
 --- @param branch string|nil
 --- @param limit integer|nil
+--- @param file string|nil Repository-relative path; limits history to this exact path.
 --- @return table[] commits
-function M.fetch_commits(cwd, mode, branch, limit)
+function M.fetch_commits(cwd, mode, branch, limit, file)
 	limit = limit or 120
 	local cmd = {
 		"log",
@@ -298,6 +300,10 @@ function M.fetch_commits(cwd, mode, branch, limit)
 		table.insert(cmd, "HEAD")
 	end
 
+	if file then
+		-- shortcut: history follows the exact path, add rename tracking when needed.
+		vim.list_extend(cmd, { "--", ":(literal)" .. file })
+	end
 	local raw_lines = git.lines(cmd, cwd)
 	local commits = {}
 	for _, line in ipairs(raw_lines) do
@@ -324,28 +330,20 @@ function M.fetch_commit_files(cwd, commit_hash)
 	if not commit_hash or commit_hash == "" then
 		return {}
 	end
-	local raw_lines = git.lines({ "show", "--name-status", "--pretty=format:", commit_hash }, cwd)
+	local result = git.spawn({ "show", "--name-status", "-z", "--pretty=format:", commit_hash }, cwd):wait()
+	local fields = vim.split(result.stdout or "", "\0", { plain = true, trimempty = true })
 	local files = {}
-	for _, line in ipairs(raw_lines) do
-		line = vim.trim(line)
-		if line ~= "" then
-			local status_char, filepath = line:match("^([A-Z%d]+)%s+(.+)$")
-			if status_char and filepath then
-				local s = status_char:sub(1, 1)
-				local old_file = nil
-				if s == "R" or s == "C" then
-					local p1, p2 = filepath:match("^([^\t]+)\t(.+)$")
-					if p1 and p2 then
-						old_file = p1
-						filepath = p2
-					end
-				end
-				table.insert(files, {
-					status = s,
-					filepath = filepath,
-					old_filepath = old_file,
-				})
-			end
+	local i = 1
+	while i < #fields do
+		local status = vim.trim(fields[i]):sub(1, 1)
+		local filepath, old_file = fields[i + 1], nil
+		i = i + 2
+		if status == "R" or status == "C" then
+			old_file, filepath = filepath, fields[i]
+			i = i + 1
+		end
+		if filepath then
+			table.insert(files, { status = status, filepath = filepath, old_filepath = old_file })
 		end
 	end
 	return files
@@ -365,11 +363,12 @@ function M.fetch_file_diff(cwd, commit_hash, filepath, status)
 		return { " [No file selected] " }, { "context" }, { " [No file selected] " }, { "context" }
 	end
 
-	local raw_diff = git.lines({ "show", "--format=", "--color=never", commit_hash, "--", filepath }, cwd)
+	local pathspec = ":(literal)" .. filepath
+	local raw_diff = git.lines({ "show", "--format=", "--color=never", commit_hash, "--", pathspec }, cwd)
 
 	if #raw_diff == 0 then
 		-- Try diff against parent explicitly
-		raw_diff = git.lines({ "diff", "--color=never", commit_hash .. "~1", commit_hash, "--", filepath }, cwd)
+		raw_diff = git.lines({ "diff", "--color=never", commit_hash .. "~1", commit_hash, "--", pathspec }, cwd)
 	end
 
 	if #raw_diff == 0 then
@@ -735,6 +734,11 @@ function M.select_commit(target)
 	if cur_commit then
 		M.state.active_commit_hash = cur_commit.full_hash
 		M.state.files = M.fetch_commit_files(M.state.cwd, cur_commit.full_hash)
+		if M.state.history_file then
+			M.state.files = vim.tbl_filter(function(file)
+				return file.filepath == M.state.history_file
+			end, M.state.files)
+		end
 		M.state.active_file_idx = 1
 		local cur_file = M.state.files[1]
 		M.state.active_file = cur_file and cur_file.filepath or nil
@@ -809,7 +813,7 @@ end
 --- Toggles between current branch and --all modes.
 function M.toggle_mode()
 	M.state.mode = M.state.mode == "all" and "branch" or "all"
-	M.state.commits = M.fetch_commits(M.state.cwd, M.state.mode, M.state.branch)
+	M.state.commits = M.fetch_commits(M.state.cwd, M.state.mode, M.state.branch, nil, M.state.history_file)
 	M.select_commit(1)
 	notify(
 		string.format("Switched mode to %s", M.state.mode == "all" and "🌐 All Branches (--all)" or "🌿 Current Branch")
@@ -836,7 +840,7 @@ function M.select_branch()
 		if choice and choice ~= "" then
 			M.state.branch = choice
 			M.state.mode = "branch"
-			M.state.commits = M.fetch_commits(M.state.cwd, "branch", choice)
+			M.state.commits = M.fetch_commits(M.state.cwd, "branch", choice, nil, M.state.history_file)
 			M.select_commit(1)
 			notify(string.format("Inspecting branch: %s", choice))
 		end
@@ -1038,8 +1042,52 @@ function M.close()
 	end
 end
 
+--- Opens history for one file, resolving its own repository (including submodules).
+function M.open_file_history(file)
+	if not file or file == "" or vim.fn.isdirectory(file) == 1 then
+		notify("Select a file to view its commit history", vim.log.levels.WARN)
+		return
+	end
+	file = path_util.normalize(vim.fn.fnamemodify(file, ":p"))
+	local root = git.lines({ "rev-parse", "--show-toplevel" }, vim.fs.dirname(file))[1]
+	if not root then
+		notify("File is not in a Git repository", vim.log.levels.WARN)
+		return
+	end
+	local relative = path_util.relative_to(file, root)
+	if not relative or relative == "" then
+		notify("File is outside the Git repository", vim.log.levels.WARN)
+		return
+	end
+	M.open({ cwd = root, mode = "branch", branch = "HEAD", history_file = relative })
+end
+
+--- Reuses the Ctrl+k finder with history as its selection action.
+function M.pick_file_history(cwd)
+	cwd = cwd or project.root() or vim.fn.getcwd()
+	if not _G.FindFilesGitignore then
+		require("lazy").load({ plugins = { "telescope.nvim" } })
+	end
+	_G.FindFilesGitignore({
+		cwd = cwd,
+		prompt_title = "Git File History",
+		attach_mappings = function(prompt_bufnr)
+			require("telescope.actions").select_default:replace(function()
+				local entry = require("telescope.actions.state").get_selected_entry()
+				require("telescope.actions").close(prompt_bufnr)
+				if entry then
+					vim.schedule(function()
+						M.open_file_history(entry.path or path_util.join(cwd, entry.value))
+					end)
+				end
+			end)
+			return true
+		end,
+	})
+end
+
 --- Opens the Git Log Diff Dashboard.
---- @param opts? { cwd?: string, commit?: string, mode?: "branch"|"all", branch?: string, file?: string }
+--- @param opts? { cwd?: string, commit?: string, mode?: "branch"|"all", branch?: string, file?: string, history_file?: string }
 function M.open(opts)
 	opts = opts or {}
 	local orig_win = vim.api.nvim_get_current_win()
@@ -1065,10 +1113,11 @@ function M.open(opts)
 	local mode = opts.mode or saved_session.mode or "branch"
 	local current_branch_res = git.lines({ "branch", "--show-current" }, target_cwd)[1] or "HEAD"
 	local branch = opts.branch or saved_session.branch or current_branch_res
-	local initial_commit = opts.commit or saved_session.commit
+	local initial_commit = opts.commit or (not opts.history_file and saved_session.commit or nil)
 	local initial_file = opts.file or saved_session.file
 
 	M.state.cwd = target_cwd
+	M.state.history_file = opts.history_file
 	M.state.prev_win = orig_win
 	M.state.prev_tab = orig_tab
 	M.state.mode = mode
@@ -1078,9 +1127,12 @@ function M.open(opts)
 	M.state.top_ratio = saved_session.top_ratio or M.settings.top_ratio
 
 	-- Fetch commit list
-	M.state.commits = M.fetch_commits(target_cwd, mode, branch)
+	M.state.commits = M.fetch_commits(target_cwd, mode, branch, nil, M.state.history_file)
 	if #M.state.commits == 0 then
-		notify("No commit history found in repository", vim.log.levels.INFO)
+		notify(
+			opts.history_file and ("No commit history for: " .. opts.history_file) or "No commit history found in repository",
+			vim.log.levels.INFO
+		)
 		return
 	end
 
@@ -1139,6 +1191,9 @@ function M.open(opts)
 	vim.wo[logs_win].scrolloff = 6
 	vim.wo[logs_win].winbar =
 		"%#FoxLogDiffHeader# 📜 Commit History %#GitCenterDiffFiller#│ %#FoxGitKrakenDim#[j/k: Step | a: All | b: Branch | y: SHA | ?: Help]"
+	if M.state.history_file then
+		vim.wo[logs_win].winbar = "%#FoxLogDiffHeader# File History: " .. M.state.history_file:gsub("%%", "%%%%")
+	end
 
 	-- 3. Setup Before Code (Middle pane) using base_win
 	local before_buf = vim.api.nvim_create_buf(false, true)
@@ -1352,7 +1407,7 @@ function M.open(opts)
 				git.run({ "checkout", cur.full_hash }, function(ok, output)
 					if ok then
 						notify("✅ Checked out commit: " .. cur.hash)
-						M.state.commits = M.fetch_commits(M.state.cwd, M.state.mode, M.state.branch)
+						M.state.commits = M.fetch_commits(M.state.cwd, M.state.mode, M.state.branch, nil, M.state.history_file)
 						M.select_commit(1)
 					else
 						notify("❌ Checkout failed:\n" .. output, vim.log.levels.ERROR)
@@ -1366,7 +1421,7 @@ function M.open(opts)
 		vim.keymap.set("n", "y", yank_sha, op)
 		vim.keymap.set("n", "K", checkout_cur, op)
 		vim.keymap.set("n", "r", function()
-			M.state.commits = M.fetch_commits(M.state.cwd, M.state.mode, M.state.branch)
+			M.state.commits = M.fetch_commits(M.state.cwd, M.state.mode, M.state.branch, nil, M.state.history_file)
 			M.select_commit(M.state.active_commit_idx)
 			notify("🔄 Refreshed commit history and diffs")
 		end, op)
@@ -1431,8 +1486,16 @@ return setmetatable({
 		"GitLogDiff",
 		"GitCenterLogDiff",
 		"FoxGitLogDiff",
+		"GitFileHistory",
 	},
 	config = function()
+		vim.api.nvim_create_user_command("GitFileHistory", function(opts)
+			if opts.args ~= "" then
+				M.open_file_history(opts.args)
+			else
+				M.pick_file_history()
+			end
+		end, { nargs = "?", complete = "file", desc = "View commit history for one file" })
 		pcall(vim.api.nvim_create_user_command, "GitLogDiff", function(cmd_opts)
 			local args = cmd_opts.fargs or {}
 			local commit = args[1] ~= "" and args[1] or nil

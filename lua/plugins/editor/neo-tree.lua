@@ -77,6 +77,7 @@ local settings = {
 		["H"] = "toggle_custom_hidden",
 		["gh"] = "toggle_custom_hidden",
 		["gw"] = "toggle_word_wrap",
+		["gH"] = "file_history",
 	},
 
 	--- Keys that toggle the sidebar.
@@ -566,6 +567,11 @@ return {
 					mappings = settings.mappings,
 				},
 				commands = {
+					file_history = with_node(function(node)
+						if node.type == "file" then
+							require("plugins.fox.git.log_diff").open_file_history(node.path)
+						end
+					end, true),
 					toggle_word_wrap = neotree_wrap.toggle,
 					toggle_selected_terminal = function()
 						-- Calling the command lets lazy.nvim load the terminal manager on

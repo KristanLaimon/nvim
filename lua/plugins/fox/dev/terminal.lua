@@ -629,7 +629,6 @@ function M.toggle_selected_terminal()
 	sync_terminals()
 
 	local n = _G._fox_selected_terminal or 1
-	local t = get_term(n)
 	local current = vim.api.nvim_get_current_win()
 	local active_win = get_active_terminal_win()
 
@@ -649,12 +648,6 @@ function M.toggle_selected_terminal()
 		else
 			vim.cmd("wincmd p")
 		end
-		return
-	end
-
-	if is_valid_win(t.win) then
-		vim.api.nvim_set_current_win(t.win)
-		vim.cmd("startinsert")
 		return
 	end
 

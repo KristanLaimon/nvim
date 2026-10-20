@@ -17,6 +17,7 @@ typo in a plugin file is invisible until then.
 | `nvim -l tests/run.lua tasks` | Only specs whose name contains "tasks" | ~1s |
 | `nvim --headless -S tests/integration/run.lua` | Specs that need the real editor | a few seconds |
 | `node tests/integration/markdown_browser.mjs` | GFM and Mermaid rendering and live updates in Chromium | a few seconds |
+| `python3 tests/integration/kitty_shortcuts.py` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
 | `:FoxTest` | The unit specs, from inside the editor | ~1s |
 | `:FoxTest git` | Filtered, from inside the editor | ~1s |
 

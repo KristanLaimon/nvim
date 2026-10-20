@@ -18,6 +18,6 @@ Other tools live separately:
 - `extra/setup-terminals.ps1`: the additional PowerShell configurator for multiple terminal emulators (previously `setup-shell.ps1`).
 - `omarchy-backup.sh`: export/import Omarchy configuration.
 
-Kitty reserves Ctrl+Shift+Enter for a new window and Ctrl+Shift+P for a shortcut sequence. Run the Kitty setup to pass them to Neovim using its negotiated keyboard protocol. When `kitty.conf` includes `user.conf` (as Ryoku does), setup writes the overrides there so system updates preserve them. Undo removes only the FoxVim block.
+Kitty reserves Ctrl+Shift+Enter for a new window and Ctrl+Shift+P for a shortcut sequence. Run the Kitty setup to pass them to Neovim using its negotiated keyboard protocol. It overrides the Ctrl+Shift+P sequence prefix with `no_op`, so the command palette opens immediately without pressing Space or another key. Rerunning setup upgrades older FoxVim blocks; unsetup also recognizes those older blocks. When `kitty.conf` includes `user.conf` (as Ryoku does), setup writes the overrides there so system updates preserve them. Undo removes only the FoxVim block.
 
 On Windows, rerun `./scripts/setup-powershell.ps1` in PowerShell to forward Ctrl+Shift+Enter from Windows Terminal. PowerShell itself does not control shortcuts while Neovim is running. `:OpenWithSystemApp` and `:CommandPalette` also work without terminal shortcut support.

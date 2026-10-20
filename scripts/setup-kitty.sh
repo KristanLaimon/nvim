@@ -20,11 +20,13 @@ legacy = '# Pass environment shortcuts through to Neovim instead of focusing Kit
 old_block = '# >>> FOXVIM KITTY ENVIRONMENTS >>>\n' + maps + '# <<< FOXVIM KITTY ENVIRONMENTS <<<\n'
 # Unmapping preserves Kitty's negotiated keyboard protocol in Neovim.
 shortcuts = maps + 'map ctrl+shift+enter\nmap ctrl+shift+p\n'
-block = '# >>> FOXVIM KITTY SHORTCUTS >>>\n' + shortcuts + '# <<< FOXVIM KITTY SHORTCUTS <<<\n'
+previous_block = '# >>> FOXVIM KITTY SHORTCUTS >>>\n' + shortcuts + '# <<< FOXVIM KITTY SHORTCUTS <<<\n'
+# Override the sequence prefix itself, so Kitty does not wait for another key.
+block = previous_block.replace('map ctrl+shift+p\n', 'map ctrl+shift+p no_op\n')
 if block in text:
     print('FoxVim Kitty shortcuts are already set up.')
 else:
-    updated = text.replace(old_block, '').replace(legacy, '')
+    updated = text.replace(previous_block, '').replace(old_block, '').replace(legacy, '')
     if updated and not updated.endswith('\n'):
         updated += '\n'
     updated += block

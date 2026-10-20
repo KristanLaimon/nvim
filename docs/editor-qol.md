@@ -6,9 +6,13 @@ The small modules — each one file in `lua/plugins/fox/`, each fixing one speci
 
 ## Markdown browser preview
 
-With a Markdown file open, select **Toggle Live Markdown Browser Preview** in
+With a Markdown, `.mermaid`, or `.mmd` file open, select **Toggle Live Markdown / Mermaid Browser Preview** in
 `:CommandPalette`, or run `:MarkdownPreviewToggle`. Use `:MarkdownPreviewStop`
-to stop the server.
+to stop the server. Mermaid diagrams inside fenced `mermaid` code blocks in
+Markdown are rendered by the existing plugin. Standalone Mermaid files use the
+same renderer through an in-memory Markdown copy; the source stays untouched.
+Edits update the preview without saving. Mermaid assets are served locally by
+the plugin, with no CDN or Mermaid CLI installation required.
 
 FoxVim opens the system browser through its native handler (Explorer on Windows,
 `open` on macOS, `xdg-open` on Linux, or `wslview` when available under WSL).

@@ -113,7 +113,7 @@ return {
 	{
 		"iamcco/markdown-preview.nvim",
 		cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
-		ft = { "markdown" },
+		ft = { "markdown", "mermaid" },
 		build = "cd app && npm install",
 		init = function()
 			require("fox.markdown.browser").setup()

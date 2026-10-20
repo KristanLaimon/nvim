@@ -421,7 +421,7 @@ M.commands = {
 		category = "Markdown",
 	},
 	{
-		name = "🌐 Toggle Live Markdown Browser Preview (<leader>mp / Ctrl+Alt+M)",
+		name = "🌐 Toggle Live Markdown / Mermaid Browser Preview",
 		cmd = "MarkdownPreviewToggle",
 		category = "Markdown",
 	},

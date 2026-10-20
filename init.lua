@@ -12,7 +12,7 @@
 --   lua/config/    Editor bootstrap: options, keymaps, plugin manager.
 --   lua/fox/       Shared internal libraries (core, git, launch, lsp).
 --   lua/plugins/   One lazy.nvim spec per file, grouped by area.
---   lua/foxnvim/   The foxnvimscript automation library (its own public API).
+--   lua/fox/lib/foxnvim/   Lua libraries for Neovim.
 --   tests/         Unit specs (`nvim -l tests/run.lua`) and integration specs.
 --   docs/          Architecture and feature documentation.
 --

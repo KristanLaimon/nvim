@@ -31,7 +31,7 @@ tests/
 ├── syntax_check.lua     Compiles (never runs) every Lua file in the repository
 ├── spec/                Unit specs -- pure logic, no plugins loaded (one file per feature)
 ├── integration/         Specs that need plugins and a real UI (run.lua + a handful of *_spec.lua)
-└── foxnvimscript/       .foxnvim example scripts used as fixtures for lua/foxnvim/tests
+└── lua/                 Lua library specs and LuaLS completion check
 ```
 
 `tests/spec/` has one `*_spec.lua` per feature (`tasks_spec.lua`, `git_status_spec.lua`,
@@ -40,7 +40,7 @@ if you're editing `lua/plugins/fox/tasks.lua`, its test is `tests/spec/tasks_spe
 list grows constantly, so don't trust a snapshot of it here — `nvim -l tests/run.lua` prints
 every spec currently in the suite, and `ls tests/spec/` shows the files directly.
 
-The `foxnvimscript` library keeps its own suite in `lua/foxnvim/tests/`, run with
+The Lua in Neovim library keeps its own suite in `lua/fox/lib/foxnvim/tests/`, run with
 `require("fox.lib.foxnvim.tests").run_all()`.
 
 ---
@@ -48,7 +48,7 @@ The `foxnvimscript` library keeps its own suite in `lua/foxnvim/tests/`, run wit
 ## ✍️ Writing a spec
 
 Both runners use the same framework, `foxnvim.test` — the Vitest-style
-`describe` / `it` / `expect` already shipped with the foxnvimscript library.
+`describe` / `it` / `expect` already shipped with the FoxVim Lua library.
 
 ```lua
 -- ============================================================================
@@ -133,3 +133,12 @@ layout (window size, border color, title text), skip it; see the note above.
 4. **Run everything once before you're done**: `nvim -l tests/run.lua` — a change
    in a shared module (`lua/fox/core/*.lua`) can break a spec for a completely
    different feature that happens to depend on it.
+
+Check real LuaLS completion (requires Mason LuaLS):
+
+```sh
+nvim -l tests/lua/completion_check.lua
+```
+
+This checks a markerless `main.lua` / `library.lua` project, `lua/` modules and
+FoxVim library members using the same server settings as the editor.

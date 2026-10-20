@@ -7,12 +7,8 @@
 --   <C-S-s>       Smart launch            <C-S-q>  Launch profiles manager
 --   <C-S-x>/<A-s> Stage everything (git)
 --   <C-/>         Floating desktop explorer    <leader>fw  WSL explorer
---   <C-,>         Run the current .foxnvim script
---   <C-S-,>       Open the foxnvimscript wiki
---
--- COMMANDS
---   :FoxExport [sh|ps1] / :FoxExportSh / :FoxExportPs1
---     Transpile the current .foxnvim script to a shell script.
+--   <C-,>         Run the current Lua script
+--   <C-S-,>       Open the Lua library wiki
 --
 -- WHY THE KEYS ARE DUPLICATED HERE AND IN THE PLUGINS
 --   Each plugin binds its own keys in `setup()` so it works standalone; these
@@ -73,9 +69,9 @@ M.settings = {
 		explorer = { "<C-/>", "<C-_>" },
 		wsl_explorer = nil,
 		sneak_peek = is_mobile and { "<C-S-y>", "<C-S-Y>", "<C-Y>", "<C-y>" } or { "<C-S-y>", "<C-S-Y>" },
-		--- Run the current .lua or .foxnvim script.
+		--- Run the current Lua script.
 		run_script = { "<C-,>", "<C-comma>" },
-		--- Open the foxnvimscript wiki.
+		--- Open the Lua library wiki.
 		wiki = { "<C-S-,>", "<C-S-comma>", "<C-S-d>", "<C-S-D>" },
 		--- Focus top-right workspace badge.
 		focus_badge = { "<C-S-b>", "<C-S-B>", "<A-w>", "<M-w>", "<leader>wb", "<leader>wf" },
@@ -216,20 +212,13 @@ map_all_modes({ "<C-r>", "<C-R>", "<C-S-r>", "<C-S-R>", "<leader>fp" }, function
 end, "Open Recent Projects UI")
 
 -- ============================================================================
--- FOXNVIMSCRIPT
+-- LUA SCRIPTS
 -- ============================================================================
 
 map_all_modes(M.settings.keys.run_script, function()
 	local buf_name = vim.api.nvim_buf_get_name(0)
 
-	if
-		not (
-			buf_name:match("%.foxnvim$")
-			or buf_name:match("%.lua$")
-			or vim.bo.filetype == "foxnvim"
-			or vim.bo.filetype == "lua"
-		)
-	then
+	if not (buf_name:match("%.lua$") or vim.bo.filetype == "lua") then
 		return
 	end
 
@@ -238,7 +227,7 @@ map_all_modes(M.settings.keys.run_script, function()
 	local cmd = "nvim --headless -c \"lua package.path = vim.fn.stdpath('config') .. '/lua/?.lua;' .. vim.fn.stdpath('config') .. '/lua/?/init.lua;' .. package.path; require('fox.lib.foxnvim')\" -l "
 		.. vim.fn.shellescape(relative)
 	require("plugins.fox.dev.tasks").run_custom_command(cmd, nil, nil, vim.fn.fnamemodify(buf_name, ":t"))
-end, "Run current .lua / .foxnvim file with Neovim runner")
+end, "Run current .lua file with Neovim runner")
 
 map_all_modes(M.settings.keys.wiki, function()
 	require("fox.lib.foxnvim").wiki.open()
@@ -276,105 +265,6 @@ for slot = 1, (M.settings.environment_slots or 9) do
 		require("plugins.fox.tools.environments").switch_environment(slot)
 	end, "Switch to Environment #" .. slot)
 end
-
--- ============================================================================
--- TRANSPILER COMMANDS
--- ============================================================================
-
---- Resolves the active selected file (from active buffer OR active Neo-tree selection).
---- Returns path ONLY if it is a valid, readable .foxnvim file.
----
---- @return string|nil path
-local function resolve_active_foxnvim_file()
-	local path = nil
-
-	-- 1. If currently focused in Neo-tree, get the active selected node
-	if vim.bo.filetype == "neo-tree" then
-		local ok, manager = pcall(require, "neo-tree.sources.manager")
-		if ok and manager then
-			local state = manager.get_state("filesystem")
-			if state and state.tree then
-				local node = state.tree:get_node()
-				if node and node.path then
-					path = node.path
-				end
-			end
-		end
-	end
-
-	-- 2. Otherwise get the active buffer's file path
-	if not path or path == "" then
-		path = vim.api.nvim_buf_get_name(0)
-	end
-
-	-- 3. Verify it is a valid .foxnvim file
-	if path and path:match("%.foxnvim$") and vim.fn.filereadable(path) == 1 then
-		return path
-	end
-
-	return nil
-end
-
---- Runs a transpiler export against the resolved script.
---- @param exporter fun(path: string, ...) Export function from foxnvimtranspiler.
---- @param ... any Extra arguments, e.g. an output path.
-local function export(exporter, ...)
-	local script_path = resolve_active_foxnvim_file()
-	if not script_path then
-		vim.notify("Transpile failed: Active buffer or Neo-tree selection is not a .foxnvim file", vim.log.levels.WARN, {
-			title = "foxnvimtranspiler",
-		})
-		return
-	end
-
-	local ok, res = pcall(exporter, script_path, ...)
-	if ok then
-		-- Refresh Neo-tree if available so new .sh / .ps1 files appear immediately
-		pcall(function()
-			require("neo-tree.sources.manager").refresh("filesystem")
-		end)
-	else
-		vim.notify("Transpile error: " .. tostring(res), vim.log.levels.ERROR, {
-			title = "foxnvimtranspiler",
-		})
-	end
-end
-
-vim.api.nvim_create_user_command("FoxTranspile", function(command)
-	local transpiler = require("fox.lib.foxnvim").foxnvimtranspiler
-	local target = command.fargs[1] or "both"
-
-	if target == "sh" then
-		export(transpiler.export_sh, command.fargs[2])
-	elseif target == "ps1" then
-		export(transpiler.export_ps1, command.fargs[2])
-	else
-		export(transpiler.export_both)
-	end
-end, { nargs = "*", desc = "Transpile active buffer or Neo-tree .foxnvim selection to .sh and .ps1" })
-
-vim.api.nvim_create_user_command("FoxTranspileBoth", function()
-	export(require("fox.lib.foxnvim").foxnvimtranspiler.export_both)
-end, { desc = "Transpile active .foxnvim file to both .sh and .ps1" })
-
-vim.api.nvim_create_user_command("FoxTranspileSh", function(command)
-	export(require("fox.lib.foxnvim").foxnvimtranspiler.export_sh, command.args ~= "" and command.args or nil)
-end, { nargs = "?", desc = "Transpile active .foxnvim file to .sh (Bash)" })
-
-vim.api.nvim_create_user_command("FoxTranspilePs1", function(command)
-	export(require("fox.lib.foxnvim").foxnvimtranspiler.export_ps1, command.args ~= "" and command.args or nil)
-end, { nargs = "?", desc = "Transpile active .foxnvim file to .ps1 (PowerShell)" })
-
--- Aliases for backwards compatibility
-vim.api.nvim_create_user_command("FoxExport", function(...)
-	vim.cmd("FoxTranspile " .. (... or ""))
-end, { nargs = "*" })
-vim.api.nvim_create_user_command("FoxExportSh", function(...)
-	vim.cmd("FoxTranspileSh " .. (... or ""))
-end, { nargs = "?" })
-vim.api.nvim_create_user_command("FoxExportPs1", function(...)
-	vim.cmd("FoxTranspilePs1 " .. (... or ""))
-end, { nargs = "?" })
 
 -- ============================================================================
 -- GIT DIFF MODE KEYMAPS

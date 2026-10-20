@@ -580,7 +580,6 @@ function M.gitignore_generated(root)
 	local default_entries = {
 		M.settings.ref_file or ".foxnvim/types.d.ts",
 		".foxnvim/",
-		"*.foxnvim",
 	}
 
 	local existing_lines = {}
@@ -639,7 +638,7 @@ function M.setup()
 			function()
 				M.gitignore_generated()
 			end,
-			"Add .foxnvim ignore entries (*.foxnvim, .foxnvim/, types.d.ts) to .gitignore",
+			"Add .foxnvim ignore entries (.foxnvim/, types.d.ts) to .gitignore",
 		},
 	}
 	for name, spec in pairs(commands) do

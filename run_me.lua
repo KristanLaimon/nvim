@@ -5,7 +5,7 @@
 local root = vim.fn.stdpath("config")
 package.path = root .. "/lua/?.lua;" .. root .. "/lua/?/init.lua;" .. package.path
 
--- Explicit foxnvimscript library imports
+-- Explicit Lua library imports
 local cli = require("fox.lib.foxnvim.cli")
 local terminal = require("fox.lib.foxnvim.terminal")
 local console = require("fox.lib.foxnvim.console")
@@ -19,7 +19,6 @@ local schema = {
 		["setup"] = "Run dependency setup script (install.ps1 / install.sh)",
 		["setup-ps"] = "Configure Windows Terminal keymaps (setup-powershell.ps1)",
 		["unsetup-ps"] = "Restore Windows Terminal keymaps (unsetup-powershell.ps1)",
-		["example"] = "Run example script (example.foxnvim)",
 		["lint"] = "Format & lint Lua files (stylua + luacheck)",
 		["all"] = "Run all checks: lint, syntax, tests",
 		["help"] = "Show this CLI help screen",
@@ -67,7 +66,9 @@ end
 local function run_setup()
 	console.log("[run_me] Running Setup Dependencies...")
 	if vim.fn.has("win32") == 1 then
-		terminal.run("powershell.exe -ExecutionPolicy Bypass -File " .. vim.fn.shellescape(root .. "/scripts/dependencies/install.ps1"))
+		terminal.run(
+			"powershell.exe -ExecutionPolicy Bypass -File " .. vim.fn.shellescape(root .. "/scripts/dependencies/install.ps1")
+		)
 	else
 		terminal.run("bash " .. vim.fn.shellescape(root .. "/scripts/dependencies/install.sh"))
 	end
@@ -118,12 +119,6 @@ local function run_lint()
 	return true
 end
 
-local function run_example()
-	console.log("[run_me] Running Example Script...")
-	safe_dofile(root .. "/scripts/example.foxnvim")
-	return true
-end
-
 local function run_all()
 	local steps = {
 		{ name = "Lint & Format", fn = run_lint },
@@ -154,7 +149,6 @@ local function show_menu()
 		"Run Setup Dependencies (install.ps1 / install.sh)",
 		"Setup Windows Terminal Keymaps (setup-powershell.ps1)",
 		"Unsetup Windows Terminal Keymaps (unsetup-powershell.ps1)",
-		"Run Example Script (scripts/example.foxnvim)",
 		"Lint & Format (stylua + luacheck)",
 		"Run All (lint + syntax + tests)",
 		"Exit",
@@ -172,19 +166,13 @@ local function show_menu()
 		elseif idx == 5 then
 			run_unsetup_ps()
 		elseif idx == 6 then
-			run_example()
-		elseif idx == 7 then
 			run_lint()
-		elseif idx == 8 then
+		elseif idx == 7 then
 			run_all()
 		else
 			print(cli.colorize("Exiting run_me CLI.", cli.colors.yellow))
 		end
 	end)
-end
-
-if true then
-	--nothing
 end
 
 -- Parse CLI Flags
@@ -207,8 +195,6 @@ elseif parsed.flags["setup-ps"] then
 	run_setup_ps()
 elseif parsed.flags["unsetup-ps"] then
 	run_unsetup_ps()
-elseif parsed.flags.example or parsed.flags.e then
-	run_example()
 elseif parsed.flags.lint or parsed.flags.l then
 	if not run_lint() then
 		os.exit(1)

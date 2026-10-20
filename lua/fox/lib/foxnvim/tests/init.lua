@@ -18,7 +18,6 @@ function M.run_all()
 		"async_spec",
 		"test_framework_spec",
 		"test_mock_spec",
-		"foxnvimtranspiler_spec",
 	}
 
 	local passed = 0

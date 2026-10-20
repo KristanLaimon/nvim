@@ -1,6 +1,6 @@
 # ⚡ foxnvim.async (Concurrency & Multi-Threading Suite)
 
-`foxnvim.async` (también importable como `concurrent` o `parallel`) añade soporte de **concurrencia**, **paralelismo multinúcleo en OS threads** y primitivas **async/await** para scripts Neovim (`foxnvimscript`).
+`foxnvim.async` (también importable como `concurrent` o `parallel`) añade soporte de **concurrencia**, **paralelismo multinúcleo en OS threads** y primitivas **async/await** para scripts Neovim (Lua in Neovim).
 
 ---
 

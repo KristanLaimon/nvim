@@ -1,5 +1,5 @@
 --- @module "foxnvim.wiki"
---- Floating Interactive Wiki Documentation System for `foxnvimscript`.
+--- Floating Interactive Wiki Documentation System for Lua in Neovim.
 --- Opens a styled floating markdown window inside Neovim with single-key navigation (1–6).
 ---
 --- @example
@@ -74,7 +74,7 @@ function M.open(doc_file)
 		col = col,
 		style = "minimal",
 		border = "rounded",
-		title = " 🦊 foxnvimscript Wiki Documentation [Press 1-6 to switch, q to close] ",
+		title = " 🦊 Lua Libraries Wiki Documentation [Press 1-6 to switch, q to close] ",
 		title_pos = "center",
 	})
 

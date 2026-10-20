@@ -1,5 +1,5 @@
 --- @module "foxnvim.async"
---- Concurrency, Async/Await, and Multi-Threading Parallelism suite for `foxnvimscript`.
+--- Concurrency, Async/Await, and Multi-Threading Parallelism suite for Lua in Neovim.
 --- Provides a modern, rich API for running tasks concurrently, offloading work to background OS threads,
 --- non-blocking timers/sleep, channels, waterfall pipelines, and JavaScript/Go-style async primitives.
 ---

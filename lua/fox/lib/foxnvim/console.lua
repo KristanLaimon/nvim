@@ -1,5 +1,5 @@
 --- @module "foxnvim.console"
---- Human-readable Console Logging, Debugging, and JSON Pretty-Printing library for `foxnvimscript`.
+--- Human-readable Console Logging, Debugging, and JSON Pretty-Printing library for Lua in Neovim.
 --- Provides `console.log`, `console.info`, `console.warn`, `console.error`, `console.dir`, `console.json`, and direct callable `console(...)`.
 ---
 --- @example

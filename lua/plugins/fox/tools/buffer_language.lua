@@ -190,7 +190,7 @@ M.languages = {
 		filetype = "lua",
 		ts = "lua",
 		icon = "🌙",
-		extensions = { ".lua", ".foxnvim" },
+		extensions = { ".lua" },
 	},
 	{
 		name = "Shell / Bash",

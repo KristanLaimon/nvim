@@ -1,5 +1,5 @@
 --- @module "foxnvim.json"
---- Fast JSON Parser, Encoder, and File Management module for `foxnvimscript`.
+--- Fast JSON Parser, Encoder, and File Management module for Lua in Neovim.
 --- Wraps Neovim's native C-accelerated JSON parser (`vim.json`) with safe error handling and file I/O helpers.
 ---
 --- @example

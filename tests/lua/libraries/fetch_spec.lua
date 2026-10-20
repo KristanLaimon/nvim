@@ -1,5 +1,5 @@
 -- ============================================================================
--- tests/foxnvimscript/libraries/fetch_spec.lua -- Spec tests for foxnvim.fetch module
+-- tests/lua/libraries/fetch_spec.lua -- Spec tests for foxnvim.fetch module
 -- ============================================================================
 local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect

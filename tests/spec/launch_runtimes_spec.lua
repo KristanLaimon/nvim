@@ -25,6 +25,12 @@ local function profile(runtime, overrides)
 end
 
 describe("runtimes.build_command", function()
+	it("uses Lua without script-specific runtimes", function()
+		expect(runtimes.registry.foxnvimscript).toBeNil()
+		expect(runtimes.registry.foxnvimtranspiler).toBeNil()
+		expect(vim.tbl_contains(runtimes.order, "lua")).toBe(true)
+	end)
+
 	it("prefixes the entry point with the runtime executable", function()
 		expect(runtimes.build_command(profile("bun"), ROOT)).toBe("bun src/index.js")
 		expect(runtimes.build_command(profile("python"), ROOT)).toBe("python src/index.js")
@@ -72,13 +78,6 @@ describe("runtimes.build_command", function()
 		expect(runtimes.build_command(profile("cobol", { entry_point = "main.cob" }), ROOT)).toBe("main.cob")
 	end)
 
-	it("returns no command for runtimes that execute themselves", function()
-		local cmd = runtimes.build_command(profile("foxnvimtranspiler"), ROOT)
-
-		expect(cmd).toBeNil()
-		expect(runtimes.get("foxnvimtranspiler").execute).toBeDefined()
-	end)
-
 	it("also returns the launch context for reuse", function()
 		local _, ctx = runtimes.build_command(profile("bun", { entry_point = "src/main.ts" }), ROOT)
 
@@ -94,7 +93,7 @@ describe("runtimes.build_dap_config", function()
 		expect(runtimes.build_dap_config(profile("python"), ROOT).type).toBe("python")
 		expect(runtimes.build_dap_config(profile("php"), ROOT).type).toBe("php")
 		expect(runtimes.build_dap_config(profile("bun"), ROOT).type).toBe("bun")
-		expect(runtimes.build_dap_config(profile("foxnvimscript"), ROOT).type).toBe("foxnvimscript")
+		expect(runtimes.get("lua").command:find("nvim --headless", 1, true) ~= nil).toBe(true)
 	end)
 
 	it("defaults to js-debug for node and unknown runtimes", function()

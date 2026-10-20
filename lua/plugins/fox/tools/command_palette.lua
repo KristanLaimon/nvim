@@ -410,22 +410,7 @@ M.commands = {
 	{ name = "⚡ Run Default Project Task", cmd = "TaskRunDefault", category = "Tasks" },
 	{ name = "🛠️ Open Project Task Menu", cmd = "TaskMenu", category = "Tasks" },
 
-	-- --------------------------------------------------------------------------
-	-- 🦊 foxnvimtranspiler (Script Transpiler)
-	-- --------------------------------------------------------------------------
-	{
-		name = "🦊 Transpile Selected .foxnvim Script (Both .sh & .ps1)",
-		cmd = "FoxTranspileBoth",
-		category = "Transpiler",
-	},
-	{ name = "🐧 Transpile Selected .foxnvim Script to Bash (.sh)", cmd = "FoxTranspileSh", category = "Transpiler" },
-	{
-		name = "🪟 Transpile Selected .foxnvim Script to PowerShell (.ps1)",
-		cmd = "FoxTranspilePs1",
-		category = "Transpiler",
-	},
-	{ name = "🔄 Transpile Active / Neo-tree .foxnvim File", cmd = "FoxTranspile", category = "Transpiler" },
-	{ name = "🚀 Open Launch Profiles Manager (<C-S-q>)", cmd = "LaunchProfiles", category = "Transpiler" },
+	{ name = "🚀 Open Launch Profiles Manager (<C-S-q>)", cmd = "LaunchProfiles", category = "Tasks" },
 
 	-- --------------------------------------------------------------------------
 	-- 📝 Markdown Preview

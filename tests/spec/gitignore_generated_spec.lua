@@ -30,7 +30,6 @@ describe("plugins.fox.tools.type_injector.gitignore_generated", function()
 		expect(lines).toEqual({
 			".foxnvim/types.d.ts",
 			".foxnvim/",
-			"*.foxnvim",
 		})
 	end)
 
@@ -43,7 +42,6 @@ describe("plugins.fox.tools.type_injector.gitignore_generated", function()
 		expect(lines).toEqual({
 			".foxnvim/types.d.ts",
 			".foxnvim/",
-			"*.foxnvim",
 			"",
 			"node_modules/",
 			"dist/",
@@ -51,16 +49,15 @@ describe("plugins.fox.tools.type_injector.gitignore_generated", function()
 	end)
 
 	it("does not duplicate entries already present in .gitignore", function()
-		vim.fn.writefile({ "*.foxnvim", "node_modules/" }, gitignore_path)
+		vim.fn.writefile({ ".foxnvim/", "node_modules/" }, gitignore_path)
 
 		type_injector.gitignore_generated(temp_dir)
 
 		local lines = vim.fn.readfile(gitignore_path)
 		expect(lines).toEqual({
 			".foxnvim/types.d.ts",
-			".foxnvim/",
 			"",
-			"*.foxnvim",
+			".foxnvim/",
 			"node_modules/",
 		})
 	end)

@@ -21,7 +21,7 @@ This file defines mandatory guidelines and reference links for AI coding assista
 | `M.formatters_by_ft` | `{ [filetype] = <conform formatter list> }` | `lua/plugins/lsp/formatting.lua` merges into `opts.formatters_by_ft` |
 | `M.conform_formatters` | `{ [formatter_name] = <conform formatter opts: condition/args> }` | `formatting.lua` merges into `opts.formatters` |
 | `M.dap_filetypes` + `M.dap_configs` | array of filetypes; array of static nvim-dap config tables | `lua/plugins/editor/dap.lua` calls `debuggers._shared.add(dap, dap_filetypes, dap_configs)` for languages with a plain static list (see `php`/`csharp`/`python`) |
-| `M.dap_setup` | `function(dap)` | `dap.lua` calls this instead, for languages whose adapter needs runtime setup (conditional adapter registration, delegating to another plugin's own `setup()`) -- see `bash` (conditional bashdb/bash adapter), `go` (`dap-go`), `lua` (foxnvimscript adapter) |
+| `M.dap_setup` | `function(dap)` | `dap.lua` calls this instead, for languages whose adapter needs runtime setup (conditional adapter registration, delegating to another plugin's own `setup()`) -- see `bash` (conditional bashdb/bash adapter), `go` (`dap-go`) |
 | `M.launch_runtimes` | `{ [runtime_key] = { command=, dap=, execute= } }` | `lua/fox/launch/runtimes.lua` merges every language's `launch_runtimes` into its registry -- one language can own several runtime flavors (e.g. `typescript` owns `bun`/`node`/`deno`) |
 
 A handful of truly generic, cross-language things have no owning module and stay where they are instead of being forced into one:
@@ -121,7 +121,7 @@ Detailed setup, Ex commands, DAP debug profiles, and plugin integrations for eac
 * 🎯 [**C# / .NET / Blazor Guide**](docs/languages/csharp.md) — OmniSharp, `csharp-ls`, CSharpier, `netcoredbg` (Blazor Server & DLL debugging), `:DotnetNew`, `:NugetManager`.
 * 🟦 [**Go Guide**](docs/languages/go.md) — `gopls`, `delve` DAP (`nvim-dap-go`), `gofumpt`, `goimports`.
 * 🐍 [**Python Guide**](docs/languages/python.md) — `pyright`, `debugpy` DAP, `black`, `isort`, `ruff`.
-* 🌙 [**Lua & FoxVim Scripts Guide**](docs/languages/lua.md) — `lua_ls`, `stylua`, `type_injector`, `foxnvimtranspiler` (`:FoxTranspile`).
+* 🌙 [**Lua & FoxVim Libraries Guide**](docs/languages/lua.md) — `lua_ls`, `stylua`, `type_injector`.
 * 🌐 [**Web Frontend Vanilla Guide**](docs/languages/web.md) — HTML, CSS, Tailwind CSS, Emmet, and snippets.
 * 🪐 [**Astro Guide**](docs/languages/astro.md) — Astro LSP and Prettier formatting.
 * 🧩 [**Web UI Guide**](docs/languages/web-ui.md) — Svelte, Angular, React/TSX, and the shared TypeScript toolchain.

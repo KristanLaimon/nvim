@@ -4,14 +4,12 @@
 -- WHAT IS REGISTERED HERE
 --   launch_json  IntelliSense inside `.foxnvim/launch.json`: task names, runtimes
 --                and modes (lua/plugins/fox/launch_cmp.lua).
---   foxnvim      IntelliSense inside `*.foxnvim` scripts: console, fetch, import
---                and the library modules (lua/plugins/fox/foxnvim_cmp.lua).
 --
 --   `schemastore.nvim` is declared here too, because it is what jsonls and yamlls
 --   pull their schemas from in lsp.lua.
 --
 -- WHY score_offset
---   Inside those two file types these completions are the only relevant ones, so
+--   Inside launch.json these completions are the relevant ones, so
 --   they outrank the generic buffer and snippet sources.
 --
 -- OTHER SOURCES
@@ -27,16 +25,6 @@ local sources = {
 		score_offset = 100,
 		enabled = function()
 			return vim.fn.expand("%:t") == "launch.json"
-		end,
-	},
-	foxnvim = {
-		name = "FoxNvimScript",
-		module = "plugins.fox.dev.foxnvim_cmp",
-		score_offset = 100,
-		enabled = function()
-			local ft = vim.bo.filetype
-			local name = vim.fn.expand("%:t")
-			return ft == "lua" or ft == "foxnvim" or name:match("%.foxnvim$") ~= nil or name:match("%.lua$") ~= nil
 		end,
 	},
 }

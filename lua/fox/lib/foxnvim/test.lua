@@ -1,5 +1,5 @@
 --- @module "foxnvim.test"
---- Vitest / Bun:test inspired Testing Framework for `foxnvimscript`.
+--- Vitest / Bun:test inspired Testing Framework for Lua in Neovim.
 --- Provides `describe`, `test`/`it`, `expect`, and lifecycle hooks (`beforeEach`, `afterEach`, `beforeAll`, `afterAll`).
 --- Explicitly imported via `local t = import("test"); local describe, test, expect = t.describe, t.test, t.expect`.
 ---

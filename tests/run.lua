@@ -53,7 +53,7 @@ end
 function M.load_specs(root, filter)
 	local patterns = {
 		root .. "/" .. M.spec_dir .. "/*_spec.lua",
-		root .. "/tests/foxnvimscript/libraries/*_spec.lua",
+		root .. "/tests/lua/libraries/*_spec.lua",
 	}
 	local files = {}
 	for _, pat in ipairs(patterns) do

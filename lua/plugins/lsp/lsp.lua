@@ -12,10 +12,6 @@
 --   TOML/YAML/XML have no per-language buffer-default module) are defined directly
 --   below instead of in a language module.
 --
--- LUA
---   `lua_ls` also serves `.foxnvim` scripts: script globals (fetch, console, import,
---   foxnvim) are re-added on attach so they do not show up as undefined.
---
 -- JSON / TOML SCHEMAS
 --   Bundled schemas in `schemas/` are preferred over the online SchemaStore
 --   copies, so validation works offline and cannot change under you.
@@ -324,21 +320,6 @@ return {
 			vim.api.nvim_create_autocmd("LspAttach", {
 				callback = function(args)
 					local client = vim.lsp.get_client_by_id(args.data.client_id)
-					if client and client.name == "lua_ls" then
-						local bufnr = args.buf
-						local fname = vim.api.nvim_buf_get_name(bufnr)
-						local ft = vim.bo[bufnr].filetype
-						local is_fox = (ft == "foxnvim" or fname:match("%.foxnvim$") ~= nil)
-
-						if is_fox then
-							client.config.settings.Lua = client.config.settings.Lua or {}
-							client.config.settings.Lua.diagnostics = client.config.settings.Lua.diagnostics or {}
-							client.config.settings.Lua.diagnostics.globals =
-								{ "vim", "fetch", "console", "import", "foxnvim", "cli", "terminal", "fs" }
-							pcall(client.notify, "workspace/didChangeConfiguration", { settings = client.config.settings })
-						end
-					end
-
 					if client and (client.name == "omnisharp" or client.name == "omnisharp_mono") then
 						-- Disable semantic tokens to prevent OmniSharp crash / editor freeze:
 						-- "System.ArgumentOutOfRangeException: Range must not span multiple lines"

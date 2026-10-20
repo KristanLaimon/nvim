@@ -1,5 +1,5 @@
 -- ============================================================================
--- tests/foxnvimscript/libraries/async_spec.lua -- Spec tests for foxnvim.async module
+-- tests/lua/libraries/async_spec.lua -- Spec tests for foxnvim.async module
 -- ============================================================================
 local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
@@ -44,7 +44,7 @@ describe("foxnvim.async module", function()
 				sum = sum + i
 			end
 			return sum
-		end, { 2000000 }, function(err, result)
+		end, { 2000000 }, function(_, result)
 			calculated_sum = result
 			finished = true
 		end)
@@ -75,7 +75,7 @@ describe("foxnvim.async module", function()
 					resolve("task_3")
 				end)
 			end),
-		}, function(err, results)
+		}, function(_, results)
 			multi_res = results
 			done = true
 		end)

@@ -50,6 +50,11 @@ end
 function M.get_active_lua_libraries(root, core)
 	local config_lua = vim.fn.stdpath("config") .. "/lua"
 	local paths = { vim.env.VIMRUNTIME, config_lua }
+	for _, dir in ipairs(vim.api.nvim_get_runtime_file("lua", true)) do
+		if not vim.tbl_contains(paths, dir) then
+			table.insert(paths, dir)
+		end
+	end
 	for _, name in ipairs(core.load_project_types(root).lua) do
 		local schema_path = core.resolve_schema_dir("lua", name)
 		if schema_path then

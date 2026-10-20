@@ -2,9 +2,9 @@
 -- FOX LUA: Centralized Lua Language Configuration
 -- ============================================================================
 -- WHAT IT DOES
---   Sets standard 2-space indentation defaults for Lua and .foxnvim buffers when no
+--   Sets standard 2-space indentation defaults for Lua buffers when no
 --   .editorconfig file specifies buffer settings. Also owns the lua_ls LSP server
---   (which also serves `.foxnvim` scripts) and the stylua formatter.
+--   and the stylua formatter.
 -- ============================================================================
 
 ---@type FoxLangModule
@@ -13,14 +13,27 @@ local M = {}
 --- The lspconfig/mason server name(s) this language owns.
 M.lsp_server = { "lua_ls" }
 
---- lspconfig server settings, keyed by server name (see M.lsp_server). `.foxnvim`
---- script globals (fetch, console, import, foxnvim) are re-applied on LspAttach by
---- lua/plugins/lsp/lsp.lua so they don't show up as undefined; the workspace
---- library comes from the type injector.
+--- LuaLS settings and project libraries supplied by the type injector.
 ---@type table<string, vim.lsp.Config>
 M.lsp_config = {
 	lua_ls = {
-		filetypes = { "lua", "foxnvim" },
+		filetypes = { "lua" },
+		root_dir = function(buf, on_dir)
+			local filename = vim.api.nvim_buf_get_name(buf)
+			if filename ~= "" then
+				on_dir(vim.fs.root(buf, {
+					".luarc.json",
+					".luarc.jsonc",
+					".emmyrc.json",
+					".luacheckrc",
+					".stylua.toml",
+					"stylua.toml",
+					"selene.toml",
+					"selene.yml",
+					".git",
+				}) or vim.fs.dirname(filename))
+			end
+		end,
 		before_init = function(_, config)
 			local type_injector = require("plugins.fox.tools.type_injector")
 			local libs = type_injector.get_active_lua_libraries(config.root_dir)
@@ -45,6 +58,7 @@ M.lsp_config = {
 			Lua = {
 				runtime = {
 					version = "LuaJIT",
+					path = { "?.lua", "?/init.lua", "lua/?.lua", "lua/?/init.lua" },
 				},
 				diagnostics = {
 					globals = { "vim", "fetch", "console", "import", "foxnvim", "cli", "terminal", "fs" },
@@ -60,6 +74,7 @@ M.lsp_config = {
 				},
 				completion = {
 					callSnippet = "Replace",
+					autoRequire = true,
 				},
 				hint = {
 					enable = true,
@@ -99,77 +114,14 @@ M.formatters_by_ft = {
 	lua = { "stylua" },
 }
 
---- Registers the foxnvimscript DAP adapter (a headless nvim running the file
---- through the foxnvim runtime) and its launch configuration. A function, not
---- plain `dap_configs`: the adapter itself is a callback (`type = "executable"`
---- alone can't build the `dofile(...)` command line for the launched program).
---- @param dap table The `dap` module.
-function M.dap_setup(dap)
-	dap.adapters.foxnvimscript = function(callback, config)
-		callback({
-			type = "executable",
-			command = "nvim",
-			args = {
-				"--headless",
-				"-c",
-				"lua package.path = vim.fn.stdpath('config') .. '/lua/?.lua;' .. vim.fn.stdpath('config') .. '/lua/?/init.lua;' .. package.path; require('fox.lib.foxnvim'); dofile('"
-					.. (config.program or "")
-					.. "')",
-			},
-		})
-	end
-
-	dap.configurations.lua = dap.configurations.lua or {}
-	table.insert(dap.configurations.lua, {
-		type = "foxnvimscript",
-		request = "launch",
-		name = "🚀 Run with foxnvimscript",
-		program = "${file}",
-		cwd = "${workspaceFolder}",
-	})
-end
-
---- Launch-profile runtimes this language owns (see lua/fox/launch/runtimes.lua).
---- `foxnvimtranspiler` isn't a process: it transpiles the script to shell files
---- and returns. `args_str` selects the target ("sh", "ps1", anything else = both).
 local NVIM_LUA_ENTRY_COMMAND =
 	"nvim --headless -c \"lua package.path = vim.fn.stdpath('config') .. '/lua/?.lua;' .. vim.fn.stdpath('config') .. '/lua/?/init.lua;' .. package.path; require('fox.lib.foxnvim')\" -l"
 M.launch_runtimes = {
 	lua = {
 		command = NVIM_LUA_ENTRY_COMMAND,
-		dap = function(profile, root, ctx)
-			return {
-				type = "foxnvimscript",
-				request = "launch",
-				name = profile.name,
-				program = ctx.full_entry,
-				cwd = root,
-			}
-		end,
-	},
-	foxnvimscript = {
-		command = NVIM_LUA_ENTRY_COMMAND,
-		dap = function(profile, root, ctx)
-			return {
-				type = "foxnvimscript",
-				request = "launch",
-				name = profile.name,
-				program = ctx.full_entry,
-				cwd = root,
-			}
-		end,
-	},
-	foxnvimtranspiler = {
-		execute = function(ctx)
-			local transpiler = require("fox.lib.foxnvim").foxnvimtranspiler
-			if ctx.args_str == "sh" then
-				transpiler.export_sh(ctx.full_entry)
-			elseif ctx.args_str == "ps1" then
-				transpiler.export_ps1(ctx.full_entry)
-			else
-				transpiler.export_both(ctx.full_entry)
-			end
-			return true
+		dap = function()
+			vim.notify("Lua debugging requires a Lua debug adapter", vim.log.levels.WARN)
+			return nil
 		end,
 	},
 }
@@ -197,7 +149,7 @@ end
 --- Initialize Lua language configuration autocmds.
 function M.setup()
 	vim.api.nvim_create_autocmd("FileType", {
-		pattern = { "lua", "foxnvim" },
+		pattern = "lua",
 		callback = function(args)
 			M.apply_defaults(args.buf)
 		end,

@@ -1,8 +1,8 @@
-# 🦊 foxnvimscript Wiki & Documentation
+# 🦊 Lua Libraries Wiki & Documentation
 
-Bienvenido a la documentación interactiva de **foxnvimscript** (`foxnvim.*`).
+Bienvenido a la documentación interactiva de **FoxVim Lua libraries** (`foxnvim.*`).
 
-**foxnvimscript** es una suite de utilidades diseñada para facilitar la creación de scripts de consola, automatización de tareas, scripts de build y herramientas CLI en Lua utilizando Neovim.
+**FoxVim Lua libraries** es una suite de utilidades diseñada para facilitar la creación de scripts de consola, automatización de tareas, scripts de build y herramientas CLI en Lua utilizando Neovim.
 
 ---
 
@@ -24,7 +24,6 @@ Bienvenido a la documentación interactiva de **foxnvimscript** (`foxnvim.*`).
 7. **`foxnvim.fs`**: Helper para lectura, escritura y manipulación de archivos.
 8. **`foxnvim.fetch`**: API tipo `fetch` para peticiones HTTP/HTTPS en Lua puro (sin curl).
 9. **`foxnvim.test`**: Librería de testing tipo Vitest / Bun:test (`describe`, `test`, `expect`).
-10. **`foxnvim.foxnvimtranspiler`**: Transpilador automático de `.foxnvim` a scripts equivalentes `.sh` (Bash) y `.ps1` (PowerShell) con CLI nativos.
 11. **`foxnvim.async`** (`concurrent`, `parallel`): Concurrencia, paralelismo multinúcleo en OS threads y primitivas async/await.
 
 ---

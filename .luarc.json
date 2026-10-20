@@ -1,6 +1,7 @@
 {
 	"$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
 	"runtime.version": "LuaJIT",
+	"runtime.path": ["?.lua", "?/init.lua", "lua/?.lua", "lua/?/init.lua"],
 	"runtime.special": {
 		"vim.fn": "vim.fn"
 	},
@@ -11,7 +12,6 @@
 		"schemas-langs/lua/love",
 		"schemas-langs/lua/koreader"
 	],
-	"workspace.library": ["$VIMRUNTIME/lua", "${3rd}/luv/library"],
 	"diagnostics.globals": [
 		"vim",
 

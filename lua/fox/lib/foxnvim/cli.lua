@@ -1,5 +1,5 @@
 --- @module "foxnvim.cli"
---- Powerful CLI Mini-Framework, ASCII Art Generator, Argument Parser, and Interactive Menu Suite for `foxnvimscript`.
+--- Powerful CLI Mini-Framework, ASCII Art Generator, Argument Parser, and Interactive Menu Suite for Lua in Neovim.
 --- Provides Vim/Arrow/Mouse-navigable menus, checkbox multi-selection, formatted boxes, tables, spinners, ANSI colors, and argument parsing.
 ---
 --- Documentation & Usage Guide:

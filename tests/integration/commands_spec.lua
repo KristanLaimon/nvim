@@ -69,14 +69,25 @@ describe("user commands", function()
 		end
 	end)
 
-	it("registers the type injector and transpiler commands", function()
+	it("removes the shell transpiler commands", function()
+		for _, name in ipairs({
+			"FoxTranspile",
+			"FoxTranspileBoth",
+			"FoxTranspileSh",
+			"FoxTranspilePs1",
+			"FoxExport",
+			"FoxExportSh",
+			"FoxExportPs1",
+		}) do
+			expect({ name, has_command(name) }).toEqual({ name, false })
+		end
+	end)
+
+	it("registers the type injector commands", function()
 		for _, name in ipairs({
 			"TypeInjector",
 			"FoxTypes",
 			"FoxGitignoreGenerated",
-			"FoxExport",
-			"FoxExportSh",
-			"FoxExportPs1",
 		}) do
 			expect({ name, has_command(name) }).toEqual({ name, true })
 		end

@@ -1,10 +1,8 @@
 test.sh
 test.ps1
-tests/foxnvimscript/*.sh
-tests/foxnvimscript/*.ps1
-tests/foxnvimscript/json_out
-tests/foxnvimscript/output_test
-tests/foxnvimscript/output_tests
+tests/lua/json_out
+tests/lua/output_test
+tests/lua/output_tests
 json_out
 output_test
 output_tests

@@ -1,30 +1,39 @@
-# 🌙 Lua & FoxVim Script Development Suite
+# Lua development
 
-[← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
+FoxVim uses `lua_ls`, StyLua and the Lua Treesitter parser for ordinary `.lua` files.
+The minimal fresh installation remains Lua only.
 
-FoxVim provides full editing and transpilation support for **Lua** and local `.foxnvim` scripts (`foxnvimtranspiler`).
+## Libraries and completion
 
----
+Use standard `require` calls for module paths, members, signatures and documentation:
 
-## 🛠️ Toolchain Summary
+```lua
+local fs = require("fox.lib.foxnvim.fs")
+local json = require("fox.lib.foxnvim.json")
+local fox = require("fox.lib.foxnvim")
 
-| Feature | Tool / Package | Details |
-| :--- | :--- | :--- |
-| **Language Server (LSP)** | `lua_ls` | Configured with Neovim API globals (`vim`) and `.foxnvim` script globals (`fetch`, `console`, `import`, `cli`, `terminal`, `fs`) |
-| **Formatters (Conform)** | `stylua` | Opinionated Lua code formatting |
-| **Treesitter Parsers** | `lua` | Full syntax trees for Lua and `.foxnvim` scripts |
-| **Autocompletion** | `blink.cmp` + `foxnvim_cmp` | Neovim Lua API completion + `.foxnvim` library completion |
-| **Transpiler** | `foxnvimtranspiler` | Transpiles `.foxnvim` scripts to cross-platform Bash (`.sh`) and PowerShell (`.ps1`) |
+local exists = fs.exists("data.json")
+local data = json.decode('{"enabled":true}')
+fox.console.log(data)
+```
 
----
+LuaLS searches `?.lua`, `?/init.lua`, `lua/?.lua` and `lua/?/init.lua` in the
+project, and loads FoxVim libraries, installed plugin Lua directories and LuaRocks
+trees through the type injector. Optional type schemas remain project selections.
+For custom module layouts, add `runtime.path` entries in the project's `.luarc.json`.
+LuaLS infers members from modules that return a table; C modules need type definitions.
+See [LuaLS settings](https://luals.github.io/wiki/settings/#runtimepath).
 
-## 🧰 Ex Commands & Command Palette Actions
+The libraries require Neovim. Run the current Lua file with `<C-,>` or a launch
+profile using runtime `lua`; `<C-S-,>` opens their wiki. The runner loads the
+FoxVim globals. External plain Lua interpreters do not provide Neovim's APIs.
+The old script-specific filetype, runtimes and shell transpilation are removed;
+rename old `.foxnvim` scripts to `.lua` and set launch profiles to runtime `lua`.
+The former script adapter ran a process without implementing DAP; Lua debugging
+requires a real Lua debug adapter.
 
-Accessible via **Command Palette** (`<C-S-p>` / `:CommandPalette`):
+## Commands
 
-* `:FormatDocument` – Format active Lua file using StyLua.
-* `:FoxTranspile` – Transpile active `.foxnvim` script.
-* `:FoxTranspileSh` – Transpile `.foxnvim` script to Bash (`.sh`).
-* `:FoxTranspilePs1` – Transpile `.foxnvim` script to PowerShell (`.ps1`).
-* `:FoxTranspileBoth` – Transpile `.foxnvim` script to both `.sh` and `.ps1`.
-* `:LanguageManager` – Manage Lua language bundle.
+- `:FormatDocument`: format the current Lua file with StyLua.
+- `:TypeInjector`: select project type definitions.
+- `:LanguageManager`: manage the Lua toolchain.

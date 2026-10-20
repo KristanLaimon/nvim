@@ -1,5 +1,5 @@
 --- @module "foxnvim.fs"
---- High-performance File System and Path Manipulation Suite for `foxnvimscript`.
+--- High-performance File System and Path Manipulation Suite for Lua in Neovim.
 --- Provides cross-platform file reading, writing, directory creation, listing, and validation.
 ---
 --- @example

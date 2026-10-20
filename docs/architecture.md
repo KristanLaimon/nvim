@@ -42,7 +42,7 @@ nvim/
 │   │   │   └── debuggers/    Per-language DAP wiring (NOT specs)
 │   │   └── miscelanea/       Everything that fits nowhere else
 │   │
-│   └── foxnvim/              The foxnvimscript automation library (public API)
+│   └── foxnvim/              The FoxVim Lua libraries (public API)
 │       └── tests/            Its own spec suite
 │
 ├── tests/                    Config test suite (see docs/testing.md)
@@ -85,7 +85,7 @@ graph TD
 
     subgraph L1["Layer 1 · Platform"]
         NVIM["Neovim API<br/>vim.api · vim.uv · vim.lsp"]
-        FOXNVIM["lua/foxnvim/<br/>foxnvimscript library"]
+        FOXNVIM["lua/fox/lib/foxnvim/<br/>FoxVim Lua libraries"]
     end
 
     INIT --> CONFIG
@@ -104,7 +104,7 @@ graph TD
     FOXPLUG --> FOXNVIM
 ```
 
-**Layer 1 — Platform.** The Neovim API, and `lua/foxnvim/`, which is a
+**Layer 1 — Platform.** The Neovim API, and `lua/fox/lib/foxnvim/`, which is a
 self-contained scripting library with its own public API and test suite. It
 knows nothing about this configuration.
 
@@ -242,7 +242,7 @@ graph LR
 Highlights worth knowing:
 
 * **`tasks` is the execution engine.** Launch profiles, the dev-server bridge and
-  the `.foxnvim` runner all end up calling `tasks.run_custom_command`.
+  the Lua runner all end up calling `tasks.run_custom_command`.
 * **`fox.launch.runtimes` is the language table.** Both "run in a terminal" and
   "debug with DAP" read from it, so adding a language is one entry.
 * **`fox.core.dock` owns the bottom strip.** The multi-terminal (left) and task
@@ -353,7 +353,7 @@ graph LR
     SYNTAX["tests/syntax_check.lua<br/>parses every Lua file"]
     UNIT["tests/run.lua<br/>tests/spec/*_spec.lua"]
     INTEG["tests/integration/run.lua<br/>*_spec.lua with plugins"]
-    FOXNVIM["lua/foxnvim/tests/<br/>library suite"]
+    FOXNVIM["lua/fox/lib/foxnvim/tests/<br/>library suite"]
 
     SYNTAX --> UNIT --> INTEG
     UNIT -.same framework.-> FOXNVIM

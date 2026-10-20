@@ -1,5 +1,5 @@
 -- ============================================================================
--- tests/foxnvimscript/libraries/json_spec.lua -- Spec tests for foxnvim.json module
+-- tests/lua/libraries/json_spec.lua -- Spec tests for foxnvim.json module
 -- ============================================================================
 local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect

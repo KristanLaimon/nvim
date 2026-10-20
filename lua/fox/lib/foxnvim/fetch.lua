@@ -1,5 +1,5 @@
 --- @module "foxnvim.fetch"
---- Pure Lua Fetch-like HTTP and HTTPS client for `foxnvimscript`.
+--- Pure Lua Fetch-like HTTP and HTTPS client for Lua in Neovim.
 --- Provides a zero-dependency, lightweight, web-standard `fetch` interface with automatic JSON encoding/decoding,
 --- case-insensitive headers, URL parameter formatting, and cross-platform network execution.
 ---

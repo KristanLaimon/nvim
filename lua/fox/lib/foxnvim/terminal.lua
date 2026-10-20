@@ -1,5 +1,5 @@
 --- @module "foxnvim.terminal"
---- Cross-platform Terminal Command Execution Suite for `foxnvimscript`.
+--- Cross-platform Terminal Command Execution Suite for Lua in Neovim.
 --- Invokable as `$ "command"` or `terminal.exec("command")`.
 ---
 --- @class CommandResult

@@ -1,5 +1,5 @@
 --- @module "foxnvim.toml"
---- Native Pure Lua TOML Parser, Encoder, and File I/O manager for `foxnvimscript`.
+--- Native Pure Lua TOML Parser, Encoder, and File I/O manager for Lua in Neovim.
 --- Handles TOML tables `[section]`, key-value assignments `key = value`, inline arrays `[1, 2]`, booleans, and strings.
 ---
 --- @example

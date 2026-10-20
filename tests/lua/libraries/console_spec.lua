@@ -1,5 +1,5 @@
 -- ============================================================================
--- tests/foxnvimscript/libraries/console_spec.lua -- Spec tests for foxnvim.console module
+-- tests/lua/libraries/console_spec.lua -- Spec tests for foxnvim.console module
 -- ============================================================================
 local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect

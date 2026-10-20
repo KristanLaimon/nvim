@@ -1,9 +1,0 @@
--- Test 10: Error Handling & Protected Calls
-function safe_task(arg)
-  print("Executing task for:", arg)
-  return "success"
-end
-
-local ok, result = pcall(safe_task, "database")
-print("Task status ok:", ok)
-print("Task output:", result)

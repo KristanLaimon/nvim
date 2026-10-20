@@ -1,5 +1,5 @@
 --- @module "foxnvim.yaml"
---- Native Pure Lua YAML Parser, Encoder, and File I/O manager for `foxnvimscript`.
+--- Native Pure Lua YAML Parser, Encoder, and File I/O manager for Lua in Neovim.
 --- Handles basic YAML mappings, sequences, numbers, booleans, nulls, and comments.
 ---
 --- @example

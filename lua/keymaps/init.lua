@@ -7,7 +7,7 @@
 --   lsp.lua     Hover, signature help, diagnostics, code actions, rename.
 --   debug.lua   DAP: breakpoints, stepping, the repl.
 --   fox.lua     This config's own features: tasks, launch profiles, git center,
---               explorer, workspaces, foxnvimscript.
+--               explorer, workspaces, Lua scripts.
 --
 -- CONVENTIONS
 --   * `<leader>` is Space.

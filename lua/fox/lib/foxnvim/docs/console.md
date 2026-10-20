@@ -1,6 +1,6 @@
 # 🖨️ `foxnvim.console`
 
-Human-readable Console Logging, Object Inspection, and Pretty-JSON Debugging library for `foxnvimscript`.
+Human-readable Console Logging, Object Inspection, and Pretty-JSON Debugging library for Lua in Neovim.
 
 ---
 

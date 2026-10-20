@@ -1,16 +1,6 @@
 --- @module "foxnvim"
---- Master Entry Point for the `foxnvimscript` automation library suite.
+--- Master entry point for the FoxVim Lua libraries.
 --- Exposes `json`, `yaml`, `toml`, `terminal`, `cli`, `fs`, `fetch`, `wiki`, and `tests`.
----
---- @field json module foxnvim.json JSON parser and file I/O.
---- @field yaml module foxnvim.yaml YAML parser and file I/O.
---- @field toml module foxnvim.toml TOML parser and file I/O.
---- @field terminal module foxnvim.terminal Terminal command execution suite.
---- @field cli module foxnvim.cli CLI argument parser and menu UI helper.
---- @field fs module foxnvim.fs File system helper functions.
---- @field fetch module foxnvim.fetch Pure Lua HTTP/HTTPS fetch client.
---- @field wiki module foxnvim.wiki Floating documentation wiki system.
---- @field tests module foxnvim.tests Test suite runner.
 ---
 --- @example
 --- local fox = require("fox.lib.foxnvim")
@@ -35,8 +25,6 @@ M.it = M.test.it
 M.async = require("fox.lib.foxnvim.async")
 M.concurrent = M.async
 M.parallel = M.async
-M.foxnvimtranspiler = require("fox.lib.foxnvim.foxnvimtranspiler")
-M.exporter = M.foxnvimtranspiler
 
 M.setTimeout = M.async.setTimeout
 M.clearTimeout = M.async.clearTimeout
@@ -62,7 +50,7 @@ function M.setup_globals()
 	_G.import = M.import
 end
 
---- Global smart import function for `foxnvimscript`.
+--- Global smart import function for Lua in Neovim.
 --- Automatically detects file extensions (`.json`, `.yaml`, `.yml`, `.toml`) or module aliases (`"fetch"`, `"json"`, `"fs"`, etc.).
 ---
 --- @param target string Module name alias or file path to import.
@@ -92,13 +80,6 @@ function M.import(target)
 		return M.async
 	elseif target == "foxnvim.test" or target == "test" or target == "tests" then
 		return M.test
-	elseif
-		target == "foxnvim.foxnvimtranspiler"
-		or target == "foxnvimtranspiler"
-		or target == "foxnvim.exporter"
-		or target == "exporter"
-	then
-		return M.foxnvimtranspiler
 	end
 
 	if target:match("%.json$") then

@@ -1,6 +1,6 @@
 # 📥 Función Global import()
 
-`foxnvimscript` incluye la función `import()` que reemplaza o extiende a `require()` detectando automáticamente la extensión del archivo.
+Lua in Neovim incluye la función `import()` que reemplaza o extiende a `require()` detectando automáticamente la extensión del archivo.
 
 ## Ejemplos de Uso
 

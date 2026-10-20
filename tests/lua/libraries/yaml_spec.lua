@@ -1,5 +1,5 @@
 -- ============================================================================
--- tests/foxnvimscript/libraries/yaml_spec.lua -- Spec tests for foxnvim.yaml module
+-- tests/lua/libraries/yaml_spec.lua -- Spec tests for foxnvim.yaml module
 -- ============================================================================
 local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect

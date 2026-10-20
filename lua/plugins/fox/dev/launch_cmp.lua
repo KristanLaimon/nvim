@@ -38,8 +38,6 @@ M.settings = {
 		php = "PHP CLI binary",
 		dotnet = ".NET CLI (dotnet run)",
 		lua = "Built-in Neovim LuaJIT runtime (nvim --headless -l)",
-		foxnvimscript = "foxnvimscript automation script",
-		foxnvimtranspiler = "Transpile a .foxnvim script to .sh / .ps1",
 		custom = "Custom command string",
 	},
 

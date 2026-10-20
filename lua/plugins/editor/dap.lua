@@ -98,7 +98,7 @@ return {
 			-- ----------------------------------------------------------------------
 			-- Each fox.langs module owns its own debugger: `dap_setup(dap)` for
 			-- anything that needs to register an adapter or build configs at
-			-- runtime (bash, go, lua/foxnvimscript), or plain `dap_filetypes` +
+			-- runtime (bash, go), or plain `dap_filetypes` +
 			-- `dap_configs` for a static list (php, csharp, python). This fixed
 			-- order is what the picker shows -- fox.langs.langs itself is an
 			-- unordered table, so it can't be walked directly here.

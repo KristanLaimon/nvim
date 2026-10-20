@@ -52,8 +52,6 @@ M.order = {
 	"ruby",
 	"haskell",
 	"lua",
-	"foxnvimscript",
-	"foxnvimtranspiler",
 	"custom",
 }
 
@@ -70,7 +68,7 @@ local GENERIC_RUNTIMES = {
 --- Every supported runtime, merged from each language module's `launch_runtimes`
 --- plus the generic ones above. Adapter type names must match what
 --- mason-nvim-dap and nvim-dap-go register: pwa-node (js-debug), go, python, php
---- (xdebug), coreclr (netcoredbg), bun (fox bun adapter), foxnvimscript (built in).
+--- (xdebug), coreclr (netcoredbg), bun (fox bun adapter).
 M.registry = vim.deepcopy(GENERIC_RUNTIMES)
 for _, lang in pairs(require("fox.langs").langs) do
 	if lang.launch_runtimes then

@@ -116,6 +116,10 @@ function M.open(url)
 end
 
 function M.setup()
+	-- GitHub preserves literal quotes, dashes and ellipses instead of smart typography.
+	vim.g.mkdp_preview_options = vim.tbl_deep_extend("keep", vim.g.mkdp_preview_options or {}, {
+		mkit = { typographer = false },
+	})
 	-- The server uses nvim_call_function, so it needs a real Vimscript function.
 	vim.cmd([[
 function! FoxMarkdownOpenBrowser(url) abort

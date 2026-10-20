@@ -74,10 +74,12 @@ t.describe("Markdown browser launcher", function()
 
 	t.it("accepts the same RPC function call that the preview server uses", function()
 		local old_handler, old_echo = vim.g.mkdp_browserfunc, vim.g.mkdp_echo_preview_url
+		local old_options = vim.g.mkdp_preview_options
 		vim.g.mkdp_browserfunc = nil
 		browser.setup()
 		vim.api.nvim_call_function(vim.g.mkdp_browserfunc, { "http://localhost:8080/page/1" })
 		vim.g.mkdp_browserfunc, vim.g.mkdp_echo_preview_url = old_handler, old_echo
+		vim.g.mkdp_preview_options = old_options
 		vim.cmd("delfunction FoxMarkdownOpenBrowser")
 		t.expect(cmd).toEqual({ "xdg-open", "http://localhost:8080/page/1" })
 	end)
@@ -215,5 +217,32 @@ t.describe("Standalone Mermaid browser preview", function()
 		end
 		vim.api.nvim_exec_autocmds("TextChanged", { buffer = source })
 		t.expect(#notifications).toBe(0)
+	end)
+end)
+
+t.describe("GitHub Flavored Markdown preview defaults", function()
+	local old_options, old_handler, old_echo
+	t.beforeEach(function()
+		old_options = vim.g.mkdp_preview_options
+		old_handler, old_echo = vim.g.mkdp_browserfunc, vim.g.mkdp_echo_preview_url
+	end)
+	t.afterEach(function()
+		vim.g.mkdp_preview_options = old_options
+		vim.g.mkdp_browserfunc, vim.g.mkdp_echo_preview_url = old_handler, old_echo
+		vim.cmd("delfunction FoxMarkdownOpenBrowser")
+	end)
+
+	t.it("preserves literal punctuation by default", function()
+		vim.g.mkdp_preview_options = nil
+		browser.setup()
+		t.expect(vim.g.mkdp_preview_options.mkit.typographer).toBe(false)
+	end)
+
+	t.it("preserves explicit renderer options and unrelated preview settings", function()
+		local options =
+			{ mkit = { typographer = true, linkify = false }, maid = { theme = "forest" }, disable_sync_scroll = 1 }
+		vim.g.mkdp_preview_options = options
+		browser.setup()
+		t.expect(vim.g.mkdp_preview_options).toEqual(options)
 	end)
 end)

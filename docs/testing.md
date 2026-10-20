@@ -16,8 +16,15 @@ typo in a plugin file is invisible until then.
 | `nvim -l tests/run.lua` | Unit specs, no plugins loaded | ~1s |
 | `nvim -l tests/run.lua tasks` | Only specs whose name contains "tasks" | ~1s |
 | `nvim --headless -S tests/integration/run.lua` | Specs that need the real editor | a few seconds |
+| `node tests/integration/markdown_browser.mjs` | GFM and Mermaid rendering and live updates in Chromium | a few seconds |
 | `:FoxTest` | The unit specs, from inside the editor | ~1s |
 | `:FoxTest git` | Filtered, from inside the editor | ~1s |
+
+The browser test runs from the config root and requires Node 22+, `chromium`,
+`nvim`, and the installed `markdown-preview.nvim` plugin. It starts an isolated
+browser profile and a local preview server, checks
+[`tests/fixtures/markdown/gfm.md`](../tests/fixtures/markdown/gfm.md), and removes
+its temporary files afterward.
 
 All of them exit non-zero on failure, so they work unchanged in CI or a git hook.
 

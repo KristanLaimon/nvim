@@ -14,6 +14,13 @@ same renderer through an in-memory Markdown copy; the source stays untouched.
 Edits update the preview without saving. Mermaid assets are served locally by
 the plugin, with no CDN or Mermaid CLI installation required.
 
+The browser also renders GitHub Flavored Markdown tables (including alignment
+and escaped pipes), task lists (`- [ ]` / `- [x]`), strikethrough (`~~text~~`),
+automatic URL/email links, fenced code and HTML `<details>` sections. These can
+be mixed with Mermaid blocks in the same document. Quotes, dashes and ellipses
+stay literal by default, matching GitHub's punctuation behavior. Explicit
+`g:mkdp_preview_options` overrides are preserved.
+
 FoxVim opens the system browser through its native handler (Explorer on Windows,
 `open` on macOS, `xdg-open` on Linux, or `wslview` when available under WSL).
 The preview URL is also printed in `:messages`. If the handler fails, FoxVim

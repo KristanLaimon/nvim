@@ -17,7 +17,7 @@ typo in a plugin file is invisible until then.
 | `nvim -l tests/run.lua tasks` | Only specs whose name contains "tasks" | ~1s |
 | `nvim --headless -S tests/integration/run.lua` | Specs that need the real editor | a few seconds |
 | `node tests/integration/markdown_browser.mjs` | GFM and Mermaid rendering and live updates in Chromium | a few seconds |
-| `python3 tests/integration/kitty_shortcuts.py` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
+| `nvim --headless -S tests/integration/run.lua kitty_shortcuts` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
 | `:FoxTest` | The unit specs, from inside the editor | ~1s |
 | `:FoxTest git` | Filtered, from inside the editor | ~1s |
 
@@ -26,6 +26,12 @@ The browser test runs from the config root and requires Node 22+, `chromium`,
 browser profile and a local preview server, checks
 [`tests/fixtures/markdown/gfm.md`](../tests/fixtures/markdown/gfm.md), and removes
 its temporary files afterward.
+
+Integration tests use the existing Lua runner where possible. The Chromium test
+uses JavaScript because Node provides WebSocket for the browser's debugging
+protocol. The Kitty test uses Lua for orchestration and assertions; its short
+`kitty +runpy` check accesses Kitty's own Python parser rather than duplicating
+Kitty's shortcut rules.
 
 All of them exit non-zero on failure, so they work unchanged in CI or a git hook.
 

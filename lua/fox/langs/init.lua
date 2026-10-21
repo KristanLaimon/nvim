@@ -71,6 +71,7 @@
 --- field is optional -- see docs/adding-language.md for which ones a new
 --- language actually needs.
 ---@class FoxLangModule
+---@field icons? table<string, table<string, table>> mini.icons overrides by category and filename/extension.
 ---@field lsp_server? string[] lspconfig/mason server name(s) this language owns.
 ---@field lsp_config? table<string, vim.lsp.Config> lspconfig opts, keyed by server name; merged into lsp.lua's opts.servers.
 ---@field mason? table<string, FoxMasonToolInfo> Mason package metadata, keyed by lspconfig/formatter/tool name.

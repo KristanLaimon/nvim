@@ -19,6 +19,31 @@
 ---@class TypeScriptLangModule : FoxLangModule
 local M = {}
 
+M.icons = {
+	extension = {},
+	file = { ["nest-cli.json"] = { glyph = "", hl = "MiniIconsRed" } },
+}
+for _, kind in ipairs({
+	"controller",
+	"module",
+	"service",
+	"guard",
+	"interceptor",
+	"pipe",
+	"filter",
+	"middleware",
+	"gateway",
+	"decorator",
+	"dto",
+	"entity",
+	"resolver",
+}) do
+	for _, ext in ipairs({ "ts", "js" }) do
+		M.icons.extension[kind .. "." .. ext] = { glyph = "", hl = "MiniIconsRed" }
+		M.icons.extension[kind .. ".spec." .. ext] = { glyph = "", hl = "MiniIconsRed" }
+	end
+end
+
 --- The lspconfig/mason server name(s) backing TypeScript & JavaScript. An array even
 --- though there is normally one: swap TS servers (e.g. vtsls -> tsgo) by changing
 --- this one value, or list more than one for the rare case a language needs several.

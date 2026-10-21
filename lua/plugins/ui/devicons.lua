@@ -59,6 +59,9 @@ return {
 			},
 		},
 		config = function(_, opts)
+			for _, lang in pairs(require("fox.langs").langs) do
+				opts = vim.tbl_deep_extend("force", opts, lang.icons or {})
+			end
 			require("mini.icons").setup(opts)
 			require("mini.icons").mock_nvim_web_devicons()
 			apply_mini_icons_palette()

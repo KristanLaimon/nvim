@@ -21,6 +21,15 @@ end
 
 return function(dap)
 	shared.js_debug(dap)
+	dap.adapters.firefox = function(callback)
+		local script = vim.fn.stdpath("data") .. "/mason/packages/firefox-debug-adapter/dist/adapter.bundle.js"
+		local installed = vim.fn.filereadable(script) == 1
+		callback({
+			type = "executable",
+			command = installed and "node" or "firefox-debug-adapter",
+			args = installed and { script } or {},
+		})
+	end
 
 	local configs = {}
 

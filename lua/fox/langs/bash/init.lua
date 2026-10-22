@@ -80,13 +80,15 @@ function M.dap_setup(dap)
 	local bashdb_dir = mason_path .. "/extension/bashdb_dir"
 
 	if not dap.adapters.bashdb and not dap.adapters.bash then
+		local script = mason_path .. "/extension/out/bashDebug.js"
 		local cmd_bin = mason_path .. "/bash-debug-adapter"
 		if vim.fn.has("win32") == 1 then
 			cmd_bin = mason_path .. "/bash-debug-adapter.cmd"
 		end
 		dap.adapters.bashdb = {
 			type = "executable",
-			command = cmd_bin,
+			command = vim.fn.filereadable(script) == 1 and "node" or cmd_bin,
+			args = vim.fn.filereadable(script) == 1 and { script } or {},
 			name = "bashdb",
 		}
 	end

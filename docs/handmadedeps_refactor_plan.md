@@ -54,7 +54,7 @@ These core engine plugins and `cord.nvim` will be **kept as external dependencie
 | `mfussenegger/nvim-dap` | DAP Engine | Debug Adapter Protocol client core |
 | `rcarriga/nvim-dap-ui` | DAP UI | Interactive debugger layout & variable inspector |
 | `nvim-neotest/nvim-nio` | Async I/O | Async I/O library required by `nvim-dap-ui` |
-| `jay-babu/mason-nvim-dap.nvim` | DAP Bridge | Mason installer bridge for debug adapters |
+| Replaced: `jay-babu/mason-nvim-dap.nvim` | Local language modules | Adapter registration owned locally; completed, see PLAN.md |
 | `nvim-telescope/telescope.nvim` | Fuzzy Finder | Interactive picker engine |
 | `nvim-lua/plenary.nvim` | Utility Core | Lua async/path utilities required by Telescope |
 | `nvim-tree/nvim-web-devicons` | UI Icons | Filetype icon provider for Telescope & Neo-tree |

@@ -161,6 +161,18 @@ M.php_debug_port = M.dap_debug_port
 --- Filetypes the DAP configurations below attach to.
 M.dap_filetypes = { "php", "blade" }
 
+function M.dap_setup(dap)
+	dap.adapters.php = function(callback)
+		local script = vim.fn.stdpath("data") .. "/mason/packages/php-debug-adapter/extension/out/phpDebug.js"
+		local installed = vim.fn.filereadable(script) == 1
+		callback({
+			type = "executable",
+			command = installed and "node" or "php-debug-adapter",
+			args = installed and { script } or {},
+		})
+	end
+end
+
 --- Static nvim-dap configurations, appended by lua/plugins/editor/dap.lua.
 M.dap_configs = {
 	{

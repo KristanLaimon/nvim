@@ -28,10 +28,8 @@ M.web_filetypes = {
 -- Append configurations to every given filetype. Modules append instead of
 -- assigning so several of them (bun, node, browsers) can share a filetype.
 --
--- The first module to claim a filetype clears it first: mason-nvim-dap's
--- default_setup already pushed its own generic entries ("Python: Launch file",
--- "Chrome: Debug", ...) into the same tables, and those would otherwise sit in
--- the picker next to the ones configured here.
+-- The first module to claim a filetype clears previous entries; later modules
+-- append so shared JS/TS filetypes retain all local adapter configurations.
 local claimed = {}
 function M.add(dap, filetypes, configs)
 	for _, ft in ipairs(filetypes) do

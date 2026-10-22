@@ -10,6 +10,10 @@ are required; this feature does not install either automatically.
 Use `:DapVirtualTextEnable`, `:DapVirtualTextDisable`, `:DapVirtualTextToggle` or
 `:DapVirtualTextForceRefresh`, also available in Command Palette under Debug.
 
+Adapters are registered by the local language modules (and the shared browser/JS
+modules). Mason only provides packages selected in `:LanguageManager`; there is no
+external Mason-DAP bridge or adapter installation on startup.
+
 A from-scratch guide to wiring **any** debugger into this config, written around a real
 worked example: making `bun` stop on breakpoints (`lua/plugins/fox/bun_dap.lua`).
 
@@ -240,7 +244,7 @@ Three things follow from this shape:
 | Export | Why it's shared |
 | :--- | :--- |
 | `js_debug(dap)` | Registers `pwa-node`, `pwa-chrome` and `pwa-msedge` from the same js-debug install (Edge is Chromium: same server, different binary). Idempotent, because both `node.lua` and `browsers.lua` call it and neither knows the load order. Falls back from `dapDebugServer.js` (server mode) to the `.cmd` shim (executable mode) |
-| `add(dap, filetypes, configs)` | **Appends** configs so bun, node and browsers can share `typescript`. The first module to claim a filetype clears it first — `mason-nvim-dap`'s `default_setup` has already pushed its own generic entries ("Python: Launch file", "Chrome: Debug") into the same tables, and those would otherwise sit in the picker next to the configured ones |
+| `add(dap, filetypes, configs)` | Appends local configs so bun, node and browsers share TypeScript. The first module claiming a filetype clears previous entries; later modules append. |
 | `js_skip` | `<node_internals>/**`, `**/node_modules/**`. Without it js-debug stops inside node internals and the tsx loader — and nvim-dap force-lists every frame's buffer, so each one becomes a bufferline tab with a long absolute path |
 | `web_filetypes` | `typescript`, `javascript`, `typescriptreact`, `javascriptreact`, `svelte`, `vue`, `astro`. Also fed to `type_to_filetypes` |
 

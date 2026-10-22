@@ -355,6 +355,18 @@ M.lsp_config = {
 --- Filetypes the DAP configurations below attach to.
 M.dap_filetypes = { "python" }
 
+function M.dap_setup(dap)
+	dap.adapters.python = function(callback)
+		local root = vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/"
+		local python = root .. (vim.fn.has("win32") == 1 and "Scripts/python.exe" or "bin/python")
+		callback({
+			type = "executable",
+			command = vim.fn.filereadable(python) == 1 and python or "debugpy-adapter",
+			args = vim.fn.filereadable(python) == 1 and { "-m", "debugpy.adapter" } or {},
+		})
+	end
+end
+
 --- Static nvim-dap configurations, appended by lua/plugins/editor/dap.lua.
 M.dap_configs = {
 	{

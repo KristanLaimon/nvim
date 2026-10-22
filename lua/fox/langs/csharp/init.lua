@@ -165,6 +165,21 @@ end
 --- Filetypes the DAP configurations below attach to.
 M.dap_filetypes = { "cs" }
 
+function M.dap_setup(dap)
+	dap.adapters.coreclr = function(callback)
+		local windows = vim.fn.has("win32") == 1
+		local binary = vim.fn.stdpath("data")
+			.. "/mason/packages/netcoredbg/netcoredbg/netcoredbg"
+			.. (windows and ".exe" or "")
+		callback({
+			type = "executable",
+			command = vim.fn.filereadable(binary) == 1 and binary or "netcoredbg",
+			args = { "--interpreter=vscode" },
+			options = windows and { detached = false } or nil,
+		})
+	end
+end
+
 --- Static nvim-dap configurations, appended by lua/plugins/editor/dap.lua.
 M.dap_configs = {
 	{

@@ -2,7 +2,7 @@
 -- PLUGIN: nvim-dap -- the debugger, wired for every language this config knows.
 -- ============================================================================
 -- WHAT THIS FILE OWNS
---   1. mason-nvim-dap: which adapters get installed automatically.
+--   1. Mason exposes tools installed explicitly through LanguageManager.
 --   2. Per-language DAP config, read from each fox.langs module's `dap_setup`
 --      (function) and/or `dap_filetypes`/`dap_configs` (plain data) -- see
 --      lua/fox/langs/php/init.lua for the plain-data shape and
@@ -49,7 +49,7 @@ return {
 		dependencies = {
 			"rcarriga/nvim-dap-ui",
 			"nvim-neotest/nvim-nio",
-			"jay-babu/mason-nvim-dap.nvim",
+			"williamboman/mason.nvim",
 			"m00qek/baleia.nvim",
 		},
 		config = function()
@@ -61,21 +61,6 @@ return {
 			-- and the source lands in winnr('#') instead of the code window. Prefer a
 			-- window already showing the file, then any visible one.
 			dap.defaults.fallback.switchbuf = "useopen,usevisible,uselast"
-
-			local mason_dap_ok, mason_dap = pcall(require, "mason-nvim-dap")
-			if mason_dap_ok then
-				mason_dap.setup({
-					-- These are nvim-dap adapter names, NOT mason package names.
-					-- (js -> js-debug-adapter, python -> debugpy, coreclr -> netcoredbg)
-					ensure_installed = {},
-					automatic_installation = false,
-					handlers = {
-						function(config)
-							require("mason-nvim-dap").default_setup(config)
-						end,
-					},
-				})
-			end
 
 			-- ----------------------------------------------------------------------
 			-- Cross-language adapters & configurations

@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Cuatro reemplazos completados: **45 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Cinco reemplazos completados: **44 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -21,7 +21,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 2 | `s1n7ax/nvim-window-picker` | Fácil | Completado | Selector nativo con etiquetas, filtros de ventanas y cancelación; conservar integración Neo-tree. |
 | 3 | `theHamsta/nvim-dap-virtual-text` | Fácil-media | Completado | Extmarks para variables DAP; limpiar al continuar, cerrar y cambiar de sesión. |
 | 4 | `leoluz/nvim-dap-go` | Fácil-media | Completado | Registrar Delve y perfiles en fox.langs.go; conservar tests y attach utilizados. |
-| 5 | `jay-babu/mason-nvim-dap.nvim` | Fácil-media | Pendiente | Resolver adaptadores desde los metadatos y rutas Mason locales; verificar cada adaptador. |
+| 5 | `jay-babu/mason-nvim-dap.nvim` | Fácil-media | Completado | Resolver adaptadores desde los metadatos y rutas Mason locales; verificar cada adaptador. |
 | 6 | `doki-theme/doki-theme-vim` | Fácil-media | Pendiente | Conservar temas seleccionables, recursos y atribuciones; restaurar selección al iniciar. |
 | 7 | `ahmedkhalf/project.nvim` | Media | Pendiente | Historial y raíz locales; migrar datos y consumidores sin perder favoritos ni WSL. |
 | 8 | `goolord/alpha-nvim` | Media | Pendiente | Buffer inicial propio con botones, acciones, geometría y navegación por teclado. |
@@ -103,6 +103,14 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 - Retiradas la dependencia y su entrada del lockfile; actualizadas las guías y la prueba de integración. Cinco pruebas cubren perfiles, adaptador, rutas, aislamiento y prompts.
 - Comprobación real con Go y Delve: compilar un programa temporal, parar en un breakpoint, leer `value = 41`, continuar y salir correctamente.
 
+## Quinto ítem completado: mason-nvim-dap.nvim
+
+- Python, PHP y C# registran sus adaptadores en sus módulos de lenguaje; Firefox se registra en el módulo compartido de navegadores. Go, Bash, C/C++ y JS ya tenían registro local.
+- Usa ejecutables nativos y scripts Node de los paquetes Mason; evita wrappers `.cmd` al lanzar los adaptadores. Conserva el fallback a PATH y los perfiles existentes.
+- Mason es una dependencia directa de DAP para exponer las herramientas instaladas. LanguageManager mantiene la selección explícita; no se instalan adaptadores al arrancar ni al abrir archivos.
+- Retiradas la spec y su entrada del lockfile; corregidas las instrucciones que sugerían descargar adaptadores al reiniciar.
+- Cinco pruebas verifican rutas Windows/Unix, entrypoints Node, Codelldb, fallback y paquetes instalados después del registro. Comprobación real: Python, PHP, CoreCLR y Bash respondieron correctamente a `initialize` del protocolo DAP.
+
 ## Siguiente ítem
 
-`jay-babu/mason-nvim-dap.nvim`: resolver las rutas de adaptadores con los metadatos y módulos locales, manteniendo la instalación opcional por lenguaje.
+`doki-theme/doki-theme-vim`: conservar localmente los temas y recursos que usa FoxVim y retirar el repositorio externo de colores.

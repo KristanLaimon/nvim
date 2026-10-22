@@ -3,7 +3,7 @@
 -- ============================================================================
 -- Fails loudly when lua/plugins/fox/debuggers/ stops registering adapters and
 -- configurations the way lua/plugins/editor/dap.lua expects -- in particular when
--- mason-nvim-dap's generic defaults sneak back in and duplicate a language.
+-- generic defaults sneak back in and duplicate a language.
 -- ============================================================================
 
 require("lazy").load({ plugins = { "nvim-dap" } })
@@ -44,11 +44,10 @@ describe("dap web configurations", function()
 end)
 
 describe("dap single-runtime configurations", function()
-	it("registers exactly one configuration per compiled language", function()
-		-- Exactly one each: mason-nvim-dap's generic defaults must have been cleared.
-		expect(names("python")).toHaveLength(1)
-		expect(names("cs")).toHaveLength(1)
-		expect(names("php")).toHaveLength(1)
+	it("registers only the configurations owned by each language", function()
+		for ft, lang in pairs({ python = "python", cs = "csharp", php = "php" }) do
+			expect(#names(ft)).toBe(#require("fox.langs." .. lang).dap_configs)
+		end
 	end)
 
 	it("registers the seven local Go configurations", function()

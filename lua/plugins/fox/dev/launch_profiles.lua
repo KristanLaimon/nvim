@@ -477,7 +477,7 @@ local function start_debug_session(profile, root)
 
 	if not dap.adapters[config.type] then
 		local how = config.type == "bun" and ":FoxBunDapInstall, then restart nvim"
-			or ":Mason (or restart nvim to let mason-nvim-dap fetch it)"
+			or ":LanguageManager (select the language's debug adapter), then restart nvim"
 		notify(
 			"❌ Debug adapter '" .. config.type .. "' is not installed.\n  Install it with " .. how .. ".",
 			vim.log.levels.ERROR,

@@ -100,11 +100,14 @@ M.dap_filetypes = { "c", "cpp" }
 
 ---@param dap table
 function M.dap_setup(dap)
+	local binary = vim.fn.stdpath("data")
+		.. "/mason/packages/codelldb/extension/adapter/codelldb"
+		.. (vim.fn.has("win32") == 1 and ".exe" or "")
 	dap.adapters.codelldb = {
 		type = "server",
 		port = "${port}",
 		executable = {
-			command = "codelldb",
+			command = vim.fn.filereadable(binary) == 1 and binary or "codelldb",
 			args = { "--port", "${port}" },
 		},
 	}

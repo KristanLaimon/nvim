@@ -117,7 +117,7 @@ The profile becomes a shell command handed to the [task runner](tasks.md) (`run_
 
 ## 🐞 Debug mode
 
-`build_dap_config()` maps the profile onto a real DAP configuration. Adapter names match what `mason-nvim-dap` and the language modules register — `pwa-node`, `bun`, `go`, `python`, `php`, `coreclr`.
+`build_dap_config()` maps the profile onto a real DAP configuration. Adapter names match what the local adapter modules register — `pwa-node`, `bun`, `go`, `python`, `php`, `coreclr`.
 
 | Runtime | Adapter | Notes |
 | :--- | :--- | :--- |
@@ -129,7 +129,7 @@ The profile becomes a shell command handed to the [task runner](tasks.md) (`run_
 | `php` | `php` (Xdebug) | Xdebug is a *listener*: nvim waits on port 9003 and the PHP process connects back. `pathMappings` maps `/var/www/html` to the project root |
 | `dotnet` | `coreclr` (netcoredbg) | Launches the built **assembly**, not the project — see below |
 
-If the adapter isn't installed, the launch aborts with the exact fix: `:FoxBunDapInstall` for Bun, `:Mason` (or a restart, letting `mason-nvim-dap` fetch it) for everything else.
+If the adapter isn't installed, the launch aborts with the exact fix: `:FoxBunDapInstall` for Bun, `:LanguageManager` (select the debug adapter for its language, then restart) for the other configured languages. No adapter is downloaded on restart.
 
 ### TypeScript under Node
 

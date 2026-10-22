@@ -13,7 +13,7 @@
 --   1. Add an entry to the owning language's `M.launch_runtimes` (or, for a
 --      runtime with no owning language, to `GENERIC_RUNTIMES` below).
 --   2. Add its key to `M.order` so the profile form can cycle to it.
---   3. If it needs a debug adapter, make sure mason-nvim-dap installs it and that
+--   3. If it needs a debug adapter, declare its optional package in its language module and ensure
 --      `adapter_hint` explains how, or the error message will be useless.
 --
 -- ENTRY SHAPE
@@ -67,7 +67,7 @@ local GENERIC_RUNTIMES = {
 
 --- Every supported runtime, merged from each language module's `launch_runtimes`
 --- plus the generic ones above. Adapter type names must match what
---- mason-nvim-dap and the language modules register: pwa-node (js-debug), go, python, php
+--- the local adapter modules register: pwa-node (js-debug), go, python, php
 --- (xdebug), coreclr (netcoredbg), bun (fox bun adapter).
 M.registry = vim.deepcopy(GENERIC_RUNTIMES)
 for _, lang in pairs(require("fox.langs").langs) do

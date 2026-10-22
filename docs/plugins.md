@@ -70,7 +70,7 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | `neovim/nvim-lspconfig` | LSP server configuration |
 | `williamboman/mason.nvim` | Package manager for LSPs, formatters, linters, debug adapters |
 | `williamboman/mason-lspconfig.nvim` | Mason ↔ lspconfig bridge |
-| `zapling/mason-conform.nvim` | Auto-installs Conform formatters |
+| FoxVim LanguageManager (local) | Installs selected language formatters; Mason exposes executables to Conform through PATH |
 | `jay-babu/mason-nvim-dap.nvim` | Auto-installs debug adapters |
 | `saghen/blink.cmp` | Completion engine |
 | `rafamadriz/friendly-snippets` | Snippet collection |

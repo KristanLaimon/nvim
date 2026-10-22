@@ -54,6 +54,8 @@ end
 return {
 	{
 		"stevearc/conform.nvim",
+		-- Mason exposes installed tools on PATH; LanguageManager owns installation.
+		dependencies = { "williamboman/mason.nvim" },
 		event = { "BufReadPre", "BufNewFile" },
 		cmd = { "ConformInfo" },
 		opts = function()
@@ -83,93 +85,6 @@ return {
 			vim.api.nvim_create_user_command("ConformFormat", function()
 				require("conform").format({ async = true, lsp_fallback = true })
 			end, { desc = "Format current buffer using Pint / PHP-CS-Fixer / blade-formatter / project formatter" })
-		end,
-	},
-	{
-		"zapling/mason-conform.nvim",
-		event = { "BufReadPre", "BufNewFile" },
-		dependencies = { "williamboman/mason.nvim", "stevearc/conform.nvim" },
-		config = function()
-			local env_ok, env_mod = pcall(require, "fox.core.environment")
-			local is_mobile = false
-			if env_ok then
-				local env = env_mod.detect()
-				is_mobile = env.is_mobile or env.is_termux or env.is_proot
-			else
-				is_mobile = vim.env.TERMUX_VERSION ~= nil or vim.fn.isdirectory("/data/data/com.termux") == 1
-			end
-
-			local ignore_list = {}
-			local langs_ok, langs_mod = pcall(require, "fox.langs")
-			if langs_ok and langs_mod.langs then
-				for _, lang in pairs(langs_mod.langs) do
-					if lang.mason_order then
-						for _, pkg in ipairs(lang.mason_order) do
-							table.insert(ignore_list, pkg)
-						end
-					end
-				end
-			end
-			if #ignore_list == 0 then
-				local fallback_pkgs = {
-					"stylua",
-					"gofumpt",
-					"goimports",
-					"prettierd",
-					"prettier",
-					"blade-formatter",
-					"beautysh",
-					"protolint",
-					"biome",
-					"eslint",
-				}
-				for _, pkg in ipairs(fallback_pkgs) do
-					table.insert(ignore_list, pkg)
-				end
-			end
-
-			-- Conditional & project-specific formatters MUST NOT be auto-installed by mason-conform on any platform
-			local extra_ignores = {
-				"pint",
-				"php_cs_fixer",
-				"php-cs-fixer",
-				"dockerfmt",
-			}
-
-			for _, pkg in ipairs(extra_ignores) do
-				if not vim.tbl_contains(ignore_list, pkg) then
-					table.insert(ignore_list, pkg)
-				end
-			end
-
-			-- On mobile / Termux, ignore ALL formatters from background auto-install on file open to prevent hangs/freezes
-			if is_mobile then
-				local all_formatters = {
-					"goimports",
-					"gofumpt",
-					"stylua",
-					"protolint",
-					"prettierd",
-					"prettier",
-					"biome",
-					"dockerfmt",
-					"pint",
-					"php_cs_fixer",
-					"php-cs-fixer",
-					"blade-formatter",
-					"beautysh",
-					"eslint",
-				}
-				for _, fmt in ipairs(all_formatters) do
-					if not vim.tbl_contains(ignore_list, fmt) then
-						table.insert(ignore_list, fmt)
-					end
-				end
-			end
-
-			require("mason-conform").setup({
-				ignore_install = ignore_list,
-			})
 		end,
 	},
 }

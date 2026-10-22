@@ -4,6 +4,28 @@ local describe, it, expect = t.describe, t.it, t.expect
 require("lazy").load({ plugins = { "mini.icons" } })
 
 describe("NestJS file icons", function()
+	it("gives controllers, modules, services, and specs distinct role icons", function()
+		local icons = require("mini.icons")
+		local seen = {}
+		for _, filename in ipairs({
+			"app.controller.ts",
+			"app.module.ts",
+			"app.service.ts",
+			"app.controller.spec.ts",
+		}) do
+			local glyph, hl = icons.get("file", filename)
+			expect(seen[glyph] == nil).toBe(true)
+			expect(seen[hl] == nil).toBe(true)
+			seen[glyph], seen[hl] = true, true
+		end
+		local spec_glyph, spec_hl = icons.get("file", "app.controller.spec.ts")
+		for _, filename in ipairs({ "app.module.spec.ts", "app.service.spec.js", "example.spec.ts" }) do
+			local glyph, hl = icons.get("file", filename)
+			expect(glyph).toBe(spec_glyph)
+			expect(hl).toBe(spec_hl)
+		end
+	end)
+
 	it("resolves compound suffixes through mini.icons and the devicons mock", function()
 		local icons = require("mini.icons")
 		local devicons = require("nvim-web-devicons")

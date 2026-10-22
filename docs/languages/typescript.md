@@ -8,11 +8,12 @@ FoxVim provides a high-performance **TypeScript / JavaScript** environment suppo
 
 ## NestJS file icons
 
-NestJS filenames such as `app.controller.ts`, `app.module.ts`, and `app.service.ts`
-use the red NestJS icon in the explorer, tabs, and file pickers. The same applies
-to guards, interceptors, pipes, filters, middleware, gateways, decorators, DTOs,
-entities, resolvers, their `.spec` files, and JavaScript equivalents.
-`nest-cli.json` also uses the NestJS icon. Mappings live in
+NestJS files use distinct role icons in the explorer, tabs, and file pickers:
+controllers use red sliders, modules purple cubes, services orange gears, and
+`.spec.ts` / `.spec.js` tests green flasks. Guards, interceptors, pipes, filters,
+middleware, gateways, decorators, DTOs, entities, and resolvers each have their own
+role icon, including JavaScript equivalents.
+`nest-cli.json` uses the red NestJS logo. Mappings live in
 `lua/fox/langs/typescript/init.lua` under `M.icons` and apply by filename suffix.
 
 ## 🛠️ Toolchain Summary

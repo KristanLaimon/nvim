@@ -23,26 +23,27 @@ M.icons = {
 	extension = {},
 	file = { ["nest-cli.json"] = { glyph = "", hl = "MiniIconsRed" } },
 }
-for _, kind in ipairs({
-	"controller",
-	"module",
-	"service",
-	"guard",
-	"interceptor",
-	"pipe",
-	"filter",
-	"middleware",
-	"gateway",
-	"decorator",
-	"dto",
-	"entity",
-	"resolver",
+for kind, icon in pairs({
+	controller = { glyph = "", hl = "MiniIconsRed" },
+	module = { glyph = "", hl = "MiniIconsPurple" },
+	service = { glyph = "", hl = "MiniIconsOrange" },
+	guard = { glyph = "", hl = "MiniIconsGreen" },
+	interceptor = { glyph = "", hl = "MiniIconsYellow" },
+	pipe = { glyph = "", hl = "MiniIconsCyan" },
+	filter = { glyph = "", hl = "MiniIconsRed" },
+	middleware = { glyph = "", hl = "MiniIconsAzure" },
+	gateway = { glyph = "", hl = "MiniIconsBlue" },
+	decorator = { glyph = "", hl = "MiniIconsPurple" },
+	dto = { glyph = "", hl = "MiniIconsCyan" },
+	entity = { glyph = "", hl = "MiniIconsYellow" },
+	resolver = { glyph = "", hl = "MiniIconsAzure" },
 }) do
 	for _, ext in ipairs({ "ts", "js" }) do
-		M.icons.extension[kind .. "." .. ext] = { glyph = "", hl = "MiniIconsRed" }
-		M.icons.extension[kind .. ".spec." .. ext] = { glyph = "", hl = "MiniIconsRed" }
+		M.icons.extension[kind .. "." .. ext] = icon
 	end
 end
+M.icons.extension["spec.ts"] = { glyph = "", hl = "MiniIconsGreen" }
+M.icons.extension["spec.js"] = { glyph = "", hl = "MiniIconsGreen" }
 
 --- The lspconfig/mason server name(s) backing TypeScript & JavaScript. An array even
 --- though there is normally one: swap TS servers (e.g. vtsls -> tsgo) by changing

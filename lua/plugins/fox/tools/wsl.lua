@@ -8,7 +8,7 @@
 --      paths, so a project opened over the network share is recognized as Linux.
 --   4. Builds `wsl.exe -d <Distro> --cd <linux-path>` so the integrated terminal
 --      starts inside the right distro and directory.
---   5. Keeps its own recent-projects list, because project.nvim's history does
+--   5. Keeps its own recent-projects list, because the shared project history does
 --      not survive UNC paths well.
 --
 -- PURE MODULE

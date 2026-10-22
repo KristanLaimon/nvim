@@ -217,7 +217,7 @@ graph LR
     MODAL["input_modal"]
     EXPLORER["file_explorer"]
     FAV["fox.projects.favorites"]
-    PROJNVIM["project.nvim spec"]
+    PROJNVIM["Local recent-project spec"]
     DEBUGGERS["plugins/fox/debuggers/*"]
 
     TASKS --> DOCK

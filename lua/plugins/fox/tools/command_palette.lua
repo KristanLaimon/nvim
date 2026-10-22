@@ -96,6 +96,7 @@ M.settings = {
 --- Everything the palette offers, in display order. EDIT THIS LIST.
 --- @type table[]
 M.commands = {
+	{ name = "Project: Set Root from Current File", cmd = "ProjectRoot", category = "Files" },
 	{ name = "Debug: Enable Inline Variable Values", cmd = "DapVirtualTextEnable", category = "Debug" },
 	{ name = "Debug: Disable Inline Variable Values", cmd = "DapVirtualTextDisable", category = "Debug" },
 	{ name = "Debug: Toggle Inline Variable Values", cmd = "DapVirtualTextToggle", category = "Debug" },

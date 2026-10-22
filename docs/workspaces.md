@@ -2,6 +2,14 @@
 
 [← Back to Wiki Index](index.md)
 
+Recent projects use the local `fox_recent_projects` spec and `fox.projects.history`.
+`:RecentProjects` and `:Telescope projects` open the same FOX picker, including the
+Environments project selector. `:ProjectRoot` explicitly changes cwd to the nearest
+project marker (or the attached LSP root); opening a file does not change it.
+The existing `nvim-data/project_nvim/project_history` file is reused unchanged in
+format. History updates replace it atomically and do not check whether WSL paths
+are reachable. Favorites and the separate WSL recent list retain their own stores.
+
 The **Workspaces Manager** allows saving, loading, restoring, and switching full project session states in Neovim.
 
 ---

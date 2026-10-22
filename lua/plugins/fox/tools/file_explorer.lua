@@ -19,7 +19,7 @@
 --   Desktop again, because home is almost never what you meant.
 --
 -- FAVORITES -- `<data>/project_favorites.json`
---   A path -> true map. Favorited directories are also pushed into project.nvim's
+--   A path -> true map. Favorited directories are also pushed into the local
 --   recent list so they show up on the dashboard.
 -- ============================================================================
 
@@ -67,21 +67,13 @@ local function load_favorites()
 	return favorites.load()
 end
 
---- Adds a directory to project.nvim's recent project list, if it is not there.
+--- Adds a directory to the local recent project list, if it is not there.
 --- @param dir string Directory path.
 local function remember_recent_project(dir)
-	local ok, history = pcall(require, "project_nvim.utils.history")
-	if not ok or not history.recent_projects then
-		return
+	local ok, err = require("fox.projects.history").remember(dir)
+	if not ok then
+		vim.notify("Cannot save project history: " .. tostring(err), vim.log.levels.ERROR)
 	end
-
-	for _, p in ipairs(history.recent_projects) do
-		if favorite_key(p) == favorite_key(dir) then
-			return
-		end
-	end
-	table.insert(history.recent_projects, dir)
-	pcall(history.write_projects_to_history)
 end
 
 -- ============================================================================
@@ -262,11 +254,7 @@ local function set_project_root(target)
 		end
 	end
 
-	local history_ok, history = pcall(require, "project_nvim.utils.history")
-	if history_ok and history.recent_projects then
-		table.insert(history.recent_projects, target)
-		pcall(history.write_projects_to_history)
-	end
+	remember_recent_project(target)
 	pcall(function()
 		require("plugins.fox.tools.wsl").add_recent_project(target)
 	end)

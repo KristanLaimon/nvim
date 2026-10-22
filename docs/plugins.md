@@ -96,7 +96,7 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | `nvim-tree/neo-tree.nvim` | Sidebar file explorer |
 | `NeogitOrg/neogit` | Secondary Git UI |
 | `sindrets/diffview.nvim` | Diff/history viewer for Neogit |
-| `ahmedkhalf/project.nvim` | Project history behind Recent Projects |
+| `fox_recent_projects` / `fox.projects.history` (local) | Recent projects UI and persistent history; no external project plugin |
 | `voldikss/package-info.nvim` | Inline `package.json` dependency management |
 | `nvim-lua/plenary.nvim` | Lua utility library |
 

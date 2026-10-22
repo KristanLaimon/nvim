@@ -1,11 +1,11 @@
 -- ============================================================================
--- PLUGIN: project.nvim -- recent projects, with a custom picker (<C-r>).
+-- FOX: Recent projects -- recent projects, with a custom picker (<C-r>).
 -- ============================================================================
 -- WHY THE PICKER IS CUSTOM
 --   The stock `Telescope projects` list cannot show WSL projects, favorites, or
 --   per-language icons, and it stats every path on open -- which BOOTS WSL over
 --   SMB and freezes the UI for seconds. This picker:
---     * merges project.nvim history with the WSL recent list,
+--     * merges local history with the WSL recent list,
 --     * pins favorites (shared with the file explorer) to the top,
 --     * never stats a WSL path until you actually pick it,
 --     * opens a project cleanly: close splits, drop old buffers, cd, show tree.
@@ -20,14 +20,13 @@
 
 local lazy_req = require("fox.core.lazy_require")
 local favorites = lazy_req("fox.projects.favorites")
-local path_util = lazy_req("fox.core.path")
 
 -- ============================================================================
 -- CONFIGURATION
 -- ============================================================================
 
 local settings = {
-	--- Files and directories that mark a project root for project.nvim.
+	--- Files and directories that mark a project root for manual root detection.
 	root_patterns = {
 		".git",
 		"_darcs",
@@ -75,15 +74,13 @@ local settings = {
 	default_icon = { icon = "📄", highlight = "Directory" },
 	wsl_icon = { icon = "🐧", highlight = "Directory" },
 
-	--- Bogus entries that a broken history file can contain.
-	invalid_paths = { "c:", "c:/" },
-
 	--- Open the picker.
 	keys = { "<C-S-r>", "<C-S-R>", "<C-r>", "<C-R>", "<leader>fp" },
 }
 
 return {
-	"ahmedkhalf/project.nvim",
+	name = "fox_recent_projects",
+	dir = require("fox.core.lazyspec").for_module(),
 	cmd = { "ProjectRoot", "RecentProjects" },
 	keys = {
 		{ "<C-S-r>", "<cmd>RecentProjects<CR>", mode = { "n", "i", "v", "t" }, desc = "Open Recent Projects UI" },
@@ -96,19 +93,7 @@ return {
 		"nvim-tree/nvim-web-devicons",
 	},
 	config = function()
-		require("project_nvim").setup({
-			-- Manual mode: the working directory only changes when a project is
-			-- opened deliberately, never by opening a file from somewhere else.
-			manual_mode = true,
-			manual_gc = false,
-			detection_methods = { "pattern", "lsp" },
-			patterns = settings.root_patterns,
-			silent_chdir = true,
-			scope_chdir = "global",
-		})
-		require("telescope").load_extension("projects")
-
-		local history = require("project_nvim.utils.history")
+		local history = require("fox.projects.history")
 
 		-- ------------------------------------------------------------------
 		-- Helpers
@@ -121,32 +106,12 @@ return {
 			return favorites.key(p)
 		end
 
-		--- Rewrites project.nvim's history file, dropping duplicates and junk.
-		--- project.nvim only persists on exit, so anything changed here has to be
-		--- written by hand or it is lost.
-		---
-		--- @param list string[] Project paths, oldest first.
-		local function save_history(list)
-			local ok, path_module = pcall(require, "project_nvim.utils.path")
+		local function update_history(action, ...)
+			local ok, err = history[action](...)
 			if not ok then
-				return
+				vim.notify("Cannot save project history: " .. tostring(err), vim.log.levels.ERROR)
 			end
-
-			local file = io.open(path_module.historyfile, "w")
-			if not file then
-				return
-			end
-
-			local seen = {}
-			for _, project in ipairs(list) do
-				local clean = type(project) == "string" and normalize(project) or ""
-				local is_junk = clean == "" or vim.tbl_contains(settings.invalid_paths, clean)
-				if not is_junk and not seen[clean:lower()] then
-					seen[clean:lower()] = true
-					file:write(clean .. "\n")
-				end
-			end
-			file:close()
+			return ok
 		end
 
 		--- Icon and highlight for a project directory.
@@ -190,41 +155,14 @@ return {
 			return p:gsub("\\", "/"):match("^//wsl") ~= nil
 		end
 
-		--- Ensures project.nvim history is loaded synchronously before reading.
-		--- `history.read_projects_from_history()` runs asynchronously, causing
-		--- `history.recent_projects` to be nil on initial picker open.
-		local function ensure_history_loaded()
-			if history.recent_projects == nil then
-				local ok, path_module = pcall(require, "project_nvim.utils.path")
-				if ok and path_module.historyfile then
-					local file = io.open(path_module.historyfile, "r")
-					if file then
-						local content = file:read("*a")
-						file:close()
-						if content and content ~= "" then
-							local loaded = {}
-							for line in content:gmatch("[^\r\n]+") do
-								local trimmed = vim.trim(line)
-								if trimmed ~= "" then
-									table.insert(loaded, trimmed)
-								end
-							end
-							history.recent_projects = loaded
-						end
-					end
-				end
-			end
-		end
-
 		-- ------------------------------------------------------------------
 		-- Project list
 		-- ------------------------------------------------------------------
 
-		--- Every known project, WSL list first, then project.nvim history, with
+		--- Every known project, WSL list first, then local history, with
 		--- duplicates removed.
 		--- @return string[] paths
 		local function collect_projects()
-			ensure_history_loaded()
 			local wsl = wsl_module()
 			local projects, seen = {}, {}
 
@@ -242,7 +180,7 @@ return {
 					add(project)
 				end
 			end
-			for _, project in ipairs(history.get_recent_projects() or {}) do
+			for _, project in ipairs(history.list()) do
 				add(project)
 			end
 
@@ -340,18 +278,7 @@ return {
 				wsl.add_recent_project(dir)
 			end
 
-			-- Move the project to the end of the history, which is "most recent".
-			if history.recent_projects then
-				local updated = {}
-				for _, project in ipairs(history.recent_projects) do
-					if not path_util.equals(normalize(project), normalize(dir)) then
-						table.insert(updated, project)
-					end
-				end
-				table.insert(updated, dir)
-				history.recent_projects = updated
-				save_history(updated)
-			end
+			update_history("remember", dir)
 
 			if _G.AddOpenedFolder then
 				_G.AddOpenedFolder(dir)
@@ -377,18 +304,9 @@ return {
 		--- Removes a project from every list it appears in.
 		--- @param entry table Picker entry.
 		local function forget_project(entry)
-			for _, field in ipairs({ "recent_projects", "session_projects" }) do
-				if history[field] then
-					local kept = {}
-					for _, project in ipairs(history[field]) do
-						if normalize(project) ~= entry.norm then
-							table.insert(kept, project)
-						end
-					end
-					history[field] = kept
-				end
+			if not update_history("remove", entry.path) then
+				return
 			end
-			save_history(history.get_recent_projects())
 
 			local wsl = wsl_module()
 			if wsl then
@@ -418,14 +336,7 @@ return {
 				end
 			end
 
-			if history.recent_projects then
-				local updated = {}
-				for _, project in ipairs(history.recent_projects) do
-					table.insert(updated, normalize(project) == entry.norm and new_path or project)
-				end
-				history.recent_projects = updated
-				save_history(updated)
-			end
+			update_history("rename", entry.path, new_path)
 
 			if wsl_path and wsl then
 				wsl.remove_recent_project(entry.path)
@@ -608,16 +519,32 @@ return {
 				:find()
 		end
 
-		-- `Telescope projects` and the dashboard both route here.
-		pcall(function()
-			local tel = require("telescope")
-			tel.load_extension("projects")
-			if tel.extensions and tel.extensions.projects then
-				tel.extensions.projects.projects = open_projects_picker
-			end
-		end)
-
 		_G.OpenRecentProjects = open_projects_picker
+
+		vim.api.nvim_create_user_command("ProjectRoot", function()
+			local name = vim.api.nvim_buf_get_name(0)
+			local directory = name ~= "" and vim.fs.dirname(name) or vim.fn.getcwd()
+			local marker = vim.fs.find(settings.root_patterns, { path = directory, upward = true })[1]
+			local root = marker and vim.fs.dirname(marker)
+			if not root then
+				for _, client in ipairs(vim.lsp.get_clients({ bufnr = 0 })) do
+					root = client.config.root_dir
+					if root then
+						break
+					end
+				end
+			end
+			if not root then
+				vim.notify("No project root found", vim.log.levels.WARN)
+				return
+			end
+			local ok, err = pcall(vim.api.nvim_set_current_dir, root)
+			if ok then
+				update_history("remember", root)
+			else
+				vim.notify(tostring(err), vim.log.levels.ERROR)
+			end
+		end, { desc = "Change cwd to the current file's project root" })
 
 		vim.api.nvim_create_user_command("RecentProjects", function()
 			open_projects_picker()

@@ -180,7 +180,6 @@ return {
 	},
 	dependencies = {
 		"nvim-lua/plenary.nvim",
-		"ahmedkhalf/project.nvim",
 		"nvim-telescope/telescope-file-browser.nvim",
 	},
 	config = function()
@@ -411,8 +410,7 @@ return {
 			return dirs
 		end
 
-		--- Records a directory as the most recent project, in both project.nvim's
-		--- lists and the WSL one.
+		--- Records a directory as the most recent project, in the local history and the WSL list.
 		--- @param dir string Directory path.
 		local function remember_project(dir)
 			if not dir or dir == "" then
@@ -422,21 +420,9 @@ return {
 			local favorites = require("fox.projects.favorites")
 			local key = favorites.key(dir)
 
-			local ok, history = pcall(require, "project_nvim.utils.history")
-			if ok then
-				for _, field in ipairs({ "session_projects", "recent_projects" }) do
-					if history[field] ~= nil then
-						local kept = {}
-						for _, project in ipairs(history[field]) do
-							if favorites.key(project):lower() ~= key:lower() then
-								table.insert(kept, project)
-							end
-						end
-						table.insert(kept, key)
-						history[field] = kept
-					end
-				end
-				history.write_projects_to_history()
+			local ok, err = require("fox.projects.history").remember(key)
+			if not ok then
+				vim.notify("Cannot save project history: " .. tostring(err), vim.log.levels.ERROR)
 			end
 
 			pcall(function()

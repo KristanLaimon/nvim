@@ -79,7 +79,7 @@ FoxVim has **48 hand-crafted local plugins** in [`lua/plugins/fox/`](lua/plugins
 | Area | Packages pinned in `lazy-lock.json` |
 |---|---|
 | UI and themes | `alpha-nvim`, `bufferline.nvim`, `lualine.nvim`, `mini.icons`, `nvim-highlight-colors`, `nvim-notify`, `nvim-web-devicons`, `render-markdown.nvim` |
-| Navigation and Git | `diffview.nvim`, `git-blame.nvim`, `gitsigns.nvim`, `neo-tree.nvim`, `neogit`, `nui.nvim`, `nvim-file-operations`, `nvim-lsp-file-operations`, `package-info.nvim`, `plenary.nvim`, `project.nvim`, `snacks.nvim`, `telescope-file-browser.nvim`, `telescope.nvim` |
+| Navigation and Git | `diffview.nvim`, `git-blame.nvim`, `gitsigns.nvim`, `neo-tree.nvim`, `neogit`, `nui.nvim`, `nvim-file-operations`, `nvim-lsp-file-operations`, `package-info.nvim`, `plenary.nvim`, `snacks.nvim`, `telescope-file-browser.nvim`, `telescope.nvim` |
 | LSP and editing | `blink.cmp`, `conform.nvim`, `friendly-snippets`, `mason-lspconfig.nvim`, `mason.nvim`, `nvim-lspconfig`, `nvim-treesitter`, `nvim-ts-autotag`, `schemastore.nvim`, `symbol-usage.nvim` |
 | Debugging | `baleia.nvim`, `nvim-dap`, `nvim-dap-ui`, `nvim-nio` |
 | Language and extras | `blade-nav.nvim`, `cord.nvim`, `lazy.nvim`, `markdown-preview.nvim`, `nvim-autopairs`, `vim-blade` |

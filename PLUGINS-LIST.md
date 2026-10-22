@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **43 externos** y **59 specs locales**. El plan de sustitución está en [PLAN.md](PLAN.md).
+Total actual: **42 externos** y **60 specs locales**. El plan de sustitución está en [PLAN.md](PLAN.md).
 
 ## (External)
 
@@ -17,7 +17,6 @@ Total actual: **43 externos** y **59 specs locales**. El plan de sustitución es
 
 **Editor**
 
-- `ahmedkhalf/project.nvim` — [`editor/project.lua`](lua/plugins/editor/project.lua), [`editor/telescope.lua`](lua/plugins/editor/telescope.lua)
 - `antosha417/nvim-lsp-file-operations` — [`editor/neo-tree.lua`](lua/plugins/editor/neo-tree.lua)
 - `Crysthamus/nvim-file-operations` — [`editor/neo-tree.lua`](lua/plugins/editor/neo-tree.lua)
 - `f-person/git-blame.nvim` — [`editor/git_blame.lua`](lua/plugins/editor/git_blame.lua)
@@ -85,6 +84,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 **Editor**
 
 - `fox_buffer_cleaner` — [`fox/editor/buffer_cleaner.lua`](lua/plugins/fox/editor/buffer_cleaner.lua)
+- `fox_recent_projects` — [`editor/project.lua`](lua/plugins/editor/project.lua)
 - `fox_caps_lock` — [`fox/editor/caps_lock.lua`](lua/plugins/fox/editor/caps_lock.lua)
 - `fox_folding` — [`fox/editor/folding.lua`](lua/plugins/fox/editor/folding.lua)
 - `fox_hover_links` — [`fox/editor/hover_links.lua`](lua/plugins/fox/editor/hover_links.lua)
@@ -161,6 +161,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 No son plugins externos ni specs independientes adicionales:
 
+- `lua/fox/projects/history.lua` y `lua/telescope/_extensions/projects.lua`: historial local persistente y compatibilidad de `:Telescope projects`.
 - `lua/fox/dap/virtual_text.lua`: variables DAP con extmarks, controles y seguimiento del ciclo de sesión; sustituye a `nvim-dap-virtual-text`.
 - `lua/fox/core/window_picker.lua` y `lua/window-picker.lua`: selector local de ventanas y punto de compatibilidad con los comandos de Neo-tree; sustituye a `nvim-window-picker`.
 - `lua/plugins/fox/debuggers/{_shared,browsers,bun,node}.lua`: soporte DAP compartido; los depuradores específicos de lenguaje viven en `lua/fox/langs/<lenguaje>/init.lua`.

@@ -75,7 +75,7 @@ These external plugins will be **removed from `lazy.nvim`** and replaced with pu
 | `lewis6991/gitsigns.nvim` | `lua/handmadedeps/gitsigns.lua` | Signcolumn diff markers (`▎`, ``), async git diff watcher, `]c`/`[c` navigation |
 | `MeanderingProgrammer/render-markdown.nvim` | `lua/handmadedeps/markdown/init.lua` | Markdown callout boxes (`[!NOTE]`, `[!TIP]`), table borders, concealed headers |
 | `iamcco/markdown-preview.nvim` | `lua/handmadedeps/markdown/browser.lua` | Web browser launcher for previewing `.md` files natively |
-| `ahmedkhalf/project.nvim` | `lua/handmadedeps/project.lua` | Native `vim.fs.root()` pattern detector & history manager for project picker |
+| Replaced: `ahmedkhalf/project.nvim` | `lua/fox/projects/history.lua` + local picker | Native root detection and atomic history persistence; completed, see PLAN.md |
 | `vuki656/package-info.nvim` | `lua/handmadedeps/package_info.lua` | `package.json` dependency parser with manual status command & virtual text |
 | `stevearc/conform.nvim` | `lua/handmadedeps/formatting.lua` | Format-on-save runner for Pint, Prettier, Stylua, Gofumpt, Beautysh, CSharpier |
 | `zapling/mason-conform.nvim` | `lua/handmadedeps/formatting.lua` | Formatter executable path resolver for Mason packages |

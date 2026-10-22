@@ -791,23 +791,4 @@ return {
 			require("nvim-file-operations").setup()
 		end,
 	},
-
-	-- Used by neo-tree when a file has to be opened "in that window over there".
-	{
-		"s1n7ax/nvim-window-picker",
-		version = "2.*",
-		lazy = true,
-		config = function()
-			require("window-picker").setup({
-				filter_rules = {
-					include_current_win = false,
-					autoselect_one = true,
-					bo = {
-						filetype = { "neo-tree", "neo-tree-popup", "notify" },
-						buftype = { "terminal", "quickfix" },
-					},
-				},
-			})
-		end,
-	},
 }

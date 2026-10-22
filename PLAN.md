@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Primer reemplazo completado: **48 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Dos reemplazos completados: **47 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -18,7 +18,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | Orden | Plugin externo | Dificultad | Estado | Sustitución del uso actual |
 |---|---|---|---|---|
 | 1 | `zapling/mason-conform.nvim` | Muy fácil | Completado | Reutilizar LanguageManager y Mason/PATH; retirar la instalación automática del puente. |
-| 2 | `s1n7ax/nvim-window-picker` | Fácil | Pendiente | Selector nativo con etiquetas, filtros de ventanas y cancelación; conservar integración Neo-tree. |
+| 2 | `s1n7ax/nvim-window-picker` | Fácil | Completado | Selector nativo con etiquetas, filtros de ventanas y cancelación; conservar integración Neo-tree. |
 | 3 | `theHamsta/nvim-dap-virtual-text` | Fácil-media | Pendiente | Extmarks para variables DAP; limpiar al continuar, cerrar y cambiar de sesión. |
 | 4 | `leoluz/nvim-dap-go` | Fácil-media | Pendiente | Registrar Delve y perfiles en fox.langs.go; conservar tests y attach utilizados. |
 | 5 | `jay-babu/mason-nvim-dap.nvim` | Fácil-media | Pendiente | Resolver adaptadores desde los metadatos y rutas Mason locales; verificar cada adaptador. |
@@ -76,6 +76,15 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 - Pruebas nuevas: agregación de configuración, dependencia directa y presencia de formateadores gestionados en sus bundles. El mínimo Lua ya tiene cobertura en installer_spec.lua.
 - No se borran carpetas de instalaciones anteriores. El gestor podrá mostrar la dependencia retirada como no utilizada; no se necesita para arrancar.
 
+## Segundo ítem completado: nvim-window-picker
+
+- Implementación propia en `lua/fox/core/window_picker.lua`, sin dependencias adicionales. `lua/window-picker.lua` conserva el nombre de módulo que requiere Neo-tree.
+- Selección síncrona por letras en la barra superior de cada ventana, sin cambiar el foco. Si solo hay un destino válido, se elige automáticamente.
+- Excluye la ventana actual, otras pestañas, flotantes, ventanas no enfocables, árboles, notificaciones, terminales y quickfix.
+- Restaura las barras originales al seleccionar, cancelar, interrumpir o cerrar un destino. Usa etiquetas de varias letras cuando hay muchos destinos.
+- Retiradas la spec externa y su entrada del lockfile; actualizados el inventario, README y documentación. Las carpetas de instalaciones anteriores no se borran.
+- Ocho pruebas con ventanas reales cubren compatibilidad, selección, filtros, restauración, cancelación, interrupción, cierre y etiquetas múltiples.
+
 ## Siguiente ítem
 
-`s1n7ax/nvim-window-picker`: sustituir el selector usado por Neo-tree con APIs nativas y probar filtros, cancelación y selección. Los demás reemplazos permanecen pendientes.
+`theHamsta/nvim-dap-virtual-text`: implementar la visualización local de variables DAP con extmarks y limpiar al continuar, cerrar o cambiar de sesión. Los demás reemplazos permanecen pendientes.

@@ -108,5 +108,5 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | `akinsho/bufferline.nvim` | Buffer tab bar |
 | `nvim-lualine/lualine.nvim` | Statusline |
 | `nvim-highlight-colors` | Inline CSS colour previews |
-| `nvim-window-picker` | Visual window selector when opening files |
+| `fox.core.window_picker` (local) | Visual window selector for Neo-tree; no external plugin |
 | `nvim-file-operations` | Keeps buffers in sync with disk renames/moves |

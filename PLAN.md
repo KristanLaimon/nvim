@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Cinco reemplazos completados: **44 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Seis reemplazos completados: **43 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -22,7 +22,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 3 | `theHamsta/nvim-dap-virtual-text` | Fácil-media | Completado | Extmarks para variables DAP; limpiar al continuar, cerrar y cambiar de sesión. |
 | 4 | `leoluz/nvim-dap-go` | Fácil-media | Completado | Registrar Delve y perfiles en fox.langs.go; conservar tests y attach utilizados. |
 | 5 | `jay-babu/mason-nvim-dap.nvim` | Fácil-media | Completado | Resolver adaptadores desde los metadatos y rutas Mason locales; verificar cada adaptador. |
-| 6 | `doki-theme/doki-theme-vim` | Fácil-media | Pendiente | Conservar temas seleccionables, recursos y atribuciones; restaurar selección al iniciar. |
+| 6 | `doki-theme/doki-theme-vim` | Fácil-media | Completado | Conservar temas seleccionables, recursos y atribuciones; restaurar selección al iniciar. |
 | 7 | `ahmedkhalf/project.nvim` | Media | Pendiente | Historial y raíz locales; migrar datos y consumidores sin perder favoritos ni WSL. |
 | 8 | `goolord/alpha-nvim` | Media | Pendiente | Buffer inicial propio con botones, acciones, geometría y navegación por teclado. |
 | 9 | `windwp/nvim-ts-autotag` | Media | Pendiente | Cerrar/renombrar etiquetas con Treesitter; cubrir JSX, fragmentos y etiquetas vacías. |
@@ -111,6 +111,13 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 - Retiradas la spec y su entrada del lockfile; corregidas las instrucciones que sugerían descargar adaptadores al reiniciar.
 - Cinco pruebas verifican rutas Windows/Unix, entrypoints Node, Codelldb, fallback y paquetes instalados después del registro. Comprobación real: Python, PHP, CoreCLR y Bash respondieron correctamente a `initialize` del protocolo DAP.
 
+## Sexto ítem completado: doki-theme-vim
+
+- El catálogo de FoxThemePicker y el tema guardado (`nagatoro-fox`) ya se implementaban completamente en `colors/`, sin usar código de ejecución del plugin Doki.
+- Sustituida su spec externa por `fox_theme_startup`, una spec local eager en `lua/plugins/ui/themes.lua`. Conserva intacta la restauración y sincronización Ryoku/Omarchy.
+- Retirada la entrada del lockfile. No se copian fuentes ni recursos del repositorio externo; se conservan las atribuciones de las paletas locales existentes.
+- Dos pruebas verifican el arranque local y la carga de todas las paletas estáticas del selector sin Doki en runtimepath. Los nombres adicionales exclusivos del catálogo upstream dejan de distribuirse; no formaban parte del selector FOX ni del tema guardado.
+
 ## Siguiente ítem
 
-`doki-theme/doki-theme-vim`: conservar localmente los temas y recursos que usa FoxVim y retirar el repositorio externo de colores.
+`ahmedkhalf/project.nvim`: mover el historial y la detección de raíces al núcleo local, migrando los datos existentes y todos los consumidores del explorador y de Telescope.

@@ -2,6 +2,11 @@
 
 [← Back to Wiki Index](index.md)
 
+Theme startup uses the local `fox_theme_startup` spec in `lua/plugins/ui/themes.lua`.
+All palettes offered by `:FoxThemePicker` live in `colors/`; no external Doki plugin
+is required. Additional scheme names exclusive to the upstream Doki catalog are
+not bundled. Existing local palette attributions are preserved.
+
 This guide explains how to manage, customize, and extend colorschemes in this Neovim configuration.
 
 ---

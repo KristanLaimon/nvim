@@ -5,13 +5,12 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **44 externos** y **58 specs locales**. El plan de sustitución está en [PLAN.md](PLAN.md).
+Total actual: **43 externos** y **59 specs locales**. El plan de sustitución está en [PLAN.md](PLAN.md).
 
 ## (External)
 
 ### Core
 
-- `doki-theme/doki-theme-vim` — [`ui/themes.lua`](lua/plugins/ui/themes.lua)
 - `folke/lazy.nvim` — [`lua/lazy_init.lua`](lua/lazy_init.lua)
 
 ### Non-core
@@ -78,6 +77,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 ### Core
 
+- `fox_theme_startup` — [`ui/themes.lua`](lua/plugins/ui/themes.lua)
 - `image_viewer` — [`fox/ui/image_viewer.lua`](lua/plugins/fox/ui/image_viewer.lua)
 
 ### Non-core

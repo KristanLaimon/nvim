@@ -104,7 +104,7 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | Plugin | Purpose |
 |---|---|
 | `goolord/alpha-nvim` | Start dashboard |
-| `doki-theme/doki-theme-vim` | Theme base, with a custom `#1e1e1e` background |
+| `fox_theme_startup` (local) | Restore FOX palettes from colors/ at startup, including Ryoku/Omarchy sync |
 | `akinsho/bufferline.nvim` | Buffer tab bar |
 | `nvim-lualine/lualine.nvim` | Statusline |
 | `nvim-highlight-colors` | Inline CSS colour previews |

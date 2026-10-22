@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **46 externos** y **58 specs locales**. El plan de sustitución está en [PLAN.md](PLAN.md).
+Total actual: **45 externos** y **58 specs locales**. El plan de sustitución está en [PLAN.md](PLAN.md).
 
 ## (External)
 
@@ -25,7 +25,6 @@ Total actual: **46 externos** y **58 specs locales**. El plan de sustitución es
 - `folke/snacks.nvim` — [`editor/neo-tree.lua`](lua/plugins/editor/neo-tree.lua)
 - `iamcco/markdown-preview.nvim` — [`editor/markdown.lua`](lua/plugins/editor/markdown.lua)
 - `jay-babu/mason-nvim-dap.nvim` — [`editor/dap.lua`](lua/plugins/editor/dap.lua)
-- `leoluz/nvim-dap-go` — [`editor/dap.lua`](lua/plugins/editor/dap.lua)
 - `lewis6991/gitsigns.nvim` — [`editor/gitsigns.lua`](lua/plugins/editor/gitsigns.lua)
 - `m00qek/baleia.nvim` — [`editor/dap.lua`](lua/plugins/editor/dap.lua)
 - `MeanderingProgrammer/render-markdown.nvim` — [`editor/markdown.lua`](lua/plugins/editor/markdown.lua)

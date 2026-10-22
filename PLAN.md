@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Tres reemplazos completados: **46 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Cuatro reemplazos completados: **45 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -20,7 +20,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 1 | `zapling/mason-conform.nvim` | Muy fácil | Completado | Reutilizar LanguageManager y Mason/PATH; retirar la instalación automática del puente. |
 | 2 | `s1n7ax/nvim-window-picker` | Fácil | Completado | Selector nativo con etiquetas, filtros de ventanas y cancelación; conservar integración Neo-tree. |
 | 3 | `theHamsta/nvim-dap-virtual-text` | Fácil-media | Completado | Extmarks para variables DAP; limpiar al continuar, cerrar y cambiar de sesión. |
-| 4 | `leoluz/nvim-dap-go` | Fácil-media | Pendiente | Registrar Delve y perfiles en fox.langs.go; conservar tests y attach utilizados. |
+| 4 | `leoluz/nvim-dap-go` | Fácil-media | Completado | Registrar Delve y perfiles en fox.langs.go; conservar tests y attach utilizados. |
 | 5 | `jay-babu/mason-nvim-dap.nvim` | Fácil-media | Pendiente | Resolver adaptadores desde los metadatos y rutas Mason locales; verificar cada adaptador. |
 | 6 | `doki-theme/doki-theme-vim` | Fácil-media | Pendiente | Conservar temas seleccionables, recursos y atribuciones; restaurar selección al iniciar. |
 | 7 | `ahmedkhalf/project.nvim` | Media | Pendiente | Historial y raíz locales; migrar datos y consumidores sin perder favoritos ni WSL. |
@@ -94,6 +94,15 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 - Retiradas la dependencia y su entrada del lockfile; diez pruebas con parser Lua y extmarks reales cubren renderizado, ámbitos, Unicode, ciclo de vida y controles.
 - Igual que antes, las anotaciones de variables requieren un parser y una consulta `locals` del lenguaje; no se instalan parsers adicionales automáticamente.
 
+## Cuarto ítem completado: nvim-dap-go
+
+- Adaptador Delve y siete perfiles originales definidos en `lua/fox/langs/go/init.lua`: archivo, argumentos, argumentos y flags, paquete, attach, test por archivo y test por paquete.
+- Mantiene el puerto dinámico, host/puerto explícitos y tiempo de inicialización; usa el ejecutable nativo de Mason si existe y conserva el modo attached en Windows.
+- Los prompts esperan la respuesta del input modal, reutilizan el parser de argumentos de nvim-dap y cancelan el lanzamiento al pulsar Escape. Attach reutiliza su selector de procesos.
+- Delve sigue siendo un paquete opcional del bundle Go; no se añaden instalaciones automáticas. No se recrean APIs de tests bajo cursor que FoxVim no consumía.
+- Retiradas la dependencia y su entrada del lockfile; actualizadas las guías y la prueba de integración. Cinco pruebas cubren perfiles, adaptador, rutas, aislamiento y prompts.
+- Comprobación real con Go y Delve: compilar un programa temporal, parar en un breakpoint, leer `value = 41`, continuar y salir correctamente.
+
 ## Siguiente ítem
 
-`leoluz/nvim-dap-go`: registrar Delve y los perfiles de depuración directamente en `fox.langs.go`, conservando los perfiles de tests y attach utilizados.
+`jay-babu/mason-nvim-dap.nvim`: resolver las rutas de adaptadores con los metadatos y módulos locales, manteniendo la instalación opcional por lenguaje.

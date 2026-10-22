@@ -27,7 +27,7 @@ Nothing below installs automatically on first start: `mason-lspconfig` is config
 | **Web Frameworks (Astro)** | `astro` | `prettier` (always) | `astro` | browser adapters |
 | **Web UI (Svelte / Angular / React)** | `svelte`, `angularls`, `vtsls` | `prettierd` → `prettier` → `biome` | `svelte`, `html`, `scss`, `typescript`, `javascript`, `tsx`, `jsx` | `js-debug-adapter`, Bun adapter |
 | **Python** | `basedpyright`, `ruff` | `black` → `isort` → `ruff` | `python` | `debugpy` DAP |
-| **Go** | `gopls` | `gofumpt` → `goimports` | `go`, `gomod`, `gowork`, `gotmpl` | `delve` DAP (`nvim-dap-go`) |
+| **Go** | `gopls` | `gofumpt` → `goimports` | `go`, `gomod`, `gowork`, `gotmpl` | `delve` DAP (local `fox.langs.go`) |
 | **C# / .NET / Blazor** | `omnisharp` | `csharpier` | `csharp` | `netcoredbg` |
 | **PHP & Laravel** | `intelephense` | `pint` → `php_cs_fixer` → `blade-formatter` | `php`, `blade` | Xdebug |
 | **Rust** | `rust_analyzer` | `rustfmt` | `rust` | — |

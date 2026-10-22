@@ -50,7 +50,6 @@ return {
 			"rcarriga/nvim-dap-ui",
 			"nvim-neotest/nvim-nio",
 			"jay-babu/mason-nvim-dap.nvim",
-			"leoluz/nvim-dap-go",
 			"m00qek/baleia.nvim",
 		},
 		config = function()

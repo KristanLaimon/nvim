@@ -117,7 +117,7 @@ The profile becomes a shell command handed to the [task runner](tasks.md) (`run_
 
 ## 🐞 Debug mode
 
-`build_dap_config()` maps the profile onto a real DAP configuration. Adapter names match what `mason-nvim-dap` / `nvim-dap-go` register — `pwa-node`, `bun`, `go`, `python`, `php`, `coreclr`.
+`build_dap_config()` maps the profile onto a real DAP configuration. Adapter names match what `mason-nvim-dap` and the language modules register — `pwa-node`, `bun`, `go`, `python`, `php`, `coreclr`.
 
 | Runtime | Adapter | Notes |
 | :--- | :--- | :--- |

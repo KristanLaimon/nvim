@@ -83,7 +83,7 @@ These external plugins will be **removed from `lazy.nvim`** and replaced with pu
 | `windwp/nvim-ts-autotag` | `lua/handmadedeps/autotag.lua` | HTML/JSX closing tag auto-insertion on `>` keypress |
 | Replaced: `theHamsta/nvim-dap-virtual-text` | `lua/fox/dap/virtual_text.lua` | Local inline variable values; completed, see PLAN.md |
 | `m00qek/baleia.nvim` | `lua/handmadedeps/baleia.lua` | ANSI escape code color stripper & highlighter for DAP REPL console |
-| `leoluz/nvim-dap-go` | `lua/handmadedeps/dap_go.lua` | Delve DAP adapter & configuration generator for Go files |
+| Replaced: `leoluz/nvim-dap-go` | `lua/fox/langs/go/init.lua` | Local Delve adapter and Go profiles; completed, see PLAN.md |
 | `ricardoramirezr/blade-nav.nvim` | `lua/handmadedeps/blade_nav.lua` | Laravel Blade component navigation & blink.cmp completion provider |
 | `jwalton512/vim-blade` | `lua/handmadedeps/blade_nav.lua` | Laravel Blade syntax highlighting & directive matcher |
 | `NeogitOrg/neogit` | `lua/handmadedeps/neogit.lua` | `:Neogit` user command router directly to custom Git Center (`:GitCenterToggle`) |

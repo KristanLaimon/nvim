@@ -11,7 +11,7 @@
 local M = {}
 
 local env_ok, env_mod = pcall(require, "fox.core.environment")
-local is_low_resource = false
+local is_low_resource
 if env_ok then
 	local env = env_mod.detect()
 	is_low_resource = env.is_termux or env.is_proot or env.is_mobile
@@ -95,17 +95,66 @@ M.formatters_by_ft = {
 	go = is_low_resource and { "gofmt" } or { "goimports", "gofumpt" },
 }
 
---- delve is installed via mason-nvim-dap (nvim-dap-go's own concern), not Mason
---- directly, so it has no `M.mason` entry -- kept here only for documentation.
+--- Delve is an optional extra Mason package in the Go language bundle.
 M.dap_tool = "delve"
 
---- nvim-dap-go registers the adapter and the standard configurations (debug
---- file, debug test, attach) itself, so there is nothing to add by hand here.
---- @param _ table The `dap` module (unused: dap-go talks to nvim-dap directly).
-function M.dap_setup(_)
-	local ok, dap_go = pcall(require, "dap-go")
-	if ok then
-		dap_go.setup()
+---@param dap table
+function M.dap_setup(dap)
+	dap.adapters.go = function(callback, config)
+		local host, port = config.host or "127.0.0.1", config.port or "${port}"
+		local binary = vim.fn.stdpath("data") .. "/mason/packages/delve/dlv" .. (vim.fn.has("win32") == 1 and ".exe" or "")
+		callback({
+			type = "server",
+			host = host,
+			port = port,
+			executable = {
+				command = vim.fn.filereadable(binary) == 1 and binary or "dlv",
+				args = { "dap", "-l", host .. ":" .. port },
+				-- Delve on Windows must stay attached to its parent process.
+				detached = vim.fn.has("win32") == 0,
+			},
+			options = { initialize_timeout_sec = 20 },
+		})
+	end
+
+	local function prompt_arguments(prompt)
+		return coroutine.create(function(co)
+			vim.ui.input({ prompt = prompt }, function(input)
+				local result = input ~= nil and require("dap.utils").splitstr(input) or dap.ABORT
+				assert(coroutine.resume(co, result))
+			end)
+		end)
+	end
+	local function arguments()
+		return prompt_arguments("Args: ")
+	end
+	local function build_flags()
+		return prompt_arguments("Build Flags: ")
+	end
+
+	dap.configurations.go = {
+		{ name = "Debug", program = "${file}" },
+		{ name = "Debug (Arguments)", program = "${file}", args = arguments },
+		{ name = "Debug (Arguments & Build Flags)", program = "${file}", args = arguments, buildFlags = build_flags },
+		{ name = "Debug Package", program = "${fileDirname}" },
+		{
+			name = "Attach",
+			request = "attach",
+			mode = "local",
+			processId = function()
+				return require("dap.utils").pick_process()
+			end,
+		},
+		{ name = "Debug test", mode = "test", program = "${file}" },
+		{ name = "Debug test (go.mod)", mode = "test", program = "./${relativeFileDirname}" },
+	}
+	for _, config in ipairs(dap.configurations.go) do
+		config.type = "go"
+		config.request = config.request or "launch"
+		config.buildFlags = config.buildFlags or ""
+		if config.request == "launch" then
+			config.outputMode = "remote"
+		end
 	end
 end
 

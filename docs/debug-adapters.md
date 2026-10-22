@@ -208,7 +208,7 @@ lua/plugins/fox/debuggers/
 ├── python.lua    -- 🐍 debugpy
 ├── csharp.lua    -- 🎯 netcoredbg
 ├── php.lua       -- 🐘 Xdebug
-└── go.lua        -- 🐹 delve, via nvim-dap-go
+└── go.lua        -- 🐹 delve (now in lua/fox/langs/go/init.lua)
 ```
 
 `dap.lua` just walks a list:
@@ -251,8 +251,9 @@ and **Attach** (starts nothing; Chromium must already be running with
 `--remote-debugging-port=9222`).
 
 Python prefers the project's virtualenv interpreter over whatever `python` resolves to on
-`PATH`, so imports match what the project actually installed. Go adds nothing by hand —
-`nvim-dap-go` already registers the adapter and the standard configurations.
+`PATH`, so imports match what the project actually installed. Go registers its Delve
+adapter and seven standard profiles locally in `fox.langs.go`; no separate Go setup
+plugin is required.
 
 `tests/dap_debuggers_check.lua` fails loudly if this wiring drifts (config counts and
 per-filetype ordering):

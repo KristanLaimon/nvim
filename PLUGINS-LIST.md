@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **47 externos** y **58 specs locales**. El plan de sustitución está en [PLAN.md](PLAN.md).
+Total actual: **46 externos** y **58 specs locales**. El plan de sustitución está en [PLAN.md](PLAN.md).
 
 ## (External)
 
@@ -41,7 +41,6 @@ Total actual: **47 externos** y **58 specs locales**. El plan de sustitución es
 - `nvim-treesitter/nvim-treesitter` — [`editor/markdown.lua`](lua/plugins/editor/markdown.lua), [`lsp/treesitter.lua`](lua/plugins/lsp/treesitter.lua)
 - `rcarriga/nvim-dap-ui` — [`editor/dap.lua`](lua/plugins/editor/dap.lua)
 - `sindrets/diffview.nvim` — [`editor/neogit.lua`](lua/plugins/editor/neogit.lua), [`fox/git/git_center/init.lua`](lua/plugins/fox/git/git_center/init.lua)
-- `theHamsta/nvim-dap-virtual-text` — [`editor/dap.lua`](lua/plugins/editor/dap.lua)
 - `vuki656/package-info.nvim` — [`editor/package-info.lua`](lua/plugins/editor/package-info.lua)
 - `windwp/nvim-autopairs` — [`editor/autopairs.lua`](lua/plugins/editor/autopairs.lua)
 
@@ -164,6 +163,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 No son plugins externos ni specs independientes adicionales:
 
+- `lua/fox/dap/virtual_text.lua`: variables DAP con extmarks, controles y seguimiento del ciclo de sesión; sustituye a `nvim-dap-virtual-text`.
 - `lua/fox/core/window_picker.lua` y `lua/window-picker.lua`: selector local de ventanas y punto de compatibilidad con los comandos de Neo-tree; sustituye a `nvim-window-picker`.
 - `lua/plugins/fox/debuggers/{_shared,browsers,bun,node}.lua`: soporte DAP compartido; los depuradores específicos de lenguaje viven en `lua/fox/langs/<lenguaje>/init.lua`.
 - `lua/plugins/fox/git/git_center/*.lua`: implementación de la spec `git_center/init.lua`.

@@ -81,7 +81,7 @@ These external plugins will be **removed from `lazy.nvim`** and replaced with pu
 | `zapling/mason-conform.nvim` | `lua/handmadedeps/formatting.lua` | Formatter executable path resolver for Mason packages |
 | `windwp/nvim-autopairs` | `lua/handmadedeps/autopairs.lua` | Pair auto-insertion (`()`, `{}`, `[]`, `""`, `''`) on `InsertCharPre` |
 | `windwp/nvim-ts-autotag` | `lua/handmadedeps/autotag.lua` | HTML/JSX closing tag auto-insertion on `>` keypress |
-| `theHamsta/nvim-dap-virtual-text` | `lua/handmadedeps/dap_virtual_text.lua` | Inline variable value extmark virtual text on DAP stopped event |
+| Replaced: `theHamsta/nvim-dap-virtual-text` | `lua/fox/dap/virtual_text.lua` | Local inline variable values; completed, see PLAN.md |
 | `m00qek/baleia.nvim` | `lua/handmadedeps/baleia.lua` | ANSI escape code color stripper & highlighter for DAP REPL console |
 | `leoluz/nvim-dap-go` | `lua/handmadedeps/dap_go.lua` | Delve DAP adapter & configuration generator for Go files |
 | `ricardoramirezr/blade-nav.nvim` | `lua/handmadedeps/blade_nav.lua` | Laravel Blade component navigation & blink.cmp completion provider |

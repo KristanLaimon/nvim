@@ -2,6 +2,14 @@
 
 [← Back to Wiki Index](index.md)
 
+Inline variable values are implemented locally in `lua/fox/dap/virtual_text.lua`.
+They use nvim-dap's cached scopes and Treesitter `locals` queries, with commented
+values after the source line, changed-value highlights and cleanup when execution
+resumes or the session closes. A parser and `locals` query for the source language
+are required; this feature does not install either automatically.
+Use `:DapVirtualTextEnable`, `:DapVirtualTextDisable`, `:DapVirtualTextToggle` or
+`:DapVirtualTextForceRefresh`, also available in Command Palette under Debug.
+
 A from-scratch guide to wiring **any** debugger into this config, written around a real
 worked example: making `bun` stop on breakpoints (`lua/plugins/fox/bun_dap.lua`).
 

@@ -84,7 +84,7 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | `mfussenegger/nvim-dap` | Debug Adapter Protocol client |
 | `rcarriga/nvim-dap-ui` | Scopes / stacks / breakpoints / watches / repl / console panels |
 | `nvim-neotest/nvim-nio` | Async library required by dap-ui |
-| `theHamsta/nvim-dap-virtual-text` | Inline variable values while stopped |
+| `fox.dap.virtual_text` (local) | Inline variable values while stopped; no external plugin |
 | `leoluz/nvim-dap-go` | delve adapter and Go configurations |
 | `m00qek/baleia.nvim` | Turns ANSI escapes in adapter output back into highlights |
 

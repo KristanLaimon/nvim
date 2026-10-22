@@ -34,6 +34,10 @@ return {
 			"DapRestart",
 			"DapShowLog",
 			"DapSetLogLevel",
+			"DapVirtualTextEnable",
+			"DapVirtualTextDisable",
+			"DapVirtualTextToggle",
+			"DapVirtualTextForceRefresh",
 		},
 		keys = {
 			{ "<F5>", desc = "Debug: Start/Continue" },
@@ -46,7 +50,6 @@ return {
 			"rcarriga/nvim-dap-ui",
 			"nvim-neotest/nvim-nio",
 			"jay-babu/mason-nvim-dap.nvim",
-			"theHamsta/nvim-dap-virtual-text",
 			"leoluz/nvim-dap-go",
 			"m00qek/baleia.nvim",
 		},
@@ -178,31 +181,7 @@ return {
 				})
 			end
 
-			local virtual_text_ok, virtual_text = pcall(require, "nvim-dap-virtual-text")
-			if virtual_text_ok then
-				virtual_text.setup({
-					-- IntelliJ-style: values sit past the end of the line, aligned at a
-					-- fixed column, so code is never pushed right (the plugin default on
-					-- 0.10+ is "inline", which shifts the rest of the line).
-					-- virt_text_win_col is a floor: longer lines push the value further
-					-- right instead of overlapping their own code.
-					virt_text_pos = "eol",
-					virt_text_win_col = 80,
-					commented = true,
-					only_first_definition = false,
-					all_references = true,
-					clear_on_continue = true,
-					display_callback = function(variable)
-						local value = variable.value:gsub("%s+", " ")
-						if #value > 60 then
-							value = value:sub(1, 59) .. "…"
-						end
-						return variable.name .. " = " .. value
-					end,
-				})
-				-- Faint by default; only values that changed on this step stand out.
-				vim.api.nvim_set_hl(0, "NvimDapVirtualText", { link = "Comment", default = true })
-			end
+			require("fox.dap.virtual_text").setup(dap)
 
 			-- nvim-dap only jumps to the stopped frame when
 			-- `reason ~= "pause" or allThreadsStopped` (dap/session.lua). js-debug always

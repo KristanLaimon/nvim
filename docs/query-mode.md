@@ -7,7 +7,7 @@ FoxQuerier adds a read-only database workspace to the current project. The defau
 ## Start
 
 1. Open the project directory in FoxVim.
-2. Press **F3** to cycle directly between Editor and Query, or run `:FoxMode query`. `:FoxMode` still offers a picker.
+2. Press **F3** to cycle directly between Editor and Query, or run `:FoxMode query`. `:FoxMode` still offers a picker. First entry reopens the last used saved SQL file (or the first saved SQL file if it is unavailable); a new query is created only when none exist.
 3. Press **gC** in Normal mode or run `:FoxQueryConnections` to focus the connection sidebar. **a** adds, **e** edits, **d** deletes a profile, **Enter** connects, and **D** disconnects. SQLite opens the existing file explorer at your project root: Enter opens folders or selects a database file; Esc cancels. MySQL/PostgreSQL need host, port, database, and user. Passwords are prompted privately in RAM or resolved from `password_env`.
 4. For MySQL/PostgreSQL, run `:FoxQueryInstallDrivers` once in that project if drivers are missing. Python 3 and pip are prerequisites; installation is explicit and project-local.
 5. Search/inspect the explorer, create SQL with **gN** or `:FoxQueryNew`, and save with `:write`. The **SQL FILES** pane above connections lists saved project SQL and open tabs; Enter opens a file or expands/collapses a folder, **a** creates SQL, **A** creates a folder, **r** renames, and **d** deletes after confirmation. **Alt+h/l** switches SQL tabs. Closing every tab leaves a prompt to open or create one.

@@ -485,6 +485,17 @@ function M.refresh_view(state)
 		return
 	end
 	local active = console(state)
+	if active then
+		local file = vim.b[state.active].fox_query_document:sub(#"queries/" + 1)
+		if state.last_query ~= file then
+			local ok, err = storage.save(state.root, "private/last-query.json", { file = file })
+			if ok then
+				state.last_query = file
+			else
+				notify(err, vim.log.levels.WARN)
+			end
+		end
+	end
 	current_metadata(state)
 	local label = active and active.profile and active.profile.id or "no connection"
 	local connected = active and active.client and active.client.connected
@@ -684,7 +695,10 @@ function M.show(view)
 	local _, buf = console(state)
 	if not buf then
 		if not state.opened then
-			M.new()
+			M.draw_queries(state)
+			local saved = storage.load(state.root, "private/last-query.json", {})
+			local file = saved and saved.file
+			M.new(vim.tbl_contains(state.query_files, file) and file or state.query_files[1])
 			_, buf = console(state)
 		else
 			buf = M.empty(state)

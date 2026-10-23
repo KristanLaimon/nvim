@@ -19,6 +19,7 @@ describe("local theme startup", function()
 			end,
 		}
 		package.loaded[names[3]] = {
+			setup = function() end,
 			restore_saved_theme = function()
 				restored = true
 			end,

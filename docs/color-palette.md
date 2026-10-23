@@ -13,7 +13,7 @@ This guide explains how to manage, customize, and extend colorschemes in this Ne
 
 ## 📁 Key Files & Directories
 
-- **Nagatoro Theme System & Picker:** [`lua/plugins/fox/theme_picker.lua`](../lua/plugins/fox/theme_picker.lua)
+- **Nagatoro Theme System & Picker:** [`lua/plugins/fox/ui/theme_picker.lua`](../lua/plugins/fox/ui/theme_picker.lua)
 - **Statusline Theme Picker:** [`lua/plugins/fox/statusline_picker.lua`](../lua/plugins/fox/statusline_picker.lua)
 - **Colorify Engine (CMP Completion):** [`lua/fox/lsp/colorify.lua`](../lua/fox/lsp/colorify.lua)
 - **Theme Palette Files:** `config/colors/nagatoro-fox.lua`, `config/colors/nagatoro-light.lua`, `config/colors/onedark-fox.lua`, `config/colors/catppuccin-fox.lua`, `config/colors/nord-fox.lua`
@@ -23,7 +23,9 @@ This guide explains how to manage, customize, and extend colorschemes in this Ne
 
 ## 🎨 Nagatoro Theme System (`:FoxThemePicker`)
 
-FoxVim ships with a set of complete, hand-crafted themes matching the `nagatoro-fox` palette schema. Run `:FoxThemePicker` to open the interactive theme picker:
+FoxVim ships with a set of complete, hand-crafted themes matching the `nagatoro-fox` palette schema. Run `:FoxThemePicker` or choose **Select UI-Theme** in the Command Palette. After selecting a theme, choose **Global theme** or **This project only**.
+
+Global themes are saved in the Neovim config directory under `.foxnvim/theme.json`. Project overrides are read exclusively from `<project>/.foxnvim/theme.json` (`{"theme":"nord-fox"}`). They load on startup and when switching projects; projects without an override use the global default. Choosing a global theme updates the default; existing project overrides remain saved. Delete the project file to return permanently to the global default.
 
 - **Available Themes:**
   - `nagatoro-fox` (Hayase Nagatoro Dark — Default)
@@ -32,7 +34,7 @@ FoxVim ships with a set of complete, hand-crafted themes matching the `nagatoro-
   - `catppuccin-fox` (NvChad Catppuccin Mocha in nagatoro format)
   - `nord-fox` (NvChad Nord in nagatoro format)
   - `omarchy-fox` (Dynamic theme synced with Omarchy Linux)
-- **Live Preview & Store Persistence:** Previews themes in real time while tabbed/selected. Cancelling (`<Esc>`) restores the previous theme; confirming (`<Enter>`) saves choice to `.foxnvim/theme.json` via [`fox.core.store`](architecture.md#layer-2--shared-libraries-luafox).
+- **Live Preview & Store Persistence:** Previews themes in real time while tabbed/selected. Cancelling (`<Esc>`) restores the previous theme; confirming (`<Enter>`) asks where to save the choice via [`fox.core.store`](architecture.md#layer-2--shared-libraries-luafox).
 
 ---
 

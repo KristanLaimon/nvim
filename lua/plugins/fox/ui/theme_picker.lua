@@ -11,6 +11,7 @@ local lazy_req = require("fox.core.lazy_require")
 local store = lazy_req("fox.core.store")
 
 local M = {}
+local project = lazy_req("fox.core.project")
 
 M.settings = {
 	store_file = vim.fn.stdpath("config") .. "/.foxnvim/theme.json",
@@ -49,55 +50,74 @@ function M.discover_themes()
 	return themes
 end
 
---- Gets currently saved theme.
---- @return string theme_name
+--- Project themes are read exclusively from .foxnvim, never compatibility folders.
+function M.project_theme_file(root)
+	return (root or project.root()) .. "/.foxnvim/theme.json"
+end
+
+function M.get_project_theme()
+	local file = M.project_theme_file()
+	if vim.fs.normalize(file) == vim.fs.normalize(M.settings.store_file) then
+		return nil
+	end
+	local data = store.load(file, {})
+	if type(data.theme) == "string" and data.theme:match("^[%w_-]+$") then
+		return data.theme
+	end
+end
+
+--- Gets the project override or global default.
 function M.get_current_theme()
 	local data = store.load(M.settings.store_file, {})
-	return data.theme or vim.g.colors_name or M.settings.default_theme
+	return M.get_project_theme() or data.theme or M.settings.default_theme
 end
 
 --- Applies colorscheme and saves to store.
 --- @param name string
-function M.set_theme(name)
+function M.set_theme(name, scope, project_file)
 	if not name or name == "" then
 		return
 	end
-	if name == "ryoku-fox" then
-		require("plugins.fox.ui.ryoku_theme").set_sync_enabled(true)
+	local ok, err = pcall(vim.cmd.colorscheme, name)
+	if not ok or vim.g.colors_name ~= name then
+		vim.notify("Failed to apply theme " .. name .. ": " .. tostring(err or "palette unavailable"), vim.log.levels.ERROR)
 		return
 	end
-	local ryoku = require("plugins.fox.ui.ryoku_theme")
-	if ryoku.is_sync_enabled() then
-		ryoku.set_sync_enabled(false, { restore_theme = false })
+	local is_project = scope == "project"
+	local file = is_project and (project_file or M.project_theme_file()) or M.settings.store_file
+	local data = store.load(file, {})
+	data.theme = name
+	if not is_project then
+		data.ryoku_sync = name == "ryoku-fox"
+		data.omarchy_sync = name == "omarchy-fox"
 	end
-	local ok, err = pcall(vim.cmd.colorscheme, name)
-	if ok then
-		local data = store.load(M.settings.store_file, {})
-		data.theme = name
-		local has_omarchy, omarchy_mod = pcall(require, "plugins.fox.ui.omarchy_theme")
-		if name == "omarchy-fox" then
-			data.omarchy_sync = true
-			store.save(M.settings.store_file, data)
-			if has_omarchy then
-				omarchy_mod.set_sync_enabled(true, { quiet = true })
-			end
-		else
-			data.omarchy_sync = false
-			store.save(M.settings.store_file, data)
-			if has_omarchy and omarchy_mod.is_sync_enabled() then
-				omarchy_mod.set_sync_enabled(false, { restore_theme = false, new_theme = name, quiet = true })
-				vim.notify("Omarchy Sync disabled to apply " .. name, vim.log.levels.INFO)
-			end
-		end
-		vim.notify("Applied colorscheme: " .. name, vim.log.levels.INFO)
-	else
-		vim.notify("Failed to apply theme " .. name .. ": " .. tostring(err), vim.log.levels.ERROR)
+	ok, err = store.save(file, data)
+	if not ok then
+		vim.notify("Failed to save theme to " .. file .. ": " .. tostring(err), vim.log.levels.ERROR)
 	end
+	M.restore_saved_theme()
 end
 
 --- Restores persisted theme on startup.
 function M.restore_saved_theme()
+	M._project_file = M.project_theme_file()
+	local override = M.get_project_theme()
 	local ryoku = require("plugins.fox.ui.ryoku_theme")
+	ryoku.stop_watcher()
+	local omarchy = require("plugins.fox.ui.omarchy_theme")
+	omarchy.stop_watcher()
+	if override then
+		local ok = pcall(vim.cmd.colorscheme, override)
+		if ok and vim.g.colors_name == override then
+			if override == "ryoku-fox" then
+				ryoku.setup()
+				ryoku.start_watcher()
+			elseif override == "omarchy-fox" then
+				omarchy.start_watcher()
+			end
+			return
+		end
+	end
 	if ryoku.is_sync_enabled() and ryoku.apply({ quiet = true }) then
 		ryoku.setup()
 		ryoku.start_watcher()
@@ -110,15 +130,26 @@ function M.restore_saved_theme()
 		return
 	end
 
-	local saved = M.get_current_theme()
+	local saved = store.load(M.settings.store_file, {}).theme or M.settings.default_theme
 	if saved then
 		pcall(vim.cmd.colorscheme, saved)
 	end
 end
 
+--- Ask after theme selection so cancelling never persists a preview.
+function M.choose_scope(name, original_theme, project_file)
+	vim.ui.select({ "Global theme", "This project only" }, { prompt = "Save UI-Theme for:" }, function(choice)
+		pcall(vim.cmd.colorscheme, original_theme)
+		if choice then
+			M.set_theme(name, choice == "This project only" and "project" or "global", project_file)
+		end
+	end)
+end
+
 --- Opens interactive theme picker with live preview.
 function M.open_picker()
 	local themes = M.discover_themes()
+	local project_file = M.project_theme_file()
 	local original_theme = vim.g.colors_name or M.settings.default_theme
 
 	local has_telescope = pcall(require, "telescope.builtin")
@@ -132,7 +163,7 @@ function M.open_picker()
 
 		pickers
 			.new({}, {
-				prompt_title = "Nagatoro Themes",
+				prompt_title = "Select UI-Theme",
 				finder = finders.new_table({ results = themes }),
 				sorter = conf.generic_sorter({}),
 				attach_mappings = function(prompt_bufnr, map)
@@ -196,7 +227,7 @@ function M.open_picker()
 						local selection = action_state.get_selected_entry()
 						actions.close(prompt_bufnr)
 						if selection and selection[1] then
-							M.set_theme(selection[1])
+							M.choose_scope(selection[1], original_theme, project_file)
 						end
 					end)
 
@@ -205,9 +236,9 @@ function M.open_picker()
 			})
 			:find()
 	else
-		vim.ui.select(themes, { prompt = "Select Nagatoro Theme:" }, function(choice)
+		vim.ui.select(themes, { prompt = "Select UI-Theme:" }, function(choice)
 			if choice then
-				M.set_theme(choice)
+				M.choose_scope(choice, original_theme, project_file)
 			else
 				pcall(vim.cmd.colorscheme, original_theme)
 			end
@@ -223,7 +254,7 @@ function M.setup()
 
 	vim.api.nvim_create_user_command("FoxThemePicker", function(opts)
 		if opts.args and opts.args ~= "" then
-			M.set_theme(opts.args)
+			M.choose_scope(opts.args, vim.g.colors_name or M.settings.default_theme, M.project_theme_file())
 		else
 			M.open_picker()
 		end
@@ -232,40 +263,33 @@ function M.setup()
 		complete = function()
 			return M.discover_themes()
 		end,
-		desc = "Open Nagatoro theme picker",
+		desc = "Select UI-Theme",
 	})
 
-	vim.api.nvim_create_autocmd("ColorScheme", {
-		group = vim.api.nvim_create_augroup("fox_theme_user_change", { clear = true }),
+	local pending = false
+	vim.api.nvim_create_autocmd({ "VimEnter", "BufEnter", "DirChanged" }, {
+		group = vim.api.nvim_create_augroup("fox_project_theme", { clear = true }),
 		callback = function(args)
-			local name = args.match
-			local ryoku = require("plugins.fox.ui.ryoku_theme")
-			if name ~= "ryoku-fox" and ryoku.is_sync_enabled() then
-				ryoku.set_sync_enabled(false, { restore_theme = false })
-			end
-			if not name or name == "" or name == "default" then
+			if args.event == "BufEnter" and vim.bo[args.buf].buftype ~= "" then
 				return
 			end
-			local current_saved = M.get_current_theme()
-			if current_saved ~= name then
-				local data = store.load(M.settings.store_file, {})
-				data.theme = name
-				if name == "omarchy-fox" then
-					data.omarchy_sync = true
-				else
-					data.omarchy_sync = false
-					local has_omarchy, omarchy_mod = pcall(require, "plugins.fox.ui.omarchy_theme")
-					if has_omarchy and omarchy_mod.is_sync_enabled() then
-						omarchy_mod.set_sync_enabled(false, { restore_theme = false, new_theme = name, quiet = true })
-					end
-				end
-				store.save(M.settings.store_file, data)
+			if pending then
+				return
 			end
+			pending = true
+			vim.schedule(function()
+				pending = false
+				local file = M.project_theme_file()
+				if M._project_file ~= file then
+					M._project_file = file
+					M.restore_saved_theme()
+				end
+			end)
 		end,
 	})
 
 	if M.settings.keymap then
-		vim.keymap.set("n", M.settings.keymap, M.open_picker, { desc = "Theme Picker (Nagatoro Format)" })
+		vim.keymap.set("n", M.settings.keymap, M.open_picker, { desc = "Select UI-Theme" })
 	end
 end
 

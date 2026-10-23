@@ -12,6 +12,10 @@ function M.is_available()
 end
 
 function M.is_sync_enabled()
+	local override = require("plugins.fox.ui.theme_picker").get_project_theme()
+	if override then
+		return override == "ryoku-fox"
+	end
 	return store.load(M.settings.store_file, {}).ryoku_sync == true
 end
 

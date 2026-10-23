@@ -352,7 +352,7 @@ M.commands = {
 	{ name = "🎨 Toggle Ryoku Theme Auto Sync", cmd = "FoxRyokuSyncToggle", category = "UI" },
 	{ name = "🎨 Sync Colors with Ryoku Theme Now", cmd = "FoxRyokuSyncNow", category = "UI" },
 	{ name = "🎨 Ryoku Theme Sync Status", cmd = "FoxRyokuSyncStatus", category = "UI" },
-	{ name = "🎨 Open Nagatoro & NvChad Theme Picker", cmd = "FoxThemePicker", category = "UI" },
+	{ name = "🎨 Select UI-Theme", cmd = "FoxThemePicker", category = "UI" },
 	{
 		name = "🎨 Toggle Omarchy Theme Sync (Adapt colors to Omarchy - Default: OFF)",
 		cmd = "FoxOmarchySyncToggle",

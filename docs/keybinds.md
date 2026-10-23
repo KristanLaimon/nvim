@@ -169,7 +169,7 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 
 | Shortcut / Command | Action |
 | :--- | :--- |
-| `:FoxThemePicker` | Nagatoro & NvChad Theme Picker with live preview |
+| `:FoxThemePicker` | Select UI-Theme with live preview and global/project scope |
 | `:FoxStatuslineTheme` | Pick Statusline Theme (`nvchad_pills`, `nvchad_blocks`, `nvchad_round`, `vscode`, `minimal`) |
 | `:FoxToggleReferences` | Toggle LSP Reference Counts / CodeLens |
 | `:FoxWiki` / `:NvimWiki` / `<C-S-d>` | Open Documentation Center & Wiki Modal |

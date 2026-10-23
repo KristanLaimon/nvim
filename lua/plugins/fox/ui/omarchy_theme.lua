@@ -407,13 +407,19 @@ end
 --- Default is false.
 --- @return boolean enabled
 function M.is_sync_enabled()
+	local override = require("plugins.fox.ui.theme_picker").get_project_theme()
+	if override then
+		return override == "omarchy-fox"
+	end
+	local config_data = store.load(M.settings.store_file, {})
+	if config_data.omarchy_sync ~= nil then
+		return config_data.omarchy_sync == true
+	end
 	local data = store.load(M.settings.sync_data_file, {})
 	if data.enabled ~= nil then
 		return data.enabled == true
 	end
-	-- Fallback to config store if data file doesn't exist yet
-	local config_data = store.load(M.settings.store_file, {})
-	return config_data.omarchy_sync == true
+	return false
 end
 
 --- Enables or disables Omarchy theme synchronization.

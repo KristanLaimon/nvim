@@ -63,9 +63,7 @@ describe("FoxQuerier SQL structure", function()
 	it("generates FK joins safely and rejects unsafe aliases", function()
 		local graph = sql.analyze("SELECT * FROM orders o", metadata)
 		local candidates = sql.join_candidates(metadata, graph)
-		expect(sql.join_sql(candidates[1], "c", "LEFT", "mysql")).toBe(
-			"LEFT JOIN `customers` AS `c` ON `o`.`customer_id` = `c`.`id`"
-		)
+		expect(sql.join_sql(candidates[1], "c", "LEFT", "mysql")).toBe("LEFT JOIN customers AS c ON o.customer_id = c.id")
 		expect(sql.join_sql(candidates[1], "bad alias;", "LEFT", "mysql")).toBeNil()
 		expect(sql.join_sql(candidates[1], "c", "LEFT", "sqlite")).toBe("LEFT JOIN customers AS c ON o.customer_id = c.id")
 		local unusual = vim.deepcopy(candidates[1])
@@ -78,6 +76,25 @@ describe("FoxQuerier SQL structure", function()
 			"psn3"
 		)
 		expect(sql.suggest_alias({ name = "player_trust" }, { nodes = {} })).toBe("pt")
+	end)
+
+	it("generates MySQL JOINs without quotes for ordinary schema, table, alias, and column names", function()
+		local candidate = {
+			node = { alias = "materias", table = { key = "materias" } },
+			target_table = { schema = "escolar", name = "modulos_especialidad" },
+			relation = {
+				source = "materias",
+				columns = { { source = "modulo_especialidad_id", target = "id" } },
+			},
+		}
+		expect(sql.join_sql(candidate, "me", "INNER", "mysql")).toBe(
+			"INNER JOIN escolar.modulos_especialidad AS me ON materias.modulo_especialidad_id = me.id"
+		)
+		candidate.target_table.name = "order"
+		candidate.relation.columns[1].target = "odd`column"
+		expect(sql.join_sql(candidate, "me", "LEFT", "mysql")).toBe(
+			"LEFT JOIN escolar.`order` AS me ON materias.modulo_especialidad_id = me.`odd``column`"
+		)
 	end)
 
 	it("preserves every composite-key predicate in either direction", function()

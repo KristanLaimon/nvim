@@ -435,7 +435,11 @@ do
 end
 
 local function join_identifier(name, engine)
-	if engine == "sqlite" and name:match("^[%a_][%w_]*$") and not sqlite_keywords[name:upper()] then
+	if
+		(engine == "sqlite" or engine == "mysql")
+		and name:match("^[%a_][%w_]*$")
+		and not sqlite_keywords[name:upper()]
+	then
 		return name
 	end
 	return M.quote(name, engine)

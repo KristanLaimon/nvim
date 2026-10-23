@@ -775,6 +775,7 @@ function M.show(view)
 			math.min(vim.o.columns - 12, math.max(12, math.floor(vim.o.columns * (sizes.side or 0.3))))
 		)
 		vim.wo[state.side_win].wrap = false
+		vim.wo[state.side_win].winfixwidth = true
 		if state.view == "standard" and not sizes.side then
 			local width = 24
 			for _, item in ipairs(state.metadata.tables or {}) do

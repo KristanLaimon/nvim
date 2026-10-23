@@ -37,6 +37,29 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("keeps saved Standard sidebar widths while constructing the other panels", function()
+		project(function()
+			local columns, equalalways = vim.o.columns, vim.o.equalalways
+			vim.o.columns, vim.o.equalalways = 198, true
+			local ok, err = pcall(function()
+				require("fox.core.store").save(require("fox.query.layout").path, {
+					standard = { connections = 0.12, side = 0.15 },
+				})
+				query.show("standard")
+				local state = query.state()
+				expect(vim.api.nvim_win_get_width(state.side_win)).toBe(math.floor(198 * 0.15))
+				expect(vim.api.nvim_win_get_width(state.queries_win)).toBe(math.floor(198 * 0.12))
+				query.hide()
+				query.show("standard")
+				expect(vim.api.nvim_win_get_width(state.side_win)).toBe(math.floor(198 * 0.15))
+				expect(vim.api.nvim_win_get_width(state.queries_win)).toBe(math.floor(198 * 0.12))
+			end)
+			vim.o.columns, vim.o.equalalways = columns, equalalways
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
 	it("opens SQL files through Neo-tree in a compact terminal", function()
 		project(function(root)
 			local columns = vim.o.columns

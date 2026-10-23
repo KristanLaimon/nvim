@@ -31,7 +31,7 @@ find and change almost anything without needing to ask for help:
 
 If the change touches logic (not just a setting value), skim
 [Testing](testing.md#🔧-i-edited-a-plugin-file--do-i-need-a-test) — most
-features have a matching `tests/spec/<feature>_spec.lua` you can run in under a
+features have a matching `config/tests/spec/<feature>_spec.lua` you can run in under a
 second while you iterate.
 
 ---
@@ -39,29 +39,35 @@ second while you iterate.
 ## 📂 File Structure & Directory Layout Explanation
 
 ```
-c:\Users\Fox\AppData\Local\nvim\
-├── init.lua                   -- Main Neovim bootstrap file (loads lua/lazy_init.lua)
-├── colors/                    -- Colorscheme files in nagatoro-fox palette format (*-fox.lua & nagatoro-*.lua)
-├── docs/                      -- Full offline documentation & Wiki files
+nvim/
+├── init.lua                  Editor entry point
+├── lazy-lock.json            Plugin versions
+├── run_me.lua                Setup and quality-check runner
+├── README.md
+├── AGENTS.md                 Assistant guidelines
 ├── lua/
-│   ├── config/                -- Core editor bootstrap & global options
-│   │   ├── options.lua        -- Vim options, filetypes, path resolution
-│   │   ├── lazy.lua           -- Lazy.nvim plugin manager bootstrap
-│   │   └── keymaps/           -- Global keybindings (lsp.lua, editor.lua, search.lua, debug.lua, fox.lua)
-│   ├── fox/                   -- Shared pure Lua libraries (NO keymaps/autocmds, 100% unit-testable)
-│   │   ├── core/              -- Store (JSON persistence), Path, Project, UI floats, Z-Index stack
-│   │   ├── git/               -- Git command wrappers, porcelain parsers, diff formatters
-│   │   ├── launch/            -- Launch profile runtimes & DAP resolvers
-│   │   ├── lsp/               -- CodeAction menu, Colorify completion engine, EditorConfig
-│   │   └── projects/          -- Starred favorites manager
-│   └── plugins/               -- Lazy.nvim plugin specifications
-│       ├── editor/            -- Third-party editor plugins (Neo-tree, Telescope, DAP, Auto-pairs)
-│       ├── lsp/               -- LSP servers, Mason, Blink.cmp, Conform formatting, Treesitter
-│       ├── ui/                -- Dashboard, Bufferline, Statusline, Devicons, Themes
-│       ├── miscelanea/        -- Utility plugins
-│       └── fox/               -- Custom local FOX modules (each a self-contained Lazy spec)
-├── tests/                     -- Unit & integration test suite (`tests/run.lua`)
-└── .foxnvim/                  -- Per-project persistent state (tasks.json, launch.json, breakpoints.json)
+│   ├── vim_options.lua       Editor options and bootstrap hooks
+│   ├── lazy_init.lua         Plugin manager bootstrap
+│   ├── keymaps/              Global keybindings
+│   ├── fox/                  Core, languages, libraries, and features
+│   └── plugins/              Plugin specifications
+├── after/                    Filetype overrides
+├── docs/                     Wiki and language guides
+├── config/
+│   ├── aliases/              Compiler shims
+│   ├── colors/               Local colorschemes
+│   ├── schemas/              JSON, TOML, and XML schemas
+│   ├── schemas-langs/        Bundled type definitions
+│   ├── snippets/             Snippet definitions and schema
+│   ├── templates/            File creation templates
+│   ├── scripts/              Setup scripts and utilities
+│   ├── tests/                Unit and integration suites
+│   ├── tools/                FoxQuery binaries and Go sources
+│   ├── skills/               Local skills
+│   └── plans_notes_md/       Plans, notes, and refactor briefs
+├── .foxnvim/                 Local project state (ignored by Git)
+├── .github/                  Repository assets
+└── .*                        Git and tool configuration
 ```
 
 ---
@@ -225,8 +231,8 @@ Run `:FoxStatuslineTheme` or select from Command Palette (`<C-Shift-P>`) to swit
 - `vscode` (Flat VSCode style)
 - `minimal` (Compact)
 
-### Editor Themes in `colors/*.lua`:
-To create a new theme matching `nagatoro-fox` format, copy `colors/nagatoro-fox.lua` to `colors/mytheme-fox.lua`, change `vim.g.colors_name = "mytheme-fox"`, and edit the palette table `p`:
+### Editor Themes in `config/colors/*.lua`:
+To create a new theme matching `nagatoro-fox` format, copy `config/colors/nagatoro-fox.lua` to `config/colors/mytheme-fox.lua`, change `vim.g.colors_name = "mytheme-fox"`, and edit the palette table `p`:
 ```lua
 local p = {
     bg = "#1a1b26",
@@ -289,7 +295,7 @@ Per-project build tasks and debugging launch profiles live in `.foxnvim/` inside
 
 ### Automated Setup Scripts:
 - **Windows**: `powershell -ExecutionPolicy Bypass -File .\scripts\dependencies\install.ps1`
-- **Linux / WSL**: `./scripts/dependencies/install.sh`
+- **Linux / WSL**: `./config/scripts/dependencies/install.sh`
 
 *(If external tools are missing, FoxVim degrades gracefully with clear notifications instead of crashing).*
 

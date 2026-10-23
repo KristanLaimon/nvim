@@ -35,7 +35,7 @@ The **Environments Manager** allows managing up to 9 concurrent, isolated projec
 | `<C-S-e>` / `<leader>ee` | Normal, Insert, Visual, Terminal | Open Interactive Environments CRUD Menu |
 | `<A-1>` .. `<A-9>` | Normal, Insert, Terminal | Select and display Terminal 1..9 (scoped to current environment) |
 
-Kitty reserves Ctrl+Shift+1..9 for focusing its own windows. From the FoxVim config directory, run `./scripts/setup-kitty.sh` to pass those shortcuts through to Neovim. Run `./scripts/unsetup-kitty.sh` to remove the overrides. Both scripts require Python 3, respect `XDG_CONFIG_HOME`, back up existing config before changes, and reload running Kitty windows. Undo preserves other settings and any changes made since setup.
+Kitty reserves Ctrl+Shift+1..9 for focusing its own windows. From the FoxVim config directory, run `./config/scripts/setup-kitty.sh` to pass those shortcuts through to Neovim. Run `./config/scripts/unsetup-kitty.sh` to remove the overrides. Both scripts require Python 3, respect `XDG_CONFIG_HOME`, back up existing config before changes, and reload running Kitty windows. Undo preserves other settings and any changes made since setup.
 
 ---
 

@@ -105,6 +105,6 @@ require("lazy").setup({
 	-- every time would be noise.
 	change_detection = { notify = false },
 	performance = {
-		rtp = { disabled_plugins = settings.disabled_builtins },
+		rtp = { paths = { vim.fn.stdpath("config") .. "/config" }, disabled_plugins = settings.disabled_builtins },
 	},
 })

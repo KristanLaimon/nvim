@@ -1,0 +1,131 @@
+# PLAN — Reducir dependencias externas de FoxVim
+
+Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
+
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Siete reemplazos completados: **42 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+
+## Criterio de ejecución
+
+- Un reemplazo por cambio: revisar consumidores y comandos, implementar o reutilizar módulos locales, probar, retirar specs/lockfile y actualizar ambos documentos.
+- Mantener APIs utilizadas y datos existentes. Usar Neovim y lua/fox/ antes de añadir código. Las posiciones cercanas pueden ajustarse al revisar cada implementación.
+- Mantener Lua como instalación mínima; lenguajes opcionales solo por selección explícita en LanguageManager.
+- Nui, Nio y Plenary tienen consumidores compartidos. Su posición indica dificultad; retirarlos exige migrar antes esos consumidores.
+- Menos clones no significa cero herramientas: LSPs, formateadores, adaptadores, Git, runtimes y gramáticas siguen siendo necesarios.
+- Una copia vendorizada sigue siendo código externo. Preferir implementación propia; conservar licencias y atribuciones al reutilizar código o recursos.
+
+## Lista completa, de más fácil a más difícil
+
+| Orden | Plugin externo | Dificultad | Estado | Sustitución del uso actual |
+|---|---|---|---|---|
+| 1 | `zapling/mason-conform.nvim` | Muy fácil | Completado | Reutilizar LanguageManager y Mason/PATH; retirar la instalación automática del puente. |
+| 2 | `s1n7ax/nvim-window-picker` | Fácil | Completado | Selector nativo con etiquetas, filtros de ventanas y cancelación; conservar integración Neo-tree. |
+| 3 | `theHamsta/nvim-dap-virtual-text` | Fácil-media | Completado | Extmarks para variables DAP; limpiar al continuar, cerrar y cambiar de sesión. |
+| 4 | `leoluz/nvim-dap-go` | Fácil-media | Completado | Registrar Delve y perfiles en fox.langs.go; conservar tests y attach utilizados. |
+| 5 | `jay-babu/mason-nvim-dap.nvim` | Fácil-media | Completado | Resolver adaptadores desde los metadatos y rutas Mason locales; verificar cada adaptador. |
+| 6 | `doki-theme/doki-theme-vim` | Fácil-media | Completado | Conservar temas seleccionables, recursos y atribuciones; restaurar selección al iniciar. |
+| 7 | `ahmedkhalf/project.nvim` | Media | Completado | Historial y raíz locales; migrar datos y consumidores sin perder favoritos ni WSL. |
+| 8 | `goolord/alpha-nvim` | Media | Pendiente | Buffer inicial propio con botones, acciones, geometría y navegación por teclado. |
+| 9 | `windwp/nvim-ts-autotag` | Media | Pendiente | Cerrar/renombrar etiquetas con Treesitter; cubrir JSX, fragmentos y etiquetas vacías. |
+| 10 | `Wansmer/symbol-usage.nvim` | Media | Pendiente | Referencias LSP y extmarks con debounce y protección ante respuestas atrasadas. |
+| 11 | `Hoffs/omnisharp-extended-lsp.nvim` | Media | Pendiente | Traducir respuestas de OmniSharp y abrir fuentes de metadatos; conservar navegación C#. |
+| 12 | `nvim-tree/nvim-web-devicons` | Media | Pendiente | Cubrir API mediante iconos locales y retirar specs consumidoras; hoy mini.icons aporta un mock. |
+| 13 | `nvim-mini/mini.icons` | Media | Pendiente | Catálogo local, colores, sufijos compuestos, overrides por lenguaje y API devicons. |
+| 14 | `brenoprata10/nvim-highlight-colors` | Media | Pendiente | Colores CSS/Tailwind a extmarks; preservar formatos configurados y rendimiento al editar. |
+| 15 | `williamboman/mason-lspconfig.nvim` | Media | Pendiente | Mapear paquetes a servidores desde metadatos locales; mantener activación y selección mínima. |
+| 16 | `Crysthamus/nvim-file-operations` | Media | Pendiente | Sincronizar buffers con operaciones Neo-tree sin perder cambios sin guardar. |
+| 17 | `antosha417/nvim-lsp-file-operations` | Media | Pendiente | Eventos will/didRename, create y delete; filtrar clientes y aplicar workspace edits de forma segura. |
+| 18 | `jwalton512/vim-blade` | Media | Pendiente | Syntax, detección e indentación locales de Blade; cubrir mezcla HTML/PHP y directivas. |
+| 19 | `ricardoramirezr/blade-nav.nvim` | Media | Pendiente | Resolver vistas, componentes y rutas Laravel con caché local. |
+| 20 | `f-person/git-blame.nvim` | Media | Pendiente | Reutilizar fox.git para blame asíncrono y enlaces; conservar comandos y repositorios anidados. |
+| 21 | `nvim-lualine/lualine.nvim` | Media-alta | Pendiente | Statusline nativa con diseños del picker y actualizaciones Git/LSP sin bloqueos. |
+| 22 | `akinsho/bufferline.nvim` | Media-alta | Pendiente | Tabline nativa con fijados, diagnósticos, cierre y desbordamiento. |
+| 23 | `rafamadriz/friendly-snippets` | Media-alta | Pendiente | Snippets locales de los lenguajes usados; conservar cobertura y licencias de datos migrados. |
+| 24 | `rcarriga/nvim-notify` | Media-alta | Pendiente | Cola de ventanas, expiración, historial y protección del foco. |
+| 25 | `windwp/nvim-autopairs` | Media-alta | Pendiente | Reglas de inserción/borrado, undo, completion y exclusiones de sintaxis. |
+| 26 | `vuki656/package-info.nvim` | Media-alta | Pendiente | Versiones y acciones por gestor con caché, errores de red y edición segura del manifiesto. |
+| 27 | `m00qek/baleia.nvim` | Media-alta | Pendiente | Parser ANSI incremental a highlights; escapes fragmentados y buffers DAP. |
+| 28 | `vyfor/cord.nvim` | Alta | Pendiente | IPC Discord con reconexión y presencia; validar Windows, Linux y entornos remotos. |
+| 29 | `b0o/schemastore.nvim` | Alta | Pendiente | Catálogo local y selección de schemas; definir cómo mantener actualizados sus datos. |
+| 30 | `nvim-telescope/telescope-file-browser.nvim` | Alta | Pendiente | Migrar consumidores al explorador propio conservando navegación y operaciones. |
+| 31 | `sindrets/diffview.nvim` | Alta | Pendiente | Diff e historial con fox.git; conservar integración de Neogit. |
+| 32 | `folke/snacks.nvim` | Alta | Pendiente | Inventariar APIs consumidas y sustituirlas con módulos FOX; cubrir solo funciones utilizadas. |
+| 33 | `iamcco/markdown-preview.nvim` | Alta | Pendiente | Servidor y vista web locales con recarga, scroll y renderizado seguro; quitar build externo. |
+| 34 | `MeanderingProgrammer/render-markdown.nvim` | Alta | Pendiente | Renderizado incremental con Treesitter y extmarks; tablas, bloques y modos de edición. |
+| 35 | `stevearc/conform.nvim` | Alta | Pendiente | Procesos asíncronos, condiciones, rangos, errores y guardado sin perder cambios. |
+| 36 | `neovim/nvim-lspconfig` | Alta | Pendiente | Usar vim.lsp con datos por lenguaje y migrar utilidades/root_dir consumidos. |
+| 37 | `lewis6991/gitsigns.nvim` | Muy alta | Pendiente | Hunks incrementales, signos y stage/reset parcial sin dañar el índice de Git. |
+| 38 | `NeogitOrg/neogit` | Muy alta | Pendiente | Completar funciones equivalentes en Git Center antes de retirar comandos e integraciones. |
+| 39 | `rcarriga/nvim-dap-ui` | Muy alta | Pendiente | Paneles scopes, stacks, watches, REPL y consola con layouts y sesiones. |
+| 40 | `nvim-neo-tree/neo-tree.nvim` | Muy alta | Pendiente | Árbol, watchers y operaciones seguras; migrar extensiones FOX y estado Git/ventanas. |
+| 41 | `MunifTanjim/nui.nvim` | Muy alta | Pendiente | Migrar APIs de UI de todos sus consumidores; retirar después de Neo-tree/package-info. |
+| 42 | `nvim-neotest/nvim-nio` | Muy alta | Pendiente | Migrar async y cancelación de dap-ui; eliminar tras su consumidor si deja de necesitarse. |
+| 43 | `nvim-lua/plenary.nvim` | Muy alta | Pendiente | Migrar jobs, async y paths de todos los consumidores, incluidos módulos FOX. |
+| 44 | `nvim-telescope/telescope.nvim` | Muy alta | Pendiente | Buscador/framework propios; migrar pickers FOX, extensiones y acciones. |
+| 45 | `williamboman/mason.nvim` | Muy alta | Pendiente | Descargas, versiones, extracción y binarios multiplataforma; conservar selección explícita. |
+| 46 | `folke/lazy.nvim` | Muy alta | Pendiente | Carga diferida, dependencias, bootstrap, lockfile y actualizaciones; migrar specs primero. |
+| 47 | `saghen/blink.cmp` | Extrema | Pendiente | Motor de completion, ranking, LSP/snippets y fuentes FOX; cancelación y edición rápida. |
+| 48 | `mfussenegger/nvim-dap` | Extrema | Pendiente | Cliente DAP con transportes, sesiones, breakpoints y REPL compatible con adaptadores. |
+| 49 | `nvim-treesitter/nvim-treesitter` | Extrema | Pendiente | API Treesitter nativa, queries y gestión/compilación de parsers; gramáticas siguen externas. |
+
+## Primer ítem completado: mason-conform.nvim
+
+- Eliminadas su spec y su entrada de lazy-lock.json; una instalación nueva ya no lo clona.
+- Reutilizada la implementación local existente: cada lenguaje declara sus formateadores y paquetes; fox.core.installer los presenta e instala mediante :LanguageManager.
+- Conform depende directamente de Mason para encontrar ejecutables instalados en PATH, sin otro puente ni instalaciones al abrir archivos.
+- Conservados overrides por lenguaje, condiciones de formato, formato al guardar y comandos :FormatDocument, :ConformFormat y :ConformInfo.
+- Pruebas nuevas: agregación de configuración, dependencia directa y presencia de formateadores gestionados en sus bundles. El mínimo Lua ya tiene cobertura en installer_spec.lua.
+- No se borran carpetas de instalaciones anteriores. El gestor podrá mostrar la dependencia retirada como no utilizada; no se necesita para arrancar.
+
+## Segundo ítem completado: nvim-window-picker
+
+- Implementación propia en `lua/fox/core/window_picker.lua`, sin dependencias adicionales. `lua/window-picker.lua` conserva el nombre de módulo que requiere Neo-tree.
+- Selección síncrona por letras en la barra superior de cada ventana, sin cambiar el foco. Si solo hay un destino válido, se elige automáticamente.
+- Excluye la ventana actual, otras pestañas, flotantes, ventanas no enfocables, árboles, notificaciones, terminales y quickfix.
+- Restaura las barras originales al seleccionar, cancelar, interrumpir o cerrar un destino. Usa etiquetas de varias letras cuando hay muchos destinos.
+- Retiradas la spec externa y su entrada del lockfile; actualizados el inventario, README y documentación. Las carpetas de instalaciones anteriores no se borran.
+- Ocho pruebas con ventanas reales cubren compatibilidad, selección, filtros, restauración, cancelación, interrupción, cierre y etiquetas múltiples.
+
+## Tercer ítem completado: nvim-dap-virtual-text
+
+- Implementación propia en `lua/fox/dap/virtual_text.lua`, conectada directamente a los listeners de nvim-dap. Reutiliza los scopes y variables ya recibidos; no añade peticiones al adaptador.
+- Mantiene referencias y definiciones del ámbito detenido mediante consultas `locals` de Treesitter, valores comentados al final de línea desde la columna 80, límite de 60 caracteres y resaltado de cambios entre paradas.
+- Limpia al continuar, avanzar, desconectar, salir, terminar o cambiar de sesión; ignora respuestas de sesiones inactivas y respuestas tardías mientras se ejecuta.
+- Conserva los cuatro comandos `DapVirtualText*` y los registra en Command Palette; muestra detalles de excepciones y paradas por data breakpoint.
+- Retiradas la dependencia y su entrada del lockfile; diez pruebas con parser Lua y extmarks reales cubren renderizado, ámbitos, Unicode, ciclo de vida y controles.
+- Igual que antes, las anotaciones de variables requieren un parser y una consulta `locals` del lenguaje; no se instalan parsers adicionales automáticamente.
+
+## Cuarto ítem completado: nvim-dap-go
+
+- Adaptador Delve y siete perfiles originales definidos en `lua/fox/langs/go/init.lua`: archivo, argumentos, argumentos y flags, paquete, attach, test por archivo y test por paquete.
+- Mantiene el puerto dinámico, host/puerto explícitos y tiempo de inicialización; usa el ejecutable nativo de Mason si existe y conserva el modo attached en Windows.
+- Los prompts esperan la respuesta del input modal, reutilizan el parser de argumentos de nvim-dap y cancelan el lanzamiento al pulsar Escape. Attach reutiliza su selector de procesos.
+- Delve sigue siendo un paquete opcional del bundle Go; no se añaden instalaciones automáticas. No se recrean APIs de tests bajo cursor que FoxVim no consumía.
+- Retiradas la dependencia y su entrada del lockfile; actualizadas las guías y la prueba de integración. Cinco pruebas cubren perfiles, adaptador, rutas, aislamiento y prompts.
+- Comprobación real con Go y Delve: compilar un programa temporal, parar en un breakpoint, leer `value = 41`, continuar y salir correctamente.
+
+## Quinto ítem completado: mason-nvim-dap.nvim
+
+- Python, PHP y C# registran sus adaptadores en sus módulos de lenguaje; Firefox se registra en el módulo compartido de navegadores. Go, Bash, C/C++ y JS ya tenían registro local.
+- Usa ejecutables nativos y scripts Node de los paquetes Mason; evita wrappers `.cmd` al lanzar los adaptadores. Conserva el fallback a PATH y los perfiles existentes.
+- Mason es una dependencia directa de DAP para exponer las herramientas instaladas. LanguageManager mantiene la selección explícita; no se instalan adaptadores al arrancar ni al abrir archivos.
+- Retiradas la spec y su entrada del lockfile; corregidas las instrucciones que sugerían descargar adaptadores al reiniciar.
+- Cinco pruebas verifican rutas Windows/Unix, entrypoints Node, Codelldb, fallback y paquetes instalados después del registro. Comprobación real: Python, PHP, CoreCLR y Bash respondieron correctamente a `initialize` del protocolo DAP.
+
+## Sexto ítem completado: doki-theme-vim
+
+- El catálogo de FoxThemePicker y el tema guardado (`nagatoro-fox`) ya se implementaban completamente en `config/colors/`, sin usar código de ejecución del plugin Doki.
+- Sustituida su spec externa por `fox_theme_startup`, una spec local eager en `lua/plugins/ui/themes.lua`. Conserva intacta la restauración y sincronización Ryoku/Omarchy.
+- Retirada la entrada del lockfile. No se copian fuentes ni recursos del repositorio externo; se conservan las atribuciones de las paletas locales existentes.
+- Dos pruebas verifican el arranque local y la carga de todas las paletas estáticas del selector sin Doki en runtimepath. Los nombres adicionales exclusivos del catálogo upstream dejan de distribuirse; no formaban parte del selector FOX ni del tema guardado.
+
+## Séptimo ítem completado: project.nvim
+
+- `fox.projects.history` adopta el archivo `project_nvim/project_history` existente, sin cambiar su formato ni borrar proyectos inaccesibles. Las lecturas no hacen stat de las rutas de proyectos ni arrancan WSL.
+- Guardado inmediato mediante archivo temporal y rename atómico; ante errores de lectura, escritura o reemplazo conserva el archivo original y los consumidores informan del error.
+- Picker, Telescope y explorador usan la API local. Se mantienen los favoritos, WSL, renombrado, borrado, comandos y teclas existentes.
+- `:ProjectRoot` busca el marcador más cercano y usa el root del LSP como fallback; solo cambia cwd cuando se invoca. La extensión local conserva `:Telescope projects` y la selección de proyectos de Environments.
+- Retiradas ambas declaraciones externas y el lockfile. Siete pruebas del historial y dos del comando pasaron; una comprobación de integración abrió el picker real desde la extensión local de Telescope.
+
+## Siguiente ítem
+
+`goolord/alpha-nvim`: implementar el dashboard local, conservando sus botones, acciones, geometría y navegación por teclado.

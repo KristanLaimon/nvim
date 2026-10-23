@@ -13,7 +13,8 @@
 --   lua/fox/       Shared internal libraries (core, git, launch, lsp).
 --   lua/plugins/   One lazy.nvim spec per file, grouped by area.
 --   lua/fox/lib/foxnvim/   Lua libraries for Neovim.
---   tests/         Unit specs (`nvim -l tests/run.lua`) and integration specs.
+--   config/        Assets, scripts, tools, plans, and tests.
+--   config/tests/  Unit specs (`nvim -l config/tests/run.lua`) and integration specs.
 --   docs/          Architecture and feature documentation.
 --
 -- See docs/architecture.md for the full picture.
@@ -23,6 +24,9 @@
 if vim.loader then
 	vim.loader.enable()
 end
+
+-- Bundled colorschemes live under config/colors/.
+vim.opt.runtimepath:append(vim.fn.stdpath("config") .. "/config")
 
 vim.o.background = "dark"
 
@@ -46,10 +50,10 @@ vim.api.nvim_create_user_command("ReloadConfig", function()
 end, {})
 
 -- Run the test suite from inside the editor. The same specs run headlessly with
--- `nvim -l tests/run.lua`; see tests/run.lua for the runner itself.
+-- `nvim -l config/tests/run.lua`; see config/tests/run.lua for the runner itself.
 vim.api.nvim_create_user_command("FoxTest", function(command)
 	local root = vim.fn.stdpath("config")
-	local runner = dofile(root .. "/tests/run.lua")
+	local runner = dofile(root .. "/config/tests/run.lua")
 	runner.run(root, command.args ~= "" and command.args or nil)
 end, { nargs = "?", desc = "Run the FOX unit test suite (optionally filtered by spec name)" })
 

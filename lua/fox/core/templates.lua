@@ -4,7 +4,7 @@
 -- WHAT IT DOES
 --   Discovers and presents file creation templates per programming language.
 --   Templates live as Markdown files with YAML frontmatter in:
---     `templates/<filetype>/*.md`
+--     `config/templates/<filetype>/*.md`
 --   inside the Neovim config directory (`stdpath("config")`), or locally in
 --   workspace roots (`.foxnvim/templates/<filetype>/*.md`).
 --
@@ -71,8 +71,8 @@ function M.get_template_dirs()
 	-- 2. Workspace local templates/
 	add_dir(vim.fs.joinpath(cwd, "templates"))
 
-	-- 3. Neovim configuration directory templates/
-	local config_templates = vim.fs.joinpath(vim.fn.stdpath("config"), "templates")
+	-- 3. Neovim configuration directory config/templates/
+	local config_templates = vim.fs.joinpath(vim.fn.stdpath("config"), "config", "templates")
 	add_dir(config_templates)
 
 	return dirs

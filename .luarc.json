@@ -8,9 +8,9 @@
 	"workspace.checkThirdParty": false,
 	"workspace.ignoreDir": [
 		".vscode",
-		"schemas-langs/lua/garrysmod",
-		"schemas-langs/lua/love",
-		"schemas-langs/lua/koreader"
+		"config/schemas-langs/lua/garrysmod",
+		"config/schemas-langs/lua/love",
+		"config/schemas-langs/lua/koreader"
 	],
 	"diagnostics.globals": [
 		"vim",

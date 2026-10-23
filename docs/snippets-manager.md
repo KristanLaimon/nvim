@@ -21,7 +21,7 @@ Access all these from **Command Palette** (`<C-S-p>`) → category **Snippets**.
 
 1. Open the Snippet Manager: press `<C-S-p>` and search **Snippet Manager**, or run `:FoxSnippetManager`.
 2. Choose **"Edit Snippets for Current Filetype"** (uses whatever file you have open).
-3. The `snippets/<lang>.json` file opens with IntelliSense active.
+3. The `config/snippets/<lang>.json` file opens with IntelliSense active.
 4. Add your snippet entry (see format below), save with `:w`.
 5. Your snippet is **live immediately** — start typing the prefix in any file of that type.
 
@@ -31,7 +31,7 @@ Access all these from **Command Palette** (`<C-S-p>`) → category **Snippets**.
 
 ```
 nvim/
-└── snippets/
+└── config/snippets/
     ├── snippets.schema.json   ← JSON Schema (enables IntelliSense in ALL snippet files)
     ├── lua.json
     ├── typescript.json
@@ -50,9 +50,9 @@ nvim/
 
 ## 🧠 IntelliSense While Editing Snippet Files
 
-Every file inside `snippets/` automatically gets **JSON Schema validation and completion** courtesy of `jsonls`. The schema file is at `snippets/snippets.schema.json`.
+Every file inside `config/snippets/` automatically gets **JSON Schema validation and completion** courtesy of `jsonls`. The schema file is at `config/snippets/snippets.schema.json`.
 
-When you open a `snippets/<lang>.json` file you will have:
+When you open a `config/snippets/<lang>.json` file you will have:
 - ✅ **Field autocompletion** — `prefix`, `body`, `description`, `scope` suggested automatically.
 - ✅ **Hover documentation** — hover over any key to see what it does.
 - ✅ **Inline validation** — missing `prefix` or `body`? A squiggly underline tells you immediately.

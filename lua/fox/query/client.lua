@@ -8,14 +8,14 @@ function M.executable()
 	if not os or not arch then
 		return nil, "FoxQuery has no bundled worker for " .. platform.sysname .. "/" .. platform.machine
 	end
-	local path = source:gsub("lua/fox/query/client.lua$", "tools/foxquery/")
+	local path = source:gsub("lua/fox/query/client.lua$", "config/tools/foxquery/")
 		.. "foxquery-"
 		.. os
 		.. "-"
 		.. arch
 		.. (os == "windows" and ".exe" or "")
 	if vim.fn.filereadable(path) ~= 1 then
-		return nil, "FoxQuery worker missing; run the build script in tools/repos/foxquery"
+		return nil, "FoxQuery worker missing; run the build script in config/tools/repos/foxquery"
 	end
 	if os ~= "windows" and vim.fn.executable(path) ~= 1 then
 		local ok = (vim.uv or vim.loop).fs_chmod(path, 493)

@@ -62,7 +62,7 @@ The shell-keybinding setup supports **Windows Terminal, Kitty, Foot, WezTerm, Al
 
 ## Plugin inventory
 
-FoxVim has **48 hand-crafted local plugins** in [`lua/plugins/fox/`](lua/plugins/fox/) and **48 pinned external plugins** in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
+FoxVim has **48 hand-crafted local plugins** in [`lua/plugins/fox/`](lua/plugins/fox) and **48 pinned external plugins** in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
 
 ### Hand-crafted FoxVim plugins
 
@@ -84,7 +84,7 @@ FoxVim has **48 hand-crafted local plugins** in [`lua/plugins/fox/`](lua/plugins
 | Debugging | `baleia.nvim`, `nvim-dap`, `nvim-dap-ui`, `nvim-nio` |
 | Language and extras | `blade-nav.nvim`, `cord.nvim`, `lazy.nvim`, `markdown-preview.nvim`, `nvim-autopairs`, `vim-blade` |
 
-For loading mode, dependencies, and source locations, see [PLUGINS-LIST.md](PLUGINS-LIST.md).
+For loading mode, dependencies, and source locations, see [PLUGINS-LIST.md](config/plans_notes_md/PLUGINS-LIST.md).
 
 ---
 
@@ -111,7 +111,7 @@ Return to the dashboard from anywhere with `<leader>wm`; closing the last open b
 After cloning into `%LOCALAPPDATA%\nvim` (Windows) or `~/.config/nvim` (Linux, WSL, Termux, or macOS):
 
 - **Windows (PowerShell)**: `powershell -ExecutionPolicy Bypass -File .\scripts\dependencies\install.ps1`
-- **Linux / WSL / Termux / Git Bash**: `./scripts/dependencies/install.sh`
+- **Linux / WSL / Termux / Git Bash**: `./config/scripts/dependencies/install.sh`
 
 ---
 
@@ -138,10 +138,13 @@ Start here if you are reading the code:
 ## 🧪 Tests
 
 ```sh
-nvim -l tests/syntax_check.lua                 # every Lua file still parses
-nvim -l tests/run.lua                          # unit specs (fast, no plugins)
-nvim --headless -S tests/integration/run.lua   # with the real editor loaded
+nvim -l config/tests/syntax_check.lua                 # every Lua file still parses
+nvim -l config/tests/run.lua                          # unit specs (fast, no plugins)
+nvim --headless -S config/tests/integration/run.lua   # with the real editor loaded
 ```
+
+Support assets, scripts, tests, and bundled tools live under `config/`. Plans and notes are in
+[`config/plans_notes_md/`](config/plans_notes_md/); see the [directory map](docs/architecture.md) for the full layout.
 
 Inside the editor: `:FoxTest` (optionally `:FoxTest git` to filter by spec name).
 

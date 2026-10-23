@@ -82,7 +82,7 @@ files["run_me.lua"] = {
 	},
 }
 
-files["schemas-langs/**"] = {
+files["config/schemas-langs/**"] = {
 	ignore = {
 		"211",  -- unused local variable
 		"212",  -- unused argument

@@ -1,6 +1,6 @@
 # FoxQuerier
 
-[Back to wiki](index.md) · [SQL tooling](languages/sql.md) · [Design plan](../PLAN-FOXQUERYGRIP.md)
+[Back to wiki](index.md) · [SQL tooling](languages/sql.md) · [Design plan](../config/plans_notes_md/PLAN-FOXQUERYGRIP.md)
 
 FoxQuerier adds a read-only database workspace to the current project. The default layout has saved SQL files above connections on the far left, SQL in the center, the database explorer on the right, results beneath SQL, and a full-width activity bar at the bottom. **Shift+F3** toggles the live diagram: connections disappear and SQL/diagram use 30% / 70% of the width by default, with results still beneath SQL. A compact terminal uses panel toggles above the activity bar.
 
@@ -9,11 +9,11 @@ FoxQuerier adds a read-only database workspace to the current project. The defau
 1. Open the project directory in FoxVim.
 2. Press **F3** to cycle directly between Editor and Query, or run `:FoxMode query`. `:FoxMode` still offers a picker. First entry reopens the last used saved SQL file (or the first saved SQL file if it is unavailable); a new query is created only when none exist.
 3. Press **gC** in Normal mode or run `:FoxQueryConnections` to focus the connection sidebar. **a** adds, **e** edits, **d** deletes a profile, **Enter** connects, and **D** disconnects. SQLite opens the existing file explorer at your project root: Enter opens folders or selects a database file; Esc cancels. MySQL/PostgreSQL need host, port, database, and user. Passwords are prompted privately and saved locally under `.foxnvim/query/private/passwords/`, or resolved from `password_env`. Editing a connection lets you replace its saved password; blank keeps the existing one.
-4. Database drivers are bundled in `tools/foxquery/` for Windows/Linux (amd64). No Python, pip, Node.js, Go, database CLI, or separate SQLite library is needed at runtime. Clone the configuration with these executables included; no driver installation is required. See [build instructions](../tools/repos/foxquery/README.md).
+4. Database drivers are bundled in `config/tools/foxquery/` for Windows/Linux (amd64). No Python, pip, Node.js, Go, database CLI, or separate SQLite library is needed at runtime. Clone the configuration with these executables included; no driver installation is required. See [build instructions](../config/tools/repos/foxquery/README.md).
 5. Search/inspect the explorer, create SQL with **gN** or `:FoxQueryNew`, and save with `:write`. The **SQL FILES** pane above connections lists saved project SQL and open tabs; Enter opens a file or expands/collapses a folder, **a** creates SQL, **A** creates a folder, **r** renames, and **d** deletes after confirmation. **Alt+h/l** switches SQL tabs. Closing every tab leaves a prompt to open or create one.
 6. Queries run manually with **Ctrl+Enter** or **F5** in Normal/Insert mode. Typing SQL or moving the cursor does not execute it. **Ctrl+Space** or **Ctrl+X Ctrl+O** opens completion in Insert mode. **F3** restores the editor without closing SQL sessions.
 
-For PowerShell in Windows Terminal, run `./scripts/setup-powershell.ps1` and restart Windows Terminal to forward Ctrl+Enter and Ctrl+Space to Neovim. `./scripts/unsetup-powershell.ps1` removes that forwarding. Ctrl+Alt+O remains an alternative direct mode switch. Other terminals/operating systems may intercept keys; Ex commands and the palette remain available. No new leader shortcuts are added.
+For PowerShell in Windows Terminal, run `./config/scripts/setup-powershell.ps1` and restart Windows Terminal to forward Ctrl+Enter and Ctrl+Space to Neovim. `./config/scripts/unsetup-powershell.ps1` removes that forwarding. Ctrl+Alt+O remains an alternative direct mode switch. Other terminals/operating systems may intercept keys; Ex commands and the palette remain available. No new leader shortcuts are added.
 
 The status bar shows **[Editor | Query]** in every theme: the current workflow uses normal text color and the other is dimmed. F2 retains rename; F3 switches workflows and Shift+F3 toggles the diagram. Query also has a dedicated bottom activity bar: SQL status/timing/submitted SQL on the left and **[Default | Visually]** on the right (the active view has an asterisk). Failed executions show the full server diagnostic in RAM. Click the bar from any Query pane, or focus it and press `y`, to copy the full diagnostic to the system clipboard; Enter opens the multiline error popup. Long lines can be scrolled horizontally. Diagnostics may contain query values and are never saved automatically.
 
@@ -142,10 +142,10 @@ The earlier MySQL 5.7.44 production check used the previous backend. Live MySQL/
 Run from the configuration root:
 
 ```text
-nvim --headless -u NONE -i NONE -l tests/run.lua query
+nvim --headless -u NONE -i NONE -l config/tests/run.lua query
 ```
 
-Run from `tools/repos/foxquery/`:
+Run from `config/tools/repos/foxquery/`:
 
 ```text
 go test -mod=vendor ./...

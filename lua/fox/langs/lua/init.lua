@@ -67,9 +67,9 @@ M.lsp_config = {
 					checkThirdParty = false,
 					ignoreDir = {
 						".vscode",
-						"schemas-langs/lua/garrysmod",
-						"schemas-langs/lua/love",
-						"schemas-langs/lua/koreader",
+						"config/schemas-langs/lua/garrysmod",
+						"config/schemas-langs/lua/love",
+						"config/schemas-langs/lua/koreader",
 					},
 				},
 				completion = {

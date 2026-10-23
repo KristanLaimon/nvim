@@ -2,13 +2,13 @@
 
 [← Back to Wiki Index](index.md)
 
-This guide explains how offline, 100% local JSON schema validation and autocompletion are configured in Neovim using `jsonls`, `schemastore.nvim`, and local JSON schema files stored in `schemas/json/`.
+This guide explains how offline, 100% local JSON schema validation and autocompletion are configured in Neovim using `jsonls`, `schemastore.nvim`, and local JSON schema files stored in `config/schemas/json/`.
 
 ---
 
 ## 📁 Directory Structure & Key Files
 
-- **Local JSON Schemas Folder:** `schemas/json/` ([`stdpath("config") .. "/schemas/json/"`](../schemas/json))
+- **Local JSON Schemas Folder:** `config/schemas/json/` ([`stdpath("config") .. "/schemas/json/"`](../config/schemas/json))
 - **LSP Configuration File:** [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua)
 
 ---
@@ -17,15 +17,15 @@ This guide explains how offline, 100% local JSON schema validation and autocompl
 
 | Tool / Schema | Local File Path | Applied File Patterns (`fileMatch`) | Configuration Type |
 |---|---|---|---|
-| **TypeScript** | `schemas/json/tsconfig.json` | `tsconfig*.json` | Standard SchemaStore override (`replace`) |
-| **npm package.json** | `schemas/json/package.json` | `package.json` | Standard SchemaStore override (`replace`) |
-| **Prettier** | `schemas/json/prettierrc.json` | `.prettierrc`, `.prettierrc.json` | Standard SchemaStore override (`replace`) |
+| **TypeScript** | `config/schemas/json/tsconfig.json` | `tsconfig*.json` | Standard SchemaStore override (`replace`) |
+| **npm package.json** | `config/schemas/json/package.json` | `package.json` | Standard SchemaStore override (`replace`) |
+| **Prettier** | `config/schemas/json/prettierrc.json` | `.prettierrc`, `.prettierrc.json` | Standard SchemaStore override (`replace`) |
 | **ESLint** | `eslintrc.json` | `.eslintrc`, `.eslintrc.json` | Standard SchemaStore override (`replace`) |
-| **JSConfig** | `schemas/json/jsconfig.json` | `jsconfig.json` | Standard SchemaStore override (`replace`) |
-| **Babel** | `schemas/json/babelrc.json` | `.babelrc`, `.babelrc.json`, `babel.config.json` | Standard SchemaStore override (`replace`) |
-| **Turborepo** | `schemas/json/turbo.json` | `turbo.json` | Standard SchemaStore override (`replace`) |
-| **Biome** | `schemas/json/biome.json` | `biome.json`, `biome.jsonc` | Custom schema entry (`extra`) |
-| **FoxVim Snippets** | `snippets/snippets.schema.json` | `snippets/*.json`, `snippets/**/*.json` | Custom schema entry (`extra`) |
+| **JSConfig** | `config/schemas/json/jsconfig.json` | `jsconfig.json` | Standard SchemaStore override (`replace`) |
+| **Babel** | `config/schemas/json/babelrc.json` | `.babelrc`, `.babelrc.json`, `babel.config.json` | Standard SchemaStore override (`replace`) |
+| **Turborepo** | `config/schemas/json/turbo.json` | `turbo.json` | Standard SchemaStore override (`replace`) |
+| **Biome** | `config/schemas/json/biome.json` | `biome.json`, `biome.jsonc` | Custom schema entry (`extra`) |
+| **FoxVim Snippets** | `config/snippets/snippets.schema.json` | `config/snippets/*.json`, `config/snippets/**/*.json` | Custom schema entry (`extra`) |
 
 ---
 
@@ -74,7 +74,7 @@ In [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua), `require("schemastor
 Follow this step-by-step checklist whenever you want to add a new JSON schema to Neovim.
 
 - [ ] **Step 1: Download or save the JSON schema file**
-  Save the schema `.json` file inside `schemas/json/`.  
+  Save the schema `.json` file inside `config/schemas/json/`.
   *Example file path:* `C:\Users\Fox\AppData\Local\nvim\schemas\json\my-schema.json`
 
 - [ ] **Step 2: Open [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua)**

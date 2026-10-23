@@ -6,7 +6,7 @@
 --   2. Shell selection per platform.
 --
 -- WHAT DOES NOT LIVE HERE
---   Keymaps (lua/keymaps/), plugins (lua/plugins/), colors (colors/).
+--   Keymaps (lua/keymaps/), plugins (lua/plugins/), colors (config/colors/).
 --
 -- TO CHANGE A SETTING
 --   Edit the tables in the CONFIGURATION block below. Everything under API is

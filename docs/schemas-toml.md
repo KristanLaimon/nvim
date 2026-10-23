@@ -2,13 +2,13 @@
 
 [← Back to Wiki Index](index.md)
 
-This guide explains how offline, 100% local TOML schema validation and autocompletion are configured in Neovim using the `taplo` LSP server and local schema files stored in `schemas/toml/`.
+This guide explains how offline, 100% local TOML schema validation and autocompletion are configured in Neovim using the `taplo` LSP server and local schema files stored in `config/schemas/toml/`.
 
 ---
 
 ## 📁 Directory Structure & Key Files
 
-- **Local TOML Schemas Folder:** `schemas/toml/` ([`stdpath("config") .. "/schemas/toml/"`](../schemas/toml))
+- **Local TOML Schemas Folder:** `config/schemas/toml/` ([`stdpath("config") .. "/schemas/toml/"`](../config/schemas/toml))
 - **LSP Configuration File:** [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua)
 
 ---
@@ -17,8 +17,8 @@ This guide explains how offline, 100% local TOML schema validation and autocompl
 
 | Tool / Target File | Local Schema File | Applied File Pattern |
 |---|---|---|
-| **Bun Configuration (`bunfig.toml`)** | `schemas/toml/bunfig.json` | `^bunfig\\.toml$` |
-| **Revive Linter (`revive.toml`)** | `schemas/toml/revive.json` | `^revive\\.toml$` |
+| **Bun Configuration (`bunfig.toml`)** | `config/schemas/toml/bunfig.json` | `^bunfig\\.toml$` |
+| **Revive Linter (`revive.toml`)** | `config/schemas/toml/revive.json` | `^revive\\.toml$` |
 
 ---
 
@@ -52,7 +52,7 @@ opts.servers.taplo.settings = {
 Follow this step-by-step checklist whenever you want to add a new TOML schema validation.
 
 - [ ] **Step 1: Obtain the JSON schema for your TOML tool**
-  Save the schema `.json` file inside `schemas/toml/`.  
+  Save the schema `.json` file inside `config/schemas/toml/`.
   *Example file path:* `C:\Users\Fox\AppData\Local\nvim\schemas\toml\cargo.json`
 
 - [ ] **Step 2: Open [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua)**

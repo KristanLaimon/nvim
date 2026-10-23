@@ -1,7 +1,7 @@
 -- ============================================================================
 -- PLUGINS: Theme and statusline.
 -- ============================================================================
--- All selectable FOX palettes and highlights live locally in colors/.
+-- All selectable FOX palettes and highlights live locally in config/colors/.
 --
 -- lualine renders the single global statusline (`laststatus = 3`): branch, diff
 -- and diagnostics on the left, file name next, mode and position on the right.

@@ -18,11 +18,11 @@ M.settings = {
 	keymap = nil,
 }
 
---- Scans colors/ directory for available nagatoro-fox formatted themes.
+--- Scans config/colors/ directory for available nagatoro-fox formatted themes.
 --- @return string[] theme_names
 function M.discover_themes()
 	local themes = {}
-	local colors_dir = vim.fn.stdpath("config") .. "/colors"
+	local colors_dir = vim.fn.stdpath("config") .. "/config/colors"
 	local files = vim.fn.globpath(colors_dir, "*.lua", false, true)
 
 	for _, file in ipairs(files) do

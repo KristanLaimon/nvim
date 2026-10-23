@@ -1,20 +1,20 @@
 test.sh
 test.ps1
-tests/lua/json_out
-tests/lua/output_test
-tests/lua/output_tests
+config/tests/lua/json_out
+config/tests/lua/output_test
+config/tests/lua/output_tests
 json_out
 output_test
 output_tests
 
 .foxnvim/
 .commandcode/
-PROMPT.md
-PROMPT2.md
+config/plans_notes_md/PROMPT.md
+config/plans_notes_md/PROMPT2.md
 *.log
 
-tools/repos/**/.cache/
-tools/repos/**/vendor/
-tools/foxquery/licenses/
-tools/repos/**/dist/
-tools/repos/**/*.test
+config/tools/repos/**/.cache/
+config/tools/repos/**/vendor/
+config/tools/foxquery/licenses/
+config/tools/repos/**/dist/
+config/tools/repos/**/*.test

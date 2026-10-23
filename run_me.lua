@@ -46,7 +46,7 @@ end
 
 local function run_tests()
 	console.log("[run_me] Running Test Suite...")
-	local runner = dofile(root .. "/tests/run.lua")
+	local runner = dofile(root .. "/config/tests/run.lua")
 	local code = runner.run(root, nil)
 	if code ~= 0 then
 		print(cli.colorize("[run_me] Tests failed (exit " .. code .. ").", cli.colors.red))
@@ -56,7 +56,7 @@ end
 
 local function run_syntax()
 	console.log("[run_me] Running Syntax Check...")
-	local code = safe_dofile(root .. "/tests/syntax_check.lua")
+	local code = safe_dofile(root .. "/config/tests/syntax_check.lua")
 	if code ~= 0 then
 		print(cli.colorize("[run_me] Syntax check found errors.", cli.colors.red))
 	end
@@ -67,10 +67,11 @@ local function run_setup()
 	console.log("[run_me] Running Setup Dependencies...")
 	if vim.fn.has("win32") == 1 then
 		terminal.run(
-			"powershell.exe -ExecutionPolicy Bypass -File " .. vim.fn.shellescape(root .. "/scripts/dependencies/install.ps1")
+			"powershell.exe -ExecutionPolicy Bypass -File "
+				.. vim.fn.shellescape(root .. "/config/scripts/dependencies/install.ps1")
 		)
 	else
-		terminal.run("bash " .. vim.fn.shellescape(root .. "/scripts/dependencies/install.sh"))
+		terminal.run("bash " .. vim.fn.shellescape(root .. "/config/scripts/dependencies/install.sh"))
 	end
 	return true
 end
@@ -78,7 +79,8 @@ end
 local function run_setup_ps()
 	console.log("[run_me] Setting up Windows Terminal Keymaps...")
 	terminal.run(
-		"powershell.exe -ExecutionPolicy Bypass -File " .. vim.fn.shellescape(root .. "/scripts/setup-powershell.ps1")
+		"powershell.exe -ExecutionPolicy Bypass -File "
+			.. vim.fn.shellescape(root .. "/config/scripts/setup-powershell.ps1")
 	)
 	return true
 end
@@ -86,7 +88,8 @@ end
 local function run_unsetup_ps()
 	console.log("[run_me] Restoring Windows Terminal Keymaps...")
 	terminal.run(
-		"powershell.exe -ExecutionPolicy Bypass -File " .. vim.fn.shellescape(root .. "/scripts/unsetup-powershell.ps1")
+		"powershell.exe -ExecutionPolicy Bypass -File "
+			.. vim.fn.shellescape(root .. "/config/scripts/unsetup-powershell.ps1")
 	)
 	return true
 end
@@ -144,8 +147,8 @@ end
 
 local function show_menu()
 	local options = {
-		"Run Test Suite (tests/run.lua)",
-		"Run Syntax Check (tests/syntax_check.lua)",
+		"Run Test Suite (config/tests/run.lua)",
+		"Run Syntax Check (config/tests/syntax_check.lua)",
 		"Run Setup Dependencies (install.ps1 / install.sh)",
 		"Setup Windows Terminal Keymaps (setup-powershell.ps1)",
 		"Unsetup Windows Terminal Keymaps (unsetup-powershell.ps1)",

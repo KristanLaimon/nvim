@@ -22,7 +22,7 @@
 -- ============================================================================
 
 local function get_schema_uri(category, filename)
-	local path = vim.fs.normalize(vim.fn.stdpath("config") .. "/schemas/" .. category .. "/" .. filename)
+	local path = vim.fs.normalize(vim.fn.stdpath("config") .. "/config/schemas/" .. category .. "/" .. filename)
 	return vim.uri_from_fname(path)
 end
 
@@ -69,27 +69,27 @@ local function generic_servers()
 					},
 					fileAssociations = {
 						{
-							systemId = vim.fn.stdpath("config") .. "/schemas/xml/msbuild.xsd",
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
 							pattern = "*.csproj",
 						},
 						{
-							systemId = vim.fn.stdpath("config") .. "/schemas/xml/msbuild.xsd",
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
 							pattern = "*.props",
 						},
 						{
-							systemId = vim.fn.stdpath("config") .. "/schemas/xml/msbuild.xsd",
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
 							pattern = "*.targets",
 						},
 						{
-							systemId = vim.fn.stdpath("config") .. "/schemas/xml/msbuild.xsd",
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
 							pattern = "*.fsproj",
 						},
 						{
-							systemId = vim.fn.stdpath("config") .. "/schemas/xml/msbuild.xsd",
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
 							pattern = "*.vbproj",
 						},
 						{
-							systemId = vim.fn.stdpath("config") .. "/schemas/xml/msbuild.xsd",
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
 							pattern = "*.slnx",
 						},
 					},
@@ -223,8 +223,8 @@ return {
 								{
 									name = "FoxVim Snippets Schema",
 									description = "VSCode-compatible snippet file schema",
-									fileMatch = { "snippets/*.json", "snippets/**/*.json" },
-									url = vim.uri_from_fname(vim.fn.stdpath("config") .. "/snippets/snippets.schema.json"),
+									fileMatch = { "config/snippets/*.json", "config/snippets/**/*.json" },
+									url = vim.uri_from_fname(vim.fn.stdpath("config") .. "/config/snippets/snippets.schema.json"),
 								},
 							},
 						}),
@@ -554,7 +554,7 @@ return {
 						dap = { name = "DAP", module = "fox.lsp.dap_repl_source", async = true },
 						snippets = {
 							opts = {
-								search_paths = { vim.fn.stdpath("config") .. "/snippets" },
+								search_paths = { vim.fn.stdpath("config") .. "/config/snippets" },
 								filter_snippets = function(_, file)
 									return not file:match("schema%.json$")
 								end,

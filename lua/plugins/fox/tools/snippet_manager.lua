@@ -3,7 +3,7 @@
 -- ============================================================================
 -- WHAT IT DOES
 --   Manages per-language snippets stored in VSCode JSON format inside
---   `stdpath("config")/snippets/<language>.json`.
+--   `stdpath("config")/config/snippets/<language>.json`.
 --   Integrates natively with blink.cmp autocompletion engine and provides full
 --   CRUD operations (Create, Edit, Delete, List, Reload).
 --
@@ -20,7 +20,7 @@ local store = lazy_req("fox.core.store")
 local M = {}
 
 M.settings = {
-	snippets_dir = vim.fn.stdpath("config") .. "/snippets",
+	snippets_dir = vim.fn.stdpath("config") .. "/config/snippets",
 	notify_title = "FOX Snippet Manager",
 	default_languages = {
 		"lua",

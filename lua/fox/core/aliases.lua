@@ -6,7 +6,7 @@ M.aliases = {
 
 function M.setup()
 	local is_windows = vim.fn.has("win32") == 1
-	local alias_dir = vim.fn.stdpath("config") .. (is_windows and "\\aliases" or "/aliases")
+	local alias_dir = vim.fn.stdpath("config") .. (is_windows and "\\config\\aliases" or "/config/aliases")
 
 	-- Ensure directory exists
 	vim.fn.mkdir(alias_dir, "p")

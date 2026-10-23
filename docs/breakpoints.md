@@ -83,8 +83,8 @@ Saved to `.foxnvim/breakpoints.json` (or `.foxlocal/breakpoints.json` when that 
 
 ## 🧪 Test
 
-`tests/dap_breakpoints_check.lua` exercises disable/enable round-trips, the option round-trip, and save/restore. Run it with:
+`config/tests/dap_breakpoints_check.lua` exercises disable/enable round-trips, the option round-trip, and save/restore. Run it with:
 
 ```
-nvim --headless -n -S tests/dap_breakpoints_check.lua
+nvim --headless -n -S config/tests/dap_breakpoints_check.lua
 ```

@@ -4,7 +4,7 @@
 
 This is the by-hand companion to [Type Injector](type-injector.md): everything the picker (`:FoxTypes`) does through menus, done directly on the filesystem. Use this when you're adding a new SDK's types (a game engine, an app's plugin API, an embedded Lua host) and don't want to go through the NPM install flow (that only exists for TypeScript/JavaScript — see [Managing TypeScript Type Schemas](how-to-manage-typescript-type-schemas.md) for that language's by-hand equivalent).
 
-A **schema** is just a directory of `.lua` stub files under `schemas-langs/lua/<name>/`. There is no registry to update — `scan_available_schemas()` reads the filesystem, so a directory that exists *is* an available schema.
+A **schema** is just a directory of `.lua` stub files under `config/schemas-langs/lua/<name>/`. There is no registry to update — `scan_available_schemas()` reads the filesystem, so a directory that exists *is* an available schema.
 
 ---
 
@@ -13,13 +13,13 @@ A **schema** is just a directory of `.lua` stub files under `schemas-langs/lua/<
 ### Step 1: Pick a name and a location
 
 ```
-schemas-langs/lua/<schema_name>/
+config/schemas-langs/lua/<schema_name>/
 ```
 
 Two roots are searched (see `M.get_schema_roots` in `lua/plugins/fox/type_injector.lua`):
 
 1. `stdpath("data")/schemas-langs/lua/<schema_name>/` — where NPM installs land; fine for personal, throwaway, or machine-local schemas.
-2. `stdpath("config")/schemas-langs/lua/<schema_name>/` (this repo's `schemas-langs/lua/`) — versioned with the rest of FoxVim; use this for anything you want to keep and share across machines.
+2. `stdpath("config")/config/schemas-langs/lua/<schema_name>/` (this repo's `config/schemas-langs/lua/`) — versioned with the rest of FoxVim; use this for anything you want to keep and share across machines.
 
 ### Step 2: Write the stub file(s)
 
@@ -49,7 +49,7 @@ G_reader_settings = G_reader_settings or {}
 
 ### Step 3: Version it
 
-Add a `package.json` next to the stub file(s) so the picker shows a version and you can keep multiple versions side by side later (e.g. `schemas-langs/lua/koreader/` today, `schemas-langs/lua/koreader-v2027.01/` later):
+Add a `package.json` next to the stub file(s) so the picker shows a version and you can keep multiple versions side by side later (e.g. `config/schemas-langs/lua/koreader/` today, `config/schemas-langs/lua/koreader-v2027.01/` later):
 
 ```json
 {
@@ -87,7 +87,7 @@ If `lua_ls` is already attached, either restart it (`:LspRestart`) or re-run `:F
 
 ## ✏️ Update a schema
 
-There's no "edit" command — just edit the `.lua` file(s) in `schemas-langs/lua/<schema_name>/` directly, and bump `version` in its `package.json` if the change tracks a new SDK release. Any project with the schema active picks up the change the next time `lua_ls` reloads that file (usually automatic; `:LspRestart` if not).
+There's no "edit" command — just edit the `.lua` file(s) in `config/schemas-langs/lua/<schema_name>/` directly, and bump `version` in its `package.json` if the change tracks a new SDK release. Any project with the schema active picks up the change the next time `lua_ls` reloads that file (usually automatic; `:LspRestart` if not).
 
 ---
 
@@ -95,7 +95,7 @@ There's no "edit" command — just edit the `.lua` file(s) in `schemas-langs/lua
 
 **Through the picker:** select the schema, `<C-d>` — this asks for confirmation, deletes the schema directory (`vim.fn.delete(schema_dir, "rf")`), and deactivates it in every project's `.foxnvim/types.json` you touch afterward (deactivation is per-project, so other projects' `types.json` entries become dangling references — harmless, `scan_available_schemas()` just won't list the name anymore).
 
-**By hand:** delete `schemas-langs/lua/<schema_name>/` (from whichever root it's actually in — check both with `M.get_schema_roots("lua")` if unsure), and remove the name from `.foxnvim/types.json` in any project that had it active.
+**By hand:** delete `config/schemas-langs/lua/<schema_name>/` (from whichever root it's actually in — check both with `M.get_schema_roots("lua")` if unsure), and remove the name from `.foxnvim/types.json` in any project that had it active.
 
 ---
 
@@ -103,10 +103,10 @@ There's no "edit" command — just edit the `.lua` file(s) in `schemas-langs/lua
 
 | Action | Picker | By hand |
 | :--- | :--- | :--- |
-| Create | `<C-n>` (TS/JS only, via NPM) | `mkdir schemas-langs/lua/<name>` + write `.lua` stub(s) + optional `package.json` |
+| Create | `<C-n>` (TS/JS only, via NPM) | `mkdir config/schemas-langs/lua/<name>` + write `.lua` stub(s) + optional `package.json` |
 | Register for a project | `<Enter>`/`<Tab>`/`<Space>` | Add name to `.foxnvim/types.json` → `"lua": [...]` |
 | Update | — | Edit the `.lua` file(s) in place |
 | Deregister | `<Enter>`/`<Tab>`/`<Space>` (toggle off) | Remove name from `.foxnvim/types.json` |
-| Delete | `<C-d>` | `rm -rf schemas-langs/lua/<name>` + remove from any project's `types.json` |
+| Delete | `<C-d>` | `rm -rf config/schemas-langs/lua/<name>` + remove from any project's `types.json` |
 
 See [Type Injector](type-injector.md) for how the wiring works end to end (LSP notification, TS reference-file generation, etc.).

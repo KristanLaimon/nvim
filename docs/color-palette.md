@@ -3,7 +3,7 @@
 [← Back to Wiki Index](index.md)
 
 Theme startup uses the local `fox_theme_startup` spec in `lua/plugins/ui/themes.lua`.
-All palettes offered by `:FoxThemePicker` live in `colors/`; no external Doki plugin
+All palettes offered by `:FoxThemePicker` live in `config/colors/`; no external Doki plugin
 is required. Additional scheme names exclusive to the upstream Doki catalog are
 not bundled. Existing local palette attributions are preserved.
 
@@ -16,7 +16,7 @@ This guide explains how to manage, customize, and extend colorschemes in this Ne
 - **Nagatoro Theme System & Picker:** [`lua/plugins/fox/theme_picker.lua`](../lua/plugins/fox/theme_picker.lua)
 - **Statusline Theme Picker:** [`lua/plugins/fox/statusline_picker.lua`](../lua/plugins/fox/statusline_picker.lua)
 - **Colorify Engine (CMP Completion):** [`lua/fox/lsp/colorify.lua`](../lua/fox/lsp/colorify.lua)
-- **Theme Palette Files:** `colors/nagatoro-fox.lua`, `colors/nagatoro-light.lua`, `colors/onedark-fox.lua`, `colors/catppuccin-fox.lua`, `colors/nord-fox.lua`
+- **Theme Palette Files:** `config/colors/nagatoro-fox.lua`, `config/colors/nagatoro-light.lua`, `config/colors/onedark-fox.lua`, `config/colors/catppuccin-fox.lua`, `config/colors/nord-fox.lua`
 - **Customization Guide:** [`how-to-customize-editor.md`](how-to-customize-editor.md)
 
 ---
@@ -73,7 +73,7 @@ Completion items in `blink.cmp` use NvChad layout:
 
 ## 📦 How to Add a New Theme
 
-To add a custom theme, create a new file `colors/mytheme-fox.lua` adhering to the `nagatoro-fox.lua` palette format. See [`how-to-customize-editor.md#5-how-to-customize-statusline--themes`](how-to-customize-editor.md#5-how-to-customize-statusline--themes) for full step-by-step instructions and code examples.
+To add a custom theme, create a new file `config/colors/mytheme-fox.lua` adhering to the `nagatoro-fox.lua` palette format. See [`how-to-customize-editor.md#5-how-to-customize-statusline--themes`](how-to-customize-editor.md#5-how-to-customize-statusline--themes) for full step-by-step instructions and code examples.
 
 ### Ryoku (Arch Linux)
 

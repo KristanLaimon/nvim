@@ -88,7 +88,7 @@ These external plugins will be **removed from `lazy.nvim`** and replaced with pu
 | `jwalton512/vim-blade` | `lua/handmadedeps/blade_nav.lua` | Laravel Blade syntax highlighting & directive matcher |
 | `NeogitOrg/neogit` | `lua/handmadedeps/neogit.lua` | `:Neogit` user command router directly to custom Git Center (`:GitCenterToggle`) |
 | `sindrets/diffview.nvim` | `lua/handmadedeps/neogit.lua` | Diffview router to custom Git Center full-screen diff modal |
-| `b0o/schemastore.nvim` | `lua/handmadedeps/schemastore.lua` | Schema catalog using bundled JSON & TOML schemas under `schemas/` |
+| `b0o/schemastore.nvim` | `lua/handmadedeps/schemastore.lua` | Schema catalog using bundled JSON & TOML schemas under `config/schemas/` |
 | `Wansmer/symbol-usage.nvim` | `lua/handmadedeps/codelens.lua` | Reference counter ("󰌹 X references") using native LSP CodeLens |
 | Replaced: `s1n7ax/nvim-window-picker` | `lua/fox/core/window_picker.lua` | Local synchronous window selection; completed, see PLAN.md |
 | `antosha417/nvim-lsp-file-operations` | `lua/handmadedeps/file_operations.lua` | LSP `workspace/willRenameFiles` handler for file move/rename events |
@@ -126,7 +126,7 @@ These external plugins will be **removed from `lazy.nvim`** and replaced with pu
 ### Automated Tests
 1. Execute the full Neovim unit test suite after each component is added:
    ```powershell
-   nvim -l tests/run.lua
+   nvim -l config/tests/run.lua
    ```
 2. Verify all **402+ tests pass with 0 failures**.
 

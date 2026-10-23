@@ -4,7 +4,7 @@
 
 This is the by-hand companion to [Type Injector](type-injector.md), for TypeScript/JavaScript. It covers the same ground as `<C-n>` (install from NPM) in the picker, plus the case the picker doesn't cover: dropping in real `.d.ts` files **without** the `npm` CLI, `node_modules`, or a `package.json` install step at all — just the type files themselves, fetched straight from the npm registry's tarball.
 
-A **schema** is a directory of `.d.ts` files under `schemas-langs/typescript_javascript/<name>/`. There is no registry to update — `scan_available_schemas()` reads the filesystem, so a directory that exists *is* an available schema. This repo ships two worked examples: `node/` (`@types/node`) and `bun/` (`bun-types`), both fetched this way.
+A **schema** is a directory of `.d.ts` files under `config/schemas-langs/typescript_javascript/<name>/`. There is no registry to update — `scan_available_schemas()` reads the filesystem, so a directory that exists *is* an available schema. This repo ships two worked examples: `node/` (`@types/node`) and `bun/` (`bun-types`), both fetched this way.
 
 ---
 
@@ -13,19 +13,19 @@ A **schema** is a directory of `.d.ts` files under `schemas-langs/typescript_jav
 ### Step 1: Pick a name and a location
 
 ```
-schemas-langs/typescript_javascript/<schema_name>/
+config/schemas-langs/typescript_javascript/<schema_name>/
 ```
 
 Two roots are searched (`M.get_schema_roots` in `lua/plugins/fox/type_injector.lua`):
 
 1. `stdpath("data")/schemas-langs/typescript_javascript/<schema_name>/` — where the picker's `<C-n>` NPM install lands; fine for personal, machine-local schemas.
-2. `stdpath("config")/schemas-langs/typescript_javascript/<schema_name>/` (this repo's `schemas-langs/typescript_javascript/`) — versioned with the rest of FoxVim; use this for anything you want to keep and share across machines.
+2. `stdpath("config")/config/schemas-langs/typescript_javascript/<schema_name>/` (this repo's `config/schemas-langs/typescript_javascript/`) — versioned with the rest of FoxVim; use this for anything you want to keep and share across machines.
 
 ### Step 2: Get real `.d.ts` files, no `npm install` required
 
 `resolve_schema_dir()` / `active_schema_entries()` (`lua/plugins/fox/type_injector.lua`) accept **two shapes** for a schema directory:
 
-- **Flat** — an `index.d.ts` (or any `*.d.ts` at the top level) directly in `schemas-langs/typescript_javascript/<name>/`. Use this for most packages.
+- **Flat** — an `index.d.ts` (or any `*.d.ts` at the top level) directly in `config/schemas-langs/typescript_javascript/<name>/`. Use this for most packages.
 - **`node_modules/@types/<pkg>/`** — mirrors what `npm install` would produce. Only needed when a package's own `.d.ts` uses `/// <reference types="X" />` (an *ambient* reference, resolved through Node's module resolution) rather than `/// <reference path="./x.d.ts" />` (a plain relative file reference, which works with the flat shape — no special layout needed).
 
 Every real npm package that ships types is just a tarball on the registry — `npm` is only a convenience wrapper around fetching that tarball and unpacking it. You can do the unpack step yourself with `curl` + `tar`, no npm/Node package manager involved:
@@ -42,7 +42,7 @@ curl -sL https://registry.npmjs.org/@types/node/-/node-26.2.0.tgz -o pkg.tgz
 tar xzf pkg.tgz            # unpacks into ./package/ or ./<name>/, depending on the package
 
 # 3. Copy ONLY the type files (and package.json, for the version) into the schema
-CFG="$HOME/AppData/Local/nvim/schemas-langs/typescript_javascript/node"   # adjust for your platform
+CFG="$HOME/AppData/Local/nvim/config/schemas-langs/typescript_javascript/node"   # adjust for your platform
 mkdir -p "$CFG"
 cd /tmp/fetch/package   # or whatever the extracted top folder is named
 find . -type f \( -name "*.d.ts" -o -name "package.json" \) -exec cp --parents {} "$CFG/" \;
@@ -65,7 +65,7 @@ This is different from `/// <reference path="./globals.d.ts" />` — a `path` re
 If you see one, self-contain the dependency inside your schema so it works standalone, without requiring the other schema to also be active:
 
 ```
-schemas-langs/typescript_javascript/bun/
+config/schemas-langs/typescript_javascript/bun/
 ├── index.d.ts              -- has `/// <reference types="node" />`
 ├── globals.d.ts, bun.d.ts, sqlite.d.ts, ...
 └── node_modules/
@@ -147,7 +147,7 @@ Any project with the schema active picks it up the next time `tsc` re-reads the 
 
 **Through the picker:** select the schema, `<C-d>` — confirms, deletes the schema directory, deactivates it from the currently-open project's `.foxnvim/types.json` (other projects' `types.json` entries become dangling references — harmless, `scan_available_schemas()` just stops listing the name).
 
-**By hand:** delete `schemas-langs/typescript_javascript/<schema_name>/` (check both roots with `M.get_schema_roots("typescript_javascript")` if unsure which one has it), remove the name from `.foxnvim/types.json` in any project that had it active, and re-run `:FoxTypes` (or `:LspRestart`) there to regenerate `.foxnvim/types.d.ts` without it.
+**By hand:** delete `config/schemas-langs/typescript_javascript/<schema_name>/` (check both roots with `M.get_schema_roots("typescript_javascript")` if unsure which one has it), remove the name from `.foxnvim/types.json` in any project that had it active, and re-run `:FoxTypes` (or `:LspRestart`) there to regenerate `.foxnvim/types.d.ts` without it.
 
 ---
 
@@ -155,11 +155,11 @@ Any project with the schema active picks it up the next time `tsc` re-reads the 
 
 | Action | Picker | By hand |
 | :--- | :--- | :--- |
-| Create (via npm registry) | `<C-n>` → package name → installs through `npm install` | `curl` the registry tarball URL, `tar xzf`, copy `*.d.ts` + `package.json` into `schemas-langs/typescript_javascript/<name>/` |
+| Create (via npm registry) | `<C-n>` → package name → installs through `npm install` | `curl` the registry tarball URL, `tar xzf`, copy `*.d.ts` + `package.json` into `config/schemas-langs/typescript_javascript/<name>/` |
 | Handle a `types="X"` reference | Automatic — npm installs the dependency into `node_modules` | Nest a copy under `<name>/node_modules/@types/X/` yourself (Step 3) |
 | Register for a project | `<Enter>`/`<Tab>`/`<Space>` | Add name to `.foxnvim/types.json` → `"typescript_javascript": [...]`, then `:FoxTypes` once to regen `.foxnvim/types.d.ts` |
 | Update | — | Delete + re-fetch the folder's contents |
 | Deregister | `<Enter>`/`<Tab>`/`<Space>` (toggle off) | Remove name from `.foxnvim/types.json`, re-run `:FoxTypes`/`:LspRestart` |
-| Delete | `<C-d>` | `rm -rf schemas-langs/typescript_javascript/<name>` + remove from any project's `types.json` |
+| Delete | `<C-d>` | `rm -rf config/schemas-langs/typescript_javascript/<name>` + remove from any project's `types.json` |
 
 See [Type Injector](type-injector.md) for how the wiring works end to end (generated reference file, `tsconfig.json` patching, LSP notification), and [Managing Lua Type Schemas](how-to-manage-lua-type-schemas.md) for the Lua/`lua_ls` side.

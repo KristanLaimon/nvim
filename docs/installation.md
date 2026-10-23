@@ -25,8 +25,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\dependencies\install.ps1
 Open a terminal in `~/.config/nvim` (or your Windows config directory in Git Bash) and run:
 
 ```bash
-chmod +x scripts/dependencies/install.sh
-./scripts/dependencies/install.sh
+chmod +x config/scripts/dependencies/install.sh
+./config/scripts/dependencies/install.sh
 ```
 
 *`install.sh` detects your operating system and package manager (`apt`, `dnf`, `pacman`, `brew`, or `scoop` via Git Bash) and installs the required packages automatically.*
@@ -37,11 +37,11 @@ These scripts configure terminal emulator shortcuts for FoxVim; they do not conf
 
 | Script | Purpose |
 |---|---|
-| `scripts/setup-kitty.sh` / `scripts/unsetup-kitty.sh` | Enable or undo Ctrl+Shift+Enter, Ctrl+Shift+P and Ctrl+Shift+1..9 passthrough in Kitty |
-| `scripts/setup-bash.sh` / `scripts/unsetup-bash.sh` | Configure or undo shortcuts across supported terminals using Bash |
-| `scripts/setup-powershell.ps1` / `scripts/unsetup-powershell.ps1` | Windows Terminal shortcuts and PSReadLine key handlers |
+| `config/scripts/setup-kitty.sh` / `config/scripts/unsetup-kitty.sh` | Enable or undo Ctrl+Shift+Enter, Ctrl+Shift+P and Ctrl+Shift+1..9 passthrough in Kitty |
+| `config/scripts/setup-bash.sh` / `config/scripts/unsetup-bash.sh` | Configure or undo shortcuts across supported terminals using Bash |
+| `config/scripts/setup-powershell.ps1` / `config/scripts/unsetup-powershell.ps1` | Windows Terminal shortcuts and PSReadLine key handlers |
 
-For Kitty shortcuts, run `bash scripts/setup-kitty.sh`. Dependency installers live separately in `scripts/dependencies/`. The additional PowerShell configurator for multiple terminal emulators is preserved in `scripts/extra/setup-terminals.ps1`. See [the scripts guide](../scripts/README.md) for the layout.
+For Kitty shortcuts, run `bash config/scripts/setup-kitty.sh`. Dependency installers live separately in `config/scripts/dependencies/`. The additional PowerShell configurator for multiple terminal emulators is preserved in `config/scripts/extra/setup-terminals.ps1`. See [the scripts guide](../config/scripts/README.md) for the layout.
 
 ---
 

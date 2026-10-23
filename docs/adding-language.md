@@ -4,7 +4,7 @@
 
 This guide outlines the exact step-by-step procedure for adding new programming language support, Language Servers (LSPs), Treesitter syntax highlighting, and auto-formatters to this Neovim setup.
 
-> ⚠️ **This config is not the "add each server to one big `servers = {}` table" style.** Every language owns one file, [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs/), exporting `M.lsp_config`, `M.mason`/`M.mason_order`, `M.formatters_by_ft`, and (optionally) DAP config. `lua/plugins/lsp/lsp.lua`, `lua/plugins/lsp/formatting.lua`, and `lua/fox/core/installer.lua` only *merge* those per-language tables — they have no hardcoded per-language entries to edit. See [`docs/languages.md`](languages.md) for the full picture.
+> ⚠️ **This config is not the "add each server to one big `servers = {}` table" style.** Every language owns one file, [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs), exporting `M.lsp_config`, `M.mason`/`M.mason_order`, `M.formatters_by_ft`, and (optionally) DAP config. `lua/plugins/lsp/lsp.lua`, `lua/plugins/lsp/formatting.lua`, and `lua/fox/core/installer.lua` only *merge* those per-language tables — they have no hardcoded per-language entries to edit. See [`docs/languages.md`](languages.md) for the full picture.
 
 ---
 
@@ -190,10 +190,10 @@ See [`docs/debug-adapters.md`](debug-adapters.md) for the full DAP setup guide.
 
 | Component | File to Edit | Key Section |
 |---|---|---|
-| **LSP Server + Formatter + Mason metadata** | [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs/) | `M.lsp_config`, `M.formatters_by_ft`, `M.mason`/`M.mason_order` |
+| **LSP Server + Formatter + Mason metadata** | [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs) | `M.lsp_config`, `M.formatters_by_ft`, `M.mason`/`M.mason_order` |
 | **Register the module** | [`lua/fox/langs/init.lua`](../lua/fox/langs/init.lua) | Add to `M.langs` |
-| **Install bundle (Mason pkgs + Treesitter parsers)** | [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs/) | `M.bundle_name`, `M.requires`, `M.treesitter` |
-| **Debug Adapter (optional)** | [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs/) (primary) · [`lua/plugins/editor/dap.lua`](../lua/plugins/editor/dap.lua) (add key to picker order) · [`lua/fox/launch/runtimes.lua`](../lua/fox/launch/runtimes.lua) (add key to `M.order`, if adding a launch runtime) | See [debug-adapters.md](debug-adapters.md) |
+| **Install bundle (Mason pkgs + Treesitter parsers)** | [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs) | `M.bundle_name`, `M.requires`, `M.treesitter` |
+| **Debug Adapter (optional)** | [`lua/fox/langs/<language>/init.lua`](../lua/fox/langs) (primary) · [`lua/plugins/editor/dap.lua`](../lua/plugins/editor/dap.lua) (add key to picker order) · [`lua/fox/launch/runtimes.lua`](../lua/fox/launch/runtimes.lua) (add key to `M.order`, if adding a launch runtime) | See [debug-adapters.md](debug-adapters.md) |
 
 `lua/plugins/lsp/lsp.lua`, `lua/plugins/lsp/formatting.lua`, `lua/plugins/lsp/treesitter.lua`, and `lua/fox/core/installer.lua` need **no edits** for a new language — they only aggregate what the language module declares (`installer.lua`'s `M.language_bundles` is built from it automatically).
 

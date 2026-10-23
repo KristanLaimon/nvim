@@ -18,7 +18,7 @@ If you have just installed or launched FoxVim for the first time, follow these s
 2. **Open the Dashboard & Wiki**: If you land on the dashboard screen, press `w` to open this Wiki inside Neovim (or run `:FoxWiki` / `:NvimWiki` from anywhere, or `<C-S-d>`).
 3. **Sync External Dependencies**: FoxVim relies on a few external CLI utilities (like `ripgrep`, `fd`, `gcc`, `chafa`, `node`, `bun`, `go`, `dotnet`). Run the automated setup script for your platform:
    - **Windows (PowerShell)**: `powershell -ExecutionPolicy Bypass -File .\scripts\dependencies\install.ps1`
-   - **Linux / WSL / Git Bash**: `./scripts/dependencies/install.sh`
+   - **Linux / WSL / Git Bash**: `./config/scripts/dependencies/install.sh`
    *(These scripts are idempotent—safe to run at any time! If you haven't run them yet, FoxVim will still run with [graceful fallbacks](installation.md#⚡-what-if-you-havent-run-setupps1-or-setupsh).)*
 4. **Discover Shortcuts**: Press `<C-S-p>` to launch the **Command Palette**, or press `?` / `<F1>` in any window to get instant, context-aware keyboard help.
 5. **Want to change something?** Every feature here is meant to be edited by you, not just read about — [How-To & Customization Guide § Quick Answer](how-to-customize-editor.md#⚡-quick-answer-how-do-i-change-x) is the fastest path from "I don't like this" to "fixed it myself."
@@ -96,7 +96,7 @@ If you have just installed or launched FoxVim for the first time, follow these s
 | 🧬 [**Managing Lua Type Schemas**](how-to-manage-lua-type-schemas.md) | Create/update/delete/register a [Type Injector](type-injector.md) Lua schema by hand, no picker needed |
 | 🧬 [**Managing TypeScript Type Schemas**](how-to-manage-typescript-type-schemas.md) | Same, for TypeScript/JS — fetching real `.d.ts` files straight from the npm registry, no `npm install` |
 | 📶 [**Dynamic Z-Index Manager**](z-index.md) | Centralized Z-index stack manager (`fox.core.z_index`) for floating windows |
-| 🧪 [**Testing Suite**](testing.md) | Running unit & integration tests (`:FoxTest`, `tests/run.lua`) |
+| 🧪 [**Testing Suite**](testing.md) | Running unit & integration tests (`:FoxTest`, `config/tests/run.lua`) |
 
 ---
 

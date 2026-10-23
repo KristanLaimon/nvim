@@ -14,47 +14,34 @@ If you only read one section, read [The four layers](#-the-four-layers) and
 
 ```
 nvim/
-├── init.lua                  Entry point: options → keymaps → lazy
+├── init.lua                  Editor entry point
+├── lazy-lock.json            Plugin versions
+├── run_me.lua                Setup and quality-check runner
+├── README.md
+├── AGENTS.md                 Assistant guidelines
 ├── lua/
-│   ├── config/               Editor bootstrap (no features live here)
-│   │   ├── options.lua       Options, filetypes, shell, PATH repair
-│   │   ├── lazy.lua          Plugin manager bootstrap and import order
-│   │   └── keymaps/          Every keybinding, split by domain
-│   │       ├── init.lua      Loads the five modules below
-│   │       ├── editor.lua    Text, clipboard, windows, buffers
-│   │       ├── search.lua    Find files, splits, URLs
-│   │       ├── lsp.lua       Hover, diagnostics, code actions, rename
-│   │       ├── debug.lua     DAP keys and the repl toggle
-│   │       └── fox.lua       Tasks, launch profiles, git, explorers, scripts
-│   │
-│   ├── fox/                  Shared internal libraries (pure Lua, testable)
-│   │   ├── core/             path, store, project, ui, dock, lazyspec
-│   │   ├── git/              cmd, status, diff
-│   │   ├── launch/           runtimes (how to run and debug each language)
-│   │   ├── lsp/              code_action_menu, editorconfig, dap_repl_source
-│   │   └── projects/         favorites
-│   │
-│   ├── plugins/              One lazy.nvim spec per file
-│   │   ├── ui/               Dashboard, bufferline, theme, icons, notifications
-│   │   ├── editor/           telescope, neo-tree, dap, neogit, markdown, …
-│   │   ├── lsp/              Servers, formatting, treesitter, completion sources
-│   │   ├── fox/              This config's own features (each a local spec)
-│   │   │   └── debuggers/    Per-language DAP wiring (NOT specs)
-│   │   └── miscelanea/       Everything that fits nowhere else
-│   │
-│   └── foxnvim/              The FoxVim Lua libraries (public API)
-│       └── tests/            Its own spec suite
-│
-├── tests/                    Config test suite (see docs/testing.md)
-│   ├── run.lua               Headless unit runner
-│   ├── syntax_check.lua      Parses every Lua file
-│   ├── spec/                 Unit specs (no plugins required)
-│   └── integration/          Specs that need the real editor
-│
-├── colors/                   The nagatoro-fox colorscheme
-├── schemas/                  Bundled JSON & TOML schemas
-├── schemas-langs/            Type definition bundles for the type injector
-└── docs/                     This documentation
+│   ├── vim_options.lua       Editor options and bootstrap hooks
+│   ├── lazy_init.lua         Plugin manager bootstrap
+│   ├── keymaps/              Global keybindings
+│   ├── fox/                  Core, languages, libraries, and features
+│   └── plugins/              Plugin specifications
+├── after/                    Filetype overrides
+├── docs/                     Wiki and language guides
+├── config/
+│   ├── aliases/              Compiler shims
+│   ├── colors/               Local colorschemes
+│   ├── schemas/              JSON, TOML, and XML schemas
+│   ├── schemas-langs/        Bundled type definitions
+│   ├── snippets/             Snippet definitions and schema
+│   ├── templates/            File creation templates
+│   ├── scripts/              Setup scripts and utilities
+│   ├── tests/                Unit and integration suites
+│   ├── tools/                FoxQuery binaries and Go sources
+│   ├── skills/               Local skills
+│   └── plans_notes_md/       Plans, notes, and refactor briefs
+├── .foxnvim/                 Local project state (ignored by Git)
+├── .github/                  Repository assets
+└── .*                        Git and tool configuration
 ```
 
 ---
@@ -110,7 +97,7 @@ knows nothing about this configuration.
 
 **Layer 2 — Shared libraries (`lua/fox/`).** Pure Lua. No keymaps, no autocmds,
 no user commands, no global state. Everything here is unit-testable without
-starting a plugin, which is exactly why the tests in `tests/spec/` are fast.
+starting a plugin, which is exactly why the tests in `config/tests/spec/` are fast.
 
 **Layer 3 — Features (`lua/plugins/`).** Each file returns a lazy.nvim spec.
 This is where UI, keymaps, commands and state live. FOX features may use
@@ -300,7 +287,7 @@ Global state (caches, not settings) lives under `stdpath("data")`:
 | Add a language to run/debug | `lua/fox/launch/runtimes.lua` + `lua/plugins/fox/debuggers/` | See [adding-language.md](adding-language.md). |
 | Add an editor option | `lua/vim_options.lua` | The `settings` table at the top. |
 | Change a feature's behaviour | That module's `M.settings` block | Always the first thing in the file. |
-| Add a test | `tests/spec/` or `tests/integration/` | See [testing.md](testing.md). |
+| Add a test | `config/tests/spec/` or `config/tests/integration/` | See [testing.md](testing.md). |
 
 ---
 
@@ -350,9 +337,9 @@ Rules that are load-bearing rather than cosmetic:
 
 ```mermaid
 graph LR
-    SYNTAX["tests/syntax_check.lua<br/>parses every Lua file"]
-    UNIT["tests/run.lua<br/>tests/spec/*_spec.lua"]
-    INTEG["tests/integration/run.lua<br/>*_spec.lua with plugins"]
+    SYNTAX["config/tests/syntax_check.lua<br/>parses every Lua file"]
+    UNIT["config/tests/run.lua<br/>config/tests/spec/*_spec.lua"]
+    INTEG["config/tests/integration/run.lua<br/>*_spec.lua with plugins"]
     FOXNVIM["lua/fox/lib/foxnvim/tests/<br/>library suite"]
 
     SYNTAX --> UNIT --> INTEG
@@ -360,9 +347,9 @@ graph LR
 ```
 
 ```sh
-nvim -l tests/syntax_check.lua                 # nothing is broken
-nvim -l tests/run.lua                          # unit specs (fast, no plugins)
-nvim --headless -S tests/integration/run.lua   # with the real editor
+nvim -l config/tests/syntax_check.lua                 # nothing is broken
+nvim -l config/tests/run.lua                          # unit specs (fast, no plugins)
+nvim --headless -S config/tests/integration/run.lua   # with the real editor
 ```
 
 Details, and how to write a spec, in [testing.md](testing.md).

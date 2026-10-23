@@ -6,8 +6,8 @@
 --   Love2D script gets Love types, a Neovim config gets vim types, and a plain
 --   Lua project gets neither.
 --
---   Schemas live in `schemas-langs/<lang>/<schema>/` (both in this config and in
---   `stdpath("data")`). For TS/JS they can also be installed straight from npm
+--   Bundled schemas live in `config/schemas-langs/<lang>/<schema>/`; downloads
+--   stay under `stdpath("data")/schemas-langs/`. TS/JS schemas can come from npm
 --   (`@types/...`) through the picker.
 --
 -- HOW EACH LANGUAGE IS WIRED
@@ -220,7 +220,7 @@ end
 function M.get_schema_roots(lang)
 	return {
 		vim.fs.normalize(path.join(vim.fn.stdpath("data"), M.settings.schemas_dir, lang)),
-		vim.fs.normalize(path.join(vim.fn.stdpath("config"), M.settings.schemas_dir, lang)),
+		vim.fs.normalize(path.join(vim.fn.stdpath("config"), "config", M.settings.schemas_dir, lang)),
 	}
 end
 

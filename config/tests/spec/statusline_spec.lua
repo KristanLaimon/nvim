@@ -1,0 +1,137 @@
+-- ============================================================================
+-- config/tests/spec/statusline_spec.lua -- Statusline engine & theme picker.
+-- ============================================================================
+
+local t = require("fox.lib.foxnvim.test")
+local describe, it, expect = t.describe, t.it, t.expect
+local statusline = require("plugins.fox.ui.statusline_picker")
+
+describe("plugins.fox.ui.statusline_picker", function()
+	it("shows Editor and Query with only the current workspace mode in normal color", function()
+		local saved = package.loaded["fox.query"]
+		local ok, err = pcall(function()
+			package.loaded["fox.query"] = nil
+			local editor = statusline.workflow_status()
+			expect(vim.api.nvim_eval_statusline(editor, {}).str).toBe("[Editor | Query]")
+			expect(editor).toContain("%#StatusLine#Editor")
+			expect(editor).toContain("%#FoxWorkflowInactive#Query")
+			local state = { mode = "query", tab = vim.api.nvim_get_current_tabpage() }
+			package.loaded["fox.query"] = { states = { test = state } }
+			local query = statusline.workflow_status()
+			expect(vim.api.nvim_eval_statusline(query, {}).str).toBe("[Editor | Query]")
+			expect(query).toContain("%#FoxWorkflowInactive#Editor")
+			expect(query).toContain("%#StatusLine#Query")
+			state.tab = -1
+			expect(statusline.workflow_status()).toBe(editor)
+		end)
+		package.loaded["fox.query"] = saved
+		if not ok then
+			error(err)
+		end
+	end)
+
+	it("formats modes into NvChad icon pills", function()
+		expect(statusline.format_mode("NORMAL")).toBe(" NORMAL")
+		expect(statusline.format_mode("INSERT")).toBe("󰏫 INSERT")
+		expect(statusline.format_mode("VISUAL")).toBe("󰈈 VISUAL")
+		expect(statusline.format_mode("COMMAND")).toBe("󰘳 COMMAND")
+	end)
+
+	it("formats current buffer line ending into LF / CRLF / CR labels", function()
+		local buf = vim.api.nvim_get_current_buf()
+		local saved = vim.bo[buf].fileformat
+
+		vim.bo[buf].fileformat = "unix"
+		expect(statusline.fileformat_status()).toBe("⏎ LF")
+
+		vim.bo[buf].fileformat = "dos"
+		expect(statusline.fileformat_status()).toBe("⏎ CRLF")
+
+		vim.bo[buf].fileformat = "mac"
+		expect(statusline.fileformat_status()).toBe("⏎ CR")
+
+		vim.bo[buf].fileformat = saved
+	end)
+
+	it("is placed first in the left statusbar section for every theme", function()
+		local themes = { "nvchad_pills", "nvchad_blocks", "nvchad_round", "nagatoro_classic", "vscode", "minimal" }
+		for _, name in ipairs(themes) do
+			local cfg = statusline.get_lualine_config(name)
+			local secs = cfg.sections
+			local left = name == "nagatoro_classic" and secs.lualine_a or secs.lualine_b
+			expect(left[1]).toBe(statusline.fileformat_status)
+		end
+	end)
+
+	it("returns formatted LSP status string", function()
+		expect(statusline.lsp_status()).toBeDefined()
+		expect(type(statusline.lsp_status())).toBe("string")
+	end)
+
+	it("cleans up raw terminal URLs into readable badges", function()
+		expect(statusline.format_filename("term://~\\AppData\\Local\\nvim//14964:C:\\PROGRA~1\\Git\\bin\\bash.exe")).toBe(
+			"󰞷 Terminal (bash)"
+		)
+		expect(statusline.format_filename("term://code//5120:powershell.exe")).toBe("󰞷 Terminal (powershell)")
+		expect(statusline.format_filename("lua/config/options.lua")).toBe("lua/config/options.lua")
+	end)
+
+	it("formats multi-terminal labels with process title (Terminal #number - process)", function()
+		vim.b.fox_term_num = 2
+		vim.b.term_title = nil
+		expect(statusline.format_filename("term://code//5120:powershell.exe")).toBe("󰞷 Terminal #2 - powershell")
+
+		vim.b.term_title = "claude"
+		expect(statusline.format_filename("term://code//5120:powershell.exe")).toBe("󰞷 Terminal #2 - claude")
+
+		vim.b.term_title = "Administrator: Windows PowerShell"
+		expect(statusline.format_filename("term://code//5120:powershell.exe")).toBe("󰞷 Terminal #2 - powershell")
+
+		vim.b.fox_term_num = nil
+		vim.b.term_title = nil
+	end)
+
+	it("returns valid lualine options for all supported themes", function()
+		local themes = { "nvchad_pills", "nvchad_blocks", "nvchad_round", "nagatoro_classic", "vscode", "minimal" }
+		for _, name in ipairs(themes) do
+			local cfg = statusline.get_lualine_config(name)
+			expect(cfg).toBeDefined()
+			expect(cfg.options).toBeDefined()
+			expect(cfg.sections).toBeDefined()
+			expect(cfg.sections.lualine_a).toBeDefined()
+			expect(cfg.sections.lualine_c[1]).toBe(statusline.workflow_status)
+		end
+	end)
+
+	it("registers FoxStatuslineTheme user command", function()
+		statusline.setup()
+		local cmds = vim.api.nvim_get_commands({})
+		expect(cmds["FoxStatuslineTheme"]).toBeDefined()
+	end)
+
+	it("dynamically resolves git branch from directory instead of defaulting to main", function()
+		-- In current repo
+		local cur_branch = statusline.resolve_git_branch(vim.fn.getcwd())
+		expect(type(cur_branch)).toBe("string")
+		expect(cur_branch ~= "").toBeTruthy()
+
+		-- In non-git directory, returns empty string
+		local tmp_dir = vim.fn.tempname()
+		vim.fn.mkdir(tmp_dir, "p")
+		expect(statusline.resolve_git_branch(tmp_dir)).toBe("")
+
+		-- In a repo with custom branch name
+		local test_repo = vim.fn.tempname()
+		vim.fn.mkdir(test_repo, "p")
+		vim.fn.system({ "git", "-C", test_repo, "init", "-b", "feature-statusline-test" })
+		local resolved = statusline.resolve_git_branch(test_repo)
+		expect(resolved).toBe("feature-statusline-test")
+
+		-- Test git_branch() function
+		local branch_label = statusline.git_branch()
+		expect(type(branch_label)).toBe("string")
+
+		vim.fn.delete(tmp_dir, "rf")
+		vim.fn.delete(test_repo, "rf")
+	end)
+end)

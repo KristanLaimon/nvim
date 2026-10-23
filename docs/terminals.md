@@ -44,7 +44,7 @@ Terminal preferences are persisted globally in Neovim's state directory (`stdpat
 
 ## Fastfetch images in Unix terminals
 
-Neovim prepends `scripts/terminal-bin` from this config to its own `PATH` via
+Neovim prepends `config/scripts/terminal-bin` from this config to its own `PATH` via
 `fox.core.terminal_fastfetch`. The bundled `fastfetch` wrapper finds the real
 Fastfetch executable through `PATH`; it needs no machine-specific binary path.
 Inside Neovim, it uses Fastfetch's Chafa renderer when `--list-features` lists
@@ -58,5 +58,5 @@ Fastfetch's global configuration and terminals launched outside Neovim alone.
 Restart Neovim after installing or updating this integration. Keep the wrapper
 executable when copying this config to another Unix system. Native Windows and
 WSL sessions launched from Windows Neovim are not configured by this integration.
-Shell startup files that replace `PATH` must preserve `scripts/terminal-bin` for
+Shell startup files that replace `PATH` must preserve `config/scripts/terminal-bin` for
 the wrapper to be used. Absolute calls to a different Fastfetch binary bypass it.

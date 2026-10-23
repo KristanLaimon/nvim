@@ -173,4 +173,4 @@ return setmetatable({
 - [ ] **Configuration First:** Store all user-tunable values in `M.settings` at the top.
 - [ ] **No Monolithic Shared Files:** If you write a helper function needed by two features, place it in `lua/fox/<area>/<helper>.lua` rather than duplicating logic.
 - [ ] **Unique Marker Directory:** Ensure `dir = require("fox.core.lazyspec").for_module()` is included in the spec return.
-- [ ] **Test Coverage:** Add a unit spec in `tests/spec/` or an integration test in `tests/integration/` (see [Testing Guide](testing.md)).
+- [ ] **Test Coverage:** Add a unit spec in `config/tests/spec/` or an integration test in `config/tests/integration/` (see [Testing Guide](testing.md)).

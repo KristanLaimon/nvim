@@ -259,11 +259,11 @@ Python prefers the project's virtualenv interpreter over whatever `python` resol
 adapter and seven standard profiles locally in `fox.langs.go`; no separate Go setup
 plugin is required.
 
-`tests/dap_debuggers_check.lua` fails loudly if this wiring drifts (config counts and
+`config/tests/dap_debuggers_check.lua` fails loudly if this wiring drifts (config counts and
 per-filetype ordering):
 
 ```
-nvim --headless -n -S tests/dap_debuggers_check.lua
+nvim --headless -n -S config/tests/dap_debuggers_check.lua
 ```
 
 ### 3.5 The layer around the session
@@ -539,12 +539,12 @@ different failure where the session stops correctly but the UI shows you the wro
 ### 6.3 Cut the editor out entirely
 
 The strongest move: drive the adapter yourself, no Neovim involved. That is
-[`tests/bun_dap_breakpoint_check.ts`](../tests/bun_dap_breakpoint_check.ts) — ~60 lines that
+[`config/tests/bun_dap_breakpoint_check.ts`](../config/tests/bun_dap_breakpoint_check.ts) — ~60 lines that
 spawn the adapter, send `initialize` + `launch`, respond to `initialized` with
 `setBreakpoints` + `configurationDone`, and assert a `stopped` event on the expected line:
 
 ```
-bun tests/bun_dap_breakpoint_check.ts
+bun config/tests/bun_dap_breakpoint_check.ts
 ```
 
 ```
@@ -606,7 +606,7 @@ Two-thirds of the work in this integration was platform detail, not protocol.
    `SERVER_SOURCE`, restart nvim, run the check script. Watch it fail the same way. Restore it.
    Deliberately reproducing a bug you already fixed is the cheapest way to actually own the
    explanation.
-4. **Write a check script for another adapter.** Copy `tests/bun_dap_breakpoint_check.ts`, point
+4. **Write a check script for another adapter.** Copy `config/tests/bun_dap_breakpoint_check.ts`, point
    it at `debugpy`, adjust the launch arguments. You will learn more about DAP in that hour than
    from any spec.
 5. **Handle a reverse request.** Make the check script answer a `runInTerminal` reverse request
@@ -623,7 +623,7 @@ Two-thirds of the work in this integration was platform detail, not protocol.
 | [`lua/plugins/editor/dap.lua`](../lua/plugins/editor/dap.lua) | All adapters + configurations + dap-ui setup |
 | [`lua/plugins/fox/bun_dap.lua`](../lua/plugins/fox/bun_dap.lua) | Bun adapter installer and generated stdio server |
 | [`lua/plugins/fox/launch_profiles.lua`](../lua/plugins/fox/launch_profiles.lua) | Per-project profiles that build DAP configs dynamically |
-| [`tests/bun_dap_breakpoint_check.ts`](../tests/bun_dap_breakpoint_check.ts) | Editor-free breakpoint regression check |
+| [`config/tests/bun_dap_breakpoint_check.ts`](../config/tests/bun_dap_breakpoint_check.ts) | Editor-free breakpoint regression check |
 | [`dapmin.lua`](../dapmin.lua) / [`dapdiag.lua`](../dapdiag.lua) | Minimal repro harness / session state logger |
 
 **Outside**

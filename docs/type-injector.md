@@ -22,7 +22,7 @@ The language is inferred from the current filetype; from any other buffer it ask
 ## 📁 Where schemas come from
 
 ```
-schemas-langs/
+config/schemas-langs/
 ├── lua/
 │   ├── vim_nvim/       -- Neovim API
 │   ├── neovide/        -- Neovide GUI globals (vim.g)
@@ -38,7 +38,7 @@ Each directory is a schema. A TS schema is either a flat folder of `.d.ts` files
 
 The `love` Lua schema targets the released **LÖVE 11.5 API**. It covers all modules, object methods, enums, and callbacks in the [wiki-derived LÖVE API catalog](https://github.com/love2d-community/love-api), with links from the hover documentation to the [official LÖVE wiki](https://love2d.org/wiki/love). Common functions also include short examples and usage tips. LÖVE 12.0 is still described as in development on the [official version history](https://love2d.org/wiki/Version_History), so its new API is outside this schema.
 
-To refresh the schema after updating that catalog, extract its repository and run `lua scripts/generate_love_types.lua /path/to/love-api` from this repository root. The generator checks the catalog version before replacing `schemas-langs/lua/love/love_types.lua`.
+To refresh the schema after updating that catalog, extract its repository and run `lua config/scripts/generate_love_types.lua /path/to/love-api` from this repository root. The generator checks the catalog version before replacing `config/schemas-langs/lua/love/love_types.lua`.
 
 Adding one is just adding a directory — `scan_available_schemas()` reads the filesystem, there is no registry to update. See [Managing TypeScript Type Schemas](how-to-manage-typescript-type-schemas.md) for how `node/` and `bun/` were populated without running `npm install`.
 

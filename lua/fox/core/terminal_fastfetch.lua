@@ -6,7 +6,7 @@ function M.setup()
 		return
 	end
 
-	local bin = vim.fn.stdpath("config") .. "/scripts/terminal-bin"
+	local bin = vim.fn.stdpath("config") .. "/config/scripts/terminal-bin"
 	if vim.fn.executable(bin .. "/fastfetch") ~= 1 then
 		return
 	end

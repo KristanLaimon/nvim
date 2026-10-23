@@ -377,6 +377,9 @@ class Driver:
 
 
 def main():
+    # JSONL is UTF-8 on both ends, regardless of the Windows console code page.
+    sys.stdin.reconfigure(encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8")
     driver, requests, output_lock = Driver(), queue.Queue(), threading.Lock()
 
     def emit(message):

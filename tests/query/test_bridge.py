@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -91,11 +92,15 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(bridge.bound_sql(sql, positions, "mysql"), "SELECT '50%%', %s, 100 %% 7")
         self.assertEqual(len(bridge.prepare("SELECT $$?;$$, ?", "postgres")[0][1]), 1)
 
-    def test_protocol_survives_errors_and_never_writes_query_state(self):
-        proc = subprocess.Popen([sys.executable, "-u", "-B", str(BRIDGE)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", cwd=self.root)
+    def test_protocol_survives_errors_and_unicode_with_legacy_encoding(self):
+        with sqlite3.connect(self.path) as con:
+            con.execute("UPDATE customers SET name = ?", ["獣"])
+        con.close()
+        env = {**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0"}
+        proc = subprocess.Popen([sys.executable, "-u", "-B", str(BRIDGE)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", cwd=self.root, env=env)
         try:
             def request(payload):
-                proc.stdin.write(json.dumps(payload) + "\n")
+                proc.stdin.write(json.dumps(payload, ensure_ascii=False) + "\n")
                 proc.stdin.flush()
                 return json.loads(proc.stdout.readline())
             result = request({"id": 1, "op": "connect", "root": str(self.root), "profile": {"engine": "sqlite", "path": "fixture.db"}})
@@ -104,6 +109,11 @@ class BridgeTests(unittest.TestCase):
             self.assertIn("error", result)
             result = request({"id": 3, "op": "execute", "sql": "SELECT ?", "params": ["secret-value"]})
             self.assertEqual(result["result"]["sets"][0]["rows"], [["secret-value"]])
+            result = request({"id": 4, "op": "execute", "sql": "SELECT name FROM customers", "params": []})
+            self.assertEqual(result["result"]["sets"][0]["rows"], [["獣"]])
+            result = request({"id": 5, "op": "execute", "sql": "SELECT '獣' AS \"名前\", ? AS bound", "params": ["á🦊獣"]})
+            self.assertEqual(result["result"]["sets"][0]["columns"], ["名前", "bound"])
+            self.assertEqual(result["result"]["sets"][0]["rows"], [["獣", "á🦊獣"]])
             self.assertEqual({p.name for p in self.root.iterdir()}, {"fixture.db"})
         finally:
             proc.stdin.close()

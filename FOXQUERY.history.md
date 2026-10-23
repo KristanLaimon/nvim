@@ -2,6 +2,8 @@
 
 Updated: 2026-10-22. Repository: `C:/Users/USER/AppData/Local/nvim`.
 
+Latest fix: Windows `'charmap' codec can't encode ... '\u7363'` during query results came from locale-dependent Python JSONL streams. `scripts/query_bridge.py` explicitly reconfigures stdin/stdout as UTF-8 before starting the worker. Disconnect/reconnect to replace an already running worker. Regression forces `PYTHONIOENCODING=cp1252` / `PYTHONUTF8=0` and verifies ASCII SQL returning stored `獣`, plus raw Unicode SQL/column names/bound values. All 9 Python driver tests and 4 Query UI/integration tests passed; no production queries were used. The full 785-test suite was not rerun for this transport-only fix.
+
 ## Resume here
 
 Read this file, `AGENTS.md`, `docs/query-mode.md`, then `IMPLEMENTATION-FOXQUERYGRIP.findings.md`. Check current code and `git status` before editing; existing staged work belongs to the user. Do not reset, unstage, or overwrite it. No commits were requested.

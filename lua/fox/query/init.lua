@@ -164,48 +164,72 @@ local function console(state)
 end
 
 function M.select(items, opts, callback)
-	local ok, pickers = pcall(require, "telescope.pickers")
-	if not ok then
-		notify("Query menus require Telescope", vim.log.levels.ERROR)
+	if #items == 0 then
 		callback(nil)
 		return
 	end
-	local actions = require("telescope.actions")
-	pickers
-		.new({}, {
-			prompt_title = opts.prompt,
-			finder = require("telescope.finders").new_table({
-				results = items,
-				entry_maker = function(item)
-					local label = opts.format_item and opts.format_item(item) or tostring(item)
-					return { value = item, display = label:gsub("[%c]", " "), ordinal = label }
-				end,
-			}),
-			sorter = require("telescope.config").values.generic_sorter({}),
-			attach_mappings = function(prompt)
-				local resolved = false
-				vim.api.nvim_create_autocmd("BufWipeout", {
-					buffer = prompt,
-					once = true,
-					callback = function()
-						if not resolved then
-							resolved = true
-							vim.schedule(function()
-								callback(nil)
-							end)
-						end
-					end,
-				})
-				actions.select_default:replace(function()
-					local entry = require("telescope.actions.state").get_selected_entry()
-					resolved = true
-					actions.close(prompt)
-					callback(entry and entry.value)
+	vim.cmd("stopinsert")
+	local prompt = (opts.prompt or "Choose"):gsub("[%c]", " ")
+	local lines, width = { prompt, "" }, vim.fn.strdisplaywidth(prompt)
+	for _, item in ipairs(items) do
+		local label = (opts.format_item and opts.format_item(item) or tostring(item)):gsub("[%c]", " ")
+		lines[#lines + 1] = label
+		width = math.max(width, vim.fn.strdisplaywidth(label))
+	end
+	width = math.max(1, math.min(math.max(24, width), 90, vim.o.columns - 4))
+	lines[2] = string.rep("-", width)
+	local height = 0
+	for _, line in ipairs(lines) do
+		height = height + math.max(1, math.ceil(vim.fn.strdisplaywidth(line) / width))
+	end
+	local buf, win = require("fox.core.ui").float({
+		title = " Query ",
+		lines = lines,
+		width = width,
+		height = math.max(1, math.min(height, vim.o.lines - 6)),
+	})
+	vim.b[buf].fox_query_root = M.state().root
+	vim.wo[win].wrap, vim.wo[win].cursorline = true, true
+	vim.api.nvim_win_set_cursor(win, { 3, 0 })
+	local resolved = false
+	local function finish(item, index)
+		if resolved then
+			return
+		end
+		resolved = true
+		if valid(win, "win") and vim.api.nvim_win_get_buf(win) == buf then
+			vim.api.nvim_win_close(win, true)
+		end
+		callback(item, index)
+	end
+	vim.api.nvim_create_autocmd("BufWipeout", {
+		buffer = buf,
+		once = true,
+		callback = function()
+			if not resolved then
+				vim.schedule(function()
+					finish(nil)
 				end)
-				return true
-			end,
-		})
-		:find()
+			end
+		end,
+	})
+	for _, key in ipairs({ "q", "<Esc>", "<C-c>" }) do
+		vim.keymap.set("n", key, function()
+			finish(nil)
+		end, { buffer = buf, silent = true, nowait = true })
+	end
+	vim.keymap.set("n", "<CR>", function()
+		local index = vim.api.nvim_win_get_cursor(win)[1] - 2
+		if items[index] then
+			finish(items[index], index)
+		end
+	end, { buffer = buf, silent = true })
+	for key, direction in pairs({ j = 1, k = -1, ["<Down>"] = 1, ["<Up>"] = -1, ["<C-n>"] = 1, ["<C-p>"] = -1 }) do
+		vim.keymap.set("n", key, function()
+			local row = math.max(3, math.min(#lines, vim.api.nvim_win_get_cursor(win)[1] + direction))
+			vim.api.nvim_win_set_cursor(win, { row, 0 })
+		end, { buffer = buf, silent = true })
+	end
 end
 
 function M.empty(state)
@@ -1567,12 +1591,7 @@ function M.insert_join(target)
 			return candidate.target == target.key
 		end, candidates)
 	end
-	M.select(candidates, {
-		prompt = "Choose foreign key mapping",
-		format_item = function(candidate)
-			return sql.join_label(candidate)
-		end,
-	}, function(candidate)
+	local function choose(candidate)
 		if not candidate then
 			return
 		end
@@ -1589,51 +1608,55 @@ function M.insert_join(target)
 					return
 				end
 			end
-			M.select({ "INNER", "LEFT" }, { prompt = "JOIN type" }, function(kind)
-				if not kind then
-					return
-				end
+			local joins = {}
+			for _, kind in ipairs({ "INNER", "LEFT" }) do
 				local join, join_err = sql.join_sql(candidate, alias, kind, active.profile.engine)
 				if not join then
 					notify(join_err, vim.log.levels.WARN)
 					return
 				end
-				M.select({ "Insert this JOIN", "Cancel" }, { prompt = join }, function(choice)
-					if choice ~= "Insert this JOIN" then
-						return
+				joins[#joins + 1] = join
+			end
+			M.select(joins, { prompt = "Insert JOIN (Enter inserts the selected SQL; Esc cancels)" }, function(join)
+				if not join then
+					return
+				end
+				local current = text_at_cursor(state)
+				if current ~= text then
+					notify("SQL changed while reviewing; choose the JOIN again", vim.log.levels.WARN)
+					return
+				end
+				local statements = sql.statements(text, state.metadata.syntax or state.metadata.engine)
+				local first, last = 1, #text + 1
+				for _, entry in ipairs(statements or {}) do
+					if offset >= entry.first and offset <= entry.last then
+						first, last = entry.first, entry.last
+						break
 					end
-					local current = text_at_cursor(state)
-					if current ~= text then
-						notify("SQL changed while reviewing; choose the JOIN again", vim.log.levels.WARN)
-						return
+				end
+				local at = last
+				for _, token in ipairs(sql.tokens(statement)) do
+					if
+						token.kind == "word"
+						and vim.tbl_contains({ "WHERE", "GROUP", "ORDER", "HAVING", "LIMIT", "UNION" }, token.upper)
+					then
+						at = first + token.first - 1
+						break
 					end
-					local statements = sql.statements(text, state.metadata.syntax or state.metadata.engine)
-					local first, last = 1, #text + 1
-					for _, entry in ipairs(statements or {}) do
-						if offset >= entry.first and offset <= entry.last then
-							first, last = entry.first, entry.last
-							break
-						end
-					end
-					local at = last
-					for _, token in ipairs(sql.tokens(statement)) do
-						if
-							token.kind == "word"
-							and vim.tbl_contains({ "WHERE", "GROUP", "ORDER", "HAVING", "LIMIT", "UNION" }, token.upper)
-						then
-							at = first + token.first - 1
-							break
-						end
-					end
-					local prefix = text:sub(1, at - 1)
-					local row = select(2, prefix:gsub("\n", ""))
-					local column = #(prefix:match("[^\n]*$") or "")
-					vim.api.nvim_buf_set_text(state.active, row, column, row, column, { "", join, "" })
-					M.refresh_view(state)
-				end)
+				end
+				local prefix = text:sub(1, at - 1)
+				local row = select(2, prefix:gsub("\n", ""))
+				local column = #(prefix:match("[^\n]*$") or "")
+				vim.api.nvim_buf_set_text(state.active, row, column, row, column, { "", join, "" })
+				M.refresh_view(state)
 			end)
 		end)
-	end)
+	end
+	if #candidates == 1 then
+		choose(candidates[1])
+	else
+		M.select(candidates, { prompt = "Choose foreign key mapping", format_item = sql.join_label }, choose)
+	end
 end
 
 function M.graph(all)

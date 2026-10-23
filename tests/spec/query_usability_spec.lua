@@ -3,73 +3,43 @@ local describe, it, expect = t.describe, t.it, t.expect
 local query = require("fox.query")
 
 describe("FoxQuerier usability", function()
-	it("selects original popup values and calls back once on selection or cancellation", function()
-		local names =
-			{ "telescope.pickers", "telescope.finders", "telescope.config", "telescope.actions", "telescope.actions.state" }
-		local saved, prompt, confirm, finder = {}, nil, nil, nil
-		for _, name in ipairs(names) do
-			saved[name] = package.loaded[name]
+	it("uses compact query popups and calls back once on selection or cancellation", function()
+		local item, values, popup = { id = "test" }, {}, nil
+		local function open()
+			query.select({ item, { id = "second" } }, {
+				prompt = "Queries",
+				format_item = function(value)
+					return value.id
+				end,
+			}, function(value)
+				values[#values + 1] = value or false
+			end)
+			popup = vim.api.nvim_get_current_win()
 		end
-		local item, values = { id = "test" }, {}
 		local ok, err = pcall(function()
-			package.loaded["telescope.pickers"] = {
-				new = function(_, opts)
-					return {
-						find = function()
-							prompt = vim.api.nvim_create_buf(false, true)
-							opts.attach_mappings(prompt)
-						end,
-					}
-				end,
-			}
-			package.loaded["telescope.finders"] = {
-				new_table = function(opts)
-					finder = opts
-					return opts
-				end,
-			}
-			package.loaded["telescope.config"] = { values = { generic_sorter = function() end } }
-			package.loaded["telescope.actions"] = {
-				select_default = {
-					replace = function(_, callback)
-						confirm = callback
-					end,
-				},
-				close = function(buf)
-					vim.api.nvim_buf_delete(buf, { force = true })
-				end,
-			}
-			package.loaded["telescope.actions.state"] = {
-				get_selected_entry = function()
-					return { value = item }
-				end,
-			}
-			local function open()
-				query.select({ item }, {
-					prompt = "Queries",
-					format_item = function(value)
-						return value.id
-					end,
-				}, function(value)
-					values[#values + 1] = value or false
-				end)
-			end
 			open()
-			expect(finder.entry_maker(item).display).toBe("test")
-			confirm()
+			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+			expect(lines[3]).toBe("test")
+			expect(lines[4]).toBe("second")
+			expect(vim.api.nvim_win_get_config(popup).relative).toBe("editor")
+			expect(vim.bo.filetype == "TelescopePrompt").toBeFalsy()
+			vim.fn.maparg("j", "n", false, true).callback()
+			expect(vim.api.nvim_win_get_cursor(popup)[1]).toBe(4)
+			vim.fn.maparg("k", "n", false, true).callback()
+			vim.fn.maparg("<CR>", "n", false, true).callback()
 			expect(values[1]).toBe(item)
 			open()
-			vim.api.nvim_buf_delete(prompt, { force = true })
-			expect(vim.wait(1000, function()
-				return #values == 2
-			end, 10)).toBeTruthy()
+			vim.fn.maparg("<Esc>", "n", false, true).callback()
 			expect(values[2]).toBe(false)
+			open()
+			vim.api.nvim_win_close(popup, true)
+			expect(vim.wait(1000, function()
+				return #values == 3
+			end, 10)).toBeTruthy()
+			expect(values[3]).toBe(false)
 		end)
-		if prompt and vim.api.nvim_buf_is_valid(prompt) then
-			vim.api.nvim_buf_delete(prompt, { force = true })
-		end
-		for _, name in ipairs(names) do
-			package.loaded[name] = saved[name]
+		if popup and vim.api.nvim_win_is_valid(popup) then
+			vim.api.nvim_win_close(popup, true)
 		end
 		if not ok then
 			error(err)

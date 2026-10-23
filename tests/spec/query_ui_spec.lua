@@ -168,13 +168,16 @@ describe("FoxQuerier editing actions", function()
 			state.metadata, state.consoles[buf].metadata = metadata, metadata
 			state.consoles[buf].profile = { id = "offline", engine = "sqlite", path = "unused.db" }
 			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT o.id FROM orders o WHERE o.id = 1;" })
+			local menus = 0
 			query.select = function(items, _, callback)
+				menus = menus + 1
 				callback(items[1], 1)
 			end
 			vim.ui.input = function(_, callback)
 				callback("c")
 			end
 			query.insert_join(sql_module.table(metadata, "customers"))
+			expect(menus).toBe(1)
 			local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
 			expect(text).toContain("INNER JOIN customers AS c ON o.customer_id = c.id")
 			expect(text:find("INNER JOIN", 1, true) < text:find("WHERE", 1, true)).toBeTruthy()

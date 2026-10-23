@@ -34,8 +34,8 @@ function M.classification(item, metadata)
 	return "Entity | " .. outgoing .. " outgoing / " .. incoming .. " incoming FK(s)"
 end
 
-function M.graph(graph, metadata, width)
-	return require("fox.query.diagram").render(graph, metadata, width)
+function M.graph(graph, metadata, width, column_limit)
+	return require("fox.query.diagram").render(graph, metadata, width, column_limit)
 end
 
 function M.explorer(metadata, filter, selected, notes)
@@ -199,7 +199,7 @@ function M.map(metadata, key, depth, width)
 		.. " | "
 		.. #tables
 		.. " nodes"
-	lines[#lines] = "Enter recenter | i inspect | / table search | +/- depth | zh/zl pan | q back"
+	lines[#lines + 1] = "Enter recenter | i inspect | / table search | +/- depth | zh/zl pan | q back"
 	return lines, objects
 end
 
@@ -238,20 +238,20 @@ function M.results(result)
 			segments[#segments + 1] = string.rep("-", width + 2)
 		end
 		local border = "+" .. table.concat(segments, "+") .. "+"
+		lines[#lines + 1] = border
+		lines[#lines + 1] = format_row(set.columns)
+		lines[#lines + 1] = border
+		for _, row in ipairs(set.rows) do
+			lines[#lines + 1] = format_row(row)
+			rows[#lines] = { set = set, row = row, widths = widths }
+		end
+		lines[#lines + 1] = border
 		lines[#lines + 1] = "Result "
 			.. index
 			.. " | "
 			.. #set.rows
 			.. " loaded rows"
 			.. (set.truncated and " | TRUNCATED" or "")
-		lines[#lines + 1] = border
-		lines[#lines + 1] = format_row(set.columns)
-		lines[#lines + 1] = border
-		for _, row in ipairs(set.rows) do
-			lines[#lines + 1] = format_row(row)
-			rows[#lines] = { set = set, row = row }
-		end
-		lines[#lines + 1] = border
 		lines[#lines + 1] = ""
 	end
 	return lines, rows

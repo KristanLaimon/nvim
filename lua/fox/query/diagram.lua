@@ -1,7 +1,8 @@
 local M = {}
 
-function M.render(graph, metadata, width)
+function M.render(graph, metadata, width, column_limit)
 	local sql = require("fox.query.sql")
+	column_limit = column_limit or 15
 	local card_width = math.max(15, math.min(28, math.floor(((width or 72) - 7) / 2)))
 	local gap, cells, styles, objects, nodes = 7, {}, {}, {}, {}
 	local function put(row, column, text, limit)
@@ -76,7 +77,19 @@ function M.render(graph, metadata, width)
 		end
 		local x = index % 2 == 1 and 1 or card_width + gap + 1
 		local item, rows = node.table, {}
+		local columns = {}
 		for _, column in ipairs(item and item.columns or {}) do
+			if (node.roles[column.name] or {}).output then
+				columns[#columns + 1] = column
+			end
+		end
+		local selected = #columns
+		for _, column in ipairs(item and item.columns or {}) do
+			if not (node.roles[column.name] or {}).output then
+				columns[#columns + 1] = column
+			end
+		end
+		for _, column in ipairs(columns) do
 			local roles = node.roles[column.name] or {}
 			local wildcard = node.roles["*"] or {}
 			local candidate = candidates[node.alias] and candidates[node.alias][column.name]
@@ -100,7 +113,8 @@ function M.render(graph, metadata, width)
 				group = item and "Comment" or "DiagnosticWarn",
 			}
 		end
-		local height = math.min(#rows, 12) + 4
+		local visible = math.min(#rows, math.max(column_limit, selected))
+		local height = visible + 4 + (#rows > visible and 1 or 0)
 		for row = y, y + height - 1 do
 			put(row, x, "|" .. string.rep(" ", card_width - 2) .. "|")
 			objects[row] = objects[row] or { regions = {} }
@@ -112,12 +126,12 @@ function M.render(graph, metadata, width)
 		style(y + 1, x + 1, card_width - 2, item and "Title" or "DiagnosticWarn")
 		put(y + 2, x + 2, node.name, card_width - 4)
 		style(y + 2, x + 1, card_width - 2, "Comment")
-		for row = 1, math.min(#rows, 12) do
+		for row = 1, visible do
 			put(y + 2 + row, x + 2, rows[row].text, card_width - 4)
 			style(y + 2 + row, x + 1, card_width - 2, rows[row].group)
 		end
-		if #rows > 12 then
-			put(y + height - 2, x + 2, "... " .. (#rows - 11) .. " more; Enter inspect", card_width - 4)
+		if #rows > visible then
+			put(y + height - 2, x + 2, "... " .. (#rows - visible) .. " more; Enter inspect", card_width - 4)
 		end
 		nodes[node.alias] = { x = x, row = y + 1, item = item }
 		if item then
@@ -219,8 +233,6 @@ function M.render(graph, metadata, width)
 	for _, unresolved in ipairs(graph.unresolved or {}) do
 		lines[#lines + 1] = "? " .. unresolved
 	end
-	lines[#lines + 1] = "Column markers: * selected | k JOIN | f filter | ? possible FK join | dim unused"
-	lines[#lines + 1] = "In this diagram pane: move to a table, Enter inspect, J Insert JOIN; Ctrl+h returns to SQL"
 	return lines, highlights, objects
 end
 

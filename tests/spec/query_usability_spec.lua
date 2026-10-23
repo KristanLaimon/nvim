@@ -3,6 +3,79 @@ local describe, it, expect = t.describe, t.it, t.expect
 local query = require("fox.query")
 
 describe("FoxQuerier usability", function()
+	it("selects original popup values and calls back once on selection or cancellation", function()
+		local names =
+			{ "telescope.pickers", "telescope.finders", "telescope.config", "telescope.actions", "telescope.actions.state" }
+		local saved, prompt, confirm, finder = {}, nil, nil, nil
+		for _, name in ipairs(names) do
+			saved[name] = package.loaded[name]
+		end
+		local item, values = { id = "test" }, {}
+		local ok, err = pcall(function()
+			package.loaded["telescope.pickers"] = {
+				new = function(_, opts)
+					return {
+						find = function()
+							prompt = vim.api.nvim_create_buf(false, true)
+							opts.attach_mappings(prompt)
+						end,
+					}
+				end,
+			}
+			package.loaded["telescope.finders"] = {
+				new_table = function(opts)
+					finder = opts
+					return opts
+				end,
+			}
+			package.loaded["telescope.config"] = { values = { generic_sorter = function() end } }
+			package.loaded["telescope.actions"] = {
+				select_default = {
+					replace = function(_, callback)
+						confirm = callback
+					end,
+				},
+				close = function(buf)
+					vim.api.nvim_buf_delete(buf, { force = true })
+				end,
+			}
+			package.loaded["telescope.actions.state"] = {
+				get_selected_entry = function()
+					return { value = item }
+				end,
+			}
+			local function open()
+				query.select({ item }, {
+					prompt = "Queries",
+					format_item = function(value)
+						return value.id
+					end,
+				}, function(value)
+					values[#values + 1] = value or false
+				end)
+			end
+			open()
+			expect(finder.entry_maker(item).display).toBe("test")
+			confirm()
+			expect(values[1]).toBe(item)
+			open()
+			vim.api.nvim_buf_delete(prompt, { force = true })
+			expect(vim.wait(1000, function()
+				return #values == 2
+			end, 10)).toBeTruthy()
+			expect(values[2]).toBe(false)
+		end)
+		if prompt and vim.api.nvim_buf_is_valid(prompt) then
+			vim.api.nvim_buf_delete(prompt, { force = true })
+		end
+		for _, name in ipairs(names) do
+			package.loaded[name] = saved[name]
+		end
+		if not ok then
+			error(err)
+		end
+	end)
+
 	it("keeps file selection through explorer folder navigation without changing project root", function()
 		local names =
 			{ "telescope.pickers", "telescope.finders", "telescope.config", "telescope.actions", "telescope.actions.state" }
@@ -144,7 +217,7 @@ describe("FoxQuerier usability", function()
 	end)
 
 	it("uses the existing explorer for SQLite paths and leaves cancellation unsaved", function()
-		local old_select, old_input, old_connect = vim.ui.select, vim.ui.input, query.connect
+		local old_select, old_input, old_connect = query.select, vim.ui.input, query.connect
 		local old_lazy, old_explorer = package.loaded.lazy, package.loaded["plugins.fox.tools.file_explorer"]
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
 		vim.fn.mkdir(root, "p")
@@ -158,7 +231,7 @@ describe("FoxQuerier usability", function()
 					picked = opts
 				end,
 			}
-			vim.ui.select = function(_, _, callback)
+			query.select = function(_, _, callback)
 				callback("sqlite")
 			end
 			vim.ui.input = function(opts, callback)
@@ -175,7 +248,7 @@ describe("FoxQuerier usability", function()
 			picked.on_select_file(root .. "/selected.db")
 			expect(connected.path).toBe(root .. "/selected.db")
 		end)
-		vim.ui.select, vim.ui.input, query.connect = old_select, old_input, old_connect
+		query.select, vim.ui.input, query.connect = old_select, old_input, old_connect
 		package.loaded.lazy, package.loaded["plugins.fox.tools.file_explorer"] = old_lazy, old_explorer
 		query.close_root(root)
 		vim.api.nvim_set_current_dir(cwd)

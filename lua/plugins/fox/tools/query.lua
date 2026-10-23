@@ -21,6 +21,7 @@ local commands = {
 	"FoxQueryInstallDrivers",
 	"FoxQueryExport",
 	"FoxQueryPin",
+	"FoxQueryColumns",
 	"FoxQueryActivity",
 	"FoxQueryHelp",
 	"FoxQueryErrorDetails",
@@ -59,7 +60,7 @@ return {
 			if args.args ~= "" then
 				choose(args.args)
 			else
-				vim.ui.select({ "editor", "query" }, { prompt = "Project view (FoxAI is not implemented)" }, choose)
+				query.select({ "editor", "query" }, { prompt = "Project view (FoxAI is not implemented)" }, choose)
 			end
 		end, {
 			nargs = "?",
@@ -135,6 +136,7 @@ return {
 		command("FoxQueryInstallDrivers", query.install_drivers)
 		command("FoxQueryExport", query.export)
 		command("FoxQueryPin", query.pin)
+		command("FoxQueryColumns", query.column_limit)
 		command("FoxQueryClearParameters", function()
 			for _, item in pairs(query.state().consoles) do
 				item.params = {}

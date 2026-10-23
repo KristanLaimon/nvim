@@ -414,8 +414,7 @@ def main():
                     raise ValueError("Unknown driver operation")
                 emit({"id": request["id"], "result": result})
             except Exception as error:
-                # Diagnostics can contain values: keep status generic and expose
-                # details only through the UI's explicit RAM-only details action.
+                # Diagnostics can contain values; the Query UI keeps them in RAM.
                 safe = str(error) if isinstance(error, (ValueError, FileNotFoundError, ModuleNotFoundError)) else "Database operation failed (" + type(error).__name__ + "); check SQL, connection, permissions, and server compatibility"
                 if driver.canceled.is_set():
                     safe = "Canceled or timed out; reconnect before running SQL"
@@ -426,7 +425,7 @@ def main():
                         driver.close()
                 if driver.canceled.is_set():
                     driver.close()
-                emit({"id": request.get("id"), "error": safe, "error_detail": str(error)[:4096] if request.get("op") == "execute" else None, "disconnected": driver.connection is None})
+                emit({"id": request.get("id"), "error": safe, "error_detail": str(error) if request.get("op") == "execute" else None, "disconnected": driver.connection is None})
             finally:
                 if timer:
                     timer.cancel()

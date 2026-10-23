@@ -114,6 +114,9 @@ class BridgeTests(unittest.TestCase):
             result = request({"id": 5, "op": "execute", "sql": "SELECT '獣' AS \"名前\", ? AS bound", "params": ["á🦊獣"]})
             self.assertEqual(result["result"]["sets"][0]["columns"], ["名前", "bound"])
             self.assertEqual(result["result"]["sets"][0]["rows"], [["獣", "á🦊獣"]])
+            missing_table = "missing_" + "x" * 5000
+            result = request({"id": 6, "op": "execute", "sql": 'SELECT * FROM "' + missing_table + '"', "params": []})
+            self.assertEqual(result["error_detail"], "no such table: " + missing_table)
             self.assertEqual({p.name for p in self.root.iterdir()}, {"fixture.db"})
         finally:
             proc.stdin.close()

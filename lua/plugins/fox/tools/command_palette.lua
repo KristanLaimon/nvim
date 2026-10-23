@@ -125,6 +125,7 @@ M.commands = {
 	{ name = "Query: Help", cmd = "FoxQueryHelp", category = "Query" },
 	{ name = "Query: Reveal Database Error Details (RAM Only)", cmd = "FoxQueryErrorDetails", category = "Query" },
 	{ name = "Query: Export Loaded Results", cmd = "FoxQueryExport", category = "Query" },
+	{ name = "Query: Diagram Column Limit", cmd = "FoxQueryColumns", category = "Query" },
 	{ name = "Query: Pin / Follow Statement Diagram", cmd = "FoxQueryPin", category = "Query" },
 	{ name = "Query: Clear RAM Parameters", cmd = "FoxQueryClearParameters", category = "Query" },
 	{ name = "Query: Clear Metadata Cache", cmd = "FoxQueryClearCache", category = "Query" },

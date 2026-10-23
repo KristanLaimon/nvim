@@ -145,7 +145,7 @@ describe("FoxQuerier editing actions", function()
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
 		vim.fn.mkdir(root, "p")
 		vim.api.nvim_set_current_dir(root)
-		local old_select, old_input = vim.ui.select, vim.ui.input
+		local old_select, old_input = query.select, vim.ui.input
 		local ok, err = pcall(function()
 			query.show("visual")
 			local state, sql_module = query.state(), require("fox.query.sql")
@@ -168,7 +168,7 @@ describe("FoxQuerier editing actions", function()
 			state.metadata, state.consoles[buf].metadata = metadata, metadata
 			state.consoles[buf].profile = { id = "offline", engine = "sqlite", path = "unused.db" }
 			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT o.id FROM orders o WHERE o.id = 1;" })
-			vim.ui.select = function(items, _, callback)
+			query.select = function(items, _, callback)
 				callback(items[1], 1)
 			end
 			vim.ui.input = function(_, callback)
@@ -182,7 +182,7 @@ describe("FoxQuerier editing actions", function()
 			vim.bo[buf].modified = false
 			query.hide()
 		end)
-		vim.ui.select, vim.ui.input = old_select, old_input
+		query.select, vim.ui.input = old_select, old_input
 		query.close_root(root)
 		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 			if vim.b[buf].fox_query_root == storage.root(root) then
@@ -206,11 +206,14 @@ describe("FoxQuerier editing actions", function()
 			query.show("visual")
 			local state = query.state()
 			expect(state.compact).toBeTruthy()
-			expect(#vim.api.nvim_tabpage_list_wins(state.tab)).toBe(1)
+			expect(#vim.api.nvim_tabpage_list_wins(state.tab)).toBe(2)
+			expect(vim.api.nvim_win_get_height(state.activity_win)).toBe(1)
 			query.focus_panel("side")
 			expect(vim.api.nvim_win_get_buf(state.sql_win)).toBe(state.side_buf)
 			query.results()
 			expect(vim.api.nvim_win_get_buf(state.sql_win)).toBe(state.result_buf)
+			query.focus_panel("activity")
+			expect(vim.api.nvim_get_current_win()).toBe(state.activity_win)
 			query.hide()
 		end)
 		query.close_root(root)

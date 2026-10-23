@@ -36,6 +36,195 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("registers query keys without collisions and keeps result actions scoped to results", function()
+		project(function()
+			local registry = require("fox.core.keymap_registry")
+			registry.install()
+			local previous = #registry.collisions
+			query.show("standard")
+			query.show("visual")
+			query.show("standard")
+			query.new("keys.sql")
+			query.new("keys.sql")
+			expect(#registry.collisions).toBe(previous)
+			local state = query.state()
+			local old_results, old_follow, old_help = query.results, query.follow_row, query.help
+			local results, follow, help = 0, 0, 0
+			local ok, err = pcall(function()
+				query.results = function()
+					results = results + 1
+				end
+				query.follow_row = function()
+					follow = follow + 1
+				end
+				query.help = function()
+					help = help + 1
+				end
+				vim.api.nvim_set_current_win(state.sql_win)
+				vim.fn.maparg("gR", "n", false, true).callback()
+				vim.fn.maparg("<F1>", "n", false, true).callback()
+				vim.api.nvim_set_current_win(state.result_win)
+				vim.fn.maparg("gR", "n", false, true).callback()
+				expect(results).toBe(1)
+				expect(follow).toBe(1)
+				expect(help).toBe(1)
+			end)
+			query.results, query.follow_row, query.help = old_results, old_follow, old_help
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
+	it("browses saved SQL, switches tabs, and leaves an empty editor after the last close", function()
+		project(function(root)
+			storage.write(root, "queries/saved.sql", "SELECT 42;")
+			query.show("standard")
+			local state = query.state()
+			expect(
+				vim.api.nvim_win_get_position(state.queries_win)[1] > vim.api.nvim_win_get_position(state.connections_win)[1]
+			).toBeTruthy()
+			local lines = vim.api.nvim_buf_get_lines(state.queries_buf, 0, -1, false)
+			local selected
+			for row, line in ipairs(lines) do
+				if line:find("saved.sql", 1, true) then
+					selected = row
+				end
+			end
+			vim.api.nvim_set_current_win(state.queries_win)
+			vim.api.nvim_win_set_cursor(0, { selected, 0 })
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			local saved = state.active
+			expect(vim.api.nvim_buf_get_lines(saved, 0, -1, false)[1]).toBe("SELECT 42;")
+			query.new("second.sql")
+			vim.fn.maparg("<A-h>", "n", false, true).callback()
+			expect(state.active).toBe(saved)
+			local buffers = vim.tbl_keys(state.consoles)
+			for _, buf in ipairs(buffers) do
+				query.close_buffer(buf, true)
+			end
+			expect(state.active).toBeNil()
+			expect(vim.api.nvim_win_get_buf(state.sql_win)).toBe(state.empty_buf)
+			expect(vim.api.nvim_buf_get_lines(state.empty_buf, 0, -1, false)[1]).toContain("create a new one with gN")
+			query.show("visual")
+			expect(state.active).toBeNil()
+			expect(storage.read(root, "queries/saved.sql")).toBe("SELECT 42;")
+		end)
+	end)
+
+	it("keeps status across the bottom, copies the full error, and moves connection hints below entries", function()
+		project(function(root)
+			storage.save(root, "connections.json", { profiles = { { id = "test", engine = "sqlite", path = "db" } } })
+			query.show("standard")
+			local state = query.state()
+			local item = state.consoles[state.active]
+			item.status, item.error_detail = "failed | 0.02s", "SQL error\nfull diagnostic with 100% detail"
+			query.refresh_view(state)
+			expect(vim.api.nvim_win_get_width(state.activity_win)).toBe(vim.o.columns)
+			expect(vim.api.nvim_win_get_position(state.activity_win)[1] > vim.api.nvim_win_get_position(state.result_win)[1]).toBeTruthy()
+			expect(vim.api.nvim_buf_get_lines(state.activity_buf, 0, -1, false)[1]).toContain("full diagnostic")
+			local lines = vim.api.nvim_buf_get_lines(state.connections_buf, 0, -1, false)
+			expect(lines[2]).toContain("test")
+			expect(lines[#lines - 2]).toBe("------")
+			expect(lines[#lines]).toBe("Enter Connect  D Disconnect")
+			local old_setreg, old_mouse, registers = vim.fn.setreg, vim.fn.getmousepos, {}
+			local ok, err = pcall(function()
+				vim.fn.setreg = function(register, text)
+					registers[register] = text
+				end
+				vim.fn.getmousepos = function()
+					return { winid = state.activity_win }
+				end
+				vim.api.nvim_set_current_win(state.sql_win)
+				vim.fn.maparg("<LeftMouse>", "n", false, true).callback()
+				expect(registers['"']).toBe(item.error_detail)
+				expect(registers["+"]).toBe(item.error_detail)
+			end)
+			vim.fn.setreg, vim.fn.getmousepos = old_setreg, old_mouse
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
+	it("navigates result cells through Unicode values and multiple result sets", function()
+		project(function()
+			query.show()
+			local state = query.state()
+			local item = state.consoles[state.active]
+			item.result = {
+				sets = {
+					{ columns = { "name", "id" }, rows = { { "表", "1" }, { "fox", "2" } } },
+					{ columns = { "id" }, rows = { { "3" } } },
+				},
+			}
+			query.refresh_view(state)
+			vim.api.nvim_set_current_win(state.result_win)
+			vim.api.nvim_win_set_cursor(0, { 1, 0 })
+			local function move(key)
+				vim.fn.maparg(key, "n", false, true).callback()
+			end
+			move("L")
+			expect(vim.fn.virtcol(".")).toBe(10)
+			expect(query.row().rows[1][1]).toBe("表")
+			move("J")
+			local _, row = query.row()
+			expect(row[2]).toBe("2")
+			move("H")
+			expect(vim.fn.virtcol(".")).toBe(3)
+			move("J")
+			_, row = query.row()
+			expect(row[1]).toBe("3")
+			move("K")
+			_, row = query.row()
+			expect(row[1]).toBe("fox")
+		end)
+	end)
+
+	it("validates and persists the diagram column limit in the project", function()
+		project(function(root)
+			query.show("visual")
+			local state, old_input = query.state(), vim.ui.input
+			local ok, err = pcall(function()
+				vim.ui.input = function(_, callback)
+					callback("0")
+				end
+				query.column_limit()
+				expect(state.diagram_columns).toBe(15)
+				vim.ui.input = function(_, callback)
+					callback("23")
+				end
+				query.column_limit()
+				expect(storage.load(root, "settings.json", {}).diagram_columns).toBe(23)
+				query.close_root(root)
+				expect(query.state().diagram_columns).toBe(23)
+			end)
+			vim.ui.input = old_input
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
+	it("shows 15 diagram columns by default and promotes selected columns without mutating metadata", function()
+		local columns = {}
+		for at = 1, 20 do
+			columns[at] = { name = "prop" .. at }
+		end
+		local metadata = { tables = { { key = "player", name = "player", columns = columns } }, relations = {} }
+		local graph = require("fox.query.sql").analyze("SELECT prop20 FROM player", metadata)
+		local render = require("fox.query.render")
+		local lines = render.graph(graph, metadata, 80)
+		local text = table.concat(lines, "\n")
+		expect(text).toContain("*   prop20")
+		expect(text:find("prop20", 1, true) < text:find("prop1 ", 1, true)).toBeTruthy()
+		expect(text).toContain("5 more")
+		expect(text:find("Column markers", 1, true)).toBeNil()
+		expect(columns[1].name).toBe("prop1")
+		text = table.concat(render.graph(graph, metadata, 80, 20), "\n")
+		expect(text:find("more;", 1, true)).toBeNil()
+	end)
+
 	it("renders bordered ASCII result tables and keeps row actions aligned across sets", function()
 		project(function()
 			query.show()
@@ -46,9 +235,9 @@ describe("FoxQuerier live workflow", function()
 			item.result = { sets = { first, second, { columns = { "empty" }, rows = {} } } }
 			query.refresh_view(state)
 			local lines = vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false)
-			expect(lines[4]).toBe("+------------+")
-			expect(lines[5]).toBe("| actualRank |")
-			expect(lines[7]).toBe("| CA         |")
+			expect(lines[1]).toBe("+------------+")
+			expect(lines[2]).toBe("| actualRank |")
+			expect(lines[4]).toBe("| CA         |")
 			expect(table.concat(lines, "\n")).toContain("NULL")
 			expect(table.concat(lines, "\n")).toContain("表\\ntext")
 			vim.api.nvim_set_current_win(state.result_win)
@@ -110,7 +299,7 @@ describe("FoxQuerier live workflow", function()
 			vim.fn.writefile({}, root .. "/selected.db")
 			storage.save(root, "connections.json", { profiles = { profile } })
 			storage.write(root, "notes/keep.md", "keep")
-			local old_select, old_input, old_connect = vim.ui.select, vim.ui.input, query.connect
+			local old_select, old_input, old_connect = query.select, vim.ui.input, query.connect
 			local old_lazy, old_explorer = package.loaded.lazy, package.loaded["plugins.fox.tools.file_explorer"]
 			local connected
 			local ok, err = pcall(function()
@@ -120,7 +309,7 @@ describe("FoxQuerier live workflow", function()
 						opts.on_select_file(root .. "/selected.db")
 					end,
 				}
-				vim.ui.select = function(items, _, callback)
+				query.select = function(items, _, callback)
 					callback(items[1], 1)
 				end
 				vim.ui.input = function(opts, callback)
@@ -140,7 +329,7 @@ describe("FoxQuerier live workflow", function()
 				expect(vim.fn.filereadable(root .. "/selected.db")).toBe(1)
 				expect(storage.read(root, "notes/keep.md")).toBe("keep")
 			end)
-			vim.ui.select, vim.ui.input, query.connect = old_select, old_input, old_connect
+			query.select, vim.ui.input, query.connect = old_select, old_input, old_connect
 			package.loaded.lazy, package.loaded["plugins.fox.tools.file_explorer"] = old_lazy, old_explorer
 			if not ok then
 				error(err)

@@ -14,6 +14,11 @@ end
 function M.state(root)
 	root = storage.root(root)
 	if not M.states[root] then
+		local settings, err = storage.load(root, "settings.json", {})
+		if err then
+			notify(err, vim.log.levels.WARN)
+		end
+		local limit = settings and settings.diagram_columns
 		M.states[root] = {
 			root = root,
 			view = "standard",
@@ -22,6 +27,7 @@ function M.state(root)
 			filter = "",
 			depth = 3,
 			autorun = true,
+			diagram_columns = type(limit) == "number" and limit >= 1 and limit <= 200 and limit % 1 == 0 and limit or 15,
 			connection_status = {},
 		}
 	end
@@ -38,6 +44,20 @@ local function valid(handle, kind)
 end
 
 local function query_keys(buf)
+	vim.keymap.set({ "n", "i", "v" }, "<LeftMouse>", function()
+		local mouse = vim.fn.getmousepos()
+		local state = M.states[vim.b[buf].fox_query_root]
+		if state and mouse.winid == state.activity_win then
+			M.copy_activity(state)
+		else
+			vim.api.nvim_feedkeys(vim.keycode("<LeftMouse>"), "n", false)
+		end
+	end, { buffer = buf, silent = true })
+	for key, direction in pairs({ ["<A-h>"] = -1, ["<A-l>"] = 1, ["<A-Left>"] = -1, ["<A-Right>"] = 1 }) do
+		vim.keymap.set("n", key, function()
+			M.cycle(direction)
+		end, { buffer = buf, silent = true, desc = "Query: switch SQL tab" })
+	end
 	vim.keymap.set({ "n", "i", "v" }, "<S-F3>", function()
 		M.show(M.state().view == "visual" and "standard" or "visual")
 	end, { buffer = buf, silent = true, desc = "Query: toggle live diagram" })
@@ -61,9 +81,14 @@ local function query_keys(buf)
 		},
 		gR = {
 			function()
-				M.results()
+				local state = M.states[vim.b[buf].fox_query_root]
+				if state and state.result_buf == buf then
+					M.follow_row()
+				else
+					M.results()
+				end
 			end,
-			"Results",
+			"Results / follow foreign key",
 		},
 		gE = {
 			function()
@@ -138,6 +163,173 @@ local function console(state)
 	end
 end
 
+function M.select(items, opts, callback)
+	local ok, pickers = pcall(require, "telescope.pickers")
+	if not ok then
+		notify("Query menus require Telescope", vim.log.levels.ERROR)
+		callback(nil)
+		return
+	end
+	local actions = require("telescope.actions")
+	pickers
+		.new({}, {
+			prompt_title = opts.prompt,
+			finder = require("telescope.finders").new_table({
+				results = items,
+				entry_maker = function(item)
+					local label = opts.format_item and opts.format_item(item) or tostring(item)
+					return { value = item, display = label:gsub("[%c]", " "), ordinal = label }
+				end,
+			}),
+			sorter = require("telescope.config").values.generic_sorter({}),
+			attach_mappings = function(prompt)
+				local resolved = false
+				vim.api.nvim_create_autocmd("BufWipeout", {
+					buffer = prompt,
+					once = true,
+					callback = function()
+						if not resolved then
+							resolved = true
+							vim.schedule(function()
+								callback(nil)
+							end)
+						end
+					end,
+				})
+				actions.select_default:replace(function()
+					local entry = require("telescope.actions.state").get_selected_entry()
+					resolved = true
+					actions.close(prompt)
+					callback(entry and entry.value)
+				end)
+				return true
+			end,
+		})
+		:find()
+end
+
+function M.empty(state)
+	local buf = panel(state, "empty_buf")
+	set_lines(buf, { "Select a SQL tab or create a new one with gN (:FoxQueryNew)." })
+	return buf
+end
+
+function M.cycle(direction)
+	local state, buffers = M.state(), {}
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if state.consoles[buf] and vim.bo[buf].buflisted then
+			buffers[#buffers + 1] = buf
+		end
+	end
+	if #buffers == 0 or not valid(state.sql_win, "win") then
+		return
+	end
+	local index = 1
+	for at, buf in ipairs(buffers) do
+		if buf == state.active then
+			index = at
+		end
+	end
+	state.active = buffers[(index - 1 + direction) % #buffers + 1]
+	vim.api.nvim_set_current_win(state.sql_win)
+	vim.api.nvim_win_set_buf(state.sql_win, state.active or M.empty(state))
+	M.refresh_view(state)
+end
+
+function M.column_limit()
+	local state = M.state()
+	vim.ui.input({ prompt = "Diagram columns (1-200): ", default = tostring(state.diagram_columns) }, function(value)
+		if value == nil then
+			return
+		end
+		local count = tonumber(value)
+		if not count or count < 1 or count > 200 or count % 1 ~= 0 then
+			notify("Enter a whole column count from 1 to 200", vim.log.levels.WARN)
+			return
+		end
+		local settings, err = storage.load(state.root, "settings.json", {})
+		if not settings then
+			notify(err, vim.log.levels.ERROR)
+			return
+		end
+		settings.diagram_columns = count
+		local ok, save_err = storage.save(state.root, "settings.json", settings)
+		if not ok then
+			notify(save_err, vim.log.levels.ERROR)
+			return
+		end
+		state.diagram_columns = count
+		M.refresh_view(state)
+	end)
+end
+
+function M.draw_activity(state)
+	local active = console(state)
+	state.activity_text = "ACTIVITY | "
+		.. (active and active.status or "idle")
+		.. " | "
+		.. (active and (active.error_detail or active.executed_sql) or "Waiting for SELECT SQL")
+	local buf = panel(state, "activity_buf")
+	set_lines(buf, { (state.activity_text:gsub("[\r\n]+", " | ")) })
+	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+	vim.api.nvim_buf_set_extmark(buf, ns, 0, 0, {
+		virt_text = { { state.view == "visual" and " [Default | Visually*] " or " [Default* | Visually] ", "StatusLine" } },
+		virt_text_pos = "right_align",
+	})
+	vim.keymap.set("n", "y", function()
+		M.copy_activity(state)
+	end, { buffer = buf, silent = true })
+	vim.keymap.set("n", "<CR>", M.error_details, { buffer = buf, silent = true })
+end
+
+function M.copy_activity(state)
+	state = state or M.state()
+	local active = console(state)
+	local text = active and active.error_detail or state.activity_text or "idle"
+	vim.fn.setreg('"', text)
+	vim.fn.setreg("+", text)
+	notify("Query status copied")
+end
+
+function M.draw_queries(state)
+	local files = {}
+	for _, file in ipairs(vim.fn.glob(storage.path(state.root, "queries/*.sql"), false, true)) do
+		files[#files + 1] = vim.fn.fnamemodify(file, ":t")
+	end
+	for buf in pairs(state.consoles) do
+		if valid(buf, "buf") then
+			local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t")
+			if not vim.tbl_contains(files, name) then
+				files[#files + 1] = name
+			end
+		end
+	end
+	table.sort(files)
+	state.query_files = files
+	local lines = { "SQL FILES" }
+	for _, file in ipairs(files) do
+		local current = valid(state.active, "buf") and vim.fn.fnamemodify(vim.api.nvim_buf_get_name(state.active), ":t")
+		lines[#lines + 1] = (file == current and "* " or "  ") .. file
+	end
+	if #files == 0 then
+		lines[#lines + 1] = "No saved SQL files"
+	end
+	local height = valid(state.queries_win, "win") and vim.api.nvim_win_get_height(state.queries_win) or 0
+	while #lines < height - 2 do
+		lines[#lines + 1] = ""
+	end
+	vim.list_extend(lines, { "------", "Enter Open | gN New" })
+	local buf = panel(state, "queries_buf")
+	set_lines(buf, lines)
+	vim.keymap.set("n", "<CR>", function()
+		local file = files[vim.api.nvim_win_get_cursor(0)[1] - 1]
+		if file then
+			M.new(file)
+			vim.api.nvim_set_current_win(state.sql_win)
+		end
+	end, { buffer = buf, silent = true })
+end
+
 local function current_metadata(state)
 	local item = console(state)
 	if item and item.metadata then
@@ -189,7 +381,7 @@ function M.refresh_view(state)
 		vim.wo[state.sql_win].winbar = status:gsub("%%", "%%%%") .. " %= Ctrl+Enter Run / F5 | Shift+F3 Diagram | F1 Help"
 	end
 	if valid(state.side_win, "win") then
-		vim.wo[state.side_win].winbar = "Table pane: Enter inspect | J JOIN | gV Diagram | F1 Help"
+		vim.wo[state.side_win].winbar = state.view == "visual" and "Diagram | C Columns | F1 Help" or "Tables | F1 Help"
 	end
 	if valid(state.connections_buf, "buf") then
 		M.draw_connections(state)
@@ -218,7 +410,8 @@ function M.refresh_view(state)
 		local lines, highlights, objects = render.graph(
 			graph,
 			state.metadata,
-			valid(state.side_win, "win") and vim.api.nvim_win_get_width(state.side_win) or vim.o.columns
+			valid(state.side_win, "win") and vim.api.nvim_win_get_width(state.side_win) or vim.o.columns,
+			state.diagram_columns
 		)
 		set_lines(panel(state, "side_buf"), lines)
 		state.objects = objects
@@ -239,10 +432,7 @@ function M.refresh_view(state)
 		end
 		set_lines(panel(state, "side_buf"), lines)
 	end
-	local result_lines = {
-		"RESULTS | " .. (active and active.result_label or "No execution"),
-		"Enter: expand row | y: copy row | e: export | gR: follow foreign key",
-	}
+	local result_lines = {}
 	if active and active.result then
 		if not active.result_lines or not active.result_rows then
 			active.result_lines, active.result_rows = render.results(active.result)
@@ -258,11 +448,15 @@ function M.refresh_view(state)
 			"gV: Standard / Visual | gN: new query | F3: Editor / Query | F1: help",
 		})
 	end
-	set_lines(panel(state, "result_buf"), result_lines)
-	set_lines(panel(state, "activity_buf"), {
-		"ACTIVITY | " .. (active and active.status or "idle"),
-		active and active.executed_sql or "Waiting for SELECT SQL; Ctrl+Enter / F5 runs manually",
+	vim.list_extend(result_lines, {
+		"RESULTS | " .. (active and active.result_label or "No execution"),
+		"Enter: expand row | y: copy row | e: export | gR: follow foreign key",
 	})
+	set_lines(panel(state, "result_buf"), result_lines)
+	M.draw_activity(state)
+	if valid(state.queries_buf, "buf") then
+		M.draw_queries(state)
+	end
 end
 
 local function map(buf, key, action)
@@ -351,7 +545,7 @@ function M.hide(state)
 		vim.api.nvim_set_current_tabpage(state.tab)
 		vim.cmd("tabclose")
 		state.tab, state.sql_win, state.side_win, state.result_win, state.activity_win = nil, nil, nil, nil, nil
-		state.connections_win = nil
+		state.connections_win, state.queries_win = nil, nil
 		if current ~= state.tab and valid(state.editor_tab, "tab") then
 			vim.api.nvim_set_current_tabpage(state.editor_tab)
 		end
@@ -380,9 +574,14 @@ function M.show(view)
 	state.tab, state.sql_win = vim.api.nvim_get_current_tabpage(), vim.api.nvim_get_current_win()
 	local _, buf = console(state)
 	if not buf then
-		M.new()
-		_, buf = console(state)
+		if not state.opened then
+			M.new()
+			_, buf = console(state)
+		else
+			buf = M.empty(state)
+		end
 	end
+	state.opened = true
 	vim.api.nvim_win_set_buf(state.sql_win, buf)
 	state.compact = vim.o.columns < 72 or vim.o.lines < 20
 	local sizes = layout.load(state.view)
@@ -410,10 +609,6 @@ function M.show(view)
 			vim.api.nvim_win_set_buf(state.result_win, panel(state, "result_buf"))
 			vim.api.nvim_win_set_height(state.result_win, math.max(3, math.floor(vim.o.lines * sizes.results)))
 			vim.wo[state.result_win].wrap = false
-			vim.cmd("belowright split")
-			state.activity_win = vim.api.nvim_get_current_win()
-			vim.api.nvim_win_set_buf(state.activity_win, panel(state, "activity_buf"))
-			vim.api.nvim_win_set_height(state.activity_win, sizes.activity)
 		end
 		if state.view == "standard" then
 			vim.api.nvim_set_current_win(state.sql_win)
@@ -422,11 +617,29 @@ function M.show(view)
 			vim.api.nvim_win_set_buf(state.connections_win, panel(state, "connections_buf"))
 			vim.api.nvim_win_set_width(state.connections_win, math.max(12, math.floor(vim.o.columns * sizes.connections)))
 			vim.wo[state.connections_win].wrap = false
+			vim.cmd("belowright split")
+			state.queries_win = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_buf(state.queries_win, panel(state, "queries_buf"))
+			vim.wo[state.queries_win].wrap = false
 		end
 	end
+	vim.cmd("botright split")
+	state.activity_win = vim.api.nvim_get_current_win()
+	vim.api.nvim_win_set_buf(state.activity_win, panel(state, "activity_buf"))
+	vim.api.nvim_win_set_height(state.activity_win, 1)
+	vim.wo[state.activity_win].winbar = ""
+	vim.wo[state.activity_win].winfixheight = true
+	vim.wo[state.activity_win].wrap = false
+	vim.wo[state.activity_win].number = false
+	vim.wo[state.activity_win].relativenumber = false
+	vim.wo[state.activity_win].signcolumn = "no"
+	if valid(state.result_win, "win") then
+		vim.api.nvim_win_set_height(state.result_win, math.max(3, math.floor(vim.o.lines * sizes.results)))
+	end
+	map(state.side_buf, "C", M.column_limit)
 	map(state.side_buf, "/", function()
 		if state.view == "visual" then
-			vim.ui.select(state.metadata.tables, {
+			M.select(state.metadata.tables, {
 				prompt = "Inspect cached table",
 				format_item = function(item)
 					return item.key
@@ -460,21 +673,25 @@ function M.show(view)
 	map(state.side_buf, "q", function()
 		vim.api.nvim_set_current_win(state.sql_win)
 		if state.compact then
-			vim.api.nvim_win_set_buf(state.sql_win, state.active)
+			vim.api.nvim_win_set_buf(state.sql_win, state.active or M.empty(state))
 		end
 	end)
 	map(state.side_buf, "?", M.help)
 	map(state.result_buf or panel(state, "result_buf"), "<CR>", M.expand_row)
 	map(state.result_buf, "y", M.copy_row)
 	map(state.result_buf, "e", M.export)
-	map(state.result_buf, "gR", M.follow_row)
 	map(state.result_buf, "q", function()
 		vim.api.nvim_set_current_win(state.sql_win)
 		if state.compact then
-			vim.api.nvim_win_set_buf(state.sql_win, state.active)
+			vim.api.nvim_win_set_buf(state.sql_win, state.active or M.empty(state))
 		end
 	end)
 	map(state.result_buf, "?", M.help)
+	for key, direction in pairs({ H = "left", L = "right", J = "down", K = "up" }) do
+		map(state.result_buf, key, function()
+			M.move_cell(direction)
+		end)
+	end
 	vim.api.nvim_set_current_win(state.sql_win)
 	local active = console(state)
 	if active and active.cursor then
@@ -534,7 +751,7 @@ function M.close_buffer(buf, force)
 		return
 	end
 	if vim.bo[buf].modified and not force then
-		vim.ui.select(
+		M.select(
 			{ "Save and close", "Discard and close", "Cancel" },
 			{ prompt = "Unsaved query document" },
 			function(choice)
@@ -569,7 +786,7 @@ function M.close_buffer(buf, force)
 	end
 	local _, replacement = console(state)
 	if not replacement then
-		replacement = M.new()
+		replacement = M.empty(state)
 	end
 	for _, win in ipairs(vim.api.nvim_list_wins()) do
 		if vim.api.nvim_win_get_buf(win) == buf then
@@ -595,6 +812,7 @@ function M.new(relative)
 		state.metadata = state.consoles[buf].metadata
 	end
 	if valid(state.sql_win, "win") then
+		vim.api.nvim_set_current_win(state.sql_win)
 		vim.api.nvim_win_set_buf(state.sql_win, buf)
 	end
 	vim.b[buf].fox_env_slot = _G._fox_active_env_slot or 1
@@ -607,26 +825,15 @@ function M.new(relative)
 	for _, key in ipairs({ "<C-Space>", "<C-@>", "<C-x><C-o>", "\27[32;5u", "\27[27;5;32~" }) do
 		vim.keymap.set("i", key, M.complete, { buffer = buf, silent = true, desc = "Query: database completion" })
 	end
-	map(buf, "<F1>", M.help)
 	M.refresh_view(state)
 	M.restore_connection(state)
 	return buf
 end
 
 function M.open()
-	local state, files = M.state(), {}
-	for _, file in ipairs(vim.fn.glob(storage.path(state.root, "queries/*.sql"), false, true)) do
-		files[#files + 1] = vim.fn.fnamemodify(file, ":t")
-	end
-	for buf in pairs(state.consoles) do
-		if valid(buf, "buf") then
-			local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t")
-			if not vim.tbl_contains(files, name) then
-				files[#files + 1] = name
-			end
-		end
-	end
-	vim.ui.select(files, { prompt = "Saved / open project queries" }, function(file)
+	local state = M.state()
+	M.draw_queries(state)
+	M.select(state.query_files, { prompt = "Saved / open project queries" }, function(file)
 		if file then
 			M.new(file)
 		end
@@ -666,7 +873,7 @@ function M.draw_connections(state)
 	local buf = panel(state, "connections_buf")
 	local profiles, err = storage.profiles(state.root)
 	local active = console(state)
-	local lines, objects = { "CONNECTIONS", "a Add  e Edit  d Delete", "Enter Connect  D Disconnect", "" }, {}
+	local lines, objects = { "CONNECTIONS" }, {}
 	if not profiles then
 		lines[#lines + 1] = err
 	end
@@ -679,6 +886,11 @@ function M.draw_connections(state)
 	if profiles and #profiles == 0 then
 		lines[#lines + 1] = "No connections. Press a."
 	end
+	local height = valid(state.connections_win, "win") and vim.api.nvim_win_get_height(state.connections_win) or 0
+	while #lines < height - 3 do
+		lines[#lines + 1] = ""
+	end
+	vim.list_extend(lines, { "------", "a Add  e Edit  d Delete", "Enter Connect  D Disconnect" })
 	set_lines(buf, lines)
 	local function selected()
 		return objects[vim.api.nvim_win_get_cursor(0)[1]]
@@ -708,7 +920,7 @@ function M.draw_connections(state)
 		if valid(state.sql_win, "win") then
 			vim.api.nvim_set_current_win(state.sql_win)
 			if state.compact then
-				vim.api.nvim_win_set_buf(state.sql_win, state.active)
+				vim.api.nvim_win_set_buf(state.sql_win, state.active or M.empty(state))
 			end
 		end
 	end)
@@ -722,7 +934,7 @@ function M.delete_profile(profile, state)
 			return
 		end
 	end
-	vim.ui.select(
+	M.select(
 		{ "Delete connection", "Cancel" },
 		{ prompt = "Delete profile " .. profile.id .. "? Database files and notes are kept." },
 		function(choice)
@@ -786,7 +998,7 @@ function M.add_profile(existing)
 			end
 		end
 	end
-	vim.ui.select({ "sqlite", "mysql", "postgres" }, { prompt = "Database engine" }, function(engine)
+	M.select({ "sqlite", "mysql", "postgres" }, { prompt = "Database engine" }, function(engine)
 		if not engine then
 			return
 		end
@@ -910,6 +1122,7 @@ function M.connect(profile, state)
 		item.client:close()
 	end
 	item.params, item.profile, item.restore_attempted = {}, vim.deepcopy(profile), true
+	item.error_detail = nil
 	state.restore_disconnected = false
 	item.auto_sql, item.auto_connection = nil, nil
 	state.connection_status[profile.id] = "connecting"
@@ -1130,6 +1343,7 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic)
 				return
 			end
 			item.params, item.executed_sql = params, query
+			item.error_detail = nil
 			item.started, item.status = (vim.uv or vim.loop).hrtime(), "running " .. prepared.statements .. " statement(s)"
 			item.execution = (item.execution or 0) + 1
 			local execution = item.execution
@@ -1166,7 +1380,7 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic)
 				end
 				item.status = string.format("running / fetching | %.1fs", ((vim.uv or vim.loop).hrtime() - item.started) / 1e9)
 				if valid(state.activity_buf, "buf") then
-					set_lines(state.activity_buf, { "ACTIVITY | " .. item.status, query })
+					M.draw_activity(state)
 				end
 				vim.defer_fn(elapsed, 500)
 			end
@@ -1191,7 +1405,7 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic)
 			params[index] = value == "NULL" and vim.NIL or value:gsub("^text:", "")
 		end
 		if prepared.parameters > 0 then
-			vim.ui.select({ "Run with these RAM parameters", "Cancel" }, {
+			M.select({ "Run with these RAM parameters", "Cancel" }, {
 				prompt = "Execute "
 					.. prepared.statements
 					.. " statement(s) with "
@@ -1296,7 +1510,7 @@ function M.insert_join(target)
 			return candidate.target == target.key
 		end, candidates)
 	end
-	vim.ui.select(candidates, {
+	M.select(candidates, {
 		prompt = "Choose foreign key mapping",
 		format_item = function(candidate)
 			return candidate.node.alias .. " -> " .. candidate.target .. " (" .. candidate.relation.name .. ")"
@@ -1315,7 +1529,7 @@ function M.insert_join(target)
 					return
 				end
 			end
-			vim.ui.select({ "INNER", "LEFT" }, { prompt = "JOIN type" }, function(kind)
+			M.select({ "INNER", "LEFT" }, { prompt = "JOIN type" }, function(kind)
 				if not kind then
 					return
 				end
@@ -1324,7 +1538,7 @@ function M.insert_join(target)
 					notify(join_err, vim.log.levels.WARN)
 					return
 				end
-				vim.ui.select({ "Insert this JOIN", "Cancel" }, { prompt = join }, function(choice)
+				M.select({ "Insert this JOIN", "Cancel" }, { prompt = join }, function(choice)
 					if choice ~= "Insert this JOIN" then
 						return
 					end
@@ -1393,7 +1607,7 @@ function M.graph(all)
 		draw()
 	end)
 	map(buf, "/", function()
-		vim.ui.select(state.metadata.tables, {
+		M.select(state.metadata.tables, {
 			prompt = "Find / recenter table",
 			format_item = function(item)
 				return item.key
@@ -1445,7 +1659,7 @@ function M.focus_panel(kind)
 	end
 	local buf = panel(state, kind .. "_buf")
 	local win = state[kind .. "_win"]
-	if state.compact then
+	if state.compact and kind ~= "activity" then
 		win = state.sql_win
 	elseif not valid(win, "win") then
 		vim.api.nvim_set_current_win(state.sql_win)
@@ -1473,8 +1687,9 @@ function M.help()
 			"FoxQueryRun statement / selection / section / file",
 			"FoxQueryCancel: cancel; reconnect if session is uncertain",
 			"FoxQueryResults / FoxQueryActivity: results / submitted SQL",
-			"Explorer/diagram: Enter inspect, J Insert JOIN, n notes, b browse",
-			"Results: Enter expand row, y copy, e export, gR follow FK",
+			"Explorer/diagram: Enter inspect, J Insert JOIN, C column limit, n notes, b browse",
+			"SQL files: Enter opens; Alt+h/l switches SQL tabs | Status: click/y copies; Enter error details",
+			"Results: H/L columns, J/K rows, Enter expand row, y copy, e export, gR follow FK",
 			"Map: / table search, Enter recenter, +/- depth, zh/zl pan, q back",
 			"Diagram markers: * selected, k JOIN, f filter, ? candidate FK; dim unused",
 			"Parameters: Ctrl-C cancels; NULL is null; text:NULL is literal text",
@@ -1512,10 +1727,71 @@ function M.row()
 	if not item.result_rows then
 		item.result_lines, item.result_rows = render.results(item.result)
 	end
-	local entry = item.result_rows[vim.api.nvim_win_get_cursor(0)[1] - 2]
+	local entry = item.result_rows[vim.api.nvim_win_get_cursor(0)[1]]
 	if entry then
 		return entry.set, entry.row
 	end
+end
+
+function M.move_cell(direction)
+	local state = M.state()
+	local item = console(state)
+	if not item or not item.result or vim.api.nvim_get_current_buf() ~= state.result_buf then
+		return
+	end
+	if not item.result_rows then
+		item.result_lines, item.result_rows = render.results(item.result)
+	end
+	local cursor = vim.api.nvim_win_get_cursor(0)
+	local rows = vim.tbl_keys(item.result_rows)
+	table.sort(rows)
+	if #rows == 0 then
+		return
+	end
+	local row = cursor[1]
+	if direction == "up" then
+		row = rows[1]
+		for _, at in ipairs(rows) do
+			if at >= cursor[1] then
+				break
+			end
+			row = at
+		end
+	elseif direction == "down" then
+		row = rows[#rows]
+		for _, at in ipairs(rows) do
+			if at > cursor[1] then
+				row = at
+				break
+			end
+		end
+	elseif not item.result_rows[row] then
+		row = rows[1]
+	end
+	local widths = item.result_rows[row].widths
+	local starts, cell, position = {}, 1, vim.fn.virtcol(".") - 1
+	local offset = 2
+	for at, width in ipairs(widths) do
+		starts[at] = offset
+		if position >= offset then
+			cell = at
+		end
+		offset = offset + width + 3
+	end
+	if direction == "left" or direction == "right" then
+		cell = math.max(1, math.min(#widths, cell + (direction == "left" and -1 or 1)))
+	end
+	local text = vim.api.nvim_buf_get_lines(state.result_buf, row - 1, row, false)[1]
+	local byte, display = 0, 0
+	for at = 0, vim.fn.strchars(text) - 1 do
+		if display >= starts[cell] then
+			break
+		end
+		local char = vim.fn.strcharpart(text, at, 1)
+		byte, display = byte + #char, display + vim.fn.strdisplaywidth(char)
+	end
+	vim.api.nvim_win_set_cursor(0, { row, byte })
+	vim.cmd("normal! zv")
 end
 
 function M.expand_row()
@@ -1556,7 +1832,7 @@ function M.export()
 		return
 	end
 	local name = "exports/run-" .. os.date("%Y%m%d-%H%M%S") .. ".json"
-	vim.ui.select(
+	M.select(
 		{ "Export loaded rows", "Cancel" },
 		{ prompt = "Export loaded rows only to " .. name .. "?" },
 		function(choice)
@@ -1585,7 +1861,7 @@ function M.follow_row()
 	local candidates = vim.tbl_filter(function(relation)
 		return relation.source == item.key
 	end, state.metadata.relations)
-	vim.ui.select(candidates, {
+	M.select(candidates, {
 		prompt = "Follow foreign key",
 		format_item = function(relation)
 			return relation.target .. " / " .. relation.name
@@ -1617,7 +1893,7 @@ function M.follow_row()
 		local name = (target.schema and sql.quote(target.schema, active.profile.engine) .. "." or "")
 			.. sql.quote(target.name, active.profile.engine)
 		local query = "SELECT * FROM " .. name .. " WHERE " .. table.concat(predicates, " AND ") .. " LIMIT 200"
-		vim.ui.select({ "Run related-row query", "Cancel" }, { prompt = query }, function(choice)
+		M.select({ "Run related-row query", "Cancel" }, { prompt = query }, function(choice)
 			if choice == "Run related-row query" then
 				M.run("statement", query, params, target.key)
 			end
@@ -1854,7 +2130,7 @@ end
 
 function M.install_drivers()
 	local state = M.state()
-	vim.ui.select(
+	M.select(
 		{ "Install project MySQL + PostgreSQL drivers", "Cancel" },
 		{ prompt = "Install PyMySQL and psycopg[binary] under .foxnvim/query/private/drivers?" },
 		function(choice)
@@ -1914,7 +2190,7 @@ function M.setup()
 			state.active = args.buf
 			local win = vim.api.nvim_get_current_win()
 			if not state.compact and win ~= state.sql_win then
-				for _, name in ipairs({ "side", "result", "activity" }) do
+				for _, name in ipairs({ "side", "result", "activity", "connections", "queries" }) do
 					if state[name .. "_win"] == win then
 						vim.api.nvim_win_set_buf(win, panel(state, name .. "_buf"))
 					end
@@ -1966,6 +2242,7 @@ function M.setup()
 						if not ok then
 							notify("Could not save Query layout: " .. tostring(err), vim.log.levels.WARN)
 						end
+						M.refresh_view(state)
 					end
 				end
 			end, 150)

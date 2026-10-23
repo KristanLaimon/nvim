@@ -2,7 +2,7 @@
 
 [Back to wiki](index.md) · [SQL tooling](languages/sql.md) · [Design plan](../PLAN-FOXQUERYGRIP.md)
 
-FoxQuerier adds a read-only database workspace to the current project. The default layout has connections on the far left, SQL in the center, the database explorer on the right, and results/activity beneath SQL. **Shift+F3** toggles the live diagram: connections disappear and SQL/diagram use 30% / 70% of the width by default, with results still beneath SQL. A compact terminal uses panel toggles.
+FoxQuerier adds a read-only database workspace to the current project. The default layout has connections above saved SQL files on the far left, SQL in the center, the database explorer on the right, results beneath SQL, and a full-width activity bar at the bottom. **Shift+F3** toggles the live diagram: connections disappear and SQL/diagram use 30% / 70% of the width by default, with results still beneath SQL. A compact terminal uses panel toggles above the activity bar.
 
 ## Start
 
@@ -10,12 +10,12 @@ FoxQuerier adds a read-only database workspace to the current project. The defau
 2. Press **F3** to cycle directly between Editor and Query, or run `:FoxMode query`. `:FoxMode` still offers a picker.
 3. Press **gC** in Normal mode or run `:FoxQueryConnections` to focus the connection sidebar. **a** adds, **e** edits, **d** deletes a profile, **Enter** connects, and **D** disconnects. SQLite opens the existing file explorer at your project root: Enter opens folders or selects a database file; Esc cancels. MySQL/PostgreSQL need host, port, database, and user. Passwords are prompted privately in RAM or resolved from `password_env`.
 4. For MySQL/PostgreSQL, run `:FoxQueryInstallDrivers` once in that project if drivers are missing. Python 3 and pip are prerequisites; installation is explicit and project-local.
-5. Search/inspect the explorer, create SQL with `:FoxQueryNew`, and save with `:write`.
+5. Search/inspect the explorer, create SQL with **gN** or `:FoxQueryNew`, and save with `:write`. The **SQL FILES** pane below connections lists saved project SQL and open tabs; Enter opens the selected file, and **Alt+h/l** switches SQL tabs. Closing every tab leaves a prompt to open or create one.
 6. A complete statement beginning with **SELECT** runs after a **900 ms typing or caret-movement pause** in either layout. Moving between statements runs the SELECT at the caret, matching the diagram's statement scope; moving within unchanged SQL does not repeat execution. **Ctrl+Enter** or **F5** runs manually in Normal/Insert mode. **Ctrl+Space** or **Ctrl+X Ctrl+O** opens completion in Insert mode. **F3** restores the editor without closing SQL sessions.
 
 For PowerShell in Windows Terminal, run `./scripts/setup-powershell.ps1` and restart Windows Terminal to forward Ctrl+Enter and Ctrl+Space to Neovim. `./scripts/unsetup-powershell.ps1` removes that forwarding. Ctrl+Alt+O remains an alternative direct mode switch. Other terminals/operating systems may intercept keys; Ex commands and the palette remain available. No new leader shortcuts are added.
 
-The status bar shows **[Editor | Query]** in every theme: the current workflow uses normal text color and the other is dimmed. F2 retains rename; F3 switches workflows and Shift+F3 toggles the diagram.
+The status bar shows **[Editor | Query]** in every theme: the current workflow uses normal text color and the other is dimmed. F2 retains rename; F3 switches workflows and Shift+F3 toggles the diagram. Query also has a dedicated bottom activity bar: SQL status/timing/submitted SQL on the left and **[Default | Visually]** on the right (the active view has an asterisk). Failed executions show the full server diagnostic in RAM. Click the bar from any Query pane, or focus it and press `y`, to copy the full diagnostic to the system clipboard; Enter opens the multiline error popup. Long lines can be scrolled horizontally. Diagnostics may contain query values and are never saved automatically.
 
 Query panes display connection/view/help hints. **Shift+F3** toggles the diagram in Normal/Insert/Visual mode; **gV** does the same in Normal mode. **gN** creates a query, **gE** focuses the explorer/diagram, **gR** opens results, and **F1** opens help. **Ctrl+h/j/k/l** navigate panes in Normal, Insert, and Visual modes; Ctrl+k does not invoke the file finder in Query panes. Completion uses the current statement's cached tables: unique columns are offered bare as well as qualified; ambiguous column names are offered qualified. Native and common CSI terminal sequences are mapped; F5 and Ctrl+X Ctrl+O avoid relying on modified Enter/Space delivery.
 
@@ -41,11 +41,11 @@ For PostgreSQL, `schemas` may contain multiple schema names; the selected schema
 
 SQLite paths are relative to the project root unless absolute; missing files are rejected rather than created. Docker is not queried or controlled by the app: use its exposed host/port like any other database.
 
-SQL, notes, profiles, metadata cache, explicit workspace data, installed drivers, and exports stay under `.foxnvim/query/`. Private/cache/export directories receive local ignore rules. Project/team policy determines whether saved queries and notes are committed. Existing SQLite databases remain at their configured paths.
+Saved SQL files live in **`.foxnvim/query/queries/*.sql`** and remain available in the SQL FILES pane after restarting, or through `:FoxQueryOpen`. Unsaved edits still require `:write` to survive a restart. SQL, notes, profiles, metadata cache, explicit workspace data, installed drivers, and exports stay under `.foxnvim/query/`. Private/cache/export directories receive local ignore rules. Project/team policy determines whether saved queries and notes are committed. Existing SQLite databases remain at their configured paths.
 
-UI geometry is the explicit global exception: pane proportions, results/activity sizes, and resized inspector/connections/help popups are stored in `stdpath('data')/fox/query-layout.json` (Windows: `nvim-data/fox/query-layout.json`). The default diagram split is 30% SQL / 70% diagram; saved proportions override it across projects. Sizes are clamped for smaller terminals. Only geometry is global; connection identities, SQL, and results are not stored there. Old project-workspace geometry is ignored.
+UI geometry is the explicit global exception: pane proportions, results sizes, and resized inspector/connections/help popups are stored in `stdpath('data')/fox/query-layout.json` (Windows: `nvim-data/fox/query-layout.json`). The default diagram split is 30% SQL / 70% diagram; saved proportions override it across projects. Sizes are clamped for smaller terminals. The activity bar stays one line high. Only geometry is global; connection identities, SQL, and results are not stored there. Old project-workspace geometry is ignored.
 
-Results use bordered ASCII tables. Header/border lines are not data rows; Enter/y/export/FK navigation retain their original row semantics across multiple result sets. For example:
+Results use bordered ASCII tables, with result counts, execution details, and shortcut hints below the grid. Header/border lines are not data rows; Enter/y/export/FK navigation retain their original row semantics across multiple result sets. For example:
 
 ```text
 +--------+
@@ -76,13 +76,14 @@ Results use bordered ASCII tables. Header/border lines are not data rows; Enter/
 | `:FoxQueryGraph all`, `:FoxQueryGraph neighborhood` | Whole-database overview or selected table neighborhood, initially depth 3. |
 | `:FoxQueryNotes` | Open local table Markdown notes. |
 | `:FoxQueryInsertJoin` | Review a foreign-key mapping and insert an undoable JOIN edit. |
+| `:FoxQueryColumns` | Set the project diagram column limit (also `C` in the diagram). |
 | `:FoxQueryPin` | Pin/unpin the current statement's location for the live diagram. |
 | `:FoxQueryResults`, `:FoxQueryActivity` | Show results or submitted SQL/activity. |
 | `:FoxQueryExport` | Explicit JSON export of loaded rows only. |
 | `:FoxQueryRefresh` | Refresh current connection metadata. |
 | `:FoxQueryClearParameters`, `:FoxQueryClearCache` | Clear RAM values or disposable metadata files; preserve user documents. |
 | `:FoxQueryHelp` | Context help, also available with F1 in SQL buffers and `?` in panels. |
-| `:FoxQueryErrorDetails` | Explicitly reveal the last server diagnostic in a temporary buffer; values may appear, and details are never saved automatically. |
+| `:FoxQueryErrorDetails` | Expand the last server diagnostic in a temporary buffer; values may appear, and details are never saved automatically. |
 
 All commands are in the Command Palette's **Query** category. The default Run scope is statement; an unresolved statement never falls back to running the whole file.
 
@@ -102,13 +103,13 @@ Each `?` input is bound through the driver. Inputs stay in RAM; the same unchang
 
 The graph resolves tables from cached metadata and updates after a 200 ms typing pause. Active table boxes are connected by actual SQL JOIN predicates; dotted links mark unfinished predicates. FK neighbors are dim suggestions and do not imply a JOIN exists in the SQL. Column markers are labels, not keyboard actions: `*` selected/output, `k` join key, `f` filter, `?` candidate FK column for an unfinished JOIN. Unused columns remain visible but dimmed. Aliases/self-JOINs remain separate instances. Multiple possible FKs are suggestions; none is silently inserted.
 
-The renderer caps active cards at 40, context suggestions at 20, and displayed columns per card at 12. Counts disclose hidden content; inspect a table to read its full structure. Incomplete/ambiguous/unsupported SQL is labelled partial; the graph is not an execution plan or validation proof. Pane actions run in the diagram: move to a table box, then Enter inspects or J offers Insert JOIN; Ctrl+h returns to SQL.
+The renderer caps active cards at 40 and context suggestions at 20. Cards show up to **15 columns** by default, placing explicitly selected columns first; explicitly selected columns remain visible even if they exceed that limit. Press **C** in the diagram or use `:FoxQueryColumns` to choose 1?200 columns. This preference persists per project in `.foxnvim/query/settings.json`. Counts disclose hidden content; inspect a table to read its full structure. Incomplete/ambiguous/unsupported SQL is labelled partial; the graph is not an execution plan or validation proof. Pane actions run in the diagram: move to a table box, then Enter inspects or J offers Insert JOIN; Ctrl+h returns to SQL.
 
 Use Enter on a table box to inspect it; the cursor position determines the left/right box. Inspector actions: `J` offers Insert JOIN, `n` opens notes, `b` browses rows, and `g` opens the neighborhood. Joining always requires an explicit reviewed edit; clicking a node does not rewrite or execute SQL.
 
 Explorer: `/` fuzzy-filters cached tables, Enter inspects, `b` browses, `n` opens notes. In Visual view `/` can select/recenter a table through the graph/inspector commands. Full map: `/` chooses any cached table, Enter recenters, `i` inspects, `+`/`-` change neighborhood depth, native scrolling and `zh`/`zl` pan, `q` returns. The graph shows possible bridge-table classifications with the evidence used; missing visible relationships do not prove a table is an orphan.
 
-Results: use arrows/hjkl, native `/` search over loaded rows, Enter to expand a row, `y` to copy, and `e` to export loaded JSON. Grid cells are visually clipped to 32 display cells; expanded rows retain fetched values. Binary fields carry a capped base64 preview with byte length. `gR` follows a verified table-browse result's FK, previewing the generated bound SQL. Arbitrary SQL projections do not get guessed row origins.
+Results: **Shift+h/l** moves between columns and **Shift+j/k** moves between data rows (skipping borders and footers, including across result sets). Use arrows/hjkl, native `/` search over loaded rows, Enter to expand a row, `y` to copy, and `e` to export loaded JSON. Grid cells are visually clipped to 32 display cells; expanded rows retain fetched values. Binary fields carry a capped base64 preview with byte length. `gR` follows a verified table-browse result's FK, previewing the generated bound SQL. Arbitrary SQL projections do not get guessed row origins.
 
 ## Sessions, workspaces, and limits
 
@@ -128,7 +129,7 @@ Read-only behavior is enforced with SQLite read-only URI/query-only mode, MySQL 
 
 Automated tests use disposable SQLite fixtures for binding, batches, metadata, read-only enforcement, row limits, cancellation, and actual Neovim-to-Python transport. Lua tests cover scopes, aliases, composite JOINs, diagram roles, project storage, view switching, and session exclusion.
 
-Latest implementation validation on Windows: **785 repository tests passed**, including 27 Query tests. Changed Lua files pass StyLua/Luacheck. Earlier driver validation passed **9 Python tests**, and **780 Lua files** parsed without syntax errors. Current fixture checks cover live SELECT debounce, parameter/write rejection, remembered connections/failure badges, profile edit/delete, key aliases, and both layouts. Physical Ctrl+Enter/Ctrl+Space behavior in your terminal still needs confirmation; F5 and Ctrl+X Ctrl+O are available alternatives.
+Latest implementation validation on Windows: **791 repository tests passed**, including 33 Query tests. Changed Lua files pass StyLua/Luacheck, and all 783 Lua files parse. All 9 Python bridge tests pass, including full diagnostics longer than 4,096 characters. Current fixture checks cover live SELECT debounce, parameter/write rejection, remembered connections/failure badges, profile edit/delete, key aliases, and both layouts. Physical Ctrl+Enter/Ctrl+Space behavior in your terminal still needs confirmation; F5 and Ctrl+X Ctrl+O are available alternatives.
 
 The authorized production MySQL check confirmed **5.7.44**, read-only session setup, bound constants, and a zero-row catalog query. **No business rows were read and no production files were saved.** PostgreSQL code and Windows driver loading are present, but live PostgreSQL and Linux integration still need an available test environment. Advanced SQL graph analysis remains intentionally partial.
 

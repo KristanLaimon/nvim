@@ -250,7 +250,7 @@ local function get_listed_buffer_names()
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		if vim.api.nvim_buf_is_valid(buf) and vim.fn.buflisted(buf) == 1 then
 			local name = vim.api.nvim_buf_get_name(buf)
-			if name ~= "" and vim.bo[buf].buftype == "" then
+			if name ~= "" and vim.bo[buf].buftype == "" and not vim.b[buf].fox_query_root then
 				table.insert(list, vim.fn.fnamemodify(name, ":."))
 			end
 		end
@@ -278,7 +278,8 @@ function M.save_index(data, root_dir)
 					created_at = env.created_at,
 					updated_at = env.updated_at,
 					buffers = env.buffers or {},
-					last_buffer = env.last_buffer,
+					last_buffer = env.last_buffer and not env.last_buffer:find("/.foxnvim/query/", 1, true) and env.last_buffer
+						or nil,
 					selected_terminal = env.selected_terminal,
 					terminal_open = env.terminal_open,
 					neotree_open = env.neotree_open,
@@ -785,7 +786,12 @@ local function snapshot_and_persist_environment(env)
 
 	-- Write session file to disk
 	env.session_file = env.session_file or session_path_for_slot(env.slot)
+	local query = package.loaded["fox.query"]
+	local restore_query = query and query.suspend()
 	pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(env.session_file))
+	if restore_query then
+		restore_query()
+	end
 
 	-- Restore UI after disk write
 	if neotree_was_open then
@@ -886,6 +892,14 @@ function M.switch_environment(target_slot, callback)
 	-- 2. Fast in-memory snapshot of current environment (0 disk I/O, 0 deepcopy)
 	ensure_current_slot_initialized()
 	local cur_env = _G._fox_environments[cur_slot]
+	local query = package.loaded["fox.query"]
+	if query then
+		local state = query.states[require("fox.query.storage").root(vim.fn.getcwd())]
+		if state then
+			state.resume_query = state.mode == "query"
+			query.hide(state)
+		end
+	end
 	if cur_env then
 		snapshot_active_environment(cur_env)
 	end
@@ -1108,6 +1122,12 @@ function M.switch_environment(target_slot, callback)
 	end)
 
 	notify(string.format("🌿 Active Environment: #%d (%s)", target_slot, target_env.name or target_env.cwd_name))
+	if query then
+		local state = query.states[require("fox.query.storage").root(target_env.cwd)]
+		if state and state.resume_query then
+			query.show(state.view)
+		end
+	end
 	if callback then
 		callback()
 	end
@@ -1127,6 +1147,10 @@ function M.close_environment(slot, callback)
 		end
 		return
 	end
+	local query = package.loaded["fox.query"]
+	if query and not query.can_replace(env.cwd) then
+		return
+	end
 
 	local confirm_msg = string.format(
 		"Close Environment #%d ('%s')?\nThis stops its scoped LSPs, terminals and unloads its buffers.",
@@ -1141,6 +1165,9 @@ function M.close_environment(slot, callback)
 	end
 
 	-- 1. Stop scoped LSPs
+	if query and not query.close_root(env.cwd) then
+		return
+	end
 	M.stop_environment_lsps(env)
 
 	-- 2. Kill scoped terminals

@@ -1,6 +1,10 @@
 # FoxQuerier: a database workspace inside FoxVim
 
-Status: **planning and review only**. This change defines the product; it does not implement it, install tools, or connect to a database.
+Status: **initial read-only implementation available**. See [the usage and validation guide](docs/query-mode.md) for commands, implemented behavior, and current limitations. This document retains the intended product design; unchecked acceptance items and suggested follow-ups are not claims of completed validation.
+
+Implementation coverage: Standard/Visual views, project-local profiles/documents/cache, SQLite/MySQL/PostgreSQL driver paths, bounded read-only execution, RAM parameters, cached completion, FK JOIN previews, connected ASCII diagrams, table notes, explicit workspace integration, and Command Palette actions. Advanced graph syntax, persisted SQL history, drafts, virtual relationships, and write/admin features remain follow-ups. Live PostgreSQL and Linux checks are outstanding.
+
+Production validation: the application account confirmed **MySQL 5.7.44** and engine-enforced read-only setup. Bound constants and a zero-row catalog query passed; no business records were read or production query results saved. The earlier "MySQL 5.3" report is superseded by this verified version.
 
 FoxQuerier is the working name for query mode. Requirements and user answers are marked as confirmed. Layouts, commands, extra features, and suggested defaults are proposals for review.
 
@@ -19,7 +23,7 @@ I want a lightweight place inside FoxVim to find tables, understand relationship
 | Scope | Plan query mode now. FoxAI implementation is outside this work. |
 | Project | Editor, query, and future AI modes are views of the same open project. |
 | Databases | SQLite, MySQL, and PostgreSQL must support the core workflow. |
-| First target | Work database reported as "MySQL 5.3"; exact server identity/version still needs verification. |
+| First target | Work server verified as MySQL 5.7.44 through the authorized minimal validation. |
 | Platforms | Neovim on Linux and Windows. |
 | Connection workflow | Usually local, including Docker-exposed databases. Use host/port/credentials; remain Docker agnostic. |
 | Access | Read-only first; add writes later. |
@@ -270,7 +274,7 @@ Confirmed: SELECT columns are highlighted, join/filter columns are marked separa
 
 Docker is irrelevant to connection logic: use the exposed address and credentials. No container discovery, Docker API, startup, or automatic `docker exec`. Windows and Linux support require actual checks on both platforms.
 
-Profiles need stable IDs, readable labels, engine, and optional local/staging/production labels. Check server capabilities; explain unsupported features instead of faking them. Verify the reported "MySQL 5.3" identity/version before choosing a driver, for example through a narrowly scoped `SELECT VERSION();`. Do not silently reinterpret the reported version or assume a server upgrade.
+Profiles need stable IDs, readable labels, engine, and optional local/staging/production labels. Check server capabilities; explain unsupported features instead of faking them. The reported "MySQL 5.3" version was checked through the authorized minimal validation and resolved to MySQL 5.7.44; no server upgrade was needed.
 
 Proposed session model:
 
@@ -285,7 +289,7 @@ Proposed session model:
 
 ### Driver feasibility check before UI implementation
 
-No driver/library/plugin is selected here. Compare the smallest viable existing integration/native-client approach; use a small structured driver process only if needed. Do not build a universal database framework.
+Selected implementation: a small structured Python driver process, using standard-library SQLite and explicit project-local PyMySQL/psycopg installations for the other engines. The following requirements remain the verification criteria; this is not a universal database framework.
 
 The approach must demonstrate on all three engines:
 
@@ -426,7 +430,7 @@ Confirmed: browsing, querying, learning, and notes first. Editable cells, schema
 
 The user has offered the current production database in Docker for necessary functionality checks, with an explicit instruction to access no extra information. This is limited validation access, not a reason to explore business data.
 
-- No production query is necessary to rewrite this plan; none is run for this documentation pass.
+- Planning needed no production access. Implementation validation used only read-only session setup, version/capability checks, bound constants, and a zero-row catalog query; no business records were read.
 - During implementation, first use disposable SQLite/MySQL/PostgreSQL fixtures for parsing, binding, errors, cancellation, and load tests.
 - Use production only where needed to verify the real setup: exact version/capabilities, scoped object/column/key metadata, or a narrowly justified read-only functionality check.
 - State the purpose and scope of each production check. Fetch only the minimum fields/objects needed; do not dump schemas/data, sample records merely for curiosity, or collect sensitive results in files/logs.
@@ -493,7 +497,7 @@ Integrate with current Workspace commands/UI. Exclude SQL UI/results/state from 
 
 ## 14. Commands and navigation
 
-Every action needs a descriptive Command Palette entry and Ex command. Proposed names below are not implemented; consolidate where appropriate.
+Every action needs a descriptive Command Palette entry and Ex command. The table below retains the planned interface; see the usage guide for the implemented command set and exact syntax.
 
 | Proposed command | Action |
 |---|---|
@@ -545,7 +549,7 @@ Fresh setups stay Lua-core-only. No optional SQL tools/parsers/drivers install i
 
 ## 16. Build order and acceptance checks
 
-All phases are future work, not instructions to implement now.
+The following build sequence describes the intended delivery gates. Current implementation/verification coverage is recorded above and in the usage guide; unavailable live-engine/platform checks must not be assumed complete.
 
 | Phase | Deliverable | Evidence before continuing |
 |---|---|---|
@@ -599,7 +603,7 @@ Already answered: local MySQL first, Windows/Linux, Docker agnostic; read-only f
 
 ### Foundations: settle before implementation
 
-1. **Exact server:** what does `SELECT VERSION();` report for "MySQL 5.3", including distribution? Minimal authorized production validation may establish this later; no private hostnames/credentials belong in this plan.
+1. **Exact server — answered:** the authorized version check returned MySQL 5.7.44. No private credentials belong in this plan.
 2. **Session sharing:** should tabs share temporary tables/session settings? Proposal: independent session per console, explicit sharing later.
 3. **Multiple connections:** do I compare local/staging/production in one project? Proposal: multiple profiles with explicit per-console binding.
 4. **Storage boundary:** does the rule include engine-managed SQLite journals/WAL and OS/client temp files, or FoxQuerier-owned files/cache/state? Proposal: constrain every FoxQuerier-controlled output; existing DB files and engine-managed sidecars stay at configured locations.

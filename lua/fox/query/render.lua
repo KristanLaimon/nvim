@@ -1,0 +1,221 @@
+local M = {}
+local sql = require("fox.query.sql")
+
+function M.classification(item, metadata)
+	local outgoing, incoming, keys, pk = 0, 0, {}, {}
+	for _, relation in ipairs(metadata.relations or {}) do
+		if relation.source == item.key then
+			outgoing = outgoing + 1
+			for _, pair in ipairs(relation.columns) do
+				keys[pair.source] = true
+			end
+		end
+		if relation.target == item.key then
+			incoming = incoming + 1
+		end
+	end
+	for _, column in ipairs(item.columns or {}) do
+		if column.pk then
+			pk[#pk + 1] = column.name
+		end
+	end
+	local bridge = outgoing >= 2 and #pk >= 2
+	for _, name in ipairs(pk) do
+		if not keys[name] then
+			bridge = false
+		end
+	end
+	if bridge then
+		return "Possible M:N bridge (composite PK consists of FK columns)"
+	end
+	if outgoing + incoming == 0 then
+		return "Entity; no known relationships (metadata may be incomplete)"
+	end
+	return "Entity | " .. outgoing .. " outgoing / " .. incoming .. " incoming FK(s)"
+end
+
+function M.graph(graph, metadata, width)
+	return require("fox.query.diagram").render(graph, metadata, width, M.classification)
+end
+
+function M.explorer(metadata, filter, selected, notes)
+	local lines, objects =
+		{ "DATABASE EXPLORER", "/: filter  Enter: inspect  b: browse  n: notes", "Filter: " .. (filter or ""), "" }, {}
+	local candidates = {}
+	for _, item in ipairs(metadata.tables or {}) do
+		candidates[#candidates + 1] = item.key
+	end
+	if filter and filter ~= "" then
+		candidates = vim.fn.matchfuzzy(candidates, filter)
+	end
+	for _, key in ipairs(candidates) do
+		objects[#lines + 1] = sql.table(metadata, key)
+		lines[#lines + 1] = (selected == key and "> " or "  ") .. key .. (notes and notes[key] and " [note]" or "")
+	end
+	if #candidates == 0 then
+		lines[#lines + 1] = "No matching cached tables; connect/refresh"
+	end
+	return lines, objects
+end
+
+function M.object_at(objects, row, column)
+	local object = objects and objects[row]
+	if object and object.regions then
+		for _, region in ipairs(object.regions) do
+			if column >= region.first and column < region.last then
+				return region.item
+			end
+		end
+		return nil
+	end
+	return object
+end
+
+function M.inspect(item, metadata)
+	local lines = { item.key, M.classification(item, metadata), "", "STRUCTURE" }
+	for _, column in ipairs(item.columns or {}) do
+		lines[#lines + 1] = (column.pk and "PK " or "   ")
+			.. column.name
+			.. "  "
+			.. tostring(column.type)
+			.. (column.nullable and " NULL" or " NOT NULL")
+	end
+	lines[#lines + 1] = ""
+	lines[#lines + 1] = "INDEXES / UNIQUE KEYS"
+	for _, index in ipairs(item.indexes or {}) do
+		lines[#lines + 1] = index.name
+			.. (index.unique and " UNIQUE" or "")
+			.. (index.column and " (" .. index.column .. ")" or "")
+			.. (index.definition and " " .. index.definition or "")
+	end
+	lines[#lines + 1] = ""
+	lines[#lines + 1] = "RELATIONSHIPS (visible metadata only)"
+	for _, relation in ipairs(metadata.relations or {}) do
+		if relation.source == item.key or relation.target == item.key then
+			lines[#lines + 1] = relation.source .. " -- child FK -> referenced key -- " .. relation.target
+			for _, pair in ipairs(relation.columns) do
+				lines[#lines + 1] = "  " .. tostring(pair.source) .. " = " .. tostring(pair.target)
+			end
+		end
+	end
+	return lines
+end
+
+function M.neighborhood(metadata, key, depth)
+	local visible, distance = {}, { [key] = 0 }
+	local pending, cursor = { key }, 1
+	while cursor <= #pending do
+		local current = pending[cursor]
+		cursor = cursor + 1
+		if distance[current] < depth then
+			for _, relation in ipairs(metadata.relations or {}) do
+				local other
+				if relation.source == current then
+					other = relation.target
+				elseif relation.target == current then
+					other = relation.source
+				end
+				if other and distance[other] == nil then
+					distance[other] = distance[current] + 1
+					pending[#pending + 1] = other
+				end
+			end
+		end
+	end
+	for _, item in ipairs(metadata.tables or {}) do
+		if distance[item.key] then
+			visible[#visible + 1] = item
+		end
+	end
+	return visible
+end
+
+function M.map(metadata, key, depth, width)
+	local tables = key and M.neighborhood(metadata, key, depth or 3) or metadata.tables or {}
+	local graph, visible = { kind = "schema", nodes = {}, edges = {} }, {}
+	for _, item in ipairs(tables) do
+		local roles = {}
+		for _, column in ipairs(item.columns or {}) do
+			if column.pk then
+				roles[column.name] = { join = true }
+			end
+		end
+		for _, relation in ipairs(metadata.relations or {}) do
+			if relation.source == item.key then
+				for _, pair in ipairs(relation.columns) do
+					roles[pair.source] = { join = true }
+				end
+			end
+		end
+		graph.nodes[#graph.nodes + 1] = { name = item.key, alias = item.key, table = item, roles = roles }
+		visible[item.key] = true
+	end
+	for _, relation in ipairs(metadata.relations or {}) do
+		if visible[relation.source] and visible[relation.target] then
+			local predicates = {}
+			for _, pair in ipairs(relation.columns) do
+				predicates[#predicates + 1] = tostring(pair.source) .. " = " .. tostring(pair.target)
+			end
+			graph.edges[#graph.edges + 1] = {
+				source = relation.source,
+				target = relation.target,
+				kind = "FK",
+				predicate = relation.name .. ": " .. table.concat(predicates, " AND "),
+			}
+		end
+	end
+	local lines, _, objects = M.graph(graph, metadata, width)
+	lines[2] = (key and ("Focus " .. key .. " | depth " .. (depth or 3)) or "All visible tables")
+		.. " | "
+		.. #tables
+		.. " nodes"
+	lines[#lines] = "Enter recenter | i inspect | / table search | +/- depth | zh/zl pan | q back"
+	return lines, objects
+end
+
+function M.results(result)
+	local lines = {}
+	local function display(value)
+		local text = value == vim.NIL and "NULL" or type(value) == "table" and vim.json.encode(value) or tostring(value)
+		return text:gsub("\n", "\\n"):gsub("\r", "\\r"):gsub("\t", "\\t")
+	end
+	for index, set in ipairs(result.sets or {}) do
+		local widths = {}
+		for at, column in ipairs(set.columns) do
+			widths[at] = math.min(32, vim.fn.strdisplaywidth(column))
+		end
+		for _, row in ipairs(set.rows) do
+			for at, value in ipairs(row) do
+				widths[at] = math.min(32, math.max(widths[at] or 0, vim.fn.strdisplaywidth(display(value))))
+			end
+		end
+		local function format_row(row)
+			local values = {}
+			for at, value in ipairs(row) do
+				local text = display(value)
+				if vim.fn.strdisplaywidth(text) > widths[at] then
+					text = vim.fn.strcharpart(text, 0, widths[at])
+				end
+				while vim.fn.strdisplaywidth(text) > widths[at] do
+					text = vim.fn.strcharpart(text, 0, vim.fn.strchars(text) - 1)
+				end
+				values[#values + 1] = text .. string.rep(" ", widths[at] - vim.fn.strdisplaywidth(text))
+			end
+			return table.concat(values, " | ")
+		end
+		lines[#lines + 1] = "Result "
+			.. index
+			.. " | "
+			.. #set.rows
+			.. " loaded rows"
+			.. (set.truncated and " | TRUNCATED" or "")
+		lines[#lines + 1] = format_row(set.columns)
+		for _, row in ipairs(set.rows) do
+			lines[#lines + 1] = format_row(row)
+		end
+		lines[#lines + 1] = ""
+	end
+	return lines
+end
+
+return M

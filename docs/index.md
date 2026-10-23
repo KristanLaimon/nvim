@@ -60,6 +60,7 @@ If you have just installed or launched FoxVim for the first time, follow these s
 | :--- | :--- |
 | ⌨️ [**Keybinds Reference**](keybinds.md) | Full shortcut reference categorized by domain |
 | 🧰 [**Command Palette**](command-palette.md) | `<C-S-p>` launcher, command registration & fuzzy action runner |
+| [**FoxQuerier: SQL workspace**](query-mode.md) | Standard/Visual database views, query execution, FK diagrams, and project-local notes |
 | 🗂️ [**Workspaces & Sessions**](workspaces.md) | Per-project session slots (`<C-S-w>`), tab persistence & buffer cleanups |
 | 🐙 [**Git Control Center**](git-center.md) | Interactive Git staging, restore, commit form & submodules (`<C-S-g>`) |
 | 🐙 [**Secondary Git Repos**](secondary-git.md) | Decoupled secondary Git repositories with Dotfiles pattern (`:SecondaryGitManager`) |

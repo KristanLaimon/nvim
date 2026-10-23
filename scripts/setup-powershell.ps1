@@ -35,8 +35,9 @@ if ($SettingsPaths.Count -eq 0) {
 
 # --- DEFINICIÓN DE ATAJOS ---
 # Array de atajos personalizados: [Código ASCII, Modificador, Combinación de teclas]
-# Modificador 5u = Ctrl | Modificador 6u = Ctrl + Shift
+# Modificador 5u = Ctrl | Modificador 6u = Ctrl + Shift | Modificador 7u = Ctrl + Alt
 $Atajos = @(
+    @{ Codigo = 111; Mod = "7u"; Tecla = "ctrl+alt+o" }
     @{ Codigo = 59; Mod = "5u"; Tecla = "ctrl+;" }
     @{ Codigo = 44; Mod = "5u"; Tecla = "ctrl+," }
     @{ Codigo = 46; Mod = "5u"; Tecla = "ctrl+." }

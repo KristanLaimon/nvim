@@ -19,6 +19,14 @@
 
 --- Sources added to blink.cmp: provider name -> definition.
 local sources = {
+	fox_query = {
+		name = "Database",
+		module = "fox.query.completion",
+		score_offset = 100,
+		enabled = function()
+			return vim.bo.filetype == "sql" and vim.b.fox_query_root ~= nil
+		end,
+	},
 	launch_json = {
 		name = "LaunchJson",
 		module = "plugins.fox.dev.launch_cmp",

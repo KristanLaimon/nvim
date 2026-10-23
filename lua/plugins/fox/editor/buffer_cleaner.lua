@@ -146,6 +146,11 @@ function _G.Smart_Close_Buffer(target_buf, force)
 	if not vim.api.nvim_buf_is_valid(target_buf) then
 		return
 	end
+	local query = package.loaded["fox.query"]
+	if query and vim.b[target_buf].fox_query_root then
+		query.close_buffer(target_buf, force)
+		return
+	end
 
 	local ft = vim.bo[target_buf].filetype
 	if ft == M.settings.dashboard_filetype then
@@ -338,6 +343,11 @@ end
 --- @param force boolean|nil Discard unsaved changes.
 function _G.Neotree_Smart_Quit(force)
 	local cur_buf = vim.api.nvim_get_current_buf()
+	local query = package.loaded["fox.query"]
+	if query and vim.b[cur_buf].fox_query_root then
+		query.close_buffer(cur_buf, force)
+		return
+	end
 	local ft = vim.bo[cur_buf].filetype
 	local buftype = vim.bo[cur_buf].buftype
 

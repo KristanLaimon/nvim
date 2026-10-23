@@ -158,6 +158,7 @@ end
 --- Registered per-language configuration submodules.
 ---@type table<string, FoxLangModule>
 M.langs = {
+	sql = require("fox.langs.sql"),
 	php = require("fox.langs.php"),
 	typescript = require("fox.langs.typescript"),
 	web = require("fox.langs.web"),
@@ -187,6 +188,7 @@ M.langs = {
 --- itself, see lua/fox/core/installer.lua's `M.language_bundles`.
 M.lang_order = {
 	"lua",
+	"sql",
 	"php",
 	"go",
 	"rust",

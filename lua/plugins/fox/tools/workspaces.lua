@@ -161,7 +161,7 @@ local function parse_session_file(filepath)
 		end
 		local cd = l:match("^cd%s+(.+)")
 		if cd and cwd == "" then
-			cwd = vim.fn.expand(vim.trim(cd))
+			cwd = path.normalize(vim.fn.expand(vim.trim(cd)))
 		end
 		local b = l:match("^badd%s+%+?%d*%s*(.+)")
 		if b then
@@ -403,7 +403,7 @@ local function get_current_buffers()
 	local buflist = {}
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		local name = vim.api.nvim_buf_get_name(buf)
-		if vim.fn.buflisted(buf) == 1 and name ~= "" and vim.bo[buf].buftype == "" then
+		if vim.fn.buflisted(buf) == 1 and name ~= "" and vim.bo[buf].buftype == "" and not vim.b[buf].fox_query_root then
 			table.insert(buflist, vim.fn.fnamemodify(name, ":."))
 		end
 	end
@@ -487,6 +487,8 @@ end
 --- @return string|nil err
 --- @return boolean neotree_was_open Whether neo-tree should reopen on load.
 local function save_session_file(session_path, ws_name)
+	local query = package.loaded["fox.query"]
+	local restore_query = query and query.suspend()
 	vim.opt.sessionoptions = M.settings.session_options
 
 	local neotree_was_open = is_neotree_open()
@@ -500,6 +502,9 @@ local function save_session_file(session_path, ws_name)
 	purge_neotree_buffers()
 
 	local ok, err = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(session_path))
+	if restore_query then
+		restore_query()
+	end
 
 	if ok and ws_name and ws_name ~= "" then
 		pcall(function()
@@ -552,6 +557,14 @@ function M.save_workspace(name, callback)
 
 		local id = ws_item and ws_item.id or ("ws_" .. os.time() .. "_" .. math.random(1000, 9999))
 		local session_path = path.join(storage_dir(), id .. ".vim")
+		local query = package.loaded["fox.query"]
+		if query then
+			local query_ok, query_err = query.workspace_save(id)
+			if not query_ok then
+				notify(query_err, vim.log.levels.WARN)
+				return
+			end
+		end
 
 		-- Read the terminal state before save_session_file closes its window.
 		local terminal_slot = open_terminal_slot()
@@ -688,11 +701,18 @@ end
 --- @param ws_or_identifier table|string|number Record, id/name, or slot number.
 --- @return boolean loaded
 function M.load_workspace(ws_or_identifier)
+	local query = package.loaded["fox.query"]
+	if query and not query.can_replace() then
+		return false
+	end
 	local all = load_all_workspaces()
 	local target = resolve_load_target(all, ws_or_identifier)
 
 	if not target then
 		notify("Workspace not found", vim.log.levels.WARN)
+		return false
+	end
+	if query and target.cwd and not query.can_replace(target.cwd) then
 		return false
 	end
 
@@ -725,6 +745,10 @@ function M.load_workspace(ws_or_identifier)
 	-- Staying inside the same project keeps its terminals and task outputs alive;
 	-- switching projects clears them, because they belong to the old root.
 	local is_same_project = path.equals(vim.fn.getcwd(), target.cwd or vim.fn.getcwd())
+	if query then
+		local restore_query = query.suspend()
+		restore_query(false)
+	end
 
 	if target.cwd and vim.fn.getcwd() ~= target.cwd then
 		pcall(vim.api.nvim_set_current_dir, target.cwd)
@@ -734,7 +758,11 @@ function M.load_workspace(ws_or_identifier)
 	purge_neotree_buffers()
 
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_is_valid(buf) and not (is_same_project and is_transient_buffer(buf)) then
+		if
+			vim.api.nvim_buf_is_valid(buf)
+			and not vim.b[buf].fox_query_root
+			and not (is_same_project and is_transient_buffer(buf))
+		then
 			pcall(vim.api.nvim_buf_delete, buf, { force = true })
 		end
 	end
@@ -793,6 +821,23 @@ function M.load_workspace(ws_or_identifier)
 	end
 
 	pcall(M.update_badge)
+	if target.id then
+		local query_file = path.join(
+			target.cwd or vim.fn.getcwd(),
+			".foxnvim",
+			"query",
+			"private",
+			"workspaces",
+			vim.fn.sha256(target.id):sub(1, 24) .. ".json"
+		)
+		if path.is_file(query_file) then
+			if not query then
+				pcall(vim.cmd, "Lazy load fox_query")
+				query = require("fox.query")
+			end
+			query.workspace_load(target.id)
+		end
+	end
 	notify("Workspace '" .. target.name .. "' loaded!")
 	return true
 end

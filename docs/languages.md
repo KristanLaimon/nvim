@@ -16,6 +16,7 @@ Nothing below installs automatically on first start: `mason-lspconfig` is config
 | Language / Environment | LSP server | Formatter (Conform) | Treesitter parser | Debug adapter |
 |---|---|---|---|---|
 | **Lua Core** | `lua_ls` | `stylua` | `lua` | — |
+| **[SQL / FoxQuerier](languages/sql.md)** | Local cached database completion | — | `sql` (optional) | — |
 | **Lua Extras & Teal** | `teal_ls` | `luacheck`, `selene` | `teal` | — |
 | **C / C++** | `clangd` | `clang-format`, `cppcheck`, `cpplint` | `c`, `cpp`, `make`, `cmake` | `codelldb` |
 | **Zig** | `zls` | `zigfmt` | `zig` | — |

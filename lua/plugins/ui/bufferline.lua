@@ -70,6 +70,11 @@ return {
 					{ filetype = "neo-tree", text = "🦊 Explorer", highlight = "Directory", text_align = "left" },
 				},
 				name_formatter = function(buf)
+					local query = package.loaded["fox.query"]
+					local query_label = query and query.buffer_label(buf.bufnr)
+					if query_label then
+						return query_label
+					end
 					local source = vim.b[buf.bufnr].fox_media_source
 					if source and vim.api.nvim_buf_is_valid(source) then
 						return vim.fn.fnamemodify(vim.api.nvim_buf_get_name(source), ":t")
@@ -89,6 +94,11 @@ return {
 					bufnr = vim.b[bufnr].fox_media_source or bufnr
 					if not vim.api.nvim_buf_is_valid(bufnr) then
 						return false
+					end
+					local query = package.loaded["fox.query"]
+					local query_visible = query and query.buffer_visible(bufnr)
+					if query_visible ~= nil then
+						return query_visible
 					end
 					if vim.bo[bufnr].buftype ~= "" then
 						return false

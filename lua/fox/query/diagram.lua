@@ -4,6 +4,9 @@ function M.render(graph, metadata, width, column_limit)
 	local sql = require("fox.query.sql")
 	column_limit = column_limit or 15
 	local card_width = math.max(15, #graph.nodes == 1 and (width or 72) or math.floor(((width or 72) - 7) / 2))
+	if graph.kind ~= "schema" then
+		card_width = math.min(28, card_width)
+	end
 	local gap, cells, styles, objects, nodes = 7, {}, {}, {}, {}
 	local function put(row, column, text, limit)
 		cells[row] = cells[row] or {}

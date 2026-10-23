@@ -120,6 +120,19 @@ describe("FoxQuerier SQL structure", function()
 		expect(right.key).toBe("customers")
 		expect(table.concat(lines, "\n")).toContain(">")
 	end)
+	it("keeps live query cards compact even in a wide sidebar", function()
+		for _, text in ipairs({ "SELECT * FROM orders", "SELECT o.id FROM orders o JOIN customers c ON c.id=o.customer_id" }) do
+			local graph = sql.analyze(text, metadata)
+			local lines, _, objects = render.graph(graph, metadata, 160)
+			for _, row in pairs(objects) do
+				for _, region in ipairs(row.regions or {}) do
+					expect(region.last - region.first).toBe(28)
+				end
+			end
+			expect(vim.fn.strdisplaywidth(lines[4])).toBe(#graph.nodes == 1 and 28 or 63)
+		end
+	end)
+
 	it("puts the focused schema table before its nearest neighbors and fills the available width", function()
 		local schema = {
 			tables = {

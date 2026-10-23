@@ -3,7 +3,7 @@ local M = {}
 function M.render(graph, metadata, width, column_limit)
 	local sql = require("fox.query.sql")
 	column_limit = column_limit or 15
-	local card_width = math.max(15, math.min(28, math.floor(((width or 72) - 7) / 2)))
+	local card_width = math.max(15, #graph.nodes == 1 and (width or 72) or math.floor(((width or 72) - 7) / 2))
 	local gap, cells, styles, objects, nodes = 7, {}, {}, {}, {}
 	local function put(row, column, text, limit)
 		cells[row] = cells[row] or {}
@@ -34,7 +34,7 @@ function M.render(graph, metadata, width, column_limit)
 	style(1, 1, 100, "Title")
 	local state = graph.partial and "Partial SQL: resolved portions only" or "Diagram follows SQL at the cursor"
 	if graph.kind == "schema" then
-		state = "FK metadata; not query execution"
+		state = graph.caption or "FK metadata; not query execution"
 	end
 	put(2, 1, state .. (metadata.updated_at and (" | cache " .. os.date("%H:%M", metadata.updated_at)) or ""))
 	style(2, 1, 150, "Comment")
@@ -79,13 +79,15 @@ function M.render(graph, metadata, width, column_limit)
 		local item, rows = node.table, {}
 		local columns = {}
 		for _, column in ipairs(item and item.columns or {}) do
-			if (node.roles[column.name] or {}).output then
+			local roles = node.roles[column.name] or {}
+			if roles.output or graph.kind == "schema" and (roles.primary or roles.foreign) then
 				columns[#columns + 1] = column
 			end
 		end
 		local selected = #columns
 		for _, column in ipairs(item and item.columns or {}) do
-			if not (node.roles[column.name] or {}).output then
+			local roles = node.roles[column.name] or {}
+			if not (roles.output or graph.kind == "schema" and (roles.primary or roles.foreign)) then
 				columns[#columns + 1] = column
 			end
 		end
@@ -98,8 +100,11 @@ function M.render(graph, metadata, width, column_limit)
 					.. (roles.join and "k" or candidate and "?" or " ")
 					.. (roles.filter and "f" or " ")
 				rows[#rows + 1] = {
-					text = flags .. " " .. column.name,
-					group = (roles.output or wildcard.output) and "String"
+					text = graph.kind == "schema"
+							and ((roles.primary and "PK" or "  ") .. " " .. (roles.foreign and "FK" or "  ") .. " " .. column.name)
+						or flags .. " " .. column.name,
+					group = roles.foreign and "DiagnosticInfo"
+						or (roles.output or wildcard.output) and "String"
 						or roles.join and "Identifier"
 						or candidate and "DiagnosticHint"
 						or roles.filter and "Special"
@@ -122,9 +127,9 @@ function M.render(graph, metadata, width, column_limit)
 		end
 		put(y, x, "+" .. string.rep("-", card_width - 2) .. "+")
 		put(y + height - 1, x, "+" .. string.rep("-", card_width - 2) .. "+")
-		put(y + 1, x + 2, node.alias, card_width - 4)
-		style(y + 1, x + 1, card_width - 2, item and "Title" or "DiagnosticWarn")
-		put(y + 2, x + 2, node.name, card_width - 4)
+		put(y + 1, x + 2, (node.focus and "> " or "") .. node.alias, card_width - 4)
+		style(y + 1, x + 1, card_width - 2, node.focus and "Search" or item and "Title" or "DiagnosticWarn")
+		put(y + 2, x + 2, graph.kind == "schema" and "PK FK Column" or node.name, card_width - 4)
 		style(y + 2, x + 1, card_width - 2, "Comment")
 		for row = 1, visible do
 			put(y + 2 + row, x + 2, rows[row].text, card_width - 4)
@@ -144,7 +149,8 @@ function M.render(graph, metadata, width, column_limit)
 	end
 	for _, edge in ipairs(graph.edges) do
 		local source, target = nodes[edge.source], nodes[edge.target]
-		if source and target then
+		-- shortcut: cross-row links use the edge list; add separate lanes if full cross-row routing is needed.
+		if source and target and (graph.kind ~= "schema" or source.row == target.row) then
 			local gutter = card_width + 1 + math.floor(gap / 2)
 			local sx = source.x == 1 and card_width or source.x
 			local tx = target.x == 1 and card_width or target.x
@@ -201,6 +207,9 @@ function M.render(graph, metadata, width, column_limit)
 			.. edge.target
 			.. "]: "
 			.. (edge.predicate and vim.trim(edge.predicate) ~= "" and edge.predicate or "pending predicate")
+		if graph.kind == "schema" then
+			highlights[#highlights + 1] = { #lines - 1, "DiagnosticInfo" }
+		end
 	end
 	if #graph.nodes == 0 then
 		lines[#lines + 1] = "Type FROM <table> to resolve a source"

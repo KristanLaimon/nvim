@@ -168,27 +168,35 @@ function M.neighborhood(metadata, key, depth)
 			visible[#visible + 1] = item
 		end
 	end
+	table.sort(visible, function(a, b)
+		if distance[a.key] ~= distance[b.key] then
+			return distance[a.key] < distance[b.key]
+		end
+		return a.key < b.key
+	end)
 	return visible
 end
 
-function M.map(metadata, key, depth, width)
+function M.map(metadata, key, depth, width, column_limit)
 	local tables = key and M.neighborhood(metadata, key, depth or 3) or metadata.tables or {}
 	local graph, visible = { kind = "schema", nodes = {}, edges = {} }, {}
 	for _, item in ipairs(tables) do
 		local roles = {}
 		for _, column in ipairs(item.columns or {}) do
 			if column.pk then
-				roles[column.name] = { join = true }
+				roles[column.name] = { join = true, primary = true }
 			end
 		end
 		for _, relation in ipairs(metadata.relations or {}) do
 			if relation.source == item.key then
 				for _, pair in ipairs(relation.columns) do
-					roles[pair.source] = { join = true }
+					roles[pair.source] = roles[pair.source] or {}
+					roles[pair.source].join, roles[pair.source].foreign = true, true
 				end
 			end
 		end
-		graph.nodes[#graph.nodes + 1] = { name = item.key, alias = item.key, table = item, roles = roles }
+		graph.nodes[#graph.nodes + 1] =
+			{ name = item.key, alias = item.key, table = item, roles = roles, focus = item.key == key }
 		visible[item.key] = true
 	end
 	for _, relation in ipairs(metadata.relations or {}) do
@@ -201,17 +209,17 @@ function M.map(metadata, key, depth, width)
 				source = relation.source,
 				target = relation.target,
 				kind = "FK",
-				predicate = relation.name .. ": " .. table.concat(predicates, " AND "),
+				predicate = table.concat(predicates, " AND "),
 			}
 		end
 	end
-	local lines, _, objects = M.graph(graph, metadata, width)
-	lines[2] = (key and ("Focus " .. key .. " | depth " .. (depth or 3)) or "All visible tables")
+	graph.caption = (key and ("Focus " .. key .. " | depth " .. (depth or 3)) or "All visible tables")
 		.. " | "
 		.. #tables
 		.. " nodes"
+	local lines, highlights, objects = M.graph(graph, metadata, width, column_limit)
 	lines[#lines + 1] = "Enter recenter | i inspect | / search | +/- depth | zh/zl pan | q back"
-	return lines, objects
+	return lines, objects, highlights
 end
 
 function M.results(result)

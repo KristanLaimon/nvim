@@ -36,6 +36,51 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("opens relationships at the focused table with FK colors and redraws when resized or recentered", function()
+		project(function()
+			query.show()
+			local state = query.state()
+			state.metadata = {
+				tables = {
+					{ key = "Bridge", name = "Bridge", columns = { { name = "player_id" } } },
+					{ key = "Player", name = "Player", columns = { { name = "id", pk = true } } },
+				},
+				relations = {
+					{ name = "fk", source = "Bridge", target = "Player", columns = { { source = "player_id", target = "id" } } },
+				},
+			}
+			state.consoles[state.active].metadata = state.metadata
+			state.selected = "Player"
+			query.graph(false)
+			local win, buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
+			local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+			expect(lines[5]).toContain("> Player")
+			expect(vim.fn.winsaveview().topline).toBe(1)
+			local colored = false
+			for _, mark in
+				ipairs(vim.api.nvim_buf_get_extmarks(buf, vim.api.nvim_get_namespaces().fox_query, 0, -1, { details = true }))
+			do
+				if mark[4].hl_group == "DiagnosticInfo" then
+					colored = true
+				end
+			end
+			expect(colored).toBeTruthy()
+			vim.api.nvim_win_set_width(win, 62)
+			vim.api.nvim_exec_autocmds("WinResized", {})
+			lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+			expect(vim.fn.strdisplaywidth(lines[4])).toBe(61)
+			vim.api.nvim_win_set_cursor(win, { 5, assert(lines[5]:find("Bridge", 1, true)) - 1 })
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			expect(state.selected).toBe("Bridge")
+			expect(vim.api.nvim_buf_get_lines(buf, 4, 5, false)[1]).toContain("> Bridge")
+			expect(vim.fn.winsaveview().topline).toBe(1)
+			vim.fn.maparg("q", "n", false, true).callback()
+			expect(vim.api.nvim_buf_is_valid(buf)).toBeFalsy()
+			query.graph(true)
+			vim.fn.maparg("q", "n", false, true).callback()
+		end)
+	end)
+
 	it("manages nested SQL files and folders without losing open edits or recreating old paths", function()
 		project(function(root)
 			query.show("standard")

@@ -151,6 +151,15 @@ local function set_lines(buf, lines)
 	vim.bo[buf].modifiable, vim.bo[buf].modified = false, false
 end
 
+local function set_highlights(buf, highlights)
+	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+	for _, highlight in ipairs(highlights) do
+		local opts = highlight[3] and { hl_group = highlight[2], end_col = highlight[4] }
+			or { line_hl_group = highlight[2] }
+		vim.api.nvim_buf_set_extmark(buf, ns, highlight[1], highlight[3] or 0, opts)
+	end
+end
+
 local function console(state)
 	if valid(state.active, "buf") and state.consoles[state.active] then
 		return state.consoles[state.active], state.active
@@ -526,12 +535,7 @@ function M.refresh_view(state)
 		)
 		set_lines(panel(state, "side_buf"), lines)
 		state.objects = objects
-		vim.api.nvim_buf_clear_namespace(state.side_buf, ns, 0, -1)
-		for _, highlight in ipairs(highlights) do
-			local opts = highlight[3] and { hl_group = highlight[2], end_col = highlight[4] }
-				or { line_hl_group = highlight[2] }
-			vim.api.nvim_buf_set_extmark(state.side_buf, ns, highlight[1], highlight[3] or 0, opts)
-		end
+		set_highlights(state.side_buf, highlights)
 	else
 		local lines, objects = render.explorer(state.metadata, state.filter, state.selected, state.note_keys)
 		state.objects = objects
@@ -1663,15 +1667,22 @@ function M.graph(all)
 	local state = M.state()
 	local key = not all and state.selected or nil
 	local buf = vim.api.nvim_create_buf(false, true)
+	vim.bo[buf].bufhidden = "wipe"
 	vim.b[buf].fox_query_root = state.root
 	query_keys(buf)
-	local width, height = layout.popup("relationships", math.min(110, vim.o.columns - 4), math.min(30, vim.o.lines - 6))
+	local width, height = layout.popup("relationships", math.max(1, vim.o.columns - 4), math.max(1, vim.o.lines - 6))
 	local _, win = require("fox.core.ui").float(buf, { title = " Relationships ", width = width, height = height })
 	layout.watch(win, "relationships")
 	vim.wo[win].wrap = false
+	local drawn_width
 	local function draw()
-		local lines, objects = render.map(state.metadata, key, state.depth, vim.api.nvim_win_get_width(win))
+		drawn_width = vim.api.nvim_win_get_width(win)
+		local lines, objects, highlights = render.map(state.metadata, key, state.depth, drawn_width, state.diagram_columns)
 		set_lines(buf, lines)
+		set_highlights(buf, highlights)
+		vim.api.nvim_win_call(win, function()
+			vim.fn.winrestview({ topline = 1, lnum = #lines >= 5 and 5 or 1, col = 2, leftcol = 0 })
+		end)
 		map(buf, "<CR>", function()
 			local item = render.object_at(objects, vim.api.nvim_win_get_cursor(win)[1], vim.fn.virtcol(".") - 1)
 			if item then
@@ -1681,6 +1692,22 @@ function M.graph(all)
 		end)
 	end
 	draw()
+	local resize = vim.api.nvim_create_autocmd("WinResized", {
+		group = group,
+		callback = function()
+			if valid(win, "win") and vim.api.nvim_win_get_width(win) ~= drawn_width then
+				draw()
+			end
+		end,
+	})
+	vim.api.nvim_create_autocmd("WinClosed", {
+		group = group,
+		pattern = tostring(win),
+		once = true,
+		callback = function()
+			pcall(vim.api.nvim_del_autocmd, resize)
+		end,
+	})
 	map(buf, "+", function()
 		state.depth = math.min(8, state.depth + 1)
 		draw()

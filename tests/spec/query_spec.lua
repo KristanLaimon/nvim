@@ -120,6 +120,72 @@ describe("FoxQuerier SQL structure", function()
 		expect(right.key).toBe("customers")
 		expect(table.concat(lines, "\n")).toContain(">")
 	end)
+	it("puts the focused schema table before its nearest neighbors and fills the available width", function()
+		local schema = {
+			tables = {
+				{ key = "ADistant", name = "ADistant", columns = { { name = "bridge_id" } } },
+				{
+					key = "Bridge",
+					name = "Bridge",
+					columns = {
+						{ name = "id", pk = true },
+						{ name = "player_id" },
+						{ name = "a_long_column_name_that_used_to_be_clipped" },
+					},
+				},
+				{ key = "PlayerKisses", name = "PlayerKisses", columns = { { name = "member_1" } } },
+				{ key = "Player", name = "Player", columns = { { name = "id", pk = true } } },
+			},
+			relations = {
+				{
+					name = "internal:0",
+					source = "ADistant",
+					target = "Bridge",
+					columns = { { source = "bridge_id", target = "id" } },
+				},
+				{
+					name = "internal:1",
+					source = "Bridge",
+					target = "Player",
+					columns = { { source = "player_id", target = "id" } },
+				},
+				{
+					name = "internal:2",
+					source = "PlayerKisses",
+					target = "Player",
+					columns = { { source = "member_1", target = "id" } },
+				},
+			},
+		}
+		local nearby = render.neighborhood(schema, "Player", 2)
+		expect(nearby[1].key).toBe("Player")
+		expect(nearby[2].key).toBe("Bridge")
+		expect(nearby[4].key).toBe("ADistant")
+		local lines, objects, highlights = render.map(schema, "Player", 2, 160)
+		expect(objects[4].regions[1].item.key).toBe("Player")
+		expect(lines[5]).toContain("> Player")
+		expect(vim.fn.strdisplaywidth(lines[4])).toBe(159)
+		expect(table.concat(lines, "\n")).toContain("a_long_column_name_that_used_to_be_clipped")
+		expect(table.concat(lines, "\n"):find("internal:", 1, true)).toBeNil()
+		local foreign, primary = false, false
+		for _, span in ipairs(highlights) do
+			local text = span[3] and lines[span[1] + 1]:sub(span[3] + 1, span[4]) or ""
+			if span[2] == "DiagnosticInfo" and text:find("player_id", 1, true) then
+				foreign = true
+			end
+			if span[2] == "Identifier" and text:find("PK", 1, true) then
+				primary = true
+			end
+		end
+		expect(foreign).toBeTruthy()
+		expect(primary).toBeTruthy()
+		for _, line in ipairs(lines) do
+			expect(line:match("^%s+|%s*$")).toBeNil()
+		end
+		expect(schema.tables[1].key).toBe("ADistant")
+		local single = render.map({ tables = { schema.tables[4] }, relations = {} }, "Player", 1, 160)
+		expect(vim.fn.strdisplaywidth(single[4])).toBe(160)
+	end)
 end)
 
 describe("FoxQuerier project persistence", function()

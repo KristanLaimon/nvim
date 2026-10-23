@@ -36,6 +36,340 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("keeps result headers visible and aligned while scrolling and switches them between result sets", function()
+		project(function()
+			query.show()
+			local state = query.state()
+			local item = state.consoles[state.active]
+			local first = { columns = { "id", "表nombre%", "long_column" }, rows = {} }
+			local second = { columns = { "other_id", "description" }, rows = {} }
+			for index = 1, 80 do
+				first.rows[index] = { tostring(index), "value", string.rep("x", 32) }
+				second.rows[index] = { tostring(index), "other" }
+			end
+			item.result = { sets = { first, second, { columns = { "empty_result" }, rows = {} } } }
+			query.refresh_view(state)
+			local win = state.result_win
+			vim.api.nvim_set_current_win(win)
+			vim.wo[win].number, vim.wo[win].relativenumber, vim.wo[win].signcolumn = false, false, "no"
+			vim.wo[win].statuscolumn = ""
+			local function scroll(line, left, column)
+				vim.fn.winrestview({ lnum = line, topline = line, leftcol = left or 0, col = column or 0 })
+				vim.api.nvim_exec_autocmds("WinScrolled", { pattern = tostring(win) })
+				return vim.api.nvim_eval_statusline(
+					vim.wo[win].winbar,
+					{ winid = win, maxwidth = vim.api.nvim_win_get_width(win) }
+				).str
+			end
+			local header = scroll(40)
+			expect(vim.fn.winsaveview().topline > 3).toBeTruthy()
+			expect(header).toContain("id")
+			expect(header).toContain("表nombre%")
+			expect(item.result_rows[40].row).toBe(first.rows[37])
+			local original = item.result_headers[1].text
+			local start = original:find("表", 1, true)
+			local left = vim.fn.strdisplaywidth(original:sub(1, start - 1)) + 1
+			header = scroll(40, left, 15)
+			expect(vim.fn.winsaveview().leftcol).toBe(left)
+			expect(header:sub(1, 8)).toBe(" nombre%")
+			vim.wo[win].number = true
+			header = scroll(40)
+			local gutter = vim.fn.getwininfo(win)[1].textoff
+			expect(header:sub(1, gutter)).toBe(string.rep(" ", gutter))
+			expect(header:sub(gutter + 1, gutter + 2)).toBe("| ")
+			header = scroll(item.result_headers[2].first + 20)
+			expect(header).toContain("other_id")
+			expect(header:find("表nombre%", 1, true)).toBeNil()
+			header = scroll(item.result_headers[3].first)
+			expect(header).toContain("empty_result")
+			item.result, item.result_lines = nil, nil
+			query.refresh_view(state)
+			expect(vim.wo[win].winbar).toBe("")
+		end)
+	end)
+
+	it("keeps fixed headers in the compact results panel without replacing the SQL status", function()
+		project(function()
+			local columns = vim.o.columns
+			vim.o.columns = 60
+			local ok, err = pcall(function()
+				query.show()
+				local state = query.state()
+				local item = state.consoles[state.active]
+				item.result = { sets = { { columns = { "compact_header" }, rows = { { "value" } } } } }
+				query.results()
+				expect(vim.wo[state.sql_win].winbar).toContain("compact_header")
+				vim.api.nvim_win_set_buf(state.sql_win, state.active)
+				query.refresh_view(state)
+				expect(vim.wo[state.sql_win].winbar).toContain("Ctrl+Enter Run")
+			end)
+			vim.o.columns = columns
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
+	it("opens live-diagram table details at terminal size despite an old small inspector size", function()
+		project(function()
+			query.show("visual")
+			local state = query.state()
+			local item = { key = "Season", name = "Season", columns = { { name = "id", type = "INTEGER" } } }
+			state.metadata = { tables = { item }, relations = {} }
+			state.consoles[state.active].metadata = state.metadata
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "SELECT * FROM Season;" })
+			require("fox.core.store").save(
+				require("fox.query.layout").path,
+				{ menus = { inspect = { width = 12, height = 3 } } }
+			)
+			query.refresh_view(state)
+			vim.api.nvim_set_current_win(state.side_win)
+			local found = false
+			for row, object in pairs(state.objects) do
+				for _, region in ipairs(object.regions or {}) do
+					if region.item == item then
+						vim.api.nvim_win_set_cursor(0, { row, region.first })
+						found = true
+						break
+					end
+				end
+				if found then
+					break
+				end
+			end
+			expect(found).toBeTruthy()
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			local width, height = require("plugins.fox.dev.terminal").float_size()
+			local config = vim.api.nvim_win_get_config(0)
+			expect(config.relative).toBe("editor")
+			expect(config.width).toBe(width)
+			expect(config.height).toBe(height)
+			expect(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")).toContain("INTEGER")
+			vim.fn.maparg("q", "n", false, true).callback()
+			expect(vim.api.nvim_get_current_win()).toBe(state.side_win)
+		end)
+	end)
+
+	it("outlines only the statement at the cursor and follows movement without executing", function()
+		project(function()
+			query.show()
+			local state, ns = query.state(), vim.api.nvim_create_namespace("fox_query_statement")
+			local buf = state.active
+			local lines = { "SELECT 'á;表' AS value;", "", "SELECT", "  22 AS second;" }
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+			vim.api.nvim_win_set_cursor(state.sql_win, { 1, 9 })
+			query.refresh_view(state)
+			local function marks()
+				return vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, { details = true })
+			end
+			local function range()
+				for _, mark in ipairs(marks()) do
+					if mark[4].hl_group == "CursorLine" then
+						return mark
+					end
+				end
+				error("Statement highlight missing")
+			end
+			local mark = range()
+			expect(mark[2]).toBe(0)
+			expect(mark[4].end_row).toBe(0)
+			expect(mark[4].end_col).toBe(#lines[1])
+			local top, bottom, sides = false, false, 0
+			for _, entry in ipairs(marks()) do
+				local opts = entry[4]
+				if opts.virt_lines then
+					local text = opts.virt_lines[1][1][1]
+					top = top or text:find("┌", 1, true) ~= nil
+					bottom = bottom or text:find("└", 1, true) ~= nil
+				elseif opts.virt_text then
+					sides = sides + 1
+				end
+			end
+			expect(top and bottom).toBeTruthy()
+			expect(sides).toBe(2)
+			vim.api.nvim_win_set_cursor(state.sql_win, { 4, 3 })
+			vim.api.nvim_exec_autocmds("CursorMoved", { buffer = buf })
+			expect(vim.wait(1000, function()
+				return range()[2] == 2
+			end, 10)).toBeTruthy()
+			mark = range()
+			expect(mark[4].end_row).toBe(3)
+			expect(mark[4].end_col).toBe(#lines[4])
+			expect(state.consoles[buf].execution).toBeNil()
+			expect(vim.api.nvim_buf_get_lines(buf, 0, -1, false)).toEqual(lines)
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT 1; SELECT 2;" })
+			vim.api.nvim_win_set_cursor(state.sql_win, { 1, 12 })
+			query.refresh_view(state)
+			mark = range()
+			expect(mark[3]).toBe(10)
+			expect(mark[4].end_col).toBe(19)
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT 'unfinished" })
+			query.refresh_view(state)
+			expect(#marks()).toBe(0)
+		end)
+	end)
+
+	it("quotes text cells and opens full row details at the centered terminal size", function()
+		project(function()
+			query.show()
+			local state = query.state()
+			local item = state.consoles[state.active]
+			local text = 'a"b\nc'
+			local set = {
+				columns = { "text", "number", "null", "empty", "long" },
+				rows = { { text, "9007199254740993", vim.NIL, "", string.rep("表", 40) } },
+				strings = { { true, false, false, true, true } },
+			}
+			item.result = { sets = { set } }
+			query.refresh_view(state)
+			local lines = vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false)
+			expect(lines[2]).toContain("| text")
+			expect(lines[4]).toContain(vim.json.encode(text))
+			expect(lines[4]).toContain("9007199254740993")
+			expect(lines[4]).toContain("NULL")
+			expect(lines[4]).toContain('""')
+			expect(lines[4]).toContain('…"')
+			vim.api.nvim_set_current_win(state.result_win)
+			vim.api.nvim_win_set_cursor(state.result_win, { 4, 0 })
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			local win, buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
+			local config = vim.api.nvim_win_get_config(win)
+			local width, height = require("plugins.fox.dev.terminal").float_size()
+			expect(config.relative).toBe("editor")
+			expect(config.width).toBe(width)
+			expect(config.height).toBe(height)
+			local row, col = require("fox.core.ui").center(width, height)
+			expect(config.row).toBe(row)
+			expect(config.col).toBe(col)
+			local details = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+			expect(details).toContain("text = " .. vim.json.encode(text))
+			expect(details).toContain("number = 9007199254740993")
+			expect(details).toContain("null = NULL")
+			expect(details).toContain('empty = ""')
+			expect(details).toContain(string.rep("表", 40))
+			expect(set.rows[1][1]).toBe(text)
+			vim.fn.maparg("q", "n", false, true).callback()
+			expect(vim.api.nvim_win_is_valid(win)).toBeFalsy()
+			expect(vim.api.nvim_get_current_win()).toBe(state.result_win)
+		end)
+	end)
+
+	it("connects the sole profile and reconnects before running the captured statement", function()
+		project(function(root)
+			local fixture = vim
+				.system({
+					require("fox.query.client").python(),
+					"-B",
+					"-c",
+					"import sqlite3,sys; sqlite3.connect(sys.argv[1]).close()",
+					root .. "/fixture.db",
+				}, { text = true })
+				:wait()
+			expect(fixture.code).toBe(0)
+			local profile = { id = "local", engine = "sqlite", path = "fixture.db" }
+			storage.save(root, "connections.json", { profiles = { profile } })
+			query.show()
+			local state = query.state()
+			expect(state.autorun).toBeFalsy()
+			local item, buf = state.consoles[state.active], state.active
+			expect(item.client and item.client.connecting).toBeTruthy()
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT 11;", "SELECT '22';" })
+			vim.api.nvim_exec_autocmds("TextChangedI", { buffer = buf })
+			vim.api.nvim_win_set_cursor(state.sql_win, { 2, 0 })
+			vim.api.nvim_exec_autocmds("CursorMoved", { buffer = buf })
+			vim.wait(1200)
+			expect(item.execution).toBeNil()
+			vim.fn.maparg("<C-CR>", "n", false, true).callback()
+			vim.api.nvim_win_set_cursor(state.sql_win, { 1, 0 })
+			expect(vim.wait(5000, function()
+				return item.result and not item.client.busy
+			end, 10)).toBeTruthy()
+			expect(item.result.sets[1].rows[1][1]).toBe("22")
+			expect(item.result.sets[1].strings[1][1]).toBeTruthy()
+			expect(table.concat(vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false), "\n")).toContain('"22"')
+			expect(item.execution).toBe(1)
+			expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+			item.client:close()
+			query.run("statement")
+			expect(vim.wait(5000, function()
+				return item.execution == 2 and not item.client.busy
+			end, 10)).toBeTruthy()
+			expect(item.result.sets[1].rows[1][1]).toBe("11")
+			item.client:close()
+			query.run("statement")
+			query.new()
+			expect(vim.wait(5000, function()
+				return item.client.connected and not item.client.busy
+			end, 10)).toBeTruthy()
+			expect(item.execution).toBe(2)
+		end)
+	end)
+
+	it("requires a choice for multiple profiles and never replaces a stale remembered profile", function()
+		project(function(root)
+			local profiles = {
+				{ id = "one", engine = "sqlite", path = "one.db" },
+				{ id = "two", engine = "sqlite", path = "two.db" },
+			}
+			storage.save(root, "connections.json", { profiles = profiles })
+			query.show()
+			local state = query.state()
+			local item = state.consoles[state.active]
+			expect(item.client).toBeNil()
+			query.run("statement")
+			expect(vim.api.nvim_get_current_win()).toBe(state.connections_win)
+			storage.save(root, "private/session.json", { profile = "removed", fingerprint = "old" })
+			storage.save(root, "connections.json", { profiles = { profiles[1] } })
+			item.restore_attempted = nil
+			query.restore_connection(state)
+			expect(item.client).toBeNil()
+		end)
+	end)
+
+	it("shows a connection error without executing or retaining a queued statement", function()
+		project(function(root)
+			query.show()
+			local state = query.state()
+			state.autorun = false
+			local item = state.consoles[state.active]
+			storage.save(
+				root,
+				"connections.json",
+				{ profiles = { { id = "missing", engine = "sqlite", path = "missing.db" } } }
+			)
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "SELECT 1;" })
+			query.run("statement")
+			expect(vim.wait(5000, function()
+				return state.connection_status.missing == "failed"
+			end, 10)).toBeTruthy()
+			expect(item.execution).toBeNil()
+			expect(item.pending_run).toBeNil()
+			vim.api.nvim_win_close(0, true)
+		end)
+	end)
+
+	it("opens connections when running disconnected SQL and waits for an in-flight connection", function()
+		project(function()
+			query.show()
+			local state = query.state()
+			local item = state.consoles[state.active]
+			local text = "SELECT * FROM escolar.alumnos"
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { text })
+			query.run("statement")
+			expect(vim.api.nvim_get_current_win()).toBe(state.connections_win)
+			expect(item.client).toBeNil()
+			expect(vim.api.nvim_buf_get_lines(state.active, 0, -1, false)[1]).toBe(text)
+			vim.api.nvim_set_current_win(state.sql_win)
+			item.profile = { id = "SIIA-DB" }
+			item.client = { connecting = true, close = function() end }
+			query.run("statement")
+			expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+			item.client = nil
+			query.run("statement", text, nil, nil, true)
+			expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+		end)
+	end)
+
 	it("reopens the last saved SQL on first entry and creates a query only for an empty project", function()
 		project(function(root)
 			query.show()
@@ -570,6 +904,99 @@ describe("FoxQuerier live workflow", function()
 		end)
 	end)
 
+	it("saves a masked password once and installs missing drivers before retrying", function()
+		project(function(root)
+			query.show()
+			local client = require("fox.query.client")
+			local old_new, old_input = client.new, vim.fn.inputsecret
+			local old_system, old_select, old_refresh = vim.system, query.select, query.refresh_metadata
+			local prompts, attempts = 0, 0
+			local profile = { id = "mysql", engine = "mysql", host = "localhost", port = 3306, database = "db", user = "me" }
+			local ok, err = pcall(function()
+				vim.fn.inputsecret = function()
+					prompts = prompts + 1
+					return "saved-secret"
+				end
+				client.new = function()
+					return {
+						close = function() end,
+						request = function(_, op, data, callback)
+							expect(op).toBe("connect")
+							expect(data.profile.password).toBe("saved-secret")
+							attempts = attempts + 1
+							if attempts == 1 then
+								callback(nil, "No module named 'pymysql'")
+								return
+							end
+							callback({ engine = "mysql", version = "test" })
+						end,
+					}
+				end
+				query.refresh_metadata = function() end
+				query.select = function(items, _, callback)
+					callback(items[1])
+				end
+				vim.system = function(command, _, callback)
+					expect(command).toContain("PyMySQL[rsa]>=1.1,<2")
+					expect(command).toContain(storage.path(root, "private/drivers"))
+					callback({ code = 0 })
+				end
+				local state = query.state()
+				query.connect(profile, state)
+				expect(storage.password(root, profile)).toBe("saved-secret")
+				expect(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")).toContain("install drivers and retry")
+				vim.fn.maparg("i", "n", false, true).callback()
+				expect(vim.wait(1000, function()
+					return state.connection_status.mysql == "connected"
+				end, 10)).toBeTruthy()
+				expect(attempts).toBe(2)
+				expect(prompts).toBe(1)
+				expect(profile.password).toBeNil()
+			end)
+			client.new, vim.fn.inputsecret = old_new, old_input
+			vim.system, query.select, query.refresh_metadata = old_system, old_select, old_refresh
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
+	it("keeps or replaces private passwords when editing a connection", function()
+		project(function(root)
+			local old_select, old_input, old_secret, old_connect =
+				query.select, vim.ui.input, vim.fn.inputsecret, query.connect
+			local profile = { id = "mysql", engine = "mysql", host = "localhost", port = 3306, database = "db", user = "me" }
+			local password = ""
+			local ok, err = pcall(function()
+				storage.save(root, "connections.json", { profiles = { profile } })
+				storage.password(root, profile, "original")
+				query.select = function(_, _, callback)
+					callback("mysql")
+				end
+				vim.ui.input = function(opts, callback)
+					callback(opts.default or "")
+				end
+				vim.fn.inputsecret = function()
+					return password
+				end
+				query.connect = function(value)
+					expect(value.password).toBeNil()
+				end
+				query.add_profile(profile)
+				expect(storage.password(root, profile)).toBe("original")
+				password = "replacement"
+				query.add_profile(profile)
+				expect(storage.password(root, profile)).toBe("replacement")
+				expect(storage.profiles(root)[1].password).toBeNil()
+				expect(storage.read(root, "connections.json"):find(password, 1, true)).toBeNil()
+			end)
+			query.select, vim.ui.input, vim.fn.inputsecret, query.connect = old_select, old_input, old_secret, old_connect
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
 	it("edits and deletes connection profiles without deleting databases or notes", function()
 		project(function(root)
 			query.show()
@@ -660,6 +1087,7 @@ describe("FoxQuerier live workflow", function()
 		project(function()
 			query.show()
 			local state, old_run = query.state(), query.run
+			state.autorun = true
 			local item, calls = state.consoles[state.active], {}
 			item.profile, item.client = { engine = "sqlite" }, { connected = true, close = function() end }
 			query.run = function(_, text, _, _, automatic)
@@ -712,8 +1140,8 @@ describe("FoxQuerier live workflow", function()
 			storage.save(root, "connections.json", { profiles = { profile } })
 			query.show("visual")
 			local state = query.state()
+			state.autorun = true
 			local item = state.consoles[state.active]
-			query.connect(profile, state)
 			expect(vim.wait(5000, function()
 				return item.metadata and item.client.connected and not item.client.busy
 			end, 10)).toBeTruthy()

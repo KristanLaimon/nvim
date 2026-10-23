@@ -155,6 +155,14 @@ local function get_float_height()
 	return _G._fox_terminal_float_height
 end
 
+function M.float_size()
+	return math.max(
+		1,
+		math.min(vim.o.columns - 2, math.max(20, math.floor(vim.o.columns * (M.settings.float.width or 0.85))))
+	),
+		math.max(1, math.min(vim.o.lines - 4, get_float_height()))
+end
+
 local function save_float_height(height)
 	if type(height) ~= "number" or height < M.settings.min_height or height > M.settings.max_height then
 		return
@@ -481,8 +489,7 @@ local function open_floating_window(t, n, layout)
 		r = math.max(1, total_h - h - 3)
 		c = 1
 	else
-		w = math.max(20, math.floor(total_w * (M.settings.float.width or 0.85)))
-		h = math.min(total_h - 4, get_float_height())
+		w, h = M.float_size()
 		r = math.max(1, math.floor((total_h - h) / 2) - 1)
 		c = math.max(1, math.floor((total_w - w) / 2))
 	end

@@ -222,31 +222,40 @@ function M.map(metadata, key, depth, width, column_limit)
 	return lines, objects, highlights
 end
 
+function M.value(value, is_string)
+	local text = value == vim.NIL and "NULL"
+		or (is_string or type(value) == "table") and vim.json.encode(value)
+		or tostring(value)
+	return text:gsub("\n", "\\n"):gsub("\r", "\\r"):gsub("\t", "\\t")
+end
+
 function M.results(result)
-	local lines, rows = {}, {}
-	local function display(value)
-		local text = value == vim.NIL and "NULL" or type(value) == "table" and vim.json.encode(value) or tostring(value)
-		return text:gsub("\n", "\\n"):gsub("\r", "\\r"):gsub("\t", "\\t")
-	end
+	local lines, rows, headers = {}, {}, {}
 	for index, set in ipairs(result.sets or {}) do
 		local widths = {}
 		for at, column in ipairs(set.columns) do
 			widths[at] = math.max(1, math.min(32, vim.fn.strdisplaywidth(column)))
 		end
-		for _, row in ipairs(set.rows) do
+		for row_index, row in ipairs(set.rows) do
 			for at, value in ipairs(row) do
-				widths[at] = math.min(32, math.max(widths[at] or 0, vim.fn.strdisplaywidth(display(value))))
+				widths[at] = math.min(
+					32,
+					math.max(widths[at] or 0, vim.fn.strdisplaywidth(M.value(value, set.strings and set.strings[row_index][at])))
+				)
 			end
 		end
-		local function format_row(row)
+		local function format_row(row, strings)
 			local values = {}
 			for at, value in ipairs(row) do
-				local text = display(value)
+				local text = M.value(value, strings and strings[at])
 				if vim.fn.strdisplaywidth(text) > widths[at] then
-					text = vim.fn.strcharpart(text, 0, widths[at])
-				end
-				while vim.fn.strdisplaywidth(text) > widths[at] do
-					text = vim.fn.strcharpart(text, 0, vim.fn.strchars(text) - 1)
+					local suffix = strings and strings[at] and '…"' or "…"
+					local limit = widths[at] - vim.fn.strdisplaywidth(suffix)
+					text = vim.fn.strcharpart(text, 0, math.max(0, limit))
+					while vim.fn.strdisplaywidth(text) > limit do
+						text = vim.fn.strcharpart(text, 0, vim.fn.strchars(text) - 1)
+					end
+					text = text .. suffix
 				end
 				values[#values + 1] = text .. string.rep(" ", widths[at] - vim.fn.strdisplaywidth(text))
 			end
@@ -257,12 +266,14 @@ function M.results(result)
 			segments[#segments + 1] = string.rep("-", width + 2)
 		end
 		local border = "+" .. table.concat(segments, "+") .. "+"
+		headers[#headers + 1] = { first = #lines + 1, text = format_row(set.columns) }
 		lines[#lines + 1] = border
 		lines[#lines + 1] = format_row(set.columns)
 		lines[#lines + 1] = border
-		for _, row in ipairs(set.rows) do
-			lines[#lines + 1] = format_row(row)
-			rows[#lines] = { set = set, row = row, widths = widths }
+		for row_index, row in ipairs(set.rows) do
+			local strings = set.strings and set.strings[row_index]
+			lines[#lines + 1] = format_row(row, strings)
+			rows[#lines] = { set = set, row = row, widths = widths, strings = strings }
 		end
 		lines[#lines + 1] = border
 		lines[#lines + 1] = "Result "
@@ -273,7 +284,7 @@ function M.results(result)
 			.. (set.truncated and " | TRUNCATED" or "")
 		lines[#lines + 1] = ""
 	end
-	return lines, rows
+	return lines, rows, headers
 end
 
 return M

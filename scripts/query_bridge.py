@@ -346,7 +346,7 @@ class Driver:
             try:
                 cursor.execute(query, tuple(args) if positions else None) if engine != "sqlite" else cursor.execute(query, args)
                 columns = [item[0] for item in cursor.description or []]
-                rows = []
+                rows, strings = [], []
                 while cursor.description and not self.canceled.is_set():
                     row = cursor.fetchone()
                     if row is None:
@@ -356,11 +356,12 @@ class Driver:
                     if total_rows >= 1000 or total_bytes + size > 8 * 1024 * 1024:
                         truncated = True
                         break
+                    strings.append([isinstance(value, str) for value in row])
                     rows.append(encoded)
                     total_rows, total_bytes = total_rows + 1, total_bytes + size
                     if len(rows) % 100 == 0:
                         emit({"id": request_id, "event": "fetching", "rows": total_rows})
-                sets.append({"columns": columns, "rows": rows, "truncated": truncated})
+                sets.append({"columns": columns, "rows": rows, "strings": strings, "truncated": truncated})
             finally:
                 if engine == "mysql" and (truncated or self.canceled.is_set()):
                     self.close()  # An unbuffered cursor must not drain an unbounded remainder.

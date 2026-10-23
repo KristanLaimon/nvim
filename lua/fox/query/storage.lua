@@ -153,8 +153,15 @@ function M.cache(root, fingerprint)
 end
 
 function M.prepare(root)
-	if not M.read(root, ".gitignore") then
-		return M.write(root, ".gitignore", "private/\ncache/\nexports/\nrecovery/\n*.tmp\n")
+	local original = M.read(root, ".gitignore") or ""
+	local content = original
+	for _, rule in ipairs({ "private/", "cache/", "exports/", "recovery/", "*.tmp" }) do
+		if not ("\n" .. content):find("\n" .. rule .. "\n", 1, true) then
+			content = content .. (content ~= "" and content:sub(-1) ~= "\n" and "\n" or "") .. rule .. "\n"
+		end
+	end
+	if content ~= original then
+		return M.write(root, ".gitignore", content)
 	end
 	return true
 end
@@ -175,7 +182,7 @@ function M.validate(profile)
 		return nil, "Choose sqlite, mysql, or postgres"
 	end
 	if profile.password ~= nil then
-		return nil, "Remove password from the profile; use a RAM prompt or password_env reference"
+		return nil, "Remove password from the shared profile; use the connection prompt (saved privately) or password_env"
 	end
 	if profile.engine == "sqlite" then
 		if type(profile.path) ~= "string" or profile.path == "" then
@@ -192,6 +199,22 @@ function M.validate(profile)
 		end
 	end
 	return true
+end
+
+function M.password(root, profile, value)
+	local path = "private/passwords/" .. M.fingerprint(profile) .. ".json"
+	if value ~= nil then
+		assert(type(value) == "string", "Password must be a string")
+		return M.save(root, path, { password = value })
+	end
+	local data, err = M.load(root, path, {})
+	if not data then
+		return nil, err
+	end
+	if data.password ~= nil and type(data.password) ~= "string" then
+		return nil, "Invalid saved password; edit the connection to replace it"
+	end
+	return data.password
 end
 
 function M.profiles(root)

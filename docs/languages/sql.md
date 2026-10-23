@@ -4,7 +4,7 @@
 
 FoxQuerier provides read-only SQLite, MySQL, and PostgreSQL consoles, cached table/column completion through blink.cmp, and Standard/Visual query layouts. SQL settings live in `lua/fox/langs/sql/init.lua`; database sessions and UI live in `lua/fox/query/`.
 
-Python 3 is required for database connections. SQLite uses Python's standard library. For MySQL/PostgreSQL, explicitly run `:FoxQueryInstallDrivers` in the project; it installs PyMySQL and psycopg into `.foxnvim/query/private/drivers/`. Nothing installs on startup.
+Python 3 is required for database connections. SQLite uses Python's standard library. For MySQL/PostgreSQL, explicitly run `:FoxQueryInstallDrivers` in the project; it installs PyMySQL and psycopg into `.foxnvim/query/private/drivers/`. A missing-driver connection error also offers **i** to install and retry. Nothing installs on startup. The MySQL package includes RSA authentication support ([PyMySQL installation](https://pymysql.readthedocs.io/en/latest/user/installation.html)). Passwords entered in Query connections are saved locally as plaintext under `.foxnvim/query/private/passwords/` (Git-ignored, owner-only file permissions on Unix); `password_env` remains available.
 
 Select the optional **SQL / FoxQuerier** bundle in `:LanguageManager` for the SQL Treesitter parser. The minimal fresh setup stays Lua-only. This bundle does not install a language server, formatter, database server, or Python automatically.
 

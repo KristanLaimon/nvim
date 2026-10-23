@@ -22,7 +22,7 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `<F1>` / `:FoxHelp` / `:Cheatsheet` | n, i, v, t | Open Help Menu & Runtime Cheatsheet Manager |
 | `<F2>` | n | Rename symbol, file on disk, or Neo-tree item |
 | `<F3>` | n, i, v, t | Cycle Editor / Query directly |
-| `<C-Enter>` / `<F5>` | n, i (Query SQL) | Run statement at cursor; SELECT also auto-runs after a pause |
+| `<C-Enter>` / `<F5>` | n, i (Query SQL) | Run statement at cursor; execution is manual by default |
 | `<S-F3>` | n, i, v (Query) | Toggle half-width live diagram |
 | `<C-x><C-o>` | i (Query SQL) | Open database completion (alternative to Ctrl+Space) |
 | `<C-Space>` | i | Open completion menu |

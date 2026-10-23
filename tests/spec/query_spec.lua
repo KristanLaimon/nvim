@@ -202,6 +202,34 @@ describe("FoxQuerier SQL structure", function()
 end)
 
 describe("FoxQuerier project persistence", function()
+	it("persists passwords privately, isolates connection identities, and preserves corrupt files", function()
+		local root = vim.fn.tempname()
+		vim.fn.mkdir(root, "p")
+		local profile = { id = "mysql", engine = "mysql", host = "localhost", user = "test" }
+		local ok, err = pcall(function()
+			storage.write(root, ".gitignore", "custom/\n")
+			expect(storage.password(root, profile)).toBeNil()
+			expect(storage.password(root, profile, "private-secret")).toBeTruthy()
+			expect(storage.password(root, profile)).toBe("private-secret")
+			expect(storage.read(root, ".gitignore")).toContain("custom/\nprivate/\n")
+			local path = "private/passwords/" .. storage.fingerprint(profile) .. ".json"
+			if vim.fn.has("win32") == 0 then
+				expect(vim.fn.getfperm(storage.path(root, path))).toBe("rw-------")
+			end
+			expect(storage.password(root, vim.tbl_extend("force", profile, { host = "other" }))).toBeNil()
+			expect(storage.password(root, profile, "")).toBeTruthy()
+			expect(storage.password(root, profile)).toBe("")
+			storage.write(root, path, "broken JSON")
+			local value, load_err = storage.password(root, profile)
+			expect(value).toBeNil()
+			expect(load_err).toContain("original file preserved")
+			expect(storage.read(root, path)).toBe("broken JSON")
+		end)
+		vim.fn.delete(root, "rf")
+		if not ok then
+			error(err)
+		end
+	end)
 	it("isolates notes/cache and preserves user documents on cache deletion", function()
 		local root = vim.fn.tempname()
 		vim.fn.mkdir(root, "p")

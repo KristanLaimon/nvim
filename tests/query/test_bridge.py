@@ -51,6 +51,13 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(rows, [[malicious, None, "", "á🦊", "9007199254740993"]])
         self.assertEqual(self.execute("SELECT total FROM orders")["sets"][0]["rows"][0][0], "12345678901234567890.12")
 
+    def test_marks_text_cells_without_changing_numeric_precision_or_nulls(self):
+        result = self.execute("SELECT 9007199254740993, '9007199254740993', NULL, '', 'a\"b', 1.25")["sets"][0]
+        self.assertEqual(result["rows"], [["9007199254740993", "9007199254740993", None, "", 'a"b', "1.25"]])
+        self.assertEqual(result["strings"], [[False, True, False, True, True, False]])
+        mixed = self.execute("SELECT 1 AS value UNION ALL SELECT '1'")["sets"][0]
+        self.assertEqual(mixed["strings"], [[False], [True]])
+
     def test_batch_ignores_semicolons_and_question_marks_in_literals(self):
         result = self.execute("SELECT ';?' AS literal; -- ?\nSELECT ?", ["bound"])
         self.assertEqual(len(result["sets"]), 2)

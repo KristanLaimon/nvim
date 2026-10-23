@@ -1,10 +1,13 @@
 local commands = {
 	"FoxMode",
+	"FoxModeToggle",
 	"FoxQueryView",
 	"FoxQueryConnections",
 	"FoxQueryNew",
 	"FoxQueryOpen",
 	"FoxQueryRun",
+	"FoxQueryAutoRun",
+	"FoxQueryComplete",
 	"FoxQueryCancel",
 	"FoxQueryExplorer",
 	"FoxQueryInspect",
@@ -27,13 +30,24 @@ return {
 	name = "fox_query",
 	dir = require("fox.core.lazyspec").for_module(),
 	cmd = commands,
-	keys = { { "<C-A-o>", "<Cmd>FoxMode<CR>", mode = { "n", "i", "v", "t" }, desc = "Switch FoxEditor / FoxQuerier" } },
+	keys = {
+		{ "<F3>", "<Cmd>FoxModeToggle<CR>", mode = { "n", "i", "v", "t" }, desc = "Cycle Editor / Query" },
+		{ "<C-A-o>", "<Cmd>FoxModeToggle<CR>", mode = { "n", "i", "v", "t" }, desc = "Cycle Editor / Query" },
+	},
 	config = function()
 		local query = require("fox.query")
 		query.setup()
 		local function command(name, callback, opts)
 			vim.api.nvim_create_user_command(name, callback, opts or {})
 		end
+		command("FoxModeToggle", function()
+			local state = query.state()
+			if state.mode == "query" and state.tab == vim.api.nvim_get_current_tabpage() then
+				query.hide()
+			else
+				query.show()
+			end
+		end)
 		command("FoxMode", function(args)
 			local function choose(mode)
 				if mode == "editor" then
@@ -82,6 +96,12 @@ return {
 			end,
 		})
 		command("FoxQueryCancel", query.cancel)
+		command("FoxQueryComplete", query.complete)
+		command("FoxQueryAutoRun", function()
+			local state = query.state()
+			state.autorun = not state.autorun
+			query.refresh_view(state)
+		end)
 		command("FoxQueryExplorer", function()
 			query.show("standard")
 			query.focus_panel("side")

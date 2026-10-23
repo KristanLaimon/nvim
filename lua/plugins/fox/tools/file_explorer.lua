@@ -271,7 +271,7 @@ local function set_project_root(target)
 end
 
 --- Opens the file explorer or folder picker.
---- @param opts table|nil `{ path = string, cwd = string, on_select = function, prompt_title = string, results_title = string }` Directory to open / options.
+--- @param opts table|nil `{ path, cwd, on_select, on_select_file, prompt_title, results_title }` Folder callback or file callback.
 --- @param on_select_cb function|nil Callback when folder is selected.
 function M.open_desktop_explorer(opts, on_select_cb)
 	opts = opts or {}
@@ -305,7 +305,9 @@ function M.open_desktop_explorer(opts, on_select_cb)
 
 	local results_title = opts.results_title
 	if not results_title then
-		if on_select then
+		if opts.on_select_file then
+			results_title = " Enter: open folder / select file | Ctrl+H: parent | Esc: cancel "
+		elseif on_select then
 			results_title = " Folders / Files | Press [o/O/Ctrl+O] to select folder | Press [?] for help "
 		else
 			results_title = " Files / Folders | [f / Ctrl+F]=Favorite | Press [?] for help "
@@ -332,7 +334,7 @@ function M.open_desktop_explorer(opts, on_select_cb)
 				--- Closes the picker, then reopens the explorer on `dir`.
 				local function reopen(dir)
 					vim.schedule(function()
-						M.open_desktop_explorer({ path = dir or curr_dir, on_select = on_select }, on_select)
+						M.open_desktop_explorer(vim.tbl_extend("force", opts, { path = dir or curr_dir }), on_select)
 					end)
 				end
 
@@ -352,7 +354,9 @@ function M.open_desktop_explorer(opts, on_select_cb)
 					if item.is_dir then
 						reopen(item.path)
 					else
-						if on_select then
+						if opts.on_select_file then
+							opts.on_select_file(item.path)
+						elseif on_select then
 							on_select(curr_dir)
 						else
 							vim.cmd("edit " .. vim.fn.fnameescape(item.path))
@@ -362,6 +366,13 @@ function M.open_desktop_explorer(opts, on_select_cb)
 
 				map_all({ { "i", "<C-o>" }, { "n", "<C-o>" }, { "n", "o" }, { "n", "O" } }, function()
 					local item = selected()
+					if opts.on_select_file then
+						if item and item.is_dir then
+							actions.close(prompt_bufnr)
+							reopen(item.path)
+						end
+						return
+					end
 					local target = (item and item.is_dir and not item.is_parent) and item.path or curr_dir
 					actions.close(prompt_bufnr)
 					if on_select then

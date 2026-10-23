@@ -7,6 +7,29 @@ local describe, it, expect = t.describe, t.it, t.expect
 local statusline = require("plugins.fox.ui.statusline_picker")
 
 describe("plugins.fox.ui.statusline_picker", function()
+	it("shows Editor and Query with only the current workspace mode in normal color", function()
+		local saved = package.loaded["fox.query"]
+		local ok, err = pcall(function()
+			package.loaded["fox.query"] = nil
+			local editor = statusline.workflow_status()
+			expect(vim.api.nvim_eval_statusline(editor, {}).str).toBe("[Editor | Query]")
+			expect(editor).toContain("%#StatusLine#Editor")
+			expect(editor).toContain("%#FoxWorkflowInactive#Query")
+			local state = { mode = "query", tab = vim.api.nvim_get_current_tabpage() }
+			package.loaded["fox.query"] = { states = { test = state } }
+			local query = statusline.workflow_status()
+			expect(vim.api.nvim_eval_statusline(query, {}).str).toBe("[Editor | Query]")
+			expect(query).toContain("%#FoxWorkflowInactive#Editor")
+			expect(query).toContain("%#StatusLine#Query")
+			state.tab = -1
+			expect(statusline.workflow_status()).toBe(editor)
+		end)
+		package.loaded["fox.query"] = saved
+		if not ok then
+			error(err)
+		end
+	end)
+
 	it("formats modes into NvChad icon pills", function()
 		expect(statusline.format_mode("NORMAL")).toBe(" NORMAL")
 		expect(statusline.format_mode("INSERT")).toBe("󰏫 INSERT")
@@ -76,6 +99,7 @@ describe("plugins.fox.ui.statusline_picker", function()
 			expect(cfg.options).toBeDefined()
 			expect(cfg.sections).toBeDefined()
 			expect(cfg.sections.lualine_a).toBeDefined()
+			expect(cfg.sections.lualine_c[1]).toBe(statusline.workflow_status)
 		end
 	end)
 

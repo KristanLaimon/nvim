@@ -28,6 +28,8 @@ $OriginalContent = $Content
 # Recreamos la misma lista para saber qué buscar y destruir
 $Atajos = @(
     @{ Codigo = 111; Mod = "7u"; Tecla = "ctrl+alt+o" }
+    @{ Codigo = 13; Mod = "5u"; Tecla = "ctrl+enter" }
+    @{ Codigo = 32; Mod = "5u"; Tecla = "ctrl+space" }
     @{ Codigo = 59; Mod = "5u"; Tecla = "ctrl+;" }
     @{ Codigo = 44; Mod = "5u"; Tecla = "ctrl+," }
     @{ Codigo = 46; Mod = "5u"; Tecla = "ctrl+." }

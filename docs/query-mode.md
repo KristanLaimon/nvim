@@ -2,18 +2,24 @@
 
 [Back to wiki](index.md) · [SQL tooling](languages/sql.md) · [Design plan](../PLAN-FOXQUERYGRIP.md)
 
-FoxQuerier adds a read-only database workspace to the current project. **Standard** keeps SQL on the left, a database explorer on the right, and results/activity below. **Visual** places the SQL beside an ASCII diagram that follows the statement being edited. A compact terminal uses panel toggles instead of squeezing all panes onto the screen.
+FoxQuerier adds a read-only database workspace to the current project. The default layout has connections on the far left, SQL in the center, the database explorer on the right, and results/activity beneath SQL. **Shift+F3** toggles the live diagram: connections disappear and SQL/diagram each occupy half the width, with results still beneath SQL. A compact terminal uses panel toggles.
 
 ## Start
 
 1. Open the project directory in FoxVim.
-2. Run `:FoxMode query` or press **Ctrl+Alt+O** to choose a mode.
-3. Run `:FoxQueryConnections` and add a profile. SQLite needs an existing file. MySQL/PostgreSQL need host, port, database, and user. Passwords are prompted privately in RAM or resolved from `password_env`.
+2. Press **F3** to cycle directly between Editor and Query, or run `:FoxMode query`. `:FoxMode` still offers a picker.
+3. Press **gC** in Normal mode or run `:FoxQueryConnections` to focus the connection sidebar. **a** adds, **e** edits, **d** deletes a profile, **Enter** connects, and **D** disconnects. SQLite opens the existing file explorer at your project root: Enter opens folders or selects a database file; Esc cancels. MySQL/PostgreSQL need host, port, database, and user. Passwords are prompted privately in RAM or resolved from `password_env`.
 4. For MySQL/PostgreSQL, run `:FoxQueryInstallDrivers` once in that project if drivers are missing. Python 3 and pip are prerequisites; installation is explicit and project-local.
 5. Search/inspect the explorer, create SQL with `:FoxQueryNew`, and save with `:write`.
-6. Run `:FoxQueryRun statement`, then inspect results. `:FoxMode editor` restores the editor without closing SQL sessions.
+6. A complete statement beginning with **SELECT** runs after a **900 ms typing pause** in either layout. **Ctrl+Enter** or **F5** runs manually in Normal/Insert mode. **Ctrl+Space** or **Ctrl+X Ctrl+O** opens completion in Insert mode. **F3** restores the editor without closing SQL sessions.
 
-For PowerShell in Windows Terminal, run `./scripts/setup-powershell.ps1` and restart Windows Terminal to forward Ctrl+Alt+O to Neovim. `./scripts/unsetup-powershell.ps1` removes that forwarding. Other terminals/operating systems may intercept it; the Ex command and palette remain available. No new leader shortcuts are added.
+For PowerShell in Windows Terminal, run `./scripts/setup-powershell.ps1` and restart Windows Terminal to forward Ctrl+Enter and Ctrl+Space to Neovim. `./scripts/unsetup-powershell.ps1` removes that forwarding. Ctrl+Alt+O remains an alternative direct mode switch. Other terminals/operating systems may intercept keys; Ex commands and the palette remain available. No new leader shortcuts are added.
+
+The status bar shows **[Editor | Query]** in every theme: the current workflow uses normal text color and the other is dimmed. F2 retains rename; F3 switches workflows and Shift+F3 toggles the diagram.
+
+Query panes display connection/view/help hints. **Shift+F3** toggles the diagram in Normal/Insert/Visual mode; **gV** does the same in Normal mode. **gN** creates a query, **gE** focuses the explorer/diagram, **gR** opens results, and **F1** opens help. **Ctrl+h/j/k/l** navigate panes in Normal, Insert, and Visual modes; Ctrl+k does not invoke the file finder in Query panes. Completion uses the current statement's cached tables: unique columns are offered bare as well as qualified; ambiguous column names are offered qualified. Native and common CSI terminal sequences are mapped; F5 and Ctrl+X Ctrl+O avoid relying on modified Enter/Space delivery.
+
+Automatic execution considers only the statement at the cursor. It never submits UPDATE/DELETE/INSERT, WITH, or EXPLAIN automatically. The worker independently validates SQL and enforces read-only access; SELECT INTO is rejected. Unchanged SQL is not repeatedly submitted, requests are serialized, hidden projects do not auto-run, and bound parameters require a manual run. `:FoxQueryAutoRun` toggles automatic execution for the project in RAM. SELECT can still do expensive work or invoke server functions; use restricted credentials and disable auto-run when appropriate.
 
 ## Profiles and local files
 
@@ -29,7 +35,9 @@ Profiles live in `.foxnvim/query/connections.json`:
 }
 ```
 
-Use the connection UI to create profiles or edit this file through **Edit connection profiles**. Literal `password` fields are rejected. For PostgreSQL, `schemas` may contain multiple schema names; the selected schemas become the session search path, and qualified completion makes schema choice explicit. Optional PostgreSQL `sslmode`/`sslrootcert` and MySQL `ssl_ca` settings pass to the driver; MySQL CA configuration enables certificate/hostname verification.
+Use the connection sidebar to create/edit/delete profiles, or edit this file directly for advanced settings. Deleting a profile keeps database files, saved SQL, and notes. Literal `password` fields are rejected. The last successful connection ID/fingerprint is saved in project-private `private/session.json` and selected/reconnected on normal entry or a new console; passwords are never saved. Failed connections show a popup and a **Can't connect** badge; Enter retries. Explicit workspace restoration remains disconnected until you choose a connection.
+
+For PostgreSQL, `schemas` may contain multiple schema names; the selected schemas become the session search path, and qualified completion makes schema choice explicit. Optional PostgreSQL `sslmode`/`sslrootcert` and MySQL `ssl_ca` settings pass to the driver; MySQL CA configuration enables certificate/hostname verification.
 
 SQLite paths are relative to the project root unless absolute; missing files are rejected rather than created. Docker is not queried or controlled by the app: use its exposed host/port like any other database.
 
@@ -40,11 +48,14 @@ SQL, notes, profiles, metadata cache, explicit workspace data, installed drivers
 | Command | Behavior |
 |---|---|
 | `:FoxMode [editor/query]` | Choose/switch project workflow. FoxAI remains unimplemented. |
+| `:FoxModeToggle` | Cycle Editor / Query directly (F3). |
 | `:FoxQueryView [standard/visual]` | Choose/toggle query layout. |
 | `:FoxQueryConnections` | Add/edit/connect/disconnect profiles for this console. |
 | `:FoxQueryInstallDrivers` | Explicitly install project-local MySQL/PostgreSQL drivers. |
 | `:FoxQueryNew [name.sql]`, `:FoxQueryOpen` | Create/open saved and in-memory SQL tabs. |
 | `:FoxQueryRun statement` | Execute the statement under the SQL cursor. |
+| `:FoxQueryAutoRun` | Toggle SELECT execution after a 900 ms typing pause. |
+| `:FoxQueryComplete` | Open cached database completion in Insert mode. |
 | `:FoxQueryRun selection` | Execute the last character/line selection; block selections are rejected. |
 | `:FoxQueryRun section`, `:FoxQueryRun file` | Execute an explicit section or file, in order, stopping on error. |
 | `:FoxQueryCancel` | Request cancellation; an uncertain session must reconnect. |
@@ -76,9 +87,9 @@ Each `?` input is bound through the driver. Inputs stay in RAM; the same unchang
 
 ## Visual diagram and navigation
 
-The graph resolves tables from cached metadata and updates after a 200 ms typing pause. Active table boxes are connected by actual SQL JOIN predicates. FK neighbors are dim, dotted suggestions and do not imply a JOIN exists in the SQL. `*` marks selected/output columns, `k` a join key, and `f` a filter column; a column can have several roles. Aliases/self-JOINs remain separate instances.
+The graph resolves tables from cached metadata and updates after a 200 ms typing pause. Active table boxes are connected by actual SQL JOIN predicates; dotted links mark unfinished predicates. FK neighbors are dim suggestions and do not imply a JOIN exists in the SQL. Column markers are labels, not keyboard actions: `*` selected/output, `k` join key, `f` filter, `?` candidate FK column for an unfinished JOIN. Unused columns remain visible but dimmed. Aliases/self-JOINs remain separate instances. Multiple possible FKs are suggestions; none is silently inserted.
 
-The renderer caps active cards at 40, context suggestions at 20, and displayed columns per card at 12. Counts disclose hidden content. Source columns unrelated to the query stay hidden; inspect a table to read its full structure. Incomplete/ambiguous/unsupported SQL is labelled partial; the graph is not an execution plan or validation proof.
+The renderer caps active cards at 40, context suggestions at 20, and displayed columns per card at 12. Counts disclose hidden content; inspect a table to read its full structure. Incomplete/ambiguous/unsupported SQL is labelled partial; the graph is not an execution plan or validation proof. Pane actions run in the diagram: move to a table box, then Enter inspects or J offers Insert JOIN; Ctrl+h returns to SQL.
 
 Use Enter on a table box to inspect it; the cursor position determines the left/right box. Inspector actions: `J` offers Insert JOIN, `n` opens notes, `b` browses rows, and `g` opens the neighborhood. Joining always requires an explicit reviewed edit; clicking a node does not rewrite or execute SQL.
 
@@ -104,7 +115,7 @@ Read-only behavior is enforced with SQLite read-only URI/query-only mode, MySQL 
 
 Automated tests use disposable SQLite fixtures for binding, batches, metadata, read-only enforcement, row limits, cancellation, and actual Neovim-to-Python transport. Lua tests cover scopes, aliases, composite JOINs, diagram roles, project storage, view switching, and session exclusion.
 
-Implementation validation on Windows: **772 repository tests passed**, **9 Python driver tests passed**, changed Lua files passed StyLua/Luacheck, and **780 Lua files parsed without syntax errors**. Command registration and Standard/Visual switching also passed a headless smoke check.
+Latest implementation validation on Windows: **783 repository tests passed**, including 25 Query tests. Changed Lua files pass StyLua/Luacheck. Earlier driver validation passed **9 Python tests**, and **780 Lua files** parsed without syntax errors. Current fixture checks cover live SELECT debounce, parameter/write rejection, remembered connections/failure badges, profile edit/delete, key aliases, and both layouts. Physical Ctrl+Enter/Ctrl+Space behavior in your terminal still needs confirmation; F5 and Ctrl+X Ctrl+O are available alternatives.
 
 The authorized production MySQL check confirmed **5.7.44**, read-only session setup, bound constants, and a zero-row catalog query. **No business rows were read and no production files were saved.** PostgreSQL code and Windows driver loading are present, but live PostgreSQL and Linux integration still need an available test environment. Advanced SQL graph analysis remains intentionally partial.
 

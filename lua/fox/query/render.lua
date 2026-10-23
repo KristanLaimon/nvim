@@ -35,7 +35,7 @@ function M.classification(item, metadata)
 end
 
 function M.graph(graph, metadata, width)
-	return require("fox.query.diagram").render(graph, metadata, width, M.classification)
+	return require("fox.query.diagram").render(graph, metadata, width)
 end
 
 function M.explorer(metadata, filter, selected, notes)
@@ -71,33 +71,63 @@ function M.object_at(objects, row, column)
 	return object
 end
 
-function M.inspect(item, metadata)
-	local lines = { item.key, M.classification(item, metadata), "", "STRUCTURE" }
+function M.inspect(item, metadata, width)
+	local rows, foreign = { item.key, false, "COLUMNS  |  PK primary / FK foreign / NN not null" }, {}
+	for _, relation in ipairs(metadata.relations or {}) do
+		if relation.source == item.key then
+			for _, pair in ipairs(relation.columns) do
+				foreign[pair.source] = true
+			end
+		end
+	end
 	for _, column in ipairs(item.columns or {}) do
-		lines[#lines + 1] = (column.pk and "PK " or "   ")
-			.. column.name
+		rows[#rows + 1] = column.name
 			.. "  "
 			.. tostring(column.type)
-			.. (column.nullable and " NULL" or " NOT NULL")
+			.. (column.pk and "  PK" or "")
+			.. (foreign[column.name] and "  FK" or "")
+			.. (not column.nullable and "  NN" or "")
 	end
-	lines[#lines + 1] = ""
-	lines[#lines + 1] = "INDEXES / UNIQUE KEYS"
+	rows[#rows + 1] = false
+	rows[#rows + 1] = "INDEXES / UNIQUE KEYS"
 	for _, index in ipairs(item.indexes or {}) do
-		lines[#lines + 1] = index.name
+		rows[#rows + 1] = index.name
 			.. (index.unique and " UNIQUE" or "")
 			.. (index.column and " (" .. index.column .. ")" or "")
 			.. (index.definition and " " .. index.definition or "")
 	end
-	lines[#lines + 1] = ""
-	lines[#lines + 1] = "RELATIONSHIPS (visible metadata only)"
+	rows[#rows + 1] = false
+	rows[#rows + 1] = "RELATIONSHIPS (visible metadata only)"
+	rows[#rows + 1] = M.classification(item, metadata)
 	for _, relation in ipairs(metadata.relations or {}) do
 		if relation.source == item.key or relation.target == item.key then
-			lines[#lines + 1] = relation.source .. " -- child FK -> referenced key -- " .. relation.target
+			rows[#rows + 1] = relation.source .. " -> " .. relation.target
 			for _, pair in ipairs(relation.columns) do
-				lines[#lines + 1] = "  " .. tostring(pair.source) .. " = " .. tostring(pair.target)
+				rows[#rows + 1] = "  " .. tostring(pair.source) .. " = " .. tostring(pair.target)
 			end
 		end
 	end
+	local inner = math.max(8, (width or 78) - 4)
+	local border = string.rep("─", inner + 2)
+	local lines = { "┌" .. border .. "┐" }
+	for _, row in ipairs(rows) do
+		if row == false then
+			lines[#lines + 1] = "├" .. border .. "┤"
+		else
+			local text, cells = "", 0
+			for at = 0, vim.fn.strchars(row) - 1 do
+				local char = vim.fn.strcharpart(row, at, 1):gsub("[%c]", " ")
+				local size = vim.fn.strdisplaywidth(char)
+				if cells + size > inner then
+					lines[#lines + 1] = "│ " .. text .. string.rep(" ", inner - cells) .. " │"
+					text, cells = "", 0
+				end
+				text, cells = text .. char, cells + size
+			end
+			lines[#lines + 1] = "│ " .. text .. string.rep(" ", inner - cells) .. " │"
+		end
+	end
+	lines[#lines + 1] = "└" .. border .. "┘"
 	return lines
 end
 

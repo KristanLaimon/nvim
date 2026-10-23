@@ -38,6 +38,8 @@ if ($SettingsPaths.Count -eq 0) {
 # Modificador 5u = Ctrl | Modificador 6u = Ctrl + Shift | Modificador 7u = Ctrl + Alt
 $Atajos = @(
     @{ Codigo = 111; Mod = "7u"; Tecla = "ctrl+alt+o" }
+    @{ Codigo = 13; Mod = "5u"; Tecla = "ctrl+enter" }
+    @{ Codigo = 32; Mod = "5u"; Tecla = "ctrl+space" }
     @{ Codigo = 59; Mod = "5u"; Tecla = "ctrl+;" }
     @{ Codigo = 44; Mod = "5u"; Tecla = "ctrl+," }
     @{ Codigo = 46; Mod = "5u"; Tecla = "ctrl+." }

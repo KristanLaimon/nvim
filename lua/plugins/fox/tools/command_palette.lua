@@ -96,13 +96,19 @@ M.settings = {
 --- Everything the palette offers, in display order. EDIT THIS LIST.
 --- @type table[]
 M.commands = {
-	{ name = "Switch Editor / Query View (Ctrl+Alt+O)", cmd = "FoxMode", category = "Query" },
+	{ name = "Cycle Editor / Query View (F3)", cmd = "FoxModeToggle", category = "Query" },
 	{ name = "Query: Standard View", cmd = "FoxQueryView standard", category = "Query" },
 	{ name = "Query: Visual SQL Diagram", cmd = "FoxQueryView visual", category = "Query" },
-	{ name = "Query: Connections / Add / Edit / Disconnect", cmd = "FoxQueryConnections", category = "Query" },
+	{
+		name = "Query: Connections Sidebar / Add / Edit / Delete / Disconnect",
+		cmd = "FoxQueryConnections",
+		category = "Query",
+	},
 	{ name = "Query: New SQL Console", cmd = "FoxQueryNew", category = "Query" },
 	{ name = "Query: Open Saved / Active SQL", cmd = "FoxQueryOpen", category = "Query" },
 	{ name = "Query: Run Current Statement", cmd = "FoxQueryRun statement", category = "Query" },
+	{ name = "Query: Toggle Automatic SELECT Execution", cmd = "FoxQueryAutoRun", category = "Query" },
+	{ name = "Query: Database Completion", cmd = "FoxQueryComplete", category = "Query" },
 	{ name = "Query: Run Selected SQL", cmd = "FoxQueryRun selection", category = "Query" },
 	{ name = "Query: Run Section", cmd = "FoxQueryRun section", category = "Query" },
 	{ name = "Query: Run File", cmd = "FoxQueryRun file", category = "Query" },

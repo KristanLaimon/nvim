@@ -2,6 +2,8 @@
 
 Status: **initial read-only implementation available**. See [the usage and validation guide](docs/query-mode.md) for commands, implemented behavior, and current limitations. This document retains the intended product design; unchecked acceptance items and suggested follow-ups are not claims of completed validation.
 
+Latest usability revision: connections sidebar with CRUD and last-successful-connection restore; Shift+F3 toggles a half-width live diagram without that sidebar; results stay beneath SQL in both layouts. Unused columns are dimmed and unfinished JOINs show FK candidates. The user's new observations supersede the earlier manual-only execution preference: SELECT runs after a 900 ms typing pause, subject to worker read-only checks; parameterized queries and unfinished JOIN predicates require manual action. Ctrl+Enter/F5 runs manually; Ctrl+Space/Ctrl+X Ctrl+O opens completion. See `IMPLEMENTATION-FOXQUERYGRIP.findings.md` and `FOXQUERYGRIP_history.md` for the latest decisions.
+
 Implementation coverage: Standard/Visual views, project-local profiles/documents/cache, SQLite/MySQL/PostgreSQL driver paths, bounded read-only execution, RAM parameters, cached completion, FK JOIN previews, connected ASCII diagrams, table notes, explicit workspace integration, and Command Palette actions. Advanced graph syntax, persisted SQL history, drafts, virtual relationships, and write/admin features remain follow-ups. Live PostgreSQL and Linux checks are outstanding.
 
 Production validation: the application account confirmed **MySQL 5.7.44** and engine-enforced read-only setup. Bound constants and a zero-row catalog query passed; no business records were read or production query results saved. The earlier "MySQL 5.3" report is superseded by this verified version.
@@ -202,7 +204,7 @@ Resizing preserves SQL, selection, running queries, and panel state. Proposed wi
 
 Confirmed intent: I want to see the query take shape as I write it. Typing a valid `FROM table` brings that table into the diagram and reveals related tables dimly. Selecting columns emphasizes those columns; adding JOINs brings the other tables into focus and connects them. Edits update the graph dynamically.
 
-This is SQL-driven visualization inside FoxQuerier. It is separate from Neovim's Visual selection mode. Proposed starting split: 50% SQL, 50% diagram, resizable. The normal explorer is hidden/collapsible here to preserve two main sides; results/activity open on demand, using the same execution controls as Standard view.
+This is SQL-driven visualization inside FoxQuerier, separate from Neovim's Visual selection mode. Shift+F3 toggles a 50% SQL / 50% diagram layout. The connection sidebar and normal explorer are hidden here; results/activity remain beneath SQL, using the same execution controls as the default layout.
 
 ```text
 +------------------------------------------------------------------------------------------+
@@ -247,13 +249,13 @@ ASCII shows status text and markers; the actual terminal UI can use highlights f
 - Schema FKs and actual SQL JOIN predicates are different evidence. Draw solid query edges and dotted/dim FK suggestions with labels. A valid SQL JOIN may have no declared FK; an FK alone does not prove the SQL contains a JOIN.
 - Preserve the typed JOIN kind, including LEFT/RIGHT/INNER/CROSS and dialect-supported forms. Do not imply an outer JOIN filters rows like an inner JOIN. Label complex/range predicates rather than inventing an equality/FK mapping.
 - Show independent instances for aliases/self-JOINs, such as `employees manager` and `employees report`. Never collapse them into one node just because the physical table matches.
-- Confirmed column mode: highlight SELECT output columns and mark join/filter columns separately; hide unrelated columns by default. If a column has multiple roles, retain each role's indication. Expand table reveals all columns.
+- Confirmed column mode: highlight SELECT output columns, mark join/filter columns separately, and dim unused columns. Pending JOINs mark candidate FK columns. If a column has multiple roles, retain each role's indication. Inspect reveals all columns beyond card limits.
 - `SELECT *`/`alias.*` expands known columns within rendering limits and discloses hidden counts. Expressions/aggregates retain their output aliases and reference available source columns; computed outputs must not masquerade as stored table columns.
 - The display explains the draft query's structure; it is not a query execution plan, result preview, or proof that the SQL is valid or safe.
 
 #### Behavior while SQL is incomplete
 
-- Update after a short typing pause (proposed debounce: 200 ms), using local SQL analysis and existing cached metadata. Do not connect, execute, introspect, or sample rows on each edit.
+- Update the diagram after 200 ms using local SQL analysis and cached metadata. A separate 900 ms debounce attempts only SELECT execution; it never executes writes or introspects/samples rows merely to draw the graph.
 - Follow the statement under the SQL cursor by default. A diagram focus change must not change execution scope. When the cursor moves to the diagram, keep tracking the last active SQL statement; offer an explicit pin/follow action.
 - Keep valid portions visible through partial edits. If showing the last resolved graph, label it stale/pending and distinguish it from any newly parsed portion. Never pretend the old graph describes incomplete new text exactly.
 - Stabilize node positions as edges/columns change; update affected elements instead of constantly relaying out the canvas. Selection, pan, and pinned focus should not jump on every keystroke.
@@ -525,7 +527,7 @@ Panel-local keys should be familiar: arrows or `h/j/k/l`, Enter to inspect, `/` 
 - Cache object/relationship metadata with on-demand details; no eager row counts, samples, or full-table scans on selection.
 - Bound rows/bytes, result retention, connections, history, graph size, and rendering work. Release resources when their environment closes.
 - No continuous idle polling/redrawing unchanged graphs.
-- Visual view uses debounced, scoped SQL analysis and incremental/stable graph updates; no database requests during typing, no work for hidden views, no continuous fade animations.
+- Diagram drawing uses local debounced SQL analysis; SELECT execution has a separate 900 ms debounce. No work for hidden projects or continuous fade animations.
 - Measure connect time, warm search, completion responsiveness, mode switches, and RAM overhead on my slow computer. Proposed limits are not measured guarantees.
 
 ### Existing integration points inspected
@@ -555,7 +557,7 @@ The following build sequence describes the intended delivery gates. Current impl
 |---|---|---|
 | 0. Foundations | Verify server/version; validate driver, ownership, local persistence. | Three-engine connect/metadata/binding/cancel/disconnect checks; Windows/Linux coverage. Use fixtures, production only as narrowly needed. |
 | 1. Useful query mode | Mode switch, profiles, sidebar, SQL tabs, scopes, parameters, activity, bounded read-only results, basic cached completion. | Real work queries fit the workflow without blocking UI, leaking projects, connecting on startup, or auto-restoring tabs. |
-| 2. Understand the DB | Structure, notes, FK JOIN suggestions, depth-3 graph, searchable/pannable whole-DB map, Standard/Visual switching, and the initial live SQL-diagram subset. | Real 122-table metadata is usable; ambiguity/clipping visible; notes survive refresh; editing SQL updates table/column/JOIN visuals without execution or layout jumps. |
+| 2. Understand the DB | Structure, notes, FK JOIN suggestions, depth-3 graph, searchable/pannable whole-DB map, diagram toggle, and initial live SQL analysis. | Real 122-table metadata is usable; ambiguity/clipping visible; notes survive refresh; diagrams update locally and SELECT execution follows its separate debounce. |
 | 3. Daily persistence | Explicit workspace integration, history policy, exports, related-row navigation, final layouts/shortcuts. | No SQL state escapes local storage through save/exit/restore; user documents survive failures/cleanup. |
 | Later, separate review | Writes/transactions and selected follow-ups. | Define behavior/safety before enabling each capability. |
 
@@ -631,7 +633,7 @@ Already answered: local MySQL first, Windows/Linux, Docker agnostic; read-only f
 
 18. **Column visibility — answered:** highlight SELECT columns and mark join/filter columns separately. Hide unrelated columns by default; preserve multiple role indicators when a column is both projected and used in a predicate.
 19. **Context tables:** how many related-but-not-joined tables should surround the active SQL tables? Proposal: depth 1 with a visible limit and explicit expansion; preserve depth 3 for the separate table-neighborhood inspector.
-20. **Diagram interaction — answered:** inspect the selected object and offer explicit Insert JOIN. Preview the SQL edit before applying it; no automatic rewrite or execution. This action belongs to the planned Visual workflow, not an unspecified later feature.
+20. **Diagram interaction — answered:** inspect the selected object and offer explicit Insert JOIN. Preview the SQL edit before applying it; never silently rewrite SQL. The updated SELECT auto-run policy can execute the resulting draft after its debounce.
 21. **Statement tracking:** follow the statement under the SQL cursor, or keep a selected statement pinned while editing elsewhere? Proposal: follow by default with a pin option; graph focus preserves the last SQL location.
 
 Review these in small groups. Driver, ownership, and storage decisions matter before code; the rest can be refined through layouts and daily use.

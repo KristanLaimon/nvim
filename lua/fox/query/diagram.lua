@@ -1,6 +1,6 @@
 local M = {}
 
-function M.render(graph, metadata, width, classify)
+function M.render(graph, metadata, width)
 	local sql = require("fox.query.sql")
 	local card_width = math.max(15, math.min(28, math.floor(((width or 72) - 7) / 2)))
 	local gap, cells, styles, objects, nodes = 7, {}, {}, {}, {}
@@ -31,12 +31,44 @@ function M.render(graph, metadata, width, classify)
 	end
 	put(1, 1, graph.kind == "schema" and "SCHEMA RELATIONSHIP MAP" or "LIVE QUERY DIAGRAM")
 	style(1, 1, 100, "Title")
-	local state = graph.partial and "Partial SQL: resolved portions only" or "Draft SQL; no execution"
+	local state = graph.partial and "Partial SQL: resolved portions only" or "Diagram follows SQL at the cursor"
 	if graph.kind == "schema" then
 		state = "FK metadata; not query execution"
 	end
 	put(2, 1, state .. (metadata.updated_at and (" | cache " .. os.date("%H:%M", metadata.updated_at)) or ""))
 	style(2, 1, 150, "Comment")
+	local candidates = {}
+	for _, edge in ipairs(graph.edges) do
+		if not edge.predicate or vim.trim(edge.predicate) == "" then
+			local target
+			for _, node in ipairs(graph.nodes) do
+				if node.alias == edge.target then
+					target = node
+				end
+			end
+			if target and target.table then
+				for _, node in ipairs(graph.nodes) do
+					if node ~= target and node.table and (node.first or 0) < (target.first or math.huge) then
+						for _, relation in ipairs(metadata.relations or {}) do
+							if
+								relation.source == node.table.key and relation.target == target.table.key
+								or relation.target == node.table.key and relation.source == target.table.key
+							then
+								for _, pair in ipairs(relation.columns) do
+									local source_name = relation.source == node.table.key and pair.source or pair.target
+									local target_name = relation.source == target.table.key and pair.source or pair.target
+									candidates[node.alias] = candidates[node.alias] or {}
+									candidates[target.alias] = candidates[target.alias] or {}
+									candidates[node.alias][source_name or ""] = true
+									candidates[target.alias][target_name or ""] = true
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
 	local y, pair_height, shown = 4, 0, {}
 	for index, node in ipairs(graph.nodes) do
 		if index > 40 then
@@ -47,19 +79,24 @@ function M.render(graph, metadata, width, classify)
 		for _, column in ipairs(item and item.columns or {}) do
 			local roles = node.roles[column.name] or {}
 			local wildcard = node.roles["*"] or {}
-			if roles.output or roles.join or roles.filter or wildcard.output then
+			local candidate = candidates[node.alias] and candidates[node.alias][column.name]
+			do
 				local flags = ((roles.output or wildcard.output) and "*" or " ")
-					.. (roles.join and "k" or " ")
+					.. (roles.join and "k" or candidate and "?" or " ")
 					.. (roles.filter and "f" or " ")
 				rows[#rows + 1] = {
 					text = flags .. " " .. column.name,
-					group = (roles.output or wildcard.output) and "String" or roles.join and "Identifier" or "Special",
+					group = (roles.output or wildcard.output) and "String"
+						or roles.join and "Identifier"
+						or candidate and "DiagnosticHint"
+						or roles.filter and "Special"
+						or "Comment",
 				}
 			end
 		end
 		if #rows == 0 then
 			rows[1] = {
-				text = item and "(no selected columns)" or "? unresolved source",
+				text = item and "(no columns in metadata)" or "? unresolved source",
 				group = item and "Comment" or "DiagnosticWarn",
 			}
 		end
@@ -80,7 +117,7 @@ function M.render(graph, metadata, width, classify)
 			style(y + 2 + row, x + 1, card_width - 2, rows[row].group)
 		end
 		if #rows > 12 then
-			put(y + height - 2, x + 2, "... " .. (#rows - 11) .. " more columns", card_width - 4)
+			put(y + height - 2, x + 2, "... " .. (#rows - 11) .. " more; Enter inspect", card_width - 4)
 		end
 		nodes[node.alias] = { x = x, row = y + 1, item = item }
 		if item then
@@ -97,7 +134,7 @@ function M.render(graph, metadata, width, classify)
 			local gutter = card_width + 1 + math.floor(gap / 2)
 			local sx = source.x == 1 and card_width or source.x
 			local tx = target.x == 1 and card_width or target.x
-			local stroke = edge.predicate and "-" or "."
+			local stroke = edge.predicate and vim.trim(edge.predicate) ~= "" and "-" or "."
 			for x = math.min(sx, gutter), math.max(sx, gutter) do
 				put(source.row, x, stroke)
 			end
@@ -149,7 +186,7 @@ function M.render(graph, metadata, width, classify)
 			.. " --> ["
 			.. edge.target
 			.. "]: "
-			.. (edge.predicate or "pending predicate")
+			.. (edge.predicate and vim.trim(edge.predicate) ~= "" and edge.predicate or "pending predicate")
 	end
 	if #graph.nodes == 0 then
 		lines[#lines + 1] = "Type FROM <table> to resolve a source"
@@ -179,15 +216,11 @@ function M.render(graph, metadata, width, classify)
 			lines[#lines + 1] = (count - 20) .. " context tables hidden"
 		end
 	end
-	for _, node in ipairs(graph.nodes) do
-		if node.table then
-			lines[#lines + 1] = node.alias .. ": " .. classify(node.table, metadata)
-		end
-	end
 	for _, unresolved in ipairs(graph.unresolved or {}) do
 		lines[#lines + 1] = "? " .. unresolved
 	end
-	lines[#lines + 1] = "* SELECT | k JOIN | f filter | Enter inspect | J Insert JOIN"
+	lines[#lines + 1] = "Column markers: * selected | k JOIN | f filter | ? possible FK join | dim unused"
+	lines[#lines + 1] = "In this diagram pane: move to a table, Enter inspect, J Insert JOIN; Ctrl+h returns to SQL"
 	return lines, highlights, objects
 end
 

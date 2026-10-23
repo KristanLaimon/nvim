@@ -15,6 +15,9 @@ end
 function M.new(root, changed)
 	local instance = { root = storage.root(root), pending = {}, sequence = 0, changed = changed, connected = false }
 	function instance:start()
+		if self.closing then
+			return nil, "Database session closed; reconnect"
+		end
 		if self.job then
 			return true
 		end
@@ -88,9 +91,10 @@ function M.new(root, changed)
 		end, 3000)
 	end
 	function instance:close()
-		if self.job then
-			vim.fn.chansend(self.job, '{"op":"cancel"}\n')
-			vim.fn.chanclose(self.job, "stdin")
+		if self.job and not self.closing then
+			self.closing = true
+			pcall(vim.fn.chansend, self.job, '{"op":"cancel"}\n')
+			pcall(vim.fn.chanclose, self.job, "stdin")
 			local job = self.job
 			vim.defer_fn(function()
 				if self.job == job then

@@ -20,6 +20,8 @@ function M.state(root)
 			consoles = {},
 			filter = "",
 			depth = 3,
+			autorun = true,
+			connection_status = {},
 		}
 	end
 	return M.states[root]
@@ -34,11 +36,85 @@ local function valid(handle, kind)
 		)
 end
 
+local function query_keys(buf)
+	vim.keymap.set({ "n", "i", "v" }, "<S-F3>", function()
+		M.show(M.state().view == "visual" and "standard" or "visual")
+	end, { buffer = buf, silent = true, desc = "Query: toggle live diagram" })
+	for _, direction in ipairs({ "h", "j", "k", "l" }) do
+		vim.keymap.set({ "n", "i", "v" }, "<C-" .. direction .. ">", function()
+			vim.cmd("wincmd " .. direction)
+		end, { buffer = buf, silent = true, desc = "Query: focus " .. direction })
+	end
+	local actions = {
+		gC = {
+			function()
+				M.profile()
+			end,
+			"Connections",
+		},
+		gV = {
+			function()
+				M.show(M.state().view == "visual" and "standard" or "visual")
+			end,
+			"Standard / Visual",
+		},
+		gR = {
+			function()
+				M.results()
+			end,
+			"Results",
+		},
+		gE = {
+			function()
+				M.focus_panel("side")
+			end,
+			"Explorer / diagram",
+		},
+		gN = {
+			function()
+				M.new()
+			end,
+			"New query",
+		},
+		["<F1>"] = {
+			function()
+				M.help()
+			end,
+			"Help",
+		},
+	}
+	for key, action in pairs(actions) do
+		vim.keymap.set("n", key, action[1], { buffer = buf, silent = true, desc = "Query: " .. action[2] })
+	end
+end
+
+function M.complete()
+	if vim.api.nvim_get_mode().mode:sub(1, 1) ~= "i" then
+		vim.cmd("startinsert")
+		vim.schedule(M.complete)
+		return
+	end
+	local ok, lazy = pcall(require, "lazy")
+	if ok then
+		lazy.load({ plugins = { "blink.cmp" } })
+	end
+	local loaded, blink = pcall(require, "blink.cmp")
+	if loaded then
+		local shown, err = pcall(blink.show, { providers = { "fox_query" } })
+		if not shown then
+			notify("Completion unavailable: " .. tostring(err), vim.log.levels.WARN)
+		end
+	else
+		notify("Database completion requires blink.cmp", vim.log.levels.WARN)
+	end
+end
+
 local function panel(state, key)
 	if not valid(state[key], "buf") then
 		local buf = vim.api.nvim_create_buf(false, true)
 		vim.bo[buf].bufhidden, vim.bo[buf].swapfile, vim.bo[buf].filetype = "hide", false, "foxquery"
 		vim.b[buf].fox_query_root, state[key] = state.root, buf
+		query_keys(buf)
 	end
 	return state[key]
 end
@@ -107,8 +183,15 @@ function M.refresh_view(state)
 		.. (connected and "READ ONLY" or "disconnected")
 		.. " | "
 		.. (active and active.status or "idle")
+		.. (state.autorun and " | Auto SELECT" or " | Manual")
 	if valid(state.sql_win, "win") then
-		vim.wo[state.sql_win].winbar = status:gsub("%%", "%%%%")
+		vim.wo[state.sql_win].winbar = status:gsub("%%", "%%%%") .. " %= Ctrl+Enter Run / F5 | Shift+F3 Diagram | F1 Help"
+	end
+	if valid(state.side_win, "win") then
+		vim.wo[state.side_win].winbar = "Table pane: Enter inspect | J JOIN | gV Diagram | F1 Help"
+	end
+	if valid(state.connections_buf, "buf") then
+		M.draw_connections(state)
 	end
 	if state.view == "visual" then
 		local text, offset = text_at_cursor(state)
@@ -162,11 +245,20 @@ function M.refresh_view(state)
 	if active and active.result then
 		active.result_lines = active.result_lines or render.results(active.result)
 		vim.list_extend(result_lines, active.result_lines)
+	else
+		vim.list_extend(result_lines, {
+			"",
+			"1. gC: choose a connection in the left sidebar; a adds one.",
+			"2. Write SELECT SQL above; Ctrl+Space opens column/table completion in Insert mode.",
+			"3. SELECT runs after a 900 ms typing pause; results appear here.",
+			"Ctrl+Enter or F5 runs manually. Ctrl+Space or Ctrl+X Ctrl+O opens completion.",
+			"gV: Standard / Visual | gN: new query | F3: Editor / Query | F1: help",
+		})
 	end
 	set_lines(panel(state, "result_buf"), result_lines)
 	set_lines(panel(state, "activity_buf"), {
 		"ACTIVITY | " .. (active and active.status or "idle"),
-		active and active.executed_sql or "SQL is never executed while typing",
+		active and active.executed_sql or "Waiting for SELECT SQL; Ctrl+Enter / F5 runs manually",
 	})
 end
 
@@ -187,6 +279,7 @@ end
 
 local function show_document(state, relative, filetype)
 	local buf = storage.document_buffer(state.root, relative, filetype)
+	query_keys(buf)
 	if valid(state.sql_win, "win") then
 		vim.api.nvim_set_current_win(state.sql_win)
 	end
@@ -204,12 +297,14 @@ function M.inspect(item, state)
 	state.selected = item.key
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.b[buf].fox_query_root = state.root
+	query_keys(buf)
 	local width, height = math.max(1, math.min(90, vim.o.columns - 4)), math.max(1, math.min(30, vim.o.lines - 6))
-	set_lines(buf, render.inspect(item, state.metadata))
+	set_lines(buf, render.inspect(item, state.metadata, width))
 	local _, win = require("fox.core.ui").float(
 		buf,
 		{ width = width, height = height, title = " Table: " .. item.name:gsub("[%c]", " ") .. " " }
 	)
+	vim.wo[win].winbar = "J Insert JOIN | b Browse | n Notes | g Relations | q Close"
 	map(buf, "q", function()
 		vim.api.nvim_win_close(win, true)
 	end)
@@ -252,6 +347,7 @@ function M.hide(state)
 		vim.api.nvim_set_current_tabpage(state.tab)
 		vim.cmd("tabclose")
 		state.tab, state.sql_win, state.side_win, state.result_win, state.activity_win = nil, nil, nil, nil, nil
+		state.connections_win = nil
 		if current ~= state.tab and valid(state.editor_tab, "tab") then
 			vim.api.nvim_set_current_tabpage(state.editor_tab)
 		end
@@ -299,8 +395,15 @@ function M.show(view)
 			)
 		)
 		vim.wo[state.side_win].wrap = false
+		if state.view == "standard" and not (state.widths and state.widths.standard) then
+			local width = 24
+			for _, item in ipairs(state.metadata.tables or {}) do
+				width = math.max(width, vim.fn.strdisplaywidth(item.key) + 4)
+			end
+			vim.api.nvim_win_set_width(state.side_win, math.min(width, math.floor(vim.o.columns * 0.35)))
+		end
 		vim.api.nvim_set_current_win(state.sql_win)
-		if state.view == "standard" then
+		do
 			vim.cmd("belowright split")
 			state.result_win = vim.api.nvim_get_current_win()
 			vim.api.nvim_win_set_buf(state.result_win, panel(state, "result_buf"))
@@ -310,6 +413,14 @@ function M.show(view)
 			state.activity_win = vim.api.nvim_get_current_win()
 			vim.api.nvim_win_set_buf(state.activity_win, panel(state, "activity_buf"))
 			vim.api.nvim_win_set_height(state.activity_win, 2)
+		end
+		if state.view == "standard" then
+			vim.api.nvim_set_current_win(state.sql_win)
+			vim.cmd("topleft vsplit")
+			state.connections_win = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_buf(state.connections_win, panel(state, "connections_buf"))
+			vim.api.nvim_win_set_width(state.connections_win, math.min(26, math.floor(vim.o.columns * 0.22)))
+			vim.wo[state.connections_win].wrap = false
 		end
 	end
 	map(state.side_buf, "/", function()
@@ -369,6 +480,7 @@ function M.show(view)
 		pcall(vim.api.nvim_win_set_cursor, state.sql_win, active.cursor)
 	end
 	M.refresh_view(state)
+	M.restore_connection(state)
 end
 
 function M.buffer_visible(buf)
@@ -485,8 +597,18 @@ function M.new(relative)
 		vim.api.nvim_win_set_buf(state.sql_win, buf)
 	end
 	vim.b[buf].fox_env_slot = _G._fox_active_env_slot or 1
+	query_keys(buf)
+	for _, key in ipairs({ "<C-CR>", "<F5>", "\27[13;5u", "\27[27;5;13~" }) do
+		vim.keymap.set({ "n", "i" }, key, function()
+			M.run("statement")
+		end, { buffer = buf, silent = true, desc = "Query: run statement" })
+	end
+	for _, key in ipairs({ "<C-Space>", "<C-@>", "<C-x><C-o>", "\27[32;5u", "\27[27;5;32~" }) do
+		vim.keymap.set("i", key, M.complete, { buffer = buf, silent = true, desc = "Query: database completion" })
+	end
 	map(buf, "<F1>", M.help)
 	M.refresh_view(state)
+	M.restore_connection(state)
 	return buf
 end
 
@@ -522,45 +644,148 @@ function M.profile(action)
 		end
 		return
 	end
+	if not valid(state.tab, "tab") then
+		M.show()
+	end
+	local buf = panel(state, "connections_buf")
+	M.draw_connections(state)
+	if valid(state.connections_win, "win") then
+		vim.api.nvim_set_current_win(state.connections_win)
+	elseif state.compact then
+		vim.api.nvim_win_set_buf(state.sql_win, buf)
+	else
+		local _, win = require("fox.core.ui").float(
+			buf,
+			{ title = " Connections ", width = math.min(65, vim.o.columns - 4), height = math.min(20, vim.o.lines - 4) }
+		)
+		require("fox.core.ui").close_on_keys(buf, win)
+	end
+end
+
+function M.draw_connections(state)
+	local buf = panel(state, "connections_buf")
 	local profiles, err = storage.profiles(state.root)
+	local active = console(state)
+	local lines, objects = { "CONNECTIONS", "a Add  e Edit  d Delete", "Enter Connect  D Disconnect", "" }, {}
 	if not profiles then
-		notify(err, vim.log.levels.ERROR)
-		return
+		lines[#lines + 1] = err
 	end
-	local choices = { "+ Add connection", "Edit connection profiles", "Disconnect current console" }
-	for _, profile in ipairs(profiles) do
-		choices[#choices + 1] = profile.id
-			.. " ("
-			.. profile.engine
-			.. ") "
-			.. (profile.path or (profile.host .. ":" .. profile.port .. "/" .. profile.database))
+	for _, profile in ipairs(profiles or {}) do
+		local status = state.connection_status[profile.id]
+		local selected = active and active.profile and active.profile.id == profile.id
+		lines[#lines + 1] = (status == "failed" and "[Can't connect] " or selected and "* " or "  ") .. profile.id
+		objects[#lines] = profile
 	end
-	vim.ui.select(choices, { prompt = "Project database connections" }, function(choice, index)
-		if not choice then
-			return
-		end
-		if index == 1 then
+	if profiles and #profiles == 0 then
+		lines[#lines + 1] = "No connections. Press a."
+	end
+	set_lines(buf, lines)
+	local function selected()
+		return objects[vim.api.nvim_win_get_cursor(0)[1]]
+	end
+	map(buf, "a", M.add_profile)
+	map(buf, "<CR>", function()
+		if selected() then
+			M.connect(selected(), state)
+		else
 			M.add_profile()
-			return
 		end
-		if index == 2 then
-			storage.prepare(state.root)
-			if not storage.read(state.root, "connections.json") then
-				storage.save(state.root, "connections.json", { profiles = {} })
+	end)
+	map(buf, "e", function()
+		if selected() then
+			M.add_profile(selected())
+		end
+	end)
+	map(buf, "d", function()
+		if selected() then
+			M.delete_profile(selected(), state)
+		end
+	end)
+	map(buf, "D", function()
+		M.profile("disconnect")
+	end)
+	map(buf, "q", function()
+		if valid(state.sql_win, "win") then
+			vim.api.nvim_set_current_win(state.sql_win)
+			if state.compact then
+				vim.api.nvim_win_set_buf(state.sql_win, state.active)
 			end
-			show_document(state, "connections.json", "json")
-			return
 		end
-		if index == 3 then
-			M.profile("disconnect")
-			return
-		end
-		M.connect(profiles[index - 3], state)
 	end)
 end
 
-function M.add_profile()
+function M.delete_profile(profile, state)
+	state = state or M.state()
+	for _, item in pairs(state.consoles) do
+		if item.profile and item.profile.id == profile.id and item.client and item.client.busy then
+			notify("Cancel or wait before deleting a busy connection", vim.log.levels.WARN)
+			return
+		end
+	end
+	vim.ui.select(
+		{ "Delete connection", "Cancel" },
+		{ prompt = "Delete profile " .. profile.id .. "? Database files and notes are kept." },
+		function(choice)
+			if choice ~= "Delete connection" then
+				return
+			end
+			local profiles, err = storage.profiles(state.root)
+			if not profiles then
+				notify(err, vim.log.levels.ERROR)
+				return
+			end
+			profiles = vim.tbl_filter(function(item)
+				return item.id ~= profile.id
+			end, profiles)
+			local ok, save_err = storage.save(state.root, "connections.json", { profiles = profiles })
+			if not ok then
+				notify(save_err, vim.log.levels.ERROR)
+				return
+			end
+			for _, item in pairs(state.consoles) do
+				if item.profile and item.profile.id == profile.id then
+					if item.client then
+						item.client:close()
+					end
+					item.client, item.profile, item.metadata, item.params = nil, nil, nil, {}
+					item.restore_attempted = true
+				end
+			end
+			state.connection_status[profile.id] = nil
+			M.refresh_view(state)
+		end
+	)
+end
+
+function M.restore_connection(state)
+	local item = console(state)
+	if not item or item.profile or item.restore_attempted or state.restore_disconnected then
+		return
+	end
+	item.restore_attempted = true
+	local saved = storage.load(state.root, "private/session.json", {})
+	if type(saved) ~= "table" then
+		return
+	end
+	local profiles = storage.profiles(state.root)
+	for _, profile in ipairs(profiles or {}) do
+		if profile.id == saved.profile and storage.fingerprint(profile) == saved.fingerprint then
+			M.connect(profile, state)
+			return
+		end
+	end
+end
+
+function M.add_profile(existing)
 	local state, profile = M.state(), {}
+	if existing then
+		for _, item in pairs(state.consoles) do
+			if item.profile and item.profile.id == existing.id and item.client and item.client.busy then
+				notify("Cancel or wait before editing a busy connection", vim.log.levels.WARN)
+				return
+			end
+		end
+	end
 	vim.ui.select({ "sqlite", "mysql", "postgres" }, { prompt = "Database engine" }, function(engine)
 		if not engine then
 			return
@@ -569,6 +794,11 @@ function M.add_profile()
 		local fields = engine == "sqlite" and { "id", "path" }
 			or { "id", "host", "port", "database", "user", "password_env" }
 		local defaults = { host = "127.0.0.1", port = engine == "mysql" and "3306" or "5432" }
+		if existing then
+			profile = vim.tbl_extend("force", existing, { engine = engine })
+			profile.path = engine == "sqlite" and existing.path or nil
+			defaults = vim.tbl_extend("force", defaults, existing)
+		end
 		local function ask(index)
 			local key = fields[index]
 			if not key then
@@ -582,33 +812,67 @@ function M.add_profile()
 					notify(load_err, vim.log.levels.ERROR)
 					return
 				end
-				for _, existing in ipairs(profiles) do
-					if existing.id == profile.id then
+				for _, entry in ipairs(profiles) do
+					if entry.id == profile.id and not (existing and entry.id == existing.id) then
 						notify("Profile id already exists", vim.log.levels.ERROR)
 						return
 					end
 				end
-				profiles[#profiles + 1] = profile
+				local replaced = false
+				for at, entry in ipairs(profiles) do
+					if existing and entry.id == existing.id then
+						profiles[at], replaced = profile, true
+					end
+				end
+				if not replaced then
+					profiles[#profiles + 1] = profile
+				end
 				storage.prepare(state.root)
 				local saved, save_err = storage.save(state.root, "connections.json", { profiles = profiles })
 				if not saved then
 					notify(save_err, vim.log.levels.ERROR)
 					return
 				end
+				if existing then
+					for _, item in pairs(state.consoles) do
+						if item.profile and item.profile.id == existing.id then
+							if item.client then
+								item.client:close()
+							end
+							item.client, item.profile, item.metadata, item.params = nil, nil, nil, {}
+						end
+					end
+				end
 				M.connect(profile, state)
+				return
+			end
+			if key == "path" then
+				require("lazy").load({ plugins = { "telescope.nvim" } })
+				require("plugins.fox.tools.file_explorer").open_desktop_explorer({
+					path = state.root,
+					prompt_title = " Select SQLite database ",
+					on_select_file = function(filename)
+						if vim.fn.filereadable(filename) ~= 1 then
+							notify("Choose an existing readable SQLite database", vim.log.levels.WARN)
+							return
+						end
+						profile.path = filename
+						ask(index + 1)
+					end,
+				})
 				return
 			end
 			vim.ui.input({
 				prompt = key == "password_env" and "Password environment variable (blank: prompt in RAM): " or key .. ": ",
-				default = defaults[key],
+				default = defaults[key] ~= nil and tostring(defaults[key]) or nil,
 			}, function(value)
 				if value == nil then
 					return
 				end
 				if key == "port" then
 					profile[key] = tonumber(value)
-				elseif value ~= "" then
-					profile[key] = value
+				else
+					profile[key] = value ~= "" and value or nil
 				end
 				ask(index + 1)
 			end)
@@ -645,7 +909,10 @@ function M.connect(profile, state)
 	if item.client then
 		item.client:close()
 	end
-	item.params, item.profile = {}, vim.deepcopy(profile)
+	item.params, item.profile, item.restore_attempted = {}, vim.deepcopy(profile), true
+	state.restore_disconnected = false
+	item.auto_sql, item.auto_connection = nil, nil
+	state.connection_status[profile.id] = "connecting"
 	item.result, item.result_lines, item.result_label, item.result_table, item.executed_sql = nil, nil, nil, nil, nil
 	local fingerprint = storage.fingerprint(profile)
 	local cached, cache_err = storage.cache(state.root, fingerprint)
@@ -680,9 +947,32 @@ function M.connect(profile, state)
 		end
 		if err then
 			item.status = err
-			notify(err, vim.log.levels.ERROR)
+			state.connection_status[profile.id] = "failed"
+			local error_buf, error_win = require("fox.core.ui").float({
+				title = " Connection failed ",
+				width = math.min(72, vim.o.columns - 4),
+				height = 5,
+				lines = {
+					"Can't connect: " .. profile.id,
+					tostring(err),
+					"",
+					"Connection sidebar: e edit, Enter retry; q closes this message.",
+				},
+			})
+			vim.b[error_buf].fox_query_root = state.root
+			require("fox.core.ui").close_on_keys(error_buf, error_win)
 		else
 			connection.connected, item.status = true, "connected | " .. result.engine .. " " .. result.version
+			state.connection_status[profile.id] = "connected"
+			storage.prepare(state.root)
+			local saved, save_err = storage.save(
+				state.root,
+				"private/session.json",
+				{ profile = profile.id, fingerprint = storage.fingerprint(profile) }
+			)
+			if not saved then
+				notify(save_err, vim.log.levels.WARN)
+			end
 			item.syntax = result.syntax
 			M.refresh_metadata(state, item)
 		end
@@ -720,10 +1010,57 @@ function M.refresh_metadata(state, item)
 				or "ready; cache not saved: " .. tostring(save_err)
 		end
 		M.refresh_view(state)
+		if item.auto_pending then
+			item.auto_pending = nil
+			M.autorun(state)
+		end
 	end)
 end
 
-function M.run(kind, supplied_sql, supplied_params, source_table)
+function M.autorun(state)
+	state = state or M.state()
+	if
+		not state.autorun
+		or state.mode ~= "query"
+		or state.root ~= storage.root()
+		or not valid(state.tab, "tab")
+		or vim.api.nvim_get_current_tabpage() ~= state.tab
+	then
+		return
+	end
+	local item = console(state)
+	if not item or not item.client or not item.client.connected then
+		return
+	end
+	local text, offset = text_at_cursor(state)
+	if #text > 128 * 1024 then
+		return
+	end
+	local statement = sql.scope(text, offset, "statement", nil, item.syntax or item.profile.engine)
+	if not statement then
+		return
+	end
+	local tokens, incomplete = sql.tokens(statement, item.syntax or item.profile.engine)
+	if incomplete or not tokens[1] or tokens[1].kind ~= "word" or tokens[1].upper ~= "SELECT" then
+		return
+	end
+	for _, edge in ipairs(sql.analyze(statement, item.metadata or state.metadata).edges) do
+		if edge.kind:upper() ~= "CROSS" and (not edge.predicate or vim.trim(edge.predicate) == "") then
+			return
+		end
+	end
+	if item.auto_sql == statement and item.auto_connection == item.client then
+		return
+	end
+	if item.client.busy then
+		item.auto_pending = true
+		return
+	end
+	item.auto_sql, item.auto_connection, item.auto_pending = statement, item.client, nil
+	M.run("statement", statement, nil, nil, true)
+end
+
+function M.run(kind, supplied_sql, supplied_params, source_table, automatic)
 	if kind and not vim.tbl_contains({ "statement", "selection", "section", "file" }, kind) then
 		notify("Choose statement, selection, section, or file", vim.log.levels.WARN)
 		return
@@ -774,8 +1111,18 @@ function M.run(kind, supplied_sql, supplied_params, source_table)
 			connection.busy = false
 			item.status = prepare_err
 			M.refresh_view(state)
+			if item.auto_pending then
+				item.auto_pending = nil
+				M.autorun(state)
+			end
 			return
 		end
+		if automatic and prepared.parameters > 0 then
+			connection.busy, item.status = false, "Parameters needed: Ctrl+Enter / F5 runs with values"
+			M.refresh_view(state)
+			return
+		end
+		item.auto_sql, item.auto_connection = query, connection
 		local params = supplied_params or {}
 		local function execute()
 			if item.client ~= connection or not valid(buf, "buf") then
@@ -808,6 +1155,10 @@ function M.run(kind, supplied_sql, supplied_params, source_table)
 					end
 				end
 				M.refresh_view(state)
+				if item.auto_pending then
+					item.auto_pending = nil
+					M.autorun(state)
+				end
 			end)
 			local function elapsed()
 				if item.execution ~= execution or not connection.busy or item.client ~= connection then
@@ -865,6 +1216,8 @@ end
 function M.cancel()
 	local state, item = M.state(), console(M.state())
 	if item and item.client and item.client.busy then
+		item.auto_pending = nil
+		item.auto_revision = (item.auto_revision or 0) + 1
 		item.status = "cancellation requested; reconnect may be required"
 		item.client:cancel()
 		M.refresh_view(state)
@@ -1014,6 +1367,7 @@ function M.graph(all)
 	local key = not all and state.selected or nil
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.b[buf].fox_query_root = state.root
+	query_keys(buf)
 	vim.cmd("botright split")
 	local win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(win, buf)
@@ -1110,8 +1464,10 @@ function M.help()
 		height = math.min(18, vim.o.lines - 4),
 		title = " FoxQuerier ",
 		lines = {
-			"FoxMode: Editor / Query | FoxQueryView: Standard / Visual",
-			"FoxQueryConnections: add, edit, connect, disconnect",
+			"F3: Editor / Query | Shift+F3 or gV: toggle diagram | gC: connections sidebar",
+			"Ctrl+Enter or F5: run (Normal / Insert); Ctrl+Space or Ctrl+X Ctrl+O: complete (Insert)",
+			"Ctrl+h/j/k/l: focus pane | gN: new query | gE: explorer/diagram",
+			"Connections pane: a add, e edit, d delete profile, Enter connect, D disconnect",
 			"FoxQueryNew / FoxQueryOpen: SQL tabs; :write saves locally",
 			"FoxQueryRun statement / selection / section / file",
 			"FoxQueryCancel: cancel; reconnect if session is uncertain",
@@ -1119,10 +1475,10 @@ function M.help()
 			"Explorer/diagram: Enter inspect, J Insert JOIN, n notes, b browse",
 			"Results: Enter expand row, y copy, e export, gR follow FK",
 			"Map: / table search, Enter recenter, +/- depth, zh/zl pan, q back",
-			"Visual: * SELECT column, k JOIN key, f filter; dim means context",
+			"Diagram markers: * selected, k JOIN, f filter, ? candidate FK; dim unused",
 			"Parameters: Ctrl-C cancels; NULL is null; text:NULL is literal text",
 			"Workspaces: save SQL first; explicit saves restore disconnected",
-			"No SQL executes while typing. All state stays in .foxnvim/query/.",
+			"SELECT auto-runs after 900 ms; parameters need manual run. FoxQueryAutoRun toggles.",
 		},
 	})
 	vim.b[buf].fox_query_root = M.state().root
@@ -1375,6 +1731,7 @@ end
 
 function M.workspace_load(id)
 	local state = M.state()
+	state.restore_disconnected = true
 	local saved, err = storage.load(state.root, "private/workspaces/" .. vim.fn.sha256(id):sub(1, 24) .. ".json", nil)
 	if err then
 		notify(err, vim.log.levels.WARN)
@@ -1550,6 +1907,7 @@ function M.install_drivers()
 end
 
 function M.setup()
+	vim.api.nvim_clear_autocmds({ group = group })
 	vim.api.nvim_create_autocmd("BufEnter", {
 		group = group,
 		callback = function(args)
@@ -1610,6 +1968,15 @@ function M.setup()
 			end
 			state.active = args.buf
 			local active = state.consoles[args.buf]
+			if args.event == "TextChanged" or args.event == "TextChangedI" then
+				active.auto_revision = (active.auto_revision or 0) + 1
+				local revision = active.auto_revision
+				vim.defer_fn(function()
+					if state.active == args.buf and valid(args.buf, "buf") and active.auto_revision == revision then
+						M.autorun(state)
+					end
+				end, 900)
+			end
 			if active.metadata then
 				state.metadata = active.metadata
 			end

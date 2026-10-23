@@ -63,6 +63,29 @@ function M.environment_status()
 	return ""
 end
 
+function M.workflow_status()
+	local query, active = package.loaded["fox.query"], false
+	if query then
+		for _, state in pairs(query.states) do
+			if state.mode == "query" and state.tab == vim.api.nvim_get_current_tabpage() then
+				active = true
+				break
+			end
+		end
+	end
+	local normal, dim = "%#StatusLine#", "%#FoxWorkflowInactive#"
+	return normal
+		.. "["
+		.. (active and dim or normal)
+		.. "Editor"
+		.. normal
+		.. " | "
+		.. (active and normal or dim)
+		.. "Query"
+		.. normal
+		.. "]"
+end
+
 --- Formats editor mode into NvChad style pill string.
 --- @param mode_str string
 --- @return string formatted
@@ -374,7 +397,7 @@ function M.get_lualine_config(theme_name)
 					common_diff,
 					common_diagnostics,
 				},
-				lualine_c = { common_filename },
+				lualine_c = { M.workflow_status, common_filename },
 				lualine_x = { M.python_status, M.lsp_status, "filetype" },
 				lualine_y = { "encoding", "fileformat" },
 				lualine_z = { { "location", icon = "" }, "progress" },
@@ -397,7 +420,7 @@ function M.get_lualine_config(theme_name)
 					common_diff,
 					common_diagnostics,
 				},
-				lualine_c = { common_filename },
+				lualine_c = { M.workflow_status, common_filename },
 				lualine_x = { M.python_status, M.lsp_status, "filetype" },
 				lualine_y = { "encoding" },
 				lualine_z = { { "location", icon = "" }, "progress" },
@@ -414,7 +437,7 @@ function M.get_lualine_config(theme_name)
 			sections = {
 				lualine_a = { "mode" },
 				lualine_b = { M.fileformat_status, M.environment_status, { M.git_branch, icon = "" }, common_diagnostics },
-				lualine_c = { common_filename },
+				lualine_c = { M.workflow_status, common_filename },
 				lualine_x = { M.python_status, M.lsp_status, "filetype" },
 				lualine_y = { "progress" },
 				lualine_z = { "location" },
@@ -431,7 +454,7 @@ function M.get_lualine_config(theme_name)
 			sections = {
 				lualine_a = { "mode" },
 				lualine_b = { M.fileformat_status, M.environment_status, common_filename },
-				lualine_c = {},
+				lualine_c = { M.workflow_status },
 				lualine_x = { M.python_status, { M.git_branch, icon = "" }, M.lsp_status },
 				lualine_y = { "filetype" },
 				lualine_z = { "location" },
@@ -452,7 +475,7 @@ function M.get_lualine_config(theme_name)
 					common_diagnostics,
 				},
 				lualine_b = { common_filename },
-				lualine_c = {},
+				lualine_c = { M.workflow_status },
 				lualine_x = {
 					{
 						"mode",
@@ -488,7 +511,7 @@ function M.get_lualine_config(theme_name)
 				common_diff,
 				common_diagnostics,
 			},
-			lualine_c = { common_filename },
+			lualine_c = { M.workflow_status, common_filename },
 			lualine_x = { M.python_status, M.lsp_status, "filetype" },
 			lualine_y = { "encoding" },
 			lualine_z = { { "location", icon = "" }, "progress" },
@@ -533,6 +556,16 @@ function M.setup()
 		return
 	end
 	M._did_setup = true
+	local function workflow_highlight()
+		local comment = vim.api.nvim_get_hl(0, { name = "Comment", link = false })
+		local status = vim.api.nvim_get_hl(0, { name = "StatusLine", link = false })
+		vim.api.nvim_set_hl(0, "FoxWorkflowInactive", { fg = comment.fg, bg = status.bg, bold = false })
+	end
+	workflow_highlight()
+	vim.api.nvim_create_autocmd("ColorScheme", {
+		group = vim.api.nvim_create_augroup("FoxStatuslineWorkflow", { clear = true }),
+		callback = workflow_highlight,
+	})
 
 	local group = vim.api.nvim_create_augroup("FoxStatuslineTermTitle", { clear = true })
 	vim.api.nvim_create_autocmd({ "TermOpen", "TermClose", "TermRequest", "TermEnter", "TermLeave" }, {

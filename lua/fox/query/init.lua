@@ -1415,8 +1415,6 @@ function M.connect(profile, state)
 			item.pending_run = nil
 			item.status = err
 			state.connection_status[profile.id] = "failed"
-			local missing_driver = err:find("No module named 'pymysql'", 1, true)
-				or err:find("No module named 'psycopg'", 1, true)
 			local error_buf, error_win = require("fox.core.ui").float({
 				title = " Connection failed ",
 				width = math.min(72, vim.o.columns - 4),
@@ -1424,21 +1422,13 @@ function M.connect(profile, state)
 				lines = {
 					"Can't connect: " .. profile.id,
 					tostring(err),
-					missing_driver and "i: install drivers and retry (:FoxQueryInstallDrivers)" or "",
+					"",
 					"",
 					"Connection sidebar: e edit, Enter retry; q closes this message.",
 				},
 			})
 			vim.b[error_buf].fox_query_root = state.root
 			require("fox.core.ui").close_on_keys(error_buf, error_win)
-			if missing_driver then
-				map(error_buf, "i", function()
-					vim.api.nvim_win_close(error_win, true)
-					M.install_drivers(function()
-						M.connect(profile, state)
-					end)
-				end)
-			end
 		else
 			connection.connected, item.status = true, "connected | " .. result.engine .. " " .. result.version
 			state.connection_status[profile.id] = "connected"
@@ -2429,53 +2419,6 @@ function M.can_replace(root)
 		end
 	end
 	return true
-end
-
-function M.install_drivers(done)
-	local state = M.state()
-	M.select(
-		{ "Install project MySQL + PostgreSQL drivers", "Cancel" },
-		{ prompt = "Install PyMySQL and psycopg[binary] under .foxnvim/query/private/drivers?" },
-		function(choice)
-			if choice ~= "Install project MySQL + PostgreSQL drivers" then
-				return
-			end
-			local python = client.python()
-			if not python then
-				notify("Python 3 required", vim.log.levels.ERROR)
-				return
-			end
-			storage.prepare(state.root)
-			local temporary = storage.path(state.root, "cache/pip-tmp")
-			vim.fn.mkdir(temporary, "p")
-			vim.system(
-				{
-					python,
-					"-m",
-					"pip",
-					"install",
-					"--disable-pip-version-check",
-					"--no-compile",
-					"--no-cache-dir",
-					"--target",
-					storage.path(state.root, "private/drivers"),
-					"PyMySQL[rsa]>=1.1,<2",
-					"psycopg[binary]>=3.2,<4",
-				},
-				{ text = true, env = { TMP = temporary, TEMP = temporary, TMPDIR = temporary } },
-				vim.schedule_wrap(function(result)
-					notify(
-						result.code == 0 and "Project database drivers installed"
-							or "Driver install failed; check Python/pip and network access",
-						result.code == 0 and vim.log.levels.INFO or vim.log.levels.ERROR
-					)
-					if result.code == 0 and done then
-						done()
-					end
-				end)
-			)
-		end
-	)
 end
 
 function M.setup()

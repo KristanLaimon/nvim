@@ -19,7 +19,6 @@ local commands = {
 	"FoxQueryClearParameters",
 	"FoxQueryClearCache",
 	"FoxQueryInsertJoin",
-	"FoxQueryInstallDrivers",
 	"FoxQueryExport",
 	"FoxQueryPin",
 	"FoxQueryColumns",
@@ -145,9 +144,6 @@ return {
 		command("FoxQueryErrorDetails", query.error_details)
 		command("FoxQueryInsertJoin", function()
 			query.insert_join()
-		end)
-		command("FoxQueryInstallDrivers", function()
-			query.install_drivers()
 		end)
 		command("FoxQueryExport", query.export)
 		command("FoxQueryPin", query.pin)

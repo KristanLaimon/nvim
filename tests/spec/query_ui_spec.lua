@@ -88,19 +88,16 @@ describe("FoxQuerier UI and session integration", function()
 		end
 	end)
 
-	it("connects and executes through the actual Python SQLite worker", function()
+	it("connects and executes through the bundled Go SQLite worker", function()
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
 		vim.fn.mkdir(root, "p")
-		local fixture = vim
-			.system({
-				require("fox.query.client").python(),
-				"-B",
-				"-c",
-				"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('CREATE TABLE things(id INTEGER PRIMARY KEY,name TEXT)'); c.execute('INSERT INTO things VALUES(?,?)',(1,sys.argv[2])); c.commit(); c.close()",
+		local fixture = {
+			code = vim.fn.writefile(
+				vim.fn.readfile(vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h") .. "/query/fixture.db", "b"),
 				root .. "/fixture.db",
-				"fox",
-			}, { text = true })
-			:wait()
+				"b"
+			),
+		}
 		if fixture.code ~= 0 then
 			error(fixture.stderr)
 		end

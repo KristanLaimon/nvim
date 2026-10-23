@@ -9,7 +9,7 @@ FoxQuerier adds a read-only database workspace to the current project. The defau
 1. Open the project directory in FoxVim.
 2. Press **F3** to cycle directly between Editor and Query, or run `:FoxMode query`. `:FoxMode` still offers a picker. First entry reopens the last used saved SQL file (or the first saved SQL file if it is unavailable); a new query is created only when none exist.
 3. Press **gC** in Normal mode or run `:FoxQueryConnections` to focus the connection sidebar. **a** adds, **e** edits, **d** deletes a profile, **Enter** connects, and **D** disconnects. SQLite opens the existing file explorer at your project root: Enter opens folders or selects a database file; Esc cancels. MySQL/PostgreSQL need host, port, database, and user. Passwords are prompted privately and saved locally under `.foxnvim/query/private/passwords/`, or resolved from `password_env`. Editing a connection lets you replace its saved password; blank keeps the existing one.
-4. For MySQL/PostgreSQL, run `:FoxQueryInstallDrivers` once in that project if drivers are missing. Python 3 and pip are prerequisites; installation is explicit and project-local.
+4. Database drivers are bundled in `tools/foxquery/` for Windows/Linux (amd64). No Python, pip, Node.js, Go, database CLI, or separate SQLite library is needed at runtime. Clone the configuration with these executables included; no driver installation is required. See [build instructions](../tools/repos/foxquery/README.md).
 5. Search/inspect the explorer, create SQL with **gN** or `:FoxQueryNew`, and save with `:write`. The **SQL FILES** pane above connections lists saved project SQL and open tabs; Enter opens a file or expands/collapses a folder, **a** creates SQL, **A** creates a folder, **r** renames, and **d** deletes after confirmation. **Alt+h/l** switches SQL tabs. Closing every tab leaves a prompt to open or create one.
 6. Queries run manually with **Ctrl+Enter** or **F5** in Normal/Insert mode. Typing SQL or moving the cursor does not execute it. **Ctrl+Space** or **Ctrl+X Ctrl+O** opens completion in Insert mode. **F3** restores the editor without closing SQL sessions.
 
@@ -37,13 +37,13 @@ Profiles live in `.foxnvim/query/connections.json`:
 }
 ```
 
-Use the connection sidebar to create/edit/delete profiles, or edit this file directly for advanced settings. Deleting a profile keeps database files, saved SQL, and notes. Literal `password` fields in this shared file are rejected; prompted passwords are saved separately in `private/passwords/<connection-fingerprint>.json` as plaintext, with owner-only file permissions on Unix and local Git ignore rules. The last successful connection ID/fingerprint is saved in project-private `private/session.json` and selected/reconnected on normal entry or a new console; saved passwords are reused across restarts. Failed connections show a popup and a **Can't connect** badge; Enter retries. Missing-driver errors offer **i** to install project drivers and retry, or run `:FoxQueryInstallDrivers` explicitly. Explicit workspace restoration remains disconnected until you choose a connection.
+Use the connection sidebar to create/edit/delete profiles, or edit this file directly for advanced settings. Deleting a profile keeps database files, saved SQL, and notes. Literal `password` fields in this shared file are rejected; prompted passwords are saved separately in `private/passwords/<connection-fingerprint>.json` as plaintext, with owner-only file permissions on Unix and local Git ignore rules. The last successful connection ID/fingerprint is saved in project-private `private/session.json` and selected/reconnected on normal entry or a new console; saved passwords are reused across restarts. Failed connections show a popup and a **Can't connect** badge; Enter retries. Explicit workspace restoration remains disconnected until you choose a connection.
 
 For PostgreSQL, `schemas` may contain multiple schema names; the selected schemas become the session search path, and qualified completion makes schema choice explicit. Optional PostgreSQL `sslmode`/`sslrootcert` and MySQL `ssl_ca` settings pass to the driver; MySQL CA configuration enables certificate/hostname verification.
 
 SQLite paths are relative to the project root unless absolute; missing files are rejected rather than created. Docker is not queried or controlled by the app: use its exposed host/port like any other database.
 
-Saved SQL files live in **`.foxnvim/query/queries/` (including subfolders)** and remain available in the SQL FILES pane after restarting, or through `:FoxQueryOpen`. Unsaved edits still require `:write` to survive a restart. Renaming keeps open edits and connection ownership; saving uses the new path. Delete refuses modified or running queries, and folder deletion includes its contents after confirmation. File actions reject path escapes, symlinks, and existing destinations. SQL, notes, profiles, metadata cache, explicit workspace data, installed drivers, and exports stay under `.foxnvim/query/`. Private/cache/export directories receive local ignore rules. Project/team policy determines whether saved queries and notes are committed. Existing SQLite databases remain at their configured paths.
+Saved SQL files live in **`.foxnvim/query/queries/` (including subfolders)** and remain available in the SQL FILES pane after restarting, or through `:FoxQueryOpen`. Unsaved edits still require `:write` to survive a restart. Renaming keeps open edits and connection ownership; saving uses the new path. Delete refuses modified or running queries, and folder deletion includes its contents after confirmation. File actions reject path escapes, symlinks, and existing destinations. SQL, notes, profiles, metadata cache, explicit workspace data, and exports stay under `.foxnvim/query/`. Private/cache/export directories receive local ignore rules. Project/team policy determines whether saved queries and notes are committed. Existing SQLite databases remain at their configured paths.
 
 UI geometry is the explicit global exception: pane proportions, results sizes, and resized connections/help popups are stored in `stdpath('data')/fox/query-layout.json` (Windows: `nvim-data/fox/query-layout.json`). The default diagram split is 30% SQL / 70% diagram; saved proportions override it across projects. Sizes are clamped for smaller terminals. The activity bar stays one line high. Only geometry is global; connection identities, SQL, and results are not stored there. Old project-workspace geometry is ignored.
 
@@ -66,7 +66,6 @@ Text values appear in double quotes, while numbers and NULL remain unquoted. Ent
 | `:FoxModeToggle` | Cycle Editor / Query directly (F3). |
 | `:FoxQueryView [standard/visual]` | Choose/toggle query layout. |
 | `:FoxQueryConnections` | Add/edit/connect/disconnect profiles for this console. |
-| `:FoxQueryInstallDrivers` | Explicitly install project-local MySQL/PostgreSQL drivers. |
 | `:FoxQueryNew [name.sql]`, `:FoxQueryOpen` | Create/open saved and in-memory SQL tabs. |
 | `:FoxQueryFiles [create/folder/rename/delete]` | Focus the SQL tree or act on its selected file/folder. |
 | `:FoxQueryRun statement` | Execute the statement under the SQL cursor. |
@@ -132,19 +131,26 @@ Read-only behavior is enforced with SQLite read-only URI/query-only mode, MySQL 
 
 ## Validation and remaining platform checks
 
-Automated tests use disposable SQLite fixtures for binding, batches, metadata, read-only enforcement, row limits, cancellation, and actual Neovim-to-Python transport. Lua tests cover scopes, aliases, composite JOINs, diagram roles, project storage, view switching, and session exclusion.
+Automated tests use disposable SQLite fixtures for binding, batches, metadata, read-only enforcement, row limits, cancellation, and actual Neovim-to-Go transport. Lua tests cover scopes, aliases, composite JOINs, diagram roles, project storage, view switching, and session exclusion.
 
-Validation on Windows: the latest Query run passed **40 tests**; the last full repository run passed **796 tests**. Changed Lua files pass StyLua/Luacheck, and all 784 Lua files parse. All 9 Python bridge tests pass, including full diagnostics longer than 4,096 characters. Current fixture checks cover live SELECT debounce, parameter/write rejection, remembered connections/failure badges, profile edit/delete, key aliases, and both layouts. Physical Ctrl+Enter/Ctrl+Space behavior in your terminal still needs confirmation; F5 and Ctrl+X Ctrl+O are available alternatives.
+The Python bridge and its pip installer have been replaced by the bundled Go worker. Backend tests use real disposable SQLite files and cover binding, Unicode, numeric precision, binary cells, SQL guards, metadata, engine-enforced read-only access, attachment rejection, missing-file handling, row/byte caps, cancellation, protocol recovery, and full error diagnostics. Lua tests exercise the bundled executable using a committed SQLite fixture.
 
-The authorized production MySQL check confirmed **5.7.44**, read-only session setup, bound constants, and a zero-row catalog query. **No business rows were read and no production files were saved.** PostgreSQL code and Windows driver loading are present, but live PostgreSQL and Linux integration still need an available test environment. Advanced SQL graph analysis remains intentionally partial.
+Validation on Windows: **813 repository tests passed**, including **55 Query tests**. Backend Go tests and `go vet` pass; changed Lua files pass StyLua/Luacheck, and all 784 Lua files parse. Both bundled executables build with CGO disabled and have matching SHA-256 checksums.
 
-Run:
+The earlier MySQL 5.7.44 production check used the previous backend. Live MySQL/PostgreSQL validation of this replacement, Linux execution, and physical terminal key behavior remain outstanding. Cross-compilation alone does not validate live server behavior.
+
+Run from the configuration root:
 
 ```text
 nvim --headless -u NONE -i NONE -l tests/run.lua query
-python -B -m unittest discover -s tests/query -v
 ```
 
-For an explicitly authorized remote check, `tests/query/remote_check.py` prompts privately for a password and runs only version/bound constants/zero-row metadata SQL. Its connection arguments contain no password.
+Run from `tools/repos/foxquery/`:
 
-Driver references: [PyMySQL connection options](https://pymysql.readthedocs.io/en/latest/modules/connections.html), [psycopg connections](https://www.psycopg.org/psycopg3/docs/api/connections.html), [psycopg cursor behavior](https://www.psycopg.org/psycopg3/docs/advanced/cursors.html), [Python SQLite](https://docs.python.org/3/library/sqlite3.html).
+```text
+go test -mod=vendor ./...
+./build.ps1        # PowerShell
+bash build.sh      # Bash
+```
+
+Driver references: [embedded pure-Go SQLite](https://pkg.go.dev/modernc.org/sqlite), [Go MySQL driver](https://github.com/go-sql-driver/mysql), [pgx database/sql integration](https://pkg.go.dev/github.com/jackc/pgx/v5/stdlib).

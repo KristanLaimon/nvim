@@ -1,5 +1,7 @@
 # FoxQuerier: a database workspace inside FoxVim
 
+Portability revision: Python/pip and the project driver installer have been removed. FoxQuery now uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under tools/repos/foxquery (vendor is generated locally when missing, reused, and Git-ignored); final executables live under tools/foxquery. Existing profiles, SQL, caches, and passwords retain their formats. See tools/repos/foxquery/README.md. Earlier production validation applies to the previous backend; live server and Linux checks must be repeated.
+
 Status: **initial read-only implementation available**. See [the usage and validation guide](docs/query-mode.md) for commands, implemented behavior, and current limitations. This document retains the intended product design; unchecked acceptance items and suggested follow-ups are not claims of completed validation.
 
 Latest follow-up: results are bordered ASCII tables; SELECT auto-execution follows the current caret across statements. Diagram default is now 30% SQL / 70% diagram. Resized UI geometry is explicitly global in `stdpath('data')/fox/query-layout.json`; SQL/profiles/results/cache remain project-local. This overrides older project-only split-geometry proposals below.

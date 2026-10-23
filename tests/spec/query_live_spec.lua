@@ -53,6 +53,7 @@ describe("FoxQuerier live workflow", function()
 			vim.api.nvim_set_current_win(win)
 			vim.wo[win].number, vim.wo[win].relativenumber, vim.wo[win].signcolumn = false, false, "no"
 			vim.wo[win].statuscolumn = ""
+			vim.wo[win].foldcolumn = "0"
 			local function scroll(line, left, column)
 				vim.fn.winrestview({ lnum = line, topline = line, leftcol = left or 0, col = column or 0 })
 				vim.api.nvim_exec_autocmds("WinScrolled", { pattern = tostring(win) })
@@ -256,15 +257,13 @@ describe("FoxQuerier live workflow", function()
 
 	it("connects the sole profile and reconnects before running the captured statement", function()
 		project(function(root)
-			local fixture = vim
-				.system({
-					require("fox.query.client").python(),
-					"-B",
-					"-c",
-					"import sqlite3,sys; sqlite3.connect(sys.argv[1]).close()",
+			local fixture = {
+				code = vim.fn.writefile(
+					vim.fn.readfile(vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h") .. "/query/fixture.db", "b"),
 					root .. "/fixture.db",
-				}, { text = true })
-				:wait()
+					"b"
+				),
+			}
 			expect(fixture.code).toBe(0)
 			local profile = { id = "local", engine = "sqlite", path = "fixture.db" }
 			storage.save(root, "connections.json", { profiles = { profile } })
@@ -904,12 +903,12 @@ describe("FoxQuerier live workflow", function()
 		end)
 	end)
 
-	it("saves a masked password once and installs missing drivers before retrying", function()
+	it("saves a masked password once and reuses it when retrying a failed connection", function()
 		project(function(root)
 			query.show()
 			local client = require("fox.query.client")
 			local old_new, old_input = client.new, vim.fn.inputsecret
-			local old_system, old_select, old_refresh = vim.system, query.select, query.refresh_metadata
+			local old_refresh = query.refresh_metadata
 			local prompts, attempts = 0, 0
 			local profile = { id = "mysql", engine = "mysql", host = "localhost", port = 3306, database = "db", user = "me" }
 			local ok, err = pcall(function()
@@ -925,7 +924,7 @@ describe("FoxQuerier live workflow", function()
 							expect(data.profile.password).toBe("saved-secret")
 							attempts = attempts + 1
 							if attempts == 1 then
-								callback(nil, "No module named 'pymysql'")
+								callback(nil, "Database connection failed")
 								return
 							end
 							callback({ engine = "mysql", version = "test" })
@@ -933,19 +932,12 @@ describe("FoxQuerier live workflow", function()
 					}
 				end
 				query.refresh_metadata = function() end
-				query.select = function(items, _, callback)
-					callback(items[1])
-				end
-				vim.system = function(command, _, callback)
-					expect(command).toContain("PyMySQL[rsa]>=1.1,<2")
-					expect(command).toContain(storage.path(root, "private/drivers"))
-					callback({ code = 0 })
-				end
 				local state = query.state()
 				query.connect(profile, state)
 				expect(storage.password(root, profile)).toBe("saved-secret")
-				expect(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")).toContain("install drivers and retry")
-				vim.fn.maparg("i", "n", false, true).callback()
+				expect(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")).toContain("Database connection failed")
+				vim.api.nvim_win_close(0, true)
+				query.connect(profile, state)
 				expect(vim.wait(1000, function()
 					return state.connection_status.mysql == "connected"
 				end, 10)).toBeTruthy()
@@ -954,7 +946,7 @@ describe("FoxQuerier live workflow", function()
 				expect(profile.password).toBeNil()
 			end)
 			client.new, vim.fn.inputsecret = old_new, old_input
-			vim.system, query.select, query.refresh_metadata = old_system, old_select, old_refresh
+			query.refresh_metadata = old_refresh
 			if not ok then
 				error(err)
 			end
@@ -1126,15 +1118,13 @@ describe("FoxQuerier live workflow", function()
 
 	it("debounces real SQLite SELECTs, skips parameter prompts, restores connections, and marks failures", function()
 		project(function(root)
-			local fixture = vim
-				.system({
-					require("fox.query.client").python(),
-					"-B",
-					"-c",
-					"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('CREATE TABLE things(id INTEGER PRIMARY KEY)'); c.commit(); c.close()",
+			local fixture = {
+				code = vim.fn.writefile(
+					vim.fn.readfile(vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h") .. "/query/fixture.db", "b"),
 					root .. "/fixture.db",
-				}, { text = true })
-				:wait()
+					"b"
+				),
+			}
 			expect(fixture.code).toBe(0)
 			local profile = { id = "local", engine = "sqlite", path = "fixture.db" }
 			storage.save(root, "connections.json", { profiles = { profile } })

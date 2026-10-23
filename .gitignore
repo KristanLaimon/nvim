@@ -12,3 +12,9 @@ output_tests
 PROMPT.md
 PROMPT2.md
 *.log
+
+tools/repos/**/.cache/
+tools/repos/**/vendor/
+tools/foxquery/licenses/
+tools/repos/**/dist/
+tools/repos/**/*.test

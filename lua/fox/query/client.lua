@@ -1,15 +1,29 @@
 local M = {}
 local storage = require("fox.query.storage")
 local source = debug.getinfo(1, "S").source:sub(2):gsub("\\", "/")
-M.bridge = source:gsub("lua/fox/query/client.lua$", "scripts/query_bridge.py")
-
-function M.python()
-	for _, executable in ipairs({ "python3", "python" }) do
-		if vim.fn.executable(executable) == 1 then
-			return executable
+function M.executable()
+	local platform = (vim.uv or vim.loop).os_uname()
+	local os = ({ Windows_NT = "windows", Linux = "linux" })[platform.sysname]
+	local arch = ({ x86_64 = "amd64", amd64 = "amd64", AMD64 = "amd64" })[platform.machine]
+	if not os or not arch then
+		return nil, "FoxQuery has no bundled worker for " .. platform.sysname .. "/" .. platform.machine
+	end
+	local path = source:gsub("lua/fox/query/client.lua$", "tools/foxquery/")
+		.. "foxquery-"
+		.. os
+		.. "-"
+		.. arch
+		.. (os == "windows" and ".exe" or "")
+	if vim.fn.filereadable(path) ~= 1 then
+		return nil, "FoxQuery worker missing; run the build script in tools/repos/foxquery"
+	end
+	if os ~= "windows" and vim.fn.executable(path) ~= 1 then
+		local ok = (vim.uv or vim.loop).fs_chmod(path, 493)
+		if not ok then
+			return nil, "FoxQuery worker is not executable; chmod +x " .. path
 		end
 	end
-	return nil
+	return path
 end
 
 function M.new(root, changed)
@@ -21,14 +35,13 @@ function M.new(root, changed)
 		if self.job then
 			return true
 		end
-		local python = M.python()
-		if not python then
-			return nil, "Python 3 is required for database connections"
+		local executable, err = M.executable()
+		if not executable then
+			return nil, err
 		end
 		local fragment = ""
-		self.job = vim.fn.jobstart({ python, "-u", "-B", M.bridge }, {
+		self.job = vim.fn.jobstart({ executable }, {
 			cwd = self.root,
-			env = { PYTHONDONTWRITEBYTECODE = "1", PYTHONPATH = storage.path(self.root, "private/drivers") },
 			on_stdout = function(_, data)
 				for i, part in ipairs(data) do
 					fragment = fragment .. part
@@ -65,7 +78,7 @@ function M.new(root, changed)
 		})
 		if self.job <= 0 then
 			self.job = nil
-			return nil, "Could not start Python database worker"
+			return nil, "Could not start bundled FoxQuery worker"
 		end
 		return true
 	end

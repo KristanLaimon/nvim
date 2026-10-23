@@ -1,5 +1,7 @@
 # FoxQuerier / FOXQUERYGRIP — resume notes
 
+Portability revision: Python/pip and the project driver installer have been removed. FoxQuery now uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under tools/repos/foxquery (vendor is generated locally when missing, reused, and Git-ignored); final executables live under tools/foxquery. Existing profiles, SQL, caches, and passwords retain their formats. See tools/repos/foxquery/README.md. Earlier production validation applies to the previous backend; live server and Linux checks must be repeated.
+
 Updated: 2026-10-22. Repository: `C:/Users/USER/AppData/Local/nvim`.
 
 Latest fix: Windows `'charmap' codec can't encode ... '\u7363'` during query results came from locale-dependent Python JSONL streams. `scripts/query_bridge.py` explicitly reconfigures stdin/stdout as UTF-8 before starting the worker. Disconnect/reconnect to replace an already running worker. Regression forces `PYTHONIOENCODING=cp1252` / `PYTHONUTF8=0` and verifies ASCII SQL returning stored `獣`, plus raw Unicode SQL/column names/bound values. All 9 Python driver tests and 4 Query UI/integration tests passed; no production queries were used. The full 785-test suite was not rerun for this transport-only fix.

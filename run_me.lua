@@ -1,5 +1,5 @@
 -- ============================================================================
--- 🦊 run_me.lua -- Master CLI Runner for FOXNVIM Scripts (Pure Lua)
+-- 🦊 run_me.lua -- Master CLI Runner for FOXNVIM Scripts
 -- ============================================================================
 
 local root = vim.fn.stdpath("config")

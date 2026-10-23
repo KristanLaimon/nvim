@@ -399,10 +399,10 @@ end
 --- Checks if neo-tree occupies any window.
 --- @return boolean, integer|nil winid
 local function is_neotree_open()
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if vim.api.nvim_win_is_valid(win) then
 			local buf = vim.api.nvim_win_get_buf(win)
-			if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "neo-tree" then
+			if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "neo-tree" and not vim.b[buf].fox_query_root then
 				return true, win
 			end
 		end
@@ -410,11 +410,24 @@ local function is_neotree_open()
 	return false, nil
 end
 
+local function restore_neotree(cwd)
+	local win = vim.api.nvim_get_current_win()
+	pcall(function()
+		vim.cmd("Neotree focus dir=" .. vim.fn.fnameescape(cwd or vim.fn.getcwd()))
+		-- A debounced scan can run after Query opens; establish its editor window now.
+		local state = require("neo-tree.sources.manager").get_state("filesystem")
+		require("neo-tree.ui.renderer").acquire_window(state)
+	end)
+	if vim.api.nvim_win_is_valid(win) then
+		vim.api.nvim_set_current_win(win)
+	end
+end
+
 --- Closes and purges neo-tree buffers before saving layout.
 local function purge_neotree()
 	pcall(vim.cmd, "Neotree close")
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "neo-tree" then
+		if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "neo-tree" and not vim.b[buf].fox_query_root then
 			pcall(vim.api.nvim_buf_delete, buf, { force = true })
 		end
 	end
@@ -673,6 +686,7 @@ local function snapshot_active_environment(env)
 	end
 
 	-- Remember which buffer the user was editing so we can restore it on switch-back
+	env.last_window = vim.api.nvim_get_current_win()
 	local cur_buf = vim.api.nvim_get_current_buf()
 	if vim.api.nvim_buf_is_valid(cur_buf) and vim.bo[cur_buf].buftype == "" then
 		local buf_name = vim.api.nvim_buf_get_name(cur_buf)
@@ -737,9 +751,12 @@ local function snapshot_and_persist_environment(env)
 		return false
 	end
 
-	-- First, capture in-memory state & update buffer list for disk
+	local query = package.loaded["fox.query"]
+	local restore_query = query and query.suspend()
+	-- Snapshot the editor tab, whose sidebar is separate from Query's file tree.
 	snapshot_active_environment(env)
 	env.buffers = get_listed_buffer_names()
+	local editor_win = vim.api.nvim_get_current_win()
 
 	-- Now tear down UI for a clean session file
 	vim.opt.sessionoptions = M.settings.session_options
@@ -786,16 +803,17 @@ local function snapshot_and_persist_environment(env)
 
 	-- Write session file to disk
 	env.session_file = env.session_file or session_path_for_slot(env.slot)
-	local query = package.loaded["fox.query"]
-	local restore_query = query and query.suspend()
 	pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(env.session_file))
-	if restore_query then
-		restore_query()
-	end
 
 	-- Restore UI after disk write
 	if neotree_was_open then
-		pcall(vim.cmd, "Neotree focus dir=" .. vim.fn.fnameescape(env.cwd or vim.fn.getcwd()))
+		restore_neotree(env.cwd)
+	end
+	if vim.api.nvim_win_is_valid(editor_win) then
+		vim.api.nvim_set_current_win(editor_win)
+	end
+	if restore_query then
+		restore_query()
 	end
 
 	return true
@@ -1018,6 +1036,21 @@ function M.switch_environment(target_slot, callback)
 		end
 	end
 
+	if
+		target_env.last_window
+		and vim.api.nvim_win_is_valid(target_env.last_window)
+		and vim.api.nvim_win_get_tabpage(target_env.last_window) == vim.api.nvim_get_current_tabpage()
+		and not is_transient_buffer(vim.api.nvim_win_get_buf(target_env.last_window))
+	then
+		vim.api.nvim_set_current_win(target_env.last_window)
+	else
+		for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+			if not is_transient_buffer(vim.api.nvim_win_get_buf(win)) then
+				vim.api.nvim_set_current_win(win)
+				break
+			end
+		end
+	end
 	if target_buf then
 		pcall(vim.api.nvim_set_current_buf, target_buf)
 		target_env.last_buffer_nr = target_buf
@@ -1039,17 +1072,10 @@ function M.switch_environment(target_slot, callback)
 		end)
 	end
 
-	-- 9. Async Neo-tree root navigation (does NOT freeze viewport or keystrokes)
-	local neotree_open_now = is_neotree_open()
-	if target_env.neotree_open and neotree_open_now then
-		vim.schedule(function()
-			pcall(vim.cmd, "Neotree dir=" .. vim.fn.fnameescape(target_env.cwd or vim.fn.getcwd()))
-		end)
-	elseif target_env.neotree_open and not neotree_open_now then
-		vim.schedule(function()
-			pcall(vim.cmd, "Neotree focus dir=" .. vim.fn.fnameescape(target_env.cwd or vim.fn.getcwd()))
-		end)
-	elseif target_env.neotree_open == false and neotree_open_now then
+	-- Restore the sidebar before Query creates its own tab.
+	if target_env.neotree_open then
+		restore_neotree(target_env.cwd)
+	elseif target_env.neotree_open == false and is_neotree_open() then
 		pcall(vim.cmd, "Neotree close")
 	end
 

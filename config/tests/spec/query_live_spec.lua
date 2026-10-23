@@ -1,6 +1,7 @@
 local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 local query, storage = require("fox.query"), require("fox.query.storage")
+dofile(vim.fn.stdpath("config") .. "/config/tests/query/neotree.lua")
 
 local function project(check)
 	local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
@@ -36,6 +37,28 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("opens SQL files through Neo-tree in a compact terminal", function()
+		project(function(root)
+			local columns = vim.o.columns
+			vim.o.columns = 60
+			local ok, err = pcall(function()
+				storage.write(root, "queries/compact.sql", "SELECT 42;")
+				query.show()
+				local state = query.state()
+				query.focus_panel("queries")
+				expect(vim.api.nvim_win_get_buf(state.sql_win)).toBe(state.queries_buf)
+				expect(vim.b[state.queries_buf].neo_tree_source).toBe("fox_query")
+				require("neo-tree.ui.renderer").focus_node(state.query_tree, "compact.sql")
+				vim.fn.maparg("<CR>", "n", false, true).callback()
+				expect(vim.api.nvim_win_get_buf(state.sql_win)).toBe(state.active)
+				expect(vim.b[state.active].fox_query_document).toBe("queries/compact.sql")
+			end)
+			vim.o.columns = columns
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
 	it("keeps result headers visible and aligned while scrolling and switches them between result sets", function()
 		project(function()
 			query.show()
@@ -111,7 +134,7 @@ describe("FoxQuerier live workflow", function()
 		end)
 	end)
 
-	it("opens live-diagram table details at terminal size despite an old small inspector size", function()
+	it("sizes live-diagram details from content despite an old small inspector size", function()
 		project(function()
 			query.show("visual")
 			local state = query.state()
@@ -140,7 +163,9 @@ describe("FoxQuerier live workflow", function()
 			end
 			expect(found).toBeTruthy()
 			vim.fn.maparg("<CR>", "n", false, true).callback()
-			local width, height = require("plugins.fox.dev.terminal").float_size()
+			local content = require("fox.query.render").inspect(item, state.metadata)
+			local width = math.min(vim.o.columns - 4, vim.fn.strdisplaywidth(content[1]))
+			local height = math.min(vim.o.lines - 6, #content)
 			local config = vim.api.nvim_win_get_config(0)
 			expect(config.relative).toBe("editor")
 			expect(config.width).toBe(width)
@@ -163,47 +188,28 @@ describe("FoxQuerier live workflow", function()
 			local function marks()
 				return vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, { details = true })
 			end
-			local function range()
-				for _, mark in ipairs(marks()) do
-					if mark[4].hl_group == "CursorLine" then
-						return mark
-					end
-				end
-				error("Statement highlight missing")
+			local entries = marks()
+			expect(#entries).toBe(2)
+			expect(entries[1][2]).toBe(0)
+			expect(entries[1][4].virt_lines_above).toBeTruthy()
+			for _, mark in ipairs(entries) do
+				expect(mark[4].virt_text).toBeNil()
+				expect(mark[4].virt_lines[1][1][1]).toBe(
+					string.rep("\226\148\128", vim.api.nvim_win_get_width(state.sql_win) - 2)
+				)
 			end
-			local mark = range()
-			expect(mark[2]).toBe(0)
-			expect(mark[4].end_row).toBe(0)
-			expect(mark[4].end_col).toBe(#lines[1])
-			local top, bottom, sides = false, false, 0
-			for _, entry in ipairs(marks()) do
-				local opts = entry[4]
-				if opts.virt_lines then
-					local text = opts.virt_lines[1][1][1]
-					top = top or text:find("┌", 1, true) ~= nil
-					bottom = bottom or text:find("└", 1, true) ~= nil
-				elseif opts.virt_text then
-					sides = sides + 1
-				end
-			end
-			expect(top and bottom).toBeTruthy()
-			expect(sides).toBe(2)
 			vim.api.nvim_win_set_cursor(state.sql_win, { 4, 3 })
-			vim.api.nvim_exec_autocmds("CursorMoved", { buffer = buf })
-			expect(vim.wait(1000, function()
-				return range()[2] == 2
-			end, 10)).toBeTruthy()
-			mark = range()
-			expect(mark[4].end_row).toBe(3)
-			expect(mark[4].end_col).toBe(#lines[4])
+			query.refresh_view(state)
+			entries = marks()
+			expect(entries[1][2]).toBe(2)
+			expect(entries[2][2]).toBe(3)
 			expect(state.consoles[buf].execution).toBeNil()
 			expect(vim.api.nvim_buf_get_lines(buf, 0, -1, false)).toEqual(lines)
 			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT 1; SELECT 2;" })
 			vim.api.nvim_win_set_cursor(state.sql_win, { 1, 12 })
 			query.refresh_view(state)
-			mark = range()
-			expect(mark[3]).toBe(10)
-			expect(mark[4].end_col).toBe(19)
+			expect(#marks()).toBe(2)
+			expect(marks()[1][2]).toBe(0)
 			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT 'unfinished" })
 			query.refresh_view(state)
 			expect(#marks()).toBe(0)
@@ -426,8 +432,14 @@ describe("FoxQuerier live workflow", function()
 			vim.api.nvim_win_set_width(win, 62)
 			vim.api.nvim_exec_autocmds("WinResized", {})
 			lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-			expect(vim.fn.strdisplaywidth(lines[4])).toBe(61)
-			vim.api.nvim_win_set_cursor(win, { 5, assert(lines[5]:find("Bridge", 1, true)) - 1 })
+			expect(table.concat(lines, "\n")).toContain("> Player")
+			for row, line in ipairs(lines) do
+				local column = line:find("Bridge", 1, true)
+				if column and line:find("|", 1, true) then
+					vim.api.nvim_win_set_cursor(win, { row, column - 1 })
+					break
+				end
+			end
 			vim.fn.maparg("<CR>", "n", false, true).callback()
 			expect(state.selected).toBe("Bridge")
 			expect(vim.api.nvim_buf_get_lines(buf, 4, 5, false)[1]).toContain("> Bridge")
@@ -455,11 +467,10 @@ describe("FoxQuerier live workflow", function()
 				local function select(relative)
 					query.refresh_view(state)
 					vim.api.nvim_set_current_win(state.queries_win)
-					for row, entry in pairs(state.query_nodes) do
-						if entry.relative == relative then
-							vim.api.nvim_win_set_cursor(0, { row, 0 })
-							return
-						end
+					local node = state.query_tree.tree:get_node(relative)
+					if node then
+						require("neo-tree.ui.renderer").focus_node(state.query_tree, relative)
+						return
 					end
 					error("SQL entry missing: " .. relative)
 				end
@@ -573,9 +584,10 @@ describe("FoxQuerier live workflow", function()
 			vim.fn.maparg("q", "n", false, true).callback()
 			query.refresh_view(state)
 			expect(table.concat(vim.api.nvim_buf_get_lines(state.side_buf, 0, -1, false), "\n"):find("INDEXES", 1, true)).toBeNil()
-			for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(state.side_buf, "n")) do
-				expect(mapping.lhs == "/" or mapping.lhs == "n").toBeFalsy()
-			end
+			vim.api.nvim_buf_call(state.side_buf, function()
+				expect(vim.fn.maparg("/", "n", false, true).buffer).toBe(1)
+				expect(vim.fn.maparg("n", "n", false, true).buffer).toBe(1)
+			end)
 			local sizes = {}
 			for _, win in ipairs(vim.api.nvim_tabpage_list_wins(state.tab)) do
 				sizes[win] = { vim.api.nvim_win_get_width(win), vim.api.nvim_win_get_height(win) }

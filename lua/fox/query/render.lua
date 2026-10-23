@@ -38,9 +38,8 @@ function M.graph(graph, metadata, width, column_limit)
 	return require("fox.query.diagram").render(graph, metadata, width, column_limit)
 end
 
-function M.explorer(metadata, filter, selected, notes)
-	local lines, objects =
-		{ "DATABASE EXPLORER", "Enter: inspect  b: browse  :FoxQueryNotes", "Filter: " .. (filter or ""), "" }, {}
+function M.explorer(metadata, filter, selected, notes, height)
+	local lines, objects = {}, {}
 	local candidates = {}
 	for _, item in ipairs(metadata.tables or {}) do
 		candidates[#candidates + 1] = item.key
@@ -55,6 +54,15 @@ function M.explorer(metadata, filter, selected, notes)
 	if #candidates == 0 then
 		lines[#lines + 1] = "No matching cached tables; connect/refresh"
 	end
+	while #lines < (height or 4) - 4 do
+		lines[#lines + 1] = ""
+	end
+	vim.list_extend(lines, {
+		"──────",
+		"DATABASE EXPLORER",
+		"/: filter  Enter: inspect  b: browse  n: notes",
+		"Filter: " .. (filter or ""),
+	})
 	return lines, objects
 end
 
@@ -110,36 +118,44 @@ function M.inspect(item, metadata, width)
 	rows[#rows + 1] = false
 	rows[#rows + 1] = "RELATIONSHIPS (visible metadata only)"
 	rows[#rows + 1] = M.classification(item, metadata)
-	for _, relation in ipairs(metadata.relations or {}) do
-		if relation.source == item.key or relation.target == item.key then
-			rows[#rows + 1] = relation.source .. " -> " .. relation.target
-			for _, pair in ipairs(relation.columns) do
-				rows[#rows + 1] = "  " .. tostring(pair.source) .. " = " .. tostring(pair.target)
-			end
+	local diagram, _, diagram_highlights = M.map(metadata, item.key, 1, width or vim.o.columns - 8, 200)
+	table.remove(diagram)
+	local diagram_start = #rows
+	vim.list_extend(rows, diagram)
+	local inner = math.max(8, (width or 0) - 4)
+	for _, row in ipairs(rows) do
+		if row then
+			inner = math.max(inner, vim.fn.strdisplaywidth(row))
 		end
 	end
-	local inner = math.max(8, (width or 78) - 4)
 	local border = string.rep("─", inner + 2)
 	local lines = { "┌" .. border .. "┐" }
 	for _, row in ipairs(rows) do
 		if row == false then
 			lines[#lines + 1] = "├" .. border .. "┤"
 		else
-			local text, cells = "", 0
-			for at = 0, vim.fn.strchars(row) - 1 do
-				local char = vim.fn.strcharpart(row, at, 1):gsub("[%c]", " ")
-				local size = vim.fn.strdisplaywidth(char)
-				if cells + size > inner then
-					lines[#lines + 1] = "│ " .. text .. string.rep(" ", inner - cells) .. " │"
-					text, cells = "", 0
-				end
-				text, cells = text .. char, cells + size
-			end
-			lines[#lines + 1] = "│ " .. text .. string.rep(" ", inner - cells) .. " │"
+			local text = row:gsub("[%c]", " ")
+			lines[#lines + 1] = "│ " .. text .. string.rep(" ", inner - vim.fn.strdisplaywidth(text)) .. " │"
 		end
 	end
 	lines[#lines + 1] = "└" .. border .. "┘"
-	return lines
+	local highlights = {}
+	for index, line in ipairs(lines) do
+		local header = line:find("COLUMNS", 1, true)
+			or line:find("INDEXES /", 1, true)
+			or line:find("RELATIONSHIPS", 1, true)
+			or index == 2
+		highlights[#highlights + 1] = { index - 1, header and "Title" or "Comment" }
+	end
+	for _, span in ipairs(diagram_highlights) do
+		highlights[#highlights + 1] = {
+			diagram_start + span[1] + 1,
+			span[2],
+			span[3] and span[3] + #"│ " or nil,
+			span[4] and span[4] + #"│ " or nil,
+		}
+	end
+	return lines, highlights
 end
 
 function M.neighborhood(metadata, key, depth)

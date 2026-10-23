@@ -3,6 +3,57 @@ local describe, it, expect = t.describe, t.it, t.expect
 local query = require("fox.query")
 
 describe("FoxQuerier usability", function()
+	it("keeps explorer objects above a padded footer", function()
+		local render = require("fox.query.render")
+		local item = { key = "Player", name = "Player" }
+		local lines, objects = render.explorer({ tables = { item } }, "", "Player", {}, 12)
+		expect(#lines).toBe(12)
+		expect(objects[1]).toBe(item)
+		expect(lines[9]).toBe("──────")
+		expect(lines[10]).toBe("DATABASE EXPLORER")
+		expect(lines[11]).toContain("/: filter")
+		expect(lines[12]).toBe("Filter: ")
+	end)
+
+	it("centers the focused schema card and connects incoming and outgoing neighbors at both widths", function()
+		local render = require("fox.query.render")
+		local schema = { tables = { { key = "Main", columns = { { name = "id", pk = true } } } }, relations = {} }
+		for index = 1, 6 do
+			local key = "Neighbor" .. index
+			schema.tables[#schema.tables + 1] = { key = key, columns = { { name = "id" } } }
+			schema.relations[#schema.relations + 1] = {
+				source = index % 2 == 0 and "Main" or key,
+				target = index % 2 == 0 and key or "Main",
+				columns = { { source = "id", target = "id" } },
+			}
+		end
+		for _, width in ipairs({ 180, 65 }) do
+			local lines, objects = render.map(schema, "Main", 1, width)
+			local positions = {}
+			for row, object in pairs(objects) do
+				for _, region in ipairs(object.regions or {}) do
+					positions[region.item.key] = positions[region.item.key] or { row = row, x = region.first }
+				end
+			end
+			local text = table.concat(lines, "\n")
+			expect(text).toContain("> Main")
+			expect(positions.Neighbor1.x < positions.Main.x).toBeTruthy()
+			expect(positions.Neighbor2.x > positions.Main.x).toBeTruthy()
+			for index = 1, 6 do
+				expect(text).toContain("Neighbor" .. index)
+			end
+			local arrows = 0
+			for row, line in ipairs(lines) do
+				if not line:match("^%[") then
+					arrows = arrows + select(2, line:gsub("[<>%^]", ""))
+				end
+				if row > 3 and row < #lines - 8 then
+					expect(line:find("Main", 1, true) == nil or line:find("> Main", 1, true) ~= nil).toBeTruthy()
+				end
+			end
+			expect(arrows >= 4).toBeTruthy()
+		end
+	end)
 	it("uses compact query popups and calls back once on selection or cancellation", function()
 		local item, values, popup = { id = "test" }, {}, nil
 		local function open()
@@ -160,7 +211,7 @@ describe("FoxQuerier usability", function()
 		end
 	end)
 
-	it("renders an aligned UML inspector with key flags and wrapped metadata", function()
+	it("renders aligned, unwrapped inspector rows with colored sections", function()
 		local item = {
 			key = "Long表Name",
 			name = "Long表Name",
@@ -171,7 +222,7 @@ describe("FoxQuerier usability", function()
 			},
 			indexes = { { name = string.rep("index", 15), unique = true } },
 		}
-		local lines = require("fox.query.render").inspect(item, {
+		local lines, highlights = require("fox.query.render").inspect(item, {
 			relations = {
 				{
 					source = item.key,
@@ -185,7 +236,7 @@ describe("FoxQuerier usability", function()
 		}, 44)
 		expect(lines[1]:sub(1, #"┌")).toBe("┌")
 		for _, line in ipairs(lines) do
-			expect(vim.fn.strdisplaywidth(line)).toBe(44)
+			expect(vim.fn.strdisplaywidth(line)).toBe(vim.fn.strdisplaywidth(lines[1]))
 		end
 		local text = table.concat(lines, "\n")
 		local header, id, parent, wide
@@ -216,6 +267,8 @@ describe("FoxQuerier usability", function()
 			expect(position(wide, flag)).toBe(position(header, flag))
 		end
 		expect(parent:find("NN", 1, true)).toBeNil()
+		expect(text).toContain(string.rep("index", 15))
+		expect(#highlights > #lines).toBeTruthy()
 		expect(text).toContain("INDEXES")
 		expect(text).toContain("RELATIONSHIPS")
 	end)

@@ -1,13 +1,3 @@
-Completed:
-
-- [x] JOIN choices show column mappings, use table-based aliases, and simplify SQLite quoting safely.
-- [x] Inspectors no longer duplicate their contents in the explorer.
-- [x] SQL tree supports files/folders, create, rename, and confirmed delete, including open-buffer handling.
-- [x] SQL files appear above connections in the default dashboard.
-- [x] Native search in explorer/diagram/relationships; relationship popup preserves pane heights.
-
-Original requests:
-
 1.
 Here:
 +--------------------------+
@@ -70,57 +60,13 @@ Opens up:
 │   match_played_date_id = date_played_id                                                │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 
-theres a detail when prssing J:
-
-The workflow is awful:
-
-Lets say we have this query:
-
-SELECT * 
-FROM PlayerKisses;
-
-then these options:
-
-LIVE QUERY DIAGRAM
-Diagram follows SQL at the cursor | cache 23:24
-
-+--------------------------+
-| PlayerKisses             |
-| PlayerKisses             |
-| *   member_1             |
-| *   member_2             |
-| *   kisses_count         |
-+--------------------------+
-
-[PlayerKisses] .... [Player] related, not joined
-
-i press enter in:
-
-[PlayerKisses] .... [Player] related, not joined
+This popup menu is too small, it should occupy dynamic height and view de tal manera que, every entry-prop-row
+should be in one row, because if too large prop names, then the rest of textof each line wraps to the next line and looks ugly.
 
 
-then opens up this:
+.2
 
-...
-PlayerKisses -> Player (PlayerKisses:1)
-> PlayerKisses -> Player (PlayerKisses: 0)
-
-2
-Choose foreign key mapping
->
-...
-
-Wtf are these options? 1 and 0? wtf (project: /c/Users/USER/VMS SHARED/SoftwareDevelopment/KL_ALL_IN_ONE_MAIN/src_data/kldb.db)
-
-then asks for an "alias" by default t3, which is horrible it should suggest based in initials of table (player -> p) if already existing table
-that starts with p in query, then (player -> p2) and so on, and better sintaxis, without many "" in the final output
-
-
-
-
-1.2
-
-Forsome reason after "enter" a table, then its info is copied in bottom panel sidebar right in default view:
+Forsome reason after "enter" a table, this info is being shown in popup (which is good!):
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ Match                                                                      │
 ├────────────────────────────────────────────────────────────────────────────┤
@@ -143,9 +89,231 @@ Forsome reason after "enter" a table, then its info is copied in bottom panel si
 │ TournamentMatch -> Match                                                   │
 │   match_played_date_id = date_played_id                                    │
 └────────────────────────────────────────────────────────────────────────────┘
-it should not be there!...
+The section RELATIONSHIPS is very ugly,current result/implementation: 
 
 
+
++-------------------------------------------------------------------------------------------+       +-------------------------------------------------------------------------------------------+
+| > Player                                                                                  <-------- LiveStreamSession                                                                         |
+| PK FK Column                                                                              |       | PK FK Column                                                                              |
+| PK    id                                                                                  |       | PK    id                                                                                  |
+|       username                                                                            |       |    FK TournamentMatchupId                                                                 |
+|       profilePicturePath                                                                  |       |    FK StartedByPlayerId                                                                   |
+|       actualRank                                                                          |       |       StreamPath                                                                          |
+|       whatsappNickName                                                                    |       |       StreamType                                                                          |
+|       whatsappid                                                                          |       |       Title                                                                               |
+|       whatsappid_pn                                                                       |       |       Description                                                                         |
+|       whatsappid_lid                                                                      |       |       IsActive                                                                            |
+|       role                                                                                |       |       StartedAt                                                                           |
+|       joined_date                                                                         |       |       EndedAt                                                                             |
+|       is_active                                                                           |       +-------------------------------------------------------------------------------------------+
+|       preffered_language                                                                  |
+|       PasswordHash                                                                        |
+|       TokenVersion                                                                        |
++-------------------------------------------------------------------------------------------+
+
+
++-------------------------------------------------------------------------------------------+       +-------------------------------------------------------------------------------------------+
+| Match_Player_TeamColor_Played                                                             |       | PlayerKisses                                                                              |
+| PK FK Column                                                                              |       | PK FK Column                                                                              |
+| PK FK match_played_date_id                                                                |       | PK FK member_1                                                                            |
+| PK FK player_id                                                                           |       | PK FK member_2                                                                            |
+|    FK teamColorId                                                                         |       |       kisses_count                                                                        |
+|       is_winner                                                                           |       +-------------------------------------------------------------------------------------------+
++-------------------------------------------------------------------------------------------+
+
+
++-------------------------------------------------------------------------------------------+       +-------------------------------------------------------------------------------------------+
+| PlayerSecondarynames                                                                      |       | Player_Player_Trust                                                                       |
+| PK FK Column                                                                              |       | PK FK Column                                                                              |
+| PK FK player_id                                                                           |       | PK FK who_trust_player_id                                                                 |
+| PK    username                                                                            |       | PK FK trusted_player_id                                                                   |
++-------------------------------------------------------------------------------------------+       |    FK match_format_id                                                                     |
+                                                                                                    +-------------------------------------------------------------------------------------------+
+
+
++-------------------------------------------------------------------------------------------+       +-------------------------------------------------------------------------------------------+
+| Player_Season_Plays                                                                       |       | Player_Titles                                                                             |
+| PK FK Column                                                                              |       | PK FK Column                                                                              |
+| PK FK season_id                                                                           |       | PK FK player_id                                                                           |
+| PK FK player_id                                                                           |       | PK FK title_id                                                                            |
+|       score_1s                                                                            |       +-------------------------------------------------------------------------------------------+
+|       score_2s                                                                            |
+|       score_3s                                                                            |
+|       score_HS                                                                            |
+|       score_VL                                                                            |
+|       score_BK                                                                            |
++-------------------------------------------------------------------------------------------+
+
+
+Which, obviously there are many other tables that have connection through FK to my main focus table that actually is "Player",
+and of course my table Player or main could have connection outbounds to another, those relationship aren't being shown with
+arrows or connections: 
+
+id like to have the main focus table in center of diagram:
+
+                                  responsive design!                                                             
+                                                                                                                 
+                                                                                                                 
+                                      for wide screns                                                            
+                                                                                                                 
+                                                                                                                 
+                                     ────                                                                        
+                                         ┌────────────────────────────────────────────────┐                      
+                                         │                                                │                      
+         ┌──────────────────────┐        │                                                │                      
+         │                      │        │                                                │                      
+         │                      │        │                                                │                      
+         │                      │        │                                                │                      
+         │                      │        └──────────────┬─────────────────────────────────┘                      
+         │                      │                       │                                                        
+         │                      ││                      │         ┌─────────────────────────────────────────────┐
+         │                      ││                      │         │                                             │
+         └──────────────────────┘│                      │         │                                             │
+                                 │     ┌────────────────┴──┐      │                                             │
+                                 │     │    main table     │      │                                             │
+                                 └─────┼                   ┼──────┤                                             │
+┌───────────────────────────┐          │                   │      │                                             │
+│                           │          │                   │      └─────────────────────────────────────────────┘
+│                           │          │                   │                                                     
+│                           │          │                   │                                                     
+│                           ┼───────┐  │                   │                                                     
+│                           │       │ ─┼                   │                                                     
+│                           │          │                   │                                                     
+│                           │         ┌┴───────────────────┤        ┌────────────────────────────────────┐       
+└───────────────────────────┘         │                    │        │                                    │       
+                                      │                    │        │                                    │       
+                                      │                    │        │                                    │       
+                      ┌───────────────┼────────────────┐   └─────── │                                    │       
+                      │                                │            │                                    │       
+                      │                                │            │                                    │       
+                      │                                │            └────────────────────────────────────┘       
+                      │                                │                                                         
+                      │                                │                                                         
+                      │                                │                                                         
+                      │                                │                                                         
+                      └────────────────────────────────┘                                                         
+                                                                                                                 
+                                      in case of vertical                                                        
+                   ┌─────────┐                                 ┌─────────────────┐                               
+                   │         │                                 │                 │                               
+                   │         │                                 │                 │                               
+                   │         │                                 │                 │                               
+                   │         │                         ┌───────┼                 │                               
+                   │         │                         │       │                 │                               
+                   │         │                         │       │                 │                               
+                   └─────────┤                         │       │                 │                               
+                             │          ┌──────────────┼──┐    └─────────────────┘                               
+                             │          │    main table   │                                                      
+                             └──────────┼                 │                                                      
+                                        │                 │                                                      
+                                        │                 │                                                      
+                                        │                 │                                                      
+                                        │                 │                                                      
+                                        │                 │                                                      
+                                        │                 │                                                      
+                                        │                 │                                                      
+                                        └──────┬──────────┘                                                      
+                                               │                                                                 
+                                               │                                                                 
+                                               │                                                                 
+                     ┌──────────────┐          │                                                                 
+                     │              │          │                                                                 
+                     │              │          │                                                                 
+                     │              │          │                                                                 
+                     │              ┼──────────┤                                                                 
+                     │              │          │                                                                 
+                     │              │          │      ┌───────────────┐                                          
+                     │              │          │      │               │                                          
+                     │              │          │      │               │                                          
+                     │              │          ├──────┤               │                                          
+                     └──────────────┘          │      │               │                                          
+                                               │      │               │                                          
+                                               │      │               │                                          
+                                               │      │               │                                          
+                                               │      │               │                                          
+                                               │      │               │                                          
+                                               │      └───────────────┘                                          
+                                               │                                                                 
+                                               └──────┐                                                          
+                                                      │                                                          
+                                                      │                                                          
+                                ┌────────────────┐    │                                                          
+                                │                │    │                                                          
+                                │                │    │   ┌───────────┐                                          
+                                │                │    │   │           │                                          
+                                │                │    │   │           │                                          
+                                │                ├────┼───┤           │                                          
+                                │                │    │   │           │                                          
+                                │                │    │   │           │                                          
+                                │                │    │   │           │                                          
+                                │                │    │   │           │                                          
+                                └────────────────┘    │   │           │                                          
+                                                      │   │           │                                          
+                                                      │   └───────────┘                                          
+                                                      │                                                          
+                                                      │                                                          
+                                                      │                                                          
+                          ┌──────────────┐            │                                                          
+                          │              │            │                                                          
+                          │              │            │                                                          
+                          │              ┼────────────┘                                                          
+                          │              │                                                                       
+                          │    other table idk          │                                                                       
+                          │              │                                                                       
+                          │              │                                                                       
+                          │              │                                                                       
+                          └──────────────┘
+
+
+
+And, add colors to each part of this view, colors for the headers:
+COLUMNS  |  PK primary / FK foreign / NN not null
+
+and dimmed color version for the entries (the props of that tables),
+
+the same for the other sections as "INDEXES / UNIQUE KEYS"
+
+and relationships.
+
+
+
+3. The environment feature + query mode are kinda bugged, when changing and coming back
+to the environment with query mode opened, thewhole interface starts to fall apart, se desacomoda
+en varias partes o hasta el panel de resultados se esconde/cierra. Además de que a veces como que se 
+abre el neo-tree, lo cual está raro. Hazlo bien, compatible.
+
+3.1
+Something related to environments:
+
+Let's say im on:
+
+Environment 1:
+nvim/
+
+Environment 2:
+proyect-work/
+
+im on 1 which have neo-tree opened, then switch  to 2, then come back to 1, but my focus is always in neot-ree, instead of the last window I was in!
+
+Bug
+
+4. The feature for query mode that highlights the current query selected inside a square, its kinda annoying, better
+lets make it be encerrado by just the top and bottom edges like this:
+
+--------------------------------- (straigt line ascii,idk how to write it here foryou but you understand)
+SELECT 
+  username AS Username, 
+  SUM(kisses_count) AS Total_Kisses,
+  COUNT(Player_titles.title_id) AS Total_Titles
+  FROM PlayerKisses
+INNER JOIN Player ON Player.id = PlayerKisses.member_1
+INNER JOIN Player_titles ON Player_titles.player_id = Player.id
+GROUP BY Player.username
+ORDER BY Total_Kisses DESC;
+---------------------------------  (line)
+
+of course the line will have the current-theme accentcolor.
 
 ---
 
@@ -155,15 +323,10 @@ SQL FILES
   query-20261022-214913-1.sql
   query-20261022-231253-1.sql
 
-its not like a neo-tree, i cant delete, rename, or create with "a" or even folders with "A".
-
-
-3. Swap connections and files sql sections please (of place only in dashboard)
-
+Should be using neo-tree, its kindahand made but id love it to be using neo-tree with the sql icons thanks to my font.
 
 
 4. In:
-
 DATABASE EXPLORER
 /: filter  Enter: inspect  b: browse  n: notes
 Filter: 
@@ -196,8 +359,19 @@ Filter:
   Tournament_Rank_RanksAdmitted
   __drizzle_migrations
 
- the / should be the default / behavior of nvim, remove the / behavior there, is strange, the same for the relationship panel when 
-opening relationship panel.
 
-And, height bug, when opening relationship panel, then closing it with q, the original bottom panel keeps that height, it should be restored.
+Move the:
+DATABASE EXPLORER
+/: filter  Enter: inspect  b: browse  n: notes
+Filter: 
+
+to Bottom, and make it more like 
+
+------
+DATABASE EXPLORER
+/: filter Enter: inspect  b: browse  n: notes
+Filter: 
+
+With a separator line.
+
 

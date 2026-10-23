@@ -6,6 +6,14 @@ function M.render(graph, metadata, width, column_limit)
 	local card_width = math.max(15, #graph.nodes == 1 and (width or 72) or math.floor(((width or 72) - 7) / 2))
 	if graph.kind ~= "schema" then
 		card_width = math.min(28, card_width)
+	else
+		card_width = 24
+		for _, node in ipairs(graph.nodes) do
+			card_width = math.max(card_width, vim.fn.strdisplaywidth(node.alias) + 6)
+			for _, column in ipairs(node.table and node.table.columns or {}) do
+				card_width = math.max(card_width, vim.fn.strdisplaywidth(column.name) + 11)
+			end
+		end
 	end
 	local gap, cells, styles, objects, nodes = 7, {}, {}, {}, {}
 	local function put(row, column, text, limit)
@@ -74,11 +82,51 @@ function M.render(graph, metadata, width, column_limit)
 		end
 	end
 	local y, pair_height, shown = 4, 0, {}
+	local placements, focus = {}, nil
+	local schema_wide = (width or 72) >= card_width * 3 + gap * 2 + 3
+	if graph.kind == "schema" then
+		local wide = schema_wide
+		local heights, sides = {}, { 4, 4 }
+		for index, node in ipairs(graph.nodes) do
+			local count, keys = #(node.table and node.table.columns or {}), 0
+			for _, role in pairs(node.roles) do
+				if role.primary or role.foreign then
+					keys = keys + 1
+				end
+			end
+			heights[index] = math.max(1, math.min(count, math.max(column_limit, keys)))
+				+ 4
+				+ (count > math.max(column_limit, keys) and 1 or 0)
+			if node.focus then
+				focus = index
+			end
+		end
+		local side = 1
+		for index = 1, math.min(40, #graph.nodes) do
+			if index ~= focus then
+				placements[index] = {
+					x = side == 1 and 1 or (wide and 2 or 1) * (card_width + gap) + 1,
+					y = sides[side] + (not wide and focus and heights[focus] + 3 or 0),
+				}
+				sides[side] = sides[side] + heights[index] + 2
+				side = 3 - side
+			end
+		end
+		if focus then
+			placements[focus] = {
+				x = wide and card_width + gap + 1 or math.floor((card_width + gap) / 2) + 1,
+				y = wide and math.max(4, math.floor((math.max(unpack(sides)) - heights[focus]) / 2)) or 4,
+			}
+		end
+	end
 	for index, node in ipairs(graph.nodes) do
 		if index > 40 then
 			break
 		end
 		local x = index % 2 == 1 and 1 or card_width + gap + 1
+		if placements[index] then
+			x, y = placements[index].x + 3, placements[index].y
+		end
 		local item, rows = node.table, {}
 		local columns = {}
 		for _, column in ipairs(item and item.columns or {}) do
@@ -141,7 +189,7 @@ function M.render(graph, metadata, width, column_limit)
 		if #rows > visible then
 			put(y + height - 2, x + 2, "... " .. (#rows - visible) .. " more; Enter inspect", card_width - 4)
 		end
-		nodes[node.alias] = { x = x, row = y + 1, item = item }
+		nodes[node.alias] = { x = x, row = y + 1, bottom = y + height - 1, item = item }
 		if item then
 			shown[item.key] = true
 		end
@@ -152,22 +200,52 @@ function M.render(graph, metadata, width, column_limit)
 	end
 	for _, edge in ipairs(graph.edges) do
 		local source, target = nodes[edge.source], nodes[edge.target]
-		-- shortcut: cross-row links use the edge list; add separate lanes if full cross-row routing is needed.
-		if source and target and (graph.kind ~= "schema" or source.row == target.row) then
+		if source and target then
 			local gutter = card_width + 1 + math.floor(gap / 2)
 			local sx = source.x == 1 and card_width or source.x
 			local tx = target.x == 1 and card_width or target.x
+			local sr, tr = source.row, target.row
+			local stem_target = false
+			if graph.kind == "schema" then
+				local center = focus and nodes[graph.nodes[focus].alias]
+				if not schema_wide and center and (source == center or target == center) then
+					gutter = center.x + math.floor(card_width / 2)
+					local stem_source = source == center
+					stem_target = target == center
+					sx = stem_source and gutter or source.x < center.x and source.x + card_width - 1 or source.x
+					tx = stem_target and gutter or target.x < center.x and target.x + card_width - 1 or target.x
+					sr = stem_source and center.bottom or sr
+					tr = stem_target and center.bottom or tr
+				elseif source.x ~= target.x then
+					local left = source.x < target.x and source or target
+					local right = source.x < target.x and target or source
+					gutter = math.floor((left.x + card_width + right.x) / 2)
+					sx = source == left and source.x + card_width - 1 or source.x
+					tx = target == left and target.x + card_width - 1 or target.x
+				else
+					gutter = source.x - 2
+					sx, tx = source.x, target.x
+					if source == target then
+						sr, tr = source.row + 1, target.row + 2
+					end
+				end
+			end
 			local stroke = edge.predicate and vim.trim(edge.predicate) ~= "" and "-" or "."
 			for x = math.min(sx, gutter), math.max(sx, gutter) do
-				put(source.row, x, stroke)
+				put(sr, x, stroke)
 			end
-			for row = math.min(source.row, target.row), math.max(source.row, target.row) do
+			for row = math.min(sr, tr), math.max(sr, tr) do
 				put(row, gutter, "|")
 			end
 			for x = math.min(tx, gutter), math.max(tx, gutter) do
-				put(target.row, x, stroke)
+				put(tr, x, stroke)
 			end
-			put(target.row, tx, target.x == 1 and "<" or ">")
+			put(tr, tx, stem_target and "^" or tx == target.x and ">" or "<")
+			style(sr, math.min(sx, gutter), math.abs(sx - gutter) + 1, "DiagnosticInfo")
+			style(tr, math.min(tx, gutter), math.abs(tx - gutter) + 1, "DiagnosticInfo")
+			for row = math.min(sr, tr), math.max(sr, tr) do
+				style(row, gutter, 1, "DiagnosticInfo")
+			end
 		end
 	end
 	local last = 2

@@ -118,7 +118,12 @@ local function pin_width()
 	local target_w = get_saved_width()
 	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		local buf = vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win)
-		if buf and vim.bo[buf].filetype == "neo-tree" then
+		if
+			buf
+			and vim.bo[buf].filetype == "neo-tree"
+			and not vim.b[buf].fox_query_root
+			and not vim.t[vim.api.nvim_win_get_tabpage(win)].fox_query_root
+		then
 			vim.wo[win].winfixwidth = true
 			if vim.api.nvim_win_get_width(win) ~= target_w then
 				pcall(vim.api.nvim_win_set_width, win, target_w)
@@ -172,7 +177,12 @@ local function ensure_neotree_not_alone()
 			if not is_float then
 				non_float_count = non_float_count + 1
 				local buf = vim.api.nvim_win_get_buf(win)
-				if buf and vim.bo[buf].filetype == "neo-tree" then
+				if
+					buf
+					and vim.bo[buf].filetype == "neo-tree"
+					and not vim.b[buf].fox_query_root
+					and not vim.t[vim.api.nvim_win_get_tabpage(win)].fox_query_root
+				then
 					neotree_win = win
 				end
 			end
@@ -257,7 +267,12 @@ vim.api.nvim_create_autocmd("WinResized", {
 		for _, win in ipairs(wins) do
 			if vim.api.nvim_win_is_valid(win) then
 				local buf = vim.api.nvim_win_get_buf(win)
-				if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "neo-tree" then
+				if
+					vim.api.nvim_buf_is_valid(buf)
+					and vim.bo[buf].filetype == "neo-tree"
+					and not vim.b[buf].fox_query_root
+					and not vim.t[vim.api.nvim_win_get_tabpage(win)].fox_query_root
+				then
 					save_width(vim.api.nvim_win_get_width(win))
 				end
 			end

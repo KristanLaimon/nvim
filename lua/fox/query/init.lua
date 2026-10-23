@@ -327,45 +327,22 @@ end
 
 function M.draw_queries(state)
 	local entries = require("fox.query.files").list(state)
-	local lines, objects, files = { "SQL FILES" }, {}, {}
+	local files = {}
 	state.query_expanded = state.query_expanded or {}
 	for _, entry in ipairs(entries) do
 		if not entry.directory then
 			files[#files + 1] = entry.relative
 		end
-		local parent, visible = vim.fs.dirname(entry.relative), true
-		while parent ~= "." do
-			if not state.query_expanded[parent] then
-				visible = false
-			end
-			parent = vim.fs.dirname(parent)
-		end
-		if visible then
-			local depth = select(2, entry.relative:gsub("/", ""))
-			local current = valid(state.active, "buf") and vim.b[state.active].fox_query_document
-			local marker = entry.directory and (state.query_expanded[entry.relative] and "[-] " or "[+] ")
-				or current == "queries/" .. entry.relative and "* "
-				or "  "
-			lines[#lines + 1] = string.rep("  ", depth) .. marker .. vim.fs.basename(entry.relative)
-			objects[#lines] = entry
-		end
 	end
-	state.query_files, state.query_nodes = files, objects
-	if #entries == 0 then
-		lines[#lines + 1] = "No saved SQL files"
-	end
-	local height = valid(state.queries_win, "win") and vim.api.nvim_win_get_height(state.queries_win) or 0
-	while #lines < height - 3 do
-		lines[#lines + 1] = ""
-	end
-	vim.list_extend(lines, { "------", "a SQL  A Folder  r Rename  d Delete", "Enter Open / Toggle folder" })
+	state.query_files = files
+	local tree = require("fox.query.tree")
+	tree.draw(state, entries)
 	local buf = panel(state, "queries_buf")
-	set_lines(buf, lines)
+	query_keys(buf)
 	vim.keymap.set("n", "<CR>", function()
-		local entry = objects[vim.api.nvim_win_get_cursor(0)[1]]
+		local entry = tree.selected(state)
 		if entry and entry.directory then
-			state.query_expanded[entry.relative] = not state.query_expanded[entry.relative]
-			M.draw_queries(state)
+			tree.toggle(state)
 		elseif entry then
 			M.new(entry.relative)
 		end
@@ -388,7 +365,7 @@ function M.file_action(action)
 		return
 	end
 	local win = valid(state.queries_win, "win") and state.queries_win or state.sql_win
-	local entry = valid(win, "win") and state.query_nodes and state.query_nodes[vim.api.nvim_win_get_cursor(win)[1]]
+	local entry = valid(win, "win") and require("fox.query.tree").selected(state)
 	if (action == "rename" or action == "delete") and not entry then
 		notify("Select a SQL file or folder first", vim.log.levels.WARN)
 		return
@@ -499,42 +476,11 @@ local function mark_statement(state)
 			last = first + (text:sub(first, last):find("%s*$") or 1) - 2
 			local first_row = select(2, text:sub(1, first - 1):gsub("\n", ""))
 			local last_row = select(2, text:sub(1, last - 1):gsub("\n", ""))
-			local lines = vim.api.nvim_buf_get_lines(buf, first_row, last_row + 1, false)
-			local first_col = first - (text:sub(1, first - 1):match(".*\n()") or 1)
-			local last_col = last - (text:sub(1, last - 1):match(".*\n()") or 1) + 1
-			local left = first_row == last_row and first_col or 0
-			local prefix = vim.fn.strdisplaywidth(lines[1]:sub(1, left))
-			local width = 4
-			for index, line in ipairs(lines) do
-				local finish = index == #lines and last_col or #line
-				width = math.max(width, vim.fn.strdisplaywidth(line:sub(left + 1, finish)) + 4)
-			end
-			width = math.min(width, math.max(4, vim.api.nvim_win_get_width(state.sql_win) - prefix - 4))
-			local function border(row, above, start, finish)
-				vim.api.nvim_buf_set_extmark(buf, statement_ns, row, 0, {
-					virt_lines = {
-						{ { string.rep(" ", prefix) .. start .. string.rep("─", width - 2) .. finish, "DiagnosticInfo" } },
-					},
-					virt_lines_above = above,
-				})
-			end
-			border(first_row, true, "┌", "┐")
-			border(last_row, false, "└", "┘")
-			vim.api.nvim_buf_set_extmark(buf, statement_ns, first_row, first_col, {
-				end_row = last_row,
-				end_col = last_col,
-				hl_group = "CursorLine",
-			})
-			for index, line in ipairs(lines) do
-				local row, finish = first_row + index - 1, index == #lines and last_col or #line
-				vim.api.nvim_buf_set_extmark(buf, statement_ns, row, left, {
-					virt_text = { { "│ ", "DiagnosticInfo" } },
-					virt_text_pos = "inline",
-				})
-				local padding = math.max(0, width - vim.fn.strdisplaywidth(line:sub(left + 1, finish)) - 4)
-				vim.api.nvim_buf_set_extmark(buf, statement_ns, row, finish, {
-					virt_text = { { string.rep(" ", padding) .. " │", "DiagnosticInfo" } },
-					virt_text_pos = "inline",
+			local width = math.max(1, vim.api.nvim_win_get_width(state.sql_win) - 2)
+			for _, edge in ipairs({ { first_row, true }, { last_row, false } }) do
+				vim.api.nvim_buf_set_extmark(buf, statement_ns, edge[1], 0, {
+					virt_lines = { { { string.rep("─", width), "DiagnosticInfo" } } },
+					virt_lines_above = edge[2],
 				})
 			end
 			return
@@ -648,7 +594,13 @@ function M.refresh_view(state)
 		state.objects = objects
 		set_highlights(state.side_buf, highlights)
 	else
-		local lines, objects = render.explorer(state.metadata, state.filter, state.selected, state.note_keys)
+		local lines, objects = render.explorer(
+			state.metadata,
+			state.filter,
+			state.selected,
+			state.note_keys,
+			valid(state.side_win, "win") and vim.api.nvim_win_get_height(state.side_win) or 0
+		)
 		state.objects = objects
 		set_lines(panel(state, "side_buf"), lines)
 	end
@@ -716,12 +668,16 @@ function M.inspect(item, state)
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.b[buf].fox_query_root = state.root
 	query_keys(buf)
-	local width, height = require("plugins.fox.dev.terminal").float_size()
-	set_lines(buf, render.inspect(item, state.metadata, width))
+	local lines, highlights = render.inspect(item, state.metadata)
+	local width = math.min(vim.o.columns - 4, vim.fn.strdisplaywidth(lines[1]))
+	local height = math.min(vim.o.lines - 6, #lines)
+	set_lines(buf, lines)
+	set_highlights(buf, highlights)
 	local _, win = require("fox.core.ui").float(
 		buf,
 		{ width = width, height = height, title = " Table: " .. item.name:gsub("[%c]", " ") .. " " }
 	)
+	vim.wo[win].wrap = false
 	vim.wo[win].winbar = "J Insert JOIN | b Browse | n Notes | g Relations | q Close"
 	map(buf, "q", function()
 		vim.api.nvim_win_close(win, true)
@@ -787,10 +743,12 @@ function M.show(view)
 		M.hide(state)
 	end
 	state.view, state.mode = view or state.view, "query"
+	require("fox.query.tree").setup()
 	M.privacy_enter(state)
 	state.editor_tab = vim.api.nvim_get_current_tabpage()
 	vim.cmd("tabnew")
 	state.tab, state.sql_win = vim.api.nvim_get_current_tabpage(), vim.api.nvim_get_current_win()
+	vim.t[state.tab].fox_query_root = state.root
 	local _, buf = console(state)
 	if not buf then
 		if not state.opened then
@@ -865,6 +823,19 @@ function M.show(view)
 	map(state.side_buf, "J", function()
 		M.insert_join(selected_object(state))
 	end)
+	map(state.side_buf, "n", function()
+		M.notes(selected_object(state))
+	end)
+	if state.view == "standard" then
+		map(state.side_buf, "/", function()
+			vim.ui.input({ prompt = "Filter tables: ", default = state.filter }, function(value)
+				if value and M.states[state.root] == state then
+					state.filter = value
+					M.refresh_view(state)
+				end
+			end)
+		end)
+	end
 	map(state.side_buf, "b", function()
 		M.browse(selected_object(state))
 	end)

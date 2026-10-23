@@ -59,9 +59,9 @@ end, { nargs = "?", desc = "Run the FOX unit test suite (optionally filtered by 
 
 -- ============ NEOVIDE Exclusive config ==================================
 if vim.g.neovide then
-	-- vim.g.neovide_window_blurred = false
-	-- vim.g.neovide_opacity = 0.96
-	-- vim.g.neovide_normal_opacity = 0.96
+	vim.g.neovide_window_blurred = false
+	vim.g.neovide_opacity = 0.95
+	vim.g.neovide_normal_opacity = 0.95
 
 	-- Cursor Motion & Trail Animation (Time in seconds)
 	-- Try setting to 0.25 for slow motion, 0.05 for super snappy, or 0.0 to disable.

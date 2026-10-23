@@ -131,6 +131,9 @@ end
 --- (terminals and task outputs) remain strictly to the right of Neo-tree
 --- under the code buffer.
 function M.enforce_neotree_layout()
+	if vim.t.fox_query_root then
+		return
+	end
 	local cur_win = vim.api.nvim_get_current_win()
 	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if vim.api.nvim_win_is_valid(win) then

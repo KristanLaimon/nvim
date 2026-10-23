@@ -271,6 +271,36 @@ describe("FoxQuerier usability", function()
 		expect(#highlights > #lines).toBeTruthy()
 		expect(text).toContain("INDEXES")
 		expect(text).toContain("RELATIONSHIPS")
+		expect(text:find("COLUMNS", 1, true)).toBeNil()
+		local legend = "PK primary / FK foreign / NN not null"
+		expect(position(lines[4], legend) + #legend).toBe(math.min(vim.fn.strdisplaywidth(lines[1]) - 2, vim.o.columns - 6))
+		local function highlighted(row, token, group)
+			for _, span in ipairs(highlights) do
+				if lines[span[1] + 1] == row and span[2] == group then
+					if not span[3] or row:sub(span[3] + 1, span[4]) == token then
+						return true
+					end
+				end
+			end
+			return false
+		end
+		expect(highlighted(header, "NAME", "Title")).toBeTruthy()
+		expect(highlighted(header, "TYPE", "Type")).toBeTruthy()
+		expect(highlighted(id, "BIGINT", "Type")).toBeTruthy()
+		expect(highlighted(parent, "TEXT", "Type")).toBeTruthy()
+		expect(highlighted(wide, "BOOLEAN", "Type")).toBeTruthy()
+		for flag, group in pairs({ PK = "Identifier", FK = "DiagnosticInfo", NN = "Special" }) do
+			expect(highlighted(header, flag, group)).toBeTruthy()
+			expect(highlighted(wide, flag, group)).toBeTruthy()
+			expect(highlighted(lines[4], flag, group)).toBeTruthy()
+		end
+		local found_unique = false
+		for _, line in ipairs(lines) do
+			if highlighted(line, "UNIQUE", "Keyword") then
+				found_unique = true
+			end
+		end
+		expect(found_unique).toBeTruthy()
 	end)
 
 	it("uses the existing explorer for SQLite paths and leaves cancellation unsaved", function()

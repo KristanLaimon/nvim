@@ -798,9 +798,10 @@ function M.show(view)
 			vim.api.nvim_win_set_buf(state.queries_win, panel(state, "queries_buf"))
 			vim.api.nvim_win_set_width(state.queries_win, math.max(12, math.floor(vim.o.columns * sizes.connections)))
 			vim.wo[state.queries_win].wrap = false
-			vim.cmd("belowright split")
-			state.connections_win = vim.api.nvim_get_current_win()
-			vim.api.nvim_win_set_buf(state.connections_win, panel(state, "connections_buf"))
+			state.connections_win = vim.api.nvim_open_win(panel(state, "connections_buf"), true, {
+				split = "below",
+				win = state.queries_win,
+			})
 			vim.wo[state.connections_win].wrap = false
 		end
 	end

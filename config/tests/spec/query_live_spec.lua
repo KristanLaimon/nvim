@@ -37,6 +37,115 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("restores Query after the last dock closes even when a floating panel remains", function()
+		project(function()
+			query.show("standard")
+			vim.wait(200, function()
+				return false
+			end, 10)
+			vim.cmd("redraw")
+			local state, dock = query.state(), require("fox.core.dock")
+			local saved = vim.fn.winrestcmd()
+			local terminal_buf = vim.api.nvim_create_buf(false, true)
+			vim.b[terminal_buf].fox_is_multi_term = true
+			local terminal_win = dock.open({ prefer = "terminal", height = 5 })
+			vim.api.nvim_win_set_buf(terminal_win, terminal_buf)
+			local task_buf = vim.api.nvim_create_buf(false, true)
+			vim.b[task_buf].fox_is_task = true
+			local task_win = dock.open({ prefer = "task", height = 5 })
+			vim.api.nvim_win_set_buf(task_win, task_buf)
+			expect(vim.api.nvim_win_get_position(terminal_win)[1]).toBe(vim.api.nvim_win_get_position(task_win)[1])
+			vim.api.nvim_win_close(terminal_win, true)
+			vim.wait(30, function()
+				return false
+			end, 10)
+			expect(vim.t[state.tab].fox_query_dock).toBeTruthy()
+			local popup_buf = vim.api.nvim_create_buf(false, true)
+			local popup =
+				vim.api.nvim_open_win(popup_buf, true, { relative = "editor", row = 1, col = 1, width = 20, height = 3 })
+			vim.api.nvim_win_close(task_win, true)
+			expect(vim.wait(1000, function()
+				return not vim.t[state.tab].fox_query_dock
+			end, 10)).toBeTruthy()
+			expect(vim.api.nvim_get_current_win()).toBe(popup)
+			vim.api.nvim_win_close(popup, true)
+			vim.cmd("redraw")
+			expect(vim.fn.winrestcmd()).toBe(saved)
+			for _, buf in ipairs({ terminal_buf, task_buf, popup_buf }) do
+				vim.api.nvim_buf_delete(buf, { force = true })
+			end
+		end)
+	end)
+	it("opens docked terminals below the whole Query dashboard and restores every pane on close", function()
+		project(function()
+			local terminal = require("plugins.fox.dev.terminal")
+			local dock, layout = require("fox.core.dock"), require("fox.query.layout")
+			local old_layout, old_selected = _G._fox_terminal_layout, _G._fox_selected_terminal
+			local old_slot = _G._fox_terminals[9]
+			local buf = vim.api.nvim_create_buf(false, true)
+			vim.b[buf].fox_is_multi_term, vim.b[buf].fox_term_num = true, 9
+			vim.b[buf].fox_env_slot = _G._fox_active_env_slot or 1
+			_G._fox_terminals[9] = { buf = buf }
+			_G._fox_terminal_layout, _G._fox_selected_terminal = "dock", 9
+			local ok, err = pcall(function()
+				for _, view in ipairs({ "standard", "visual" }) do
+					query.show(view)
+					local state = query.state()
+					for _, name in ipairs({ "sql", "side", "result", "activity", "queries", "connections" }) do
+						local origin = state[name .. "_win"]
+						if origin then
+							vim.api.nvim_set_current_win(origin)
+							local geometry, buffers = {}, {}
+							for _, win in ipairs(vim.api.nvim_tabpage_list_wins(state.tab)) do
+								geometry[win] = {
+									vim.api.nvim_win_get_width(win),
+									vim.api.nvim_win_get_height(win),
+									vim.api.nvim_win_get_position(win),
+								}
+								buffers[win] = vim.api.nvim_win_get_buf(win)
+							end
+							layout.save(state)
+							local saved = require("fox.core.store").read_file(layout.path)
+							terminal.open_terminal(9)
+							local _, win = dock.find()
+							expect(win ~= state.sql_win).toBeTruthy()
+							expect(vim.api.nvim_win_get_width(win)).toBe(vim.o.columns)
+							local top = vim.api.nvim_win_get_position(win)[1]
+							for pane, buffer in pairs(buffers) do
+								expect(vim.api.nvim_win_get_buf(pane)).toBe(buffer)
+								expect(vim.api.nvim_win_get_position(pane)[1] < top).toBeTruthy()
+							end
+							vim.api.nvim_win_set_height(win, 5)
+							layout.save(state)
+							expect(require("fox.core.store").read_file(layout.path)).toBe(saved)
+							terminal.toggle_selected_terminal()
+							expect(vim.wait(1000, function()
+								return not vim.t[state.tab].fox_query_dock
+							end, 10)).toBeTruthy()
+							expect(vim.api.nvim_get_current_win()).toBe(origin)
+							for pane, size in pairs(geometry) do
+								expect({
+									vim.api.nvim_win_get_width(pane),
+									vim.api.nvim_win_get_height(pane),
+									vim.api.nvim_win_get_position(pane),
+								}).toEqual(size)
+							end
+						end
+					end
+				end
+			end)
+			pcall(vim.cmd, "stopinsert")
+			for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+				pcall(vim.api.nvim_win_close, win, true)
+			end
+			vim.api.nvim_buf_delete(buf, { force = true })
+			_G._fox_terminal_layout, _G._fox_selected_terminal = old_layout, old_selected
+			_G._fox_terminals[9] = old_slot
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
 	it("keeps saved Standard sidebar widths while constructing the other panels", function()
 		project(function()
 			local columns, equalalways = vim.o.columns, vim.o.equalalways
@@ -112,7 +221,7 @@ describe("FoxQuerier live workflow", function()
 			expect(vim.fn.winsaveview().topline > 3).toBeTruthy()
 			expect(header).toContain("id")
 			expect(header).toContain("表nombre%")
-			expect(item.result_rows[40].row).toBe(first.rows[37])
+			expect(item.result_rows[40].row).toBe(first.rows[39])
 			local original = item.result_headers[1].text
 			local start = original:find("表", 1, true)
 			local left = vim.fn.strdisplaywidth(original:sub(1, start - 1)) + 1
@@ -253,14 +362,14 @@ describe("FoxQuerier live workflow", function()
 			item.result = { sets = { set } }
 			query.refresh_view(state)
 			local lines = vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false)
-			expect(lines[2]).toContain("| text")
-			expect(lines[4]).toContain(vim.json.encode(text))
-			expect(lines[4]).toContain("9007199254740993")
-			expect(lines[4]).toContain("NULL")
-			expect(lines[4]).toContain('""')
-			expect(lines[4]).toContain('…"')
+			expect(vim.wo[state.result_win].winbar).toContain("| text")
+			expect(lines[2]).toContain(vim.json.encode(text))
+			expect(lines[2]).toContain("9007199254740993")
+			expect(lines[2]).toContain("NULL")
+			expect(lines[2]).toContain('""')
+			expect(lines[2]).toContain('…"')
 			vim.api.nvim_set_current_win(state.result_win)
-			vim.api.nvim_win_set_cursor(state.result_win, { 4, 0 })
+			vim.api.nvim_win_set_cursor(state.result_win, { 2, 0 })
 			vim.fn.maparg("<CR>", "n", false, true).callback()
 			local win, buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
 			local config = vim.api.nvim_win_get_config(win)
@@ -883,8 +992,9 @@ describe("FoxQuerier live workflow", function()
 			query.refresh_view(state)
 			local lines = vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false)
 			expect(lines[1]).toBe("+------------+")
-			expect(lines[2]).toBe("| actualRank |")
-			expect(lines[4]).toBe("| CA         |")
+			expect(vim.wo[state.result_win].winbar).toContain("actualRank")
+			expect(table.concat(lines, "\n"):find("| actualRank |", 1, true)).toBeNil()
+			expect(lines[2]).toBe("| CA         |")
 			expect(table.concat(lines, "\n")).toContain("NULL")
 			expect(table.concat(lines, "\n")).toContain("表\\ntext")
 			vim.api.nvim_set_current_win(state.result_win)

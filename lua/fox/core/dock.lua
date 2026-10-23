@@ -18,6 +18,17 @@
 -- ============================================================================
 
 local M = {}
+local query_layouts = {}
+
+local function split_windows(tab)
+	local windows = {}
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+		if vim.api.nvim_win_get_config(win).relative == "" then
+			windows[#windows + 1] = win
+		end
+	end
+	return windows
+end
 
 -- ---------------------------------------------------------------------------
 -- Configuration
@@ -60,7 +71,7 @@ end
 --- @return integer|nil term_win
 function M.find()
 	local task_win, term_win
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
+	for _, win in ipairs(split_windows(0)) do
 		local is_task, is_term = M.classify(win)
 		if is_task and not task_win then
 			task_win = win
@@ -203,8 +214,27 @@ function M.open(opts)
 	opts = opts or {}
 	local task_win, term_win = M.find()
 	local height = opts.height or M.default_height
+	local tab = vim.api.nvim_get_current_tabpage()
+	if vim.t[tab].fox_query_root and not query_layouts[tab] then
+		query_layouts[tab] = { restore = vim.fn.winrestcmd(), windows = split_windows(tab), docks = {} }
+		vim.t[tab].fox_query_dock = true
+	end
 
-	if opts.prefer == "terminal" then
+	if vim.t[tab].fox_query_root and not task_win and not term_win then
+		-- Split away from Neo-tree so its buffer-copy handler cannot claim the dock.
+		for _, pane in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+			if
+				vim.bo[vim.api.nvim_win_get_buf(pane)].filetype ~= "neo-tree"
+				and vim.api.nvim_win_get_config(pane).relative == ""
+			then
+				vim.api.nvim_set_current_win(pane)
+				break
+			end
+		end
+		local buf = vim.api.nvim_create_buf(false, true)
+		vim.bo[buf].bufhidden = "wipe"
+		vim.api.nvim_open_win(buf, true, { split = "below", win = -1, height = height })
+	elseif opts.prefer == "terminal" then
 		if term_win then
 			vim.api.nvim_set_current_win(term_win)
 			vim.cmd("rightbelow vsplit")
@@ -242,6 +272,45 @@ function M.open(opts)
 	end
 
 	local win = vim.api.nvim_get_current_win()
+	local saved = query_layouts[tab]
+	if saved then
+		saved.docks[win] = true
+		vim.api.nvim_create_autocmd("WinClosed", {
+			pattern = tostring(win),
+			once = true,
+			callback = function()
+				saved.docks[win] = nil
+				vim.schedule(function()
+					if query_layouts[tab] ~= saved or next(saved.docks) then
+						return
+					end
+					query_layouts[tab] = nil
+					if not vim.api.nvim_tabpage_is_valid(tab) then
+						return
+					end
+					local windows = split_windows(tab)
+					if vim.deep_equal(windows, saved.windows) then
+						local current = vim.api.nvim_get_current_win()
+						if vim.api.nvim_get_current_tabpage() ~= tab then
+							vim.api.nvim_set_current_win(windows[1])
+						end
+						local ok, err = pcall(function()
+							-- Reclaim the dock's frame space before restoring saved pane sizes.
+							vim.cmd("wincmd =")
+							vim.cmd(saved.restore)
+						end)
+						if vim.api.nvim_win_is_valid(current) and vim.api.nvim_get_current_win() ~= current then
+							vim.api.nvim_set_current_win(current)
+						end
+						if not ok then
+							vim.notify("Could not restore Query panels: " .. tostring(err), vim.log.levels.WARN)
+						end
+					end
+					vim.t[tab].fox_query_dock = nil
+				end)
+			end,
+		})
+	end
 	M.style(win)
 	M.enforce_order()
 	return win

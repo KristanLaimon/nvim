@@ -37,7 +37,12 @@ end
 
 function M.save(state)
 	local data, changed = store.load(M.path, {}), false
-	if not state.compact and state.tab and vim.api.nvim_tabpage_is_valid(state.tab) then
+	if
+		not state.compact
+		and state.tab
+		and vim.api.nvim_tabpage_is_valid(state.tab)
+		and not vim.t[state.tab].fox_query_dock
+	then
 		local sizes = {}
 		for key, field in pairs({ side = "side_win", connections = "connections_win" }) do
 			if state[field] and vim.api.nvim_win_is_valid(state[field]) then

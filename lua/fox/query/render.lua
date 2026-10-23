@@ -80,7 +80,9 @@ function M.object_at(objects, row, column)
 end
 
 function M.inspect(item, metadata, width)
-	local rows, foreign = { item.key, false, "COLUMNS  |  PK primary / FK foreign / NN not null" }, {}
+	local legend = "PK primary / FK foreign / NN not null"
+	local rows, foreign, spans = { item.key, false, legend }, {}, {}
+	local flag_groups = { PK = "Identifier", FK = "DiagnosticInfo", NN = "Special" }
 	for _, relation in ipairs(metadata.relations or {}) do
 		if relation.source == item.key then
 			for _, pair in ipairs(relation.columns) do
@@ -98,14 +100,28 @@ function M.inspect(item, metadata, width)
 		local text = tostring(value):gsub("[%c]", " ")
 		return text .. string.rep(" ", cell_width - vim.fn.strdisplaywidth(text))
 	end
-	rows[#rows + 1] = padded("NAME", name_width) .. "  " .. padded("TYPE", type_width) .. "  PK  FK  NN"
-	for _, column in ipairs(item.columns or {}) do
-		rows[#rows + 1] = padded(column.name, name_width)
+	local function column_row(name, kind, primary, foreign_key, required)
+		local padded_name, padded_type = padded(name, name_width), padded(kind, type_width)
+		rows[#rows + 1] = padded_name
 			.. "  "
-			.. padded(column.type, type_width)
-			.. (column.pk and "  PK" or "    ")
-			.. (foreign[column.name] and "  FK" or "    ")
-			.. (not column.nullable and "  NN" or "    ")
+			.. padded_type
+			.. (primary and "  PK" or "    ")
+			.. (foreign_key and "  FK" or "    ")
+			.. (required and "  NN" or "    ")
+		local first = #"│ " + #padded_name + 2
+		spans[#spans + 1] = { #rows, "Type", first, first + #tostring(kind) }
+		first = first + #padded_type + 2
+		local flags = { primary, foreign_key, required }
+		for index, flag in ipairs({ "PK", "FK", "NN" }) do
+			if flags[index] then
+				spans[#spans + 1] = { #rows, flag_groups[flag], first, first + 2 }
+			end
+			first = first + 4
+		end
+	end
+	column_row("NAME", "TYPE", true, true, true)
+	for _, column in ipairs(item.columns or {}) do
+		column_row(column.name, column.type, column.pk, foreign[column.name], not column.nullable)
 	end
 	rows[#rows + 1] = false
 	rows[#rows + 1] = "INDEXES / UNIQUE KEYS"
@@ -114,6 +130,10 @@ function M.inspect(item, metadata, width)
 			.. (index.unique and " UNIQUE" or "")
 			.. (index.column and " (" .. index.column .. ")" or "")
 			.. (index.definition and " " .. index.definition or "")
+		if index.unique then
+			local first = #"│ " + #index.name + 1
+			spans[#spans + 1] = { #rows, "Keyword", first, first + #"UNIQUE" }
+		end
 	end
 	rows[#rows + 1] = false
 	rows[#rows + 1] = "RELATIONSHIPS (visible metadata only)"
@@ -130,23 +150,29 @@ function M.inspect(item, metadata, width)
 	end
 	local border = string.rep("─", inner + 2)
 	local lines = { "┌" .. border .. "┐" }
-	for _, row in ipairs(rows) do
+	for index, row in ipairs(rows) do
 		if row == false then
 			lines[#lines + 1] = "├" .. border .. "┤"
 		else
 			local text = row:gsub("[%c]", " ")
+			if index == 3 then
+				local visible = math.min(inner, math.max(8, vim.o.columns - 8))
+				text = string.rep(" ", math.max(0, visible - vim.fn.strdisplaywidth(text))) .. text
+			end
 			lines[#lines + 1] = "│ " .. text .. string.rep(" ", inner - vim.fn.strdisplaywidth(text)) .. " │"
 		end
 	end
 	lines[#lines + 1] = "└" .. border .. "┘"
 	local highlights = {}
 	for index, line in ipairs(lines) do
-		local header = line:find("COLUMNS", 1, true)
-			or line:find("INDEXES /", 1, true)
-			or line:find("RELATIONSHIPS", 1, true)
-			or index == 2
+		local header = line:find("INDEXES /", 1, true) or line:find("RELATIONSHIPS", 1, true) or index == 2 or index == 5
 		highlights[#highlights + 1] = { index - 1, header and "Title" or "Comment" }
 	end
+	for flag, group in pairs(flag_groups) do
+		local first = assert(lines[4]:find(flag, 1, true)) - 1
+		spans[#spans + 1] = { 3, group, first, first + 2 }
+	end
+	vim.list_extend(highlights, spans)
 	for _, span in ipairs(diagram_highlights) do
 		highlights[#highlights + 1] = {
 			diagram_start + span[1] + 1,
@@ -283,8 +309,6 @@ function M.results(result)
 		end
 		local border = "+" .. table.concat(segments, "+") .. "+"
 		headers[#headers + 1] = { first = #lines + 1, text = format_row(set.columns) }
-		lines[#lines + 1] = border
-		lines[#lines + 1] = format_row(set.columns)
 		lines[#lines + 1] = border
 		for row_index, row in ipairs(set.rows) do
 			local strings = set.strings and set.strings[row_index]

@@ -2,7 +2,9 @@
 
 Status: **initial read-only implementation available**. See [the usage and validation guide](docs/query-mode.md) for commands, implemented behavior, and current limitations. This document retains the intended product design; unchecked acceptance items and suggested follow-ups are not claims of completed validation.
 
-Latest usability revision: connections sidebar with CRUD and last-successful-connection restore; Shift+F3 toggles a half-width live diagram without that sidebar; results stay beneath SQL in both layouts. Unused columns are dimmed and unfinished JOINs show FK candidates. The user's new observations supersede the earlier manual-only execution preference: SELECT runs after a 900 ms typing pause, subject to worker read-only checks; parameterized queries and unfinished JOIN predicates require manual action. Ctrl+Enter/F5 runs manually; Ctrl+Space/Ctrl+X Ctrl+O opens completion. See `IMPLEMENTATION-FOXQUERYGRIP.findings.md` and `FOXQUERYGRIP_history.md` for the latest decisions.
+Latest follow-up: results are bordered ASCII tables; SELECT auto-execution follows the current caret across statements. Diagram default is now 30% SQL / 70% diagram. Resized UI geometry is explicitly global in `stdpath('data')/fox/query-layout.json`; SQL/profiles/results/cache remain project-local. This overrides older project-only split-geometry proposals below.
+
+Latest usability revision: connections sidebar with CRUD and last-successful-connection restore; Shift+F3 toggles a 30% SQL / 70% live diagram without that sidebar; results stay beneath SQL in both layouts. Unused columns are dimmed and unfinished JOINs show FK candidates. The user's new observations supersede the earlier manual-only execution preference: SELECT runs after a 900 ms typing pause, subject to worker read-only checks; parameterized queries and unfinished JOIN predicates require manual action. Ctrl+Enter/F5 runs manually; Ctrl+Space/Ctrl+X Ctrl+O opens completion. See `IMPLEMENTATION-FOXQUERYGRIP.findings.md` and `FOXQUERYGRIP_history.md` for the latest decisions.
 
 Implementation coverage: Standard/Visual views, project-local profiles/documents/cache, SQLite/MySQL/PostgreSQL driver paths, bounded read-only execution, RAM parameters, cached completion, FK JOIN previews, connected ASCII diagrams, table notes, explicit workspace integration, and Command Palette actions. Advanced graph syntax, persisted SQL history, drafts, virtual relationships, and write/admin features remain follow-ups. Live PostgreSQL and Linux checks are outstanding.
 
@@ -204,7 +206,7 @@ Resizing preserves SQL, selection, running queries, and panel state. Proposed wi
 
 Confirmed intent: I want to see the query take shape as I write it. Typing a valid `FROM table` brings that table into the diagram and reveals related tables dimly. Selecting columns emphasizes those columns; adding JOINs brings the other tables into focus and connects them. Edits update the graph dynamically.
 
-This is SQL-driven visualization inside FoxQuerier, separate from Neovim's Visual selection mode. Shift+F3 toggles a 50% SQL / 50% diagram layout. The connection sidebar and normal explorer are hidden here; results/activity remain beneath SQL, using the same execution controls as the default layout.
+This is SQL-driven visualization inside FoxQuerier, separate from Neovim's Visual selection mode. Shift+F3 toggles a 30% SQL / 70% diagram layout. The connection sidebar and normal explorer are hidden here; results/activity remain beneath SQL, using the same execution controls as the default layout.
 
 ```text
 +------------------------------------------------------------------------------------------+

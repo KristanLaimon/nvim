@@ -204,7 +204,7 @@ function M.map(metadata, key, depth, width)
 end
 
 function M.results(result)
-	local lines = {}
+	local lines, rows = {}, {}
 	local function display(value)
 		local text = value == vim.NIL and "NULL" or type(value) == "table" and vim.json.encode(value) or tostring(value)
 		return text:gsub("\n", "\\n"):gsub("\r", "\\r"):gsub("\t", "\\t")
@@ -212,7 +212,7 @@ function M.results(result)
 	for index, set in ipairs(result.sets or {}) do
 		local widths = {}
 		for at, column in ipairs(set.columns) do
-			widths[at] = math.min(32, vim.fn.strdisplaywidth(column))
+			widths[at] = math.max(1, math.min(32, vim.fn.strdisplaywidth(column)))
 		end
 		for _, row in ipairs(set.rows) do
 			for at, value in ipairs(row) do
@@ -231,21 +231,30 @@ function M.results(result)
 				end
 				values[#values + 1] = text .. string.rep(" ", widths[at] - vim.fn.strdisplaywidth(text))
 			end
-			return table.concat(values, " | ")
+			return "| " .. table.concat(values, " | ") .. " |"
 		end
+		local segments = {}
+		for _, width in ipairs(widths) do
+			segments[#segments + 1] = string.rep("-", width + 2)
+		end
+		local border = "+" .. table.concat(segments, "+") .. "+"
 		lines[#lines + 1] = "Result "
 			.. index
 			.. " | "
 			.. #set.rows
 			.. " loaded rows"
 			.. (set.truncated and " | TRUNCATED" or "")
+		lines[#lines + 1] = border
 		lines[#lines + 1] = format_row(set.columns)
+		lines[#lines + 1] = border
 		for _, row in ipairs(set.rows) do
 			lines[#lines + 1] = format_row(row)
+			rows[#lines] = { set = set, row = row }
 		end
+		lines[#lines + 1] = border
 		lines[#lines + 1] = ""
 	end
-	return lines
+	return lines, rows
 end
 
 return M

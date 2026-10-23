@@ -2,7 +2,7 @@
 
 [Back to wiki](index.md) · [SQL tooling](languages/sql.md) · [Design plan](../PLAN-FOXQUERYGRIP.md)
 
-FoxQuerier adds a read-only database workspace to the current project. The default layout has connections on the far left, SQL in the center, the database explorer on the right, and results/activity beneath SQL. **Shift+F3** toggles the live diagram: connections disappear and SQL/diagram each occupy half the width, with results still beneath SQL. A compact terminal uses panel toggles.
+FoxQuerier adds a read-only database workspace to the current project. The default layout has connections on the far left, SQL in the center, the database explorer on the right, and results/activity beneath SQL. **Shift+F3** toggles the live diagram: connections disappear and SQL/diagram use 30% / 70% of the width by default, with results still beneath SQL. A compact terminal uses panel toggles.
 
 ## Start
 
@@ -11,7 +11,7 @@ FoxQuerier adds a read-only database workspace to the current project. The defau
 3. Press **gC** in Normal mode or run `:FoxQueryConnections` to focus the connection sidebar. **a** adds, **e** edits, **d** deletes a profile, **Enter** connects, and **D** disconnects. SQLite opens the existing file explorer at your project root: Enter opens folders or selects a database file; Esc cancels. MySQL/PostgreSQL need host, port, database, and user. Passwords are prompted privately in RAM or resolved from `password_env`.
 4. For MySQL/PostgreSQL, run `:FoxQueryInstallDrivers` once in that project if drivers are missing. Python 3 and pip are prerequisites; installation is explicit and project-local.
 5. Search/inspect the explorer, create SQL with `:FoxQueryNew`, and save with `:write`.
-6. A complete statement beginning with **SELECT** runs after a **900 ms typing pause** in either layout. **Ctrl+Enter** or **F5** runs manually in Normal/Insert mode. **Ctrl+Space** or **Ctrl+X Ctrl+O** opens completion in Insert mode. **F3** restores the editor without closing SQL sessions.
+6. A complete statement beginning with **SELECT** runs after a **900 ms typing or caret-movement pause** in either layout. Moving between statements runs the SELECT at the caret, matching the diagram's statement scope; moving within unchanged SQL does not repeat execution. **Ctrl+Enter** or **F5** runs manually in Normal/Insert mode. **Ctrl+Space** or **Ctrl+X Ctrl+O** opens completion in Insert mode. **F3** restores the editor without closing SQL sessions.
 
 For PowerShell in Windows Terminal, run `./scripts/setup-powershell.ps1` and restart Windows Terminal to forward Ctrl+Enter and Ctrl+Space to Neovim. `./scripts/unsetup-powershell.ps1` removes that forwarding. Ctrl+Alt+O remains an alternative direct mode switch. Other terminals/operating systems may intercept keys; Ex commands and the palette remain available. No new leader shortcuts are added.
 
@@ -42,6 +42,19 @@ For PostgreSQL, `schemas` may contain multiple schema names; the selected schema
 SQLite paths are relative to the project root unless absolute; missing files are rejected rather than created. Docker is not queried or controlled by the app: use its exposed host/port like any other database.
 
 SQL, notes, profiles, metadata cache, explicit workspace data, installed drivers, and exports stay under `.foxnvim/query/`. Private/cache/export directories receive local ignore rules. Project/team policy determines whether saved queries and notes are committed. Existing SQLite databases remain at their configured paths.
+
+UI geometry is the explicit global exception: pane proportions, results/activity sizes, and resized inspector/connections/help popups are stored in `stdpath('data')/fox/query-layout.json` (Windows: `nvim-data/fox/query-layout.json`). The default diagram split is 30% SQL / 70% diagram; saved proportions override it across projects. Sizes are clamped for smaller terminals. Only geometry is global; connection identities, SQL, and results are not stored there. Old project-workspace geometry is ignored.
+
+Results use bordered ASCII tables. Header/border lines are not data rows; Enter/y/export/FK navigation retain their original row semantics across multiple result sets. For example:
+
+```text
++--------+
+| status |
++--------+
+| open   |
+| closed |
++--------+
+```
 
 ## Commands
 
@@ -115,7 +128,7 @@ Read-only behavior is enforced with SQLite read-only URI/query-only mode, MySQL 
 
 Automated tests use disposable SQLite fixtures for binding, batches, metadata, read-only enforcement, row limits, cancellation, and actual Neovim-to-Python transport. Lua tests cover scopes, aliases, composite JOINs, diagram roles, project storage, view switching, and session exclusion.
 
-Latest implementation validation on Windows: **783 repository tests passed**, including 25 Query tests. Changed Lua files pass StyLua/Luacheck. Earlier driver validation passed **9 Python tests**, and **780 Lua files** parsed without syntax errors. Current fixture checks cover live SELECT debounce, parameter/write rejection, remembered connections/failure badges, profile edit/delete, key aliases, and both layouts. Physical Ctrl+Enter/Ctrl+Space behavior in your terminal still needs confirmation; F5 and Ctrl+X Ctrl+O are available alternatives.
+Latest implementation validation on Windows: **785 repository tests passed**, including 27 Query tests. Changed Lua files pass StyLua/Luacheck. Earlier driver validation passed **9 Python tests**, and **780 Lua files** parsed without syntax errors. Current fixture checks cover live SELECT debounce, parameter/write rejection, remembered connections/failure badges, profile edit/delete, key aliases, and both layouts. Physical Ctrl+Enter/Ctrl+Space behavior in your terminal still needs confirmation; F5 and Ctrl+X Ctrl+O are available alternatives.
 
 The authorized production MySQL check confirmed **5.7.44**, read-only session setup, bound constants, and a zero-row catalog query. **No business rows were read and no production files were saved.** PostgreSQL code and Windows driver loading are present, but live PostgreSQL and Linux integration still need an available test environment. Advanced SQL graph analysis remains intentionally partial.
 

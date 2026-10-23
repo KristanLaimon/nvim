@@ -3,6 +3,7 @@ local storage = require("fox.query.storage")
 local sql = require("fox.query.sql")
 local render = require("fox.query.render")
 local client = require("fox.query.client")
+local layout = require("fox.query.layout")
 local ns = vim.api.nvim_create_namespace("fox_query")
 local group = vim.api.nvim_create_augroup("FoxQuery", { clear = true })
 
@@ -243,7 +244,9 @@ function M.refresh_view(state)
 		"Enter: expand row | y: copy row | e: export | gR: follow foreign key",
 	}
 	if active and active.result then
-		active.result_lines = active.result_lines or render.results(active.result)
+		if not active.result_lines or not active.result_rows then
+			active.result_lines, active.result_rows = render.results(active.result)
+		end
 		vim.list_extend(result_lines, active.result_lines)
 	else
 		vim.list_extend(result_lines, {
@@ -299,11 +302,13 @@ function M.inspect(item, state)
 	vim.b[buf].fox_query_root = state.root
 	query_keys(buf)
 	local width, height = math.max(1, math.min(90, vim.o.columns - 4)), math.max(1, math.min(30, vim.o.lines - 6))
+	width, height = layout.popup("inspect", width, height)
 	set_lines(buf, render.inspect(item, state.metadata, width))
 	local _, win = require("fox.core.ui").float(
 		buf,
 		{ width = width, height = height, title = " Table: " .. item.name:gsub("[%c]", " ") .. " " }
 	)
+	layout.watch(win, "inspect")
 	vim.wo[win].winbar = "J Insert JOIN | b Browse | n Notes | g Relations | q Close"
 	map(buf, "q", function()
 		vim.api.nvim_win_close(win, true)
@@ -336,12 +341,11 @@ function M.hide(state)
 		if active and valid(state.sql_win, "win") and vim.api.nvim_win_get_buf(state.sql_win) == buf then
 			active.cursor = vim.api.nvim_win_get_cursor(state.sql_win)
 		end
-		state.widths = state.widths or {}
-		if valid(state.side_win, "win") then
-			state.widths[state.view] = vim.api.nvim_win_get_width(state.side_win)
-		end
-		if valid(state.result_win, "win") then
-			state.result_height = vim.api.nvim_win_get_height(state.result_win)
+		if not state.resizing then
+			local ok, err = layout.save(state)
+			if not ok then
+				notify("Could not save Query layout: " .. tostring(err), vim.log.levels.WARN)
+			end
 		end
 		local current = vim.api.nvim_get_current_tabpage()
 		vim.api.nvim_set_current_tabpage(state.tab)
@@ -381,6 +385,7 @@ function M.show(view)
 	end
 	vim.api.nvim_win_set_buf(state.sql_win, buf)
 	state.compact = vim.o.columns < 72 or vim.o.lines < 20
+	local sizes = layout.load(state.view)
 	panel(state, "side_buf")
 	if not state.compact then
 		vim.cmd("botright vsplit")
@@ -388,14 +393,10 @@ function M.show(view)
 		vim.api.nvim_win_set_buf(state.side_win, panel(state, "side_buf"))
 		vim.api.nvim_win_set_width(
 			state.side_win,
-			math.min(
-				vim.o.columns - 12,
-				state.widths and state.widths[state.view]
-					or math.max(24, math.floor(vim.o.columns * (state.view == "visual" and 0.5 or 0.3)))
-			)
+			math.min(vim.o.columns - 12, math.max(12, math.floor(vim.o.columns * (sizes.side or 0.3))))
 		)
 		vim.wo[state.side_win].wrap = false
-		if state.view == "standard" and not (state.widths and state.widths.standard) then
+		if state.view == "standard" and not sizes.side then
 			local width = 24
 			for _, item in ipairs(state.metadata.tables or {}) do
 				width = math.max(width, vim.fn.strdisplaywidth(item.key) + 4)
@@ -407,19 +408,19 @@ function M.show(view)
 			vim.cmd("belowright split")
 			state.result_win = vim.api.nvim_get_current_win()
 			vim.api.nvim_win_set_buf(state.result_win, panel(state, "result_buf"))
-			vim.api.nvim_win_set_height(state.result_win, state.result_height or math.max(3, math.floor(vim.o.lines * 0.25)))
+			vim.api.nvim_win_set_height(state.result_win, math.max(3, math.floor(vim.o.lines * sizes.results)))
 			vim.wo[state.result_win].wrap = false
 			vim.cmd("belowright split")
 			state.activity_win = vim.api.nvim_get_current_win()
 			vim.api.nvim_win_set_buf(state.activity_win, panel(state, "activity_buf"))
-			vim.api.nvim_win_set_height(state.activity_win, 2)
+			vim.api.nvim_win_set_height(state.activity_win, sizes.activity)
 		end
 		if state.view == "standard" then
 			vim.api.nvim_set_current_win(state.sql_win)
 			vim.cmd("topleft vsplit")
 			state.connections_win = vim.api.nvim_get_current_win()
 			vim.api.nvim_win_set_buf(state.connections_win, panel(state, "connections_buf"))
-			vim.api.nvim_win_set_width(state.connections_win, math.min(26, math.floor(vim.o.columns * 0.22)))
+			vim.api.nvim_win_set_width(state.connections_win, math.max(12, math.floor(vim.o.columns * sizes.connections)))
 			vim.wo[state.connections_win].wrap = false
 		end
 	end
@@ -654,10 +655,9 @@ function M.profile(action)
 	elseif state.compact then
 		vim.api.nvim_win_set_buf(state.sql_win, buf)
 	else
-		local _, win = require("fox.core.ui").float(
-			buf,
-			{ title = " Connections ", width = math.min(65, vim.o.columns - 4), height = math.min(20, vim.o.lines - 4) }
-		)
+		local width, height = layout.popup("connections", math.min(65, vim.o.columns - 4), math.min(20, vim.o.lines - 4))
+		local _, win = require("fox.core.ui").float(buf, { title = " Connections ", width = width, height = height })
+		layout.watch(win, "connections")
 		require("fox.core.ui").close_on_keys(buf, win)
 	end
 end
@@ -1459,9 +1459,10 @@ function M.focus_panel(kind)
 end
 
 function M.help()
+	local width, height = layout.popup("help", math.min(78, vim.o.columns - 4), math.min(18, vim.o.lines - 4))
 	local buf, win = require("fox.core.ui").float({
-		width = math.min(78, vim.o.columns - 4),
-		height = math.min(18, vim.o.lines - 4),
+		width = width,
+		height = height,
 		title = " FoxQuerier ",
 		lines = {
 			"F3: Editor / Query | Shift+F3 or gV: toggle diagram | gC: connections sidebar",
@@ -1482,6 +1483,7 @@ function M.help()
 		},
 	})
 	vim.b[buf].fox_query_root = M.state().root
+	layout.watch(win, "help")
 	require("fox.core.ui").close_on_keys(buf, win)
 end
 
@@ -1502,16 +1504,17 @@ function M.error_details()
 end
 
 function M.row()
-	local item = console(M.state())
-	if not item or not item.result then
+	local state = M.state()
+	local item = console(state)
+	if not item or not item.result or vim.api.nvim_get_current_buf() ~= state.result_buf then
 		return
 	end
-	local line = vim.api.nvim_win_get_cursor(0)[1] - 2
-	for _, set in ipairs(item.result.sets) do
-		if line >= 3 and line <= #set.rows + 2 then
-			return set, set.rows[line - 2]
-		end
-		line = line - #set.rows - 3
+	if not item.result_rows then
+		item.result_lines, item.result_rows = render.results(item.result)
+	end
+	local entry = item.result_rows[vim.api.nvim_win_get_cursor(0)[1] - 2]
+	if entry then
+		return entry.set, entry.row
 	end
 end
 
@@ -1724,8 +1727,6 @@ function M.workspace_save(id)
 		selected = state.selected,
 		depth = state.depth,
 		active = state.active and vim.fn.fnamemodify(vim.api.nvim_buf_get_name(state.active), ":t"),
-		widths = state.widths,
-		result_height = state.result_height,
 	})
 end
 
@@ -1797,17 +1798,6 @@ function M.workspace_load(id)
 		type(saved.selected) == "string" and saved.selected or nil, math.max(1, math.min(8, tonumber(saved.depth) or 3))
 	if selected_buffer then
 		state.active = selected_buffer
-	end
-	if type(saved.widths) == "table" then
-		state.widths = {}
-		for _, view in ipairs({ "standard", "visual" }) do
-			if type(saved.widths[view]) == "number" then
-				state.widths[view] = math.max(12, math.min(vim.o.columns - 12, saved.widths[view]))
-			end
-		end
-	end
-	if type(saved.result_height) == "number" then
-		state.result_height = math.max(2, math.min(vim.o.lines - 10, saved.result_height))
 	end
 	if saved.mode == "query" then
 		M.show(saved.view == "visual" and "visual" or "standard")
@@ -1951,11 +1941,34 @@ function M.setup()
 		callback = function()
 			for _, state in pairs(M.states) do
 				if valid(state.tab, "tab") and vim.api.nvim_get_current_tabpage() == state.tab then
+					state.resizing = true
 					M.hide(state)
 					M.show(state.view)
+					state.resizing = nil
 					break
 				end
 			end
+		end,
+	})
+	local layout_revision = 0
+	vim.api.nvim_create_autocmd("WinResized", {
+		group = group,
+		callback = function()
+			layout_revision = layout_revision + 1
+			local revision = layout_revision
+			vim.defer_fn(function()
+				if revision ~= layout_revision then
+					return
+				end
+				for _, state in pairs(M.states) do
+					if valid(state.tab, "tab") and vim.api.nvim_get_current_tabpage() == state.tab and not state.resizing then
+						local ok, err = layout.save(state)
+						if not ok then
+							notify("Could not save Query layout: " .. tostring(err), vim.log.levels.WARN)
+						end
+					end
+				end
+			end, 150)
 		end,
 	})
 	vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "CursorMoved", "CursorMovedI" }, {
@@ -1968,7 +1981,7 @@ function M.setup()
 			end
 			state.active = args.buf
 			local active = state.consoles[args.buf]
-			if args.event == "TextChanged" or args.event == "TextChangedI" then
+			do
 				active.auto_revision = (active.auto_revision or 0) + 1
 				local revision = active.auto_revision
 				vim.defer_fn(function()

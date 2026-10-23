@@ -4,6 +4,9 @@ local query, storage = require("fox.query"), require("fox.query.storage")
 
 local function project(check)
 	local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
+	local layout = require("fox.query.layout")
+	local old_layout_path = layout.path
+	layout.path = root .. "/global-layout.json"
 	vim.fn.mkdir(root, "p")
 	vim.api.nvim_set_current_dir(root)
 	query.setup()
@@ -18,6 +21,7 @@ local function project(check)
 		end
 	end
 	query.close_root(root)
+	layout.path = old_layout_path
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		if vim.b[buf].fox_query_root == storage.root(root) then
 			pcall(vim.api.nvim_buf_delete, buf, { force = true })
@@ -32,6 +36,72 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("renders bordered ASCII result tables and keeps row actions aligned across sets", function()
+		project(function()
+			query.show()
+			local state = query.state()
+			local item = state.consoles[state.active]
+			local first = { columns = { "actualRank" }, rows = { { "CA" }, { "BR" } } }
+			local second = { columns = { "id", "value" }, rows = { { "1", vim.NIL }, { "2", "表\ntext" } } }
+			item.result = { sets = { first, second, { columns = { "empty" }, rows = {} } } }
+			query.refresh_view(state)
+			local lines = vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false)
+			expect(lines[4]).toBe("+------------+")
+			expect(lines[5]).toBe("| actualRank |")
+			expect(lines[7]).toBe("| CA         |")
+			expect(table.concat(lines, "\n")).toContain("NULL")
+			expect(table.concat(lines, "\n")).toContain("表\\ntext")
+			vim.api.nvim_set_current_win(state.result_win)
+			for row, line in ipairs(lines) do
+				vim.api.nvim_win_set_cursor(0, { row, 0 })
+				local set, value = query.row()
+				if line:find("| CA ", 1, true) then
+					expect(set).toBe(first)
+					expect(value).toBe(first.rows[1])
+				elseif line:find("| 1 ", 1, true) then
+					expect(set).toBe(second)
+					expect(value).toBe(second.rows[1])
+				elseif line:sub(1, 1) == "+" or line:find("actualRank", 1, true) then
+					expect(value).toBeNil()
+				end
+			end
+		end)
+	end)
+
+	it("persists only pane and popup geometry across projects", function()
+		project(function(root)
+			local layout = require("fox.query.layout")
+			query.show("visual")
+			local state = query.state()
+			vim.api.nvim_win_set_width(state.side_win, math.floor(vim.o.columns * 0.6))
+			vim.api.nvim_win_set_height(state.result_win, 4)
+			query.help()
+			local popup = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_width(popup, 48)
+			vim.api.nvim_exec_autocmds("WinResized", {})
+			expect(vim.wait(1000, function()
+				return vim.fn.filereadable(layout.path) == 1
+			end, 10)).toBeTruthy()
+			local saved = require("fox.core.store").load(layout.path, {})
+			expect(saved.menus.help.width).toBe(48)
+			expect(saved.visual.side).toBe(vim.api.nvim_win_get_width(state.side_win) / vim.o.columns)
+			expect(saved.profile).toBeNil()
+			expect(saved.sql).toBeNil()
+			vim.api.nvim_win_close(popup, true)
+			query.hide()
+			vim.fn.mkdir(root .. "/other", "p")
+			vim.api.nvim_set_current_dir(root .. "/other")
+			query.show("visual")
+			expect(vim.api.nvim_win_get_width(query.state().side_win)).toBe(math.floor(vim.o.columns * saved.visual.side))
+			expect(vim.api.nvim_win_get_height(query.state().result_win)).toBe(4)
+			query.help()
+			expect(vim.api.nvim_win_get_width(0)).toBe(48)
+			vim.api.nvim_win_close(0, true)
+			query.close_root(root .. "/other")
+			vim.api.nvim_set_current_dir(root)
+		end)
+	end)
+
 	it("edits and deletes connection profiles without deleting databases or notes", function()
 		project(function(root)
 			query.show()
@@ -192,19 +262,38 @@ describe("FoxQuerier live workflow", function()
 			end, 10)).toBeTruthy()
 			expect(item.execution).toBe(1)
 			expect(item.result.sets[1].rows[1][1]).toBe("2")
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "SELECT 11 AS first;", "", "SELECT 22 AS second;" })
+			vim.api.nvim_win_set_cursor(state.sql_win, { 3, 7 })
+			vim.api.nvim_exec_autocmds("CursorMoved", { buffer = state.active })
+			expect(vim.wait(4000, function()
+				return item.execution == 2 and not item.client.busy
+			end, 10)).toBeTruthy()
+			expect(item.result.sets[1].rows[1][1]).toBe("22")
+			vim.api.nvim_win_set_cursor(state.sql_win, { 1, 7 })
+			vim.api.nvim_exec_autocmds("CursorMovedI", { buffer = state.active })
+			expect(vim.wait(4000, function()
+				return item.execution == 3 and not item.client.busy
+			end, 10)).toBeTruthy()
+			expect(item.result.sets[1].rows[1][1]).toBe("11")
+			query.show("standard")
+			vim.api.nvim_set_current_win(state.sql_win)
+			vim.fn.maparg("<C-CR>", "n", false, true).callback()
+			expect(vim.wait(2000, function()
+				return item.execution == 4 and not item.client.busy
+			end, 10)).toBeTruthy()
 			type_sql("SELECT ? AS answer;")
 			query.autorun(state)
 			expect(vim.wait(2000, function()
 				return not item.client.busy
 			end, 10)).toBeTruthy()
-			expect(item.execution).toBe(1)
+			expect(item.execution).toBe(4)
 			expect(item.status).toContain("Parameters needed")
 			type_sql("SELECT 1 INTO dangerous;")
 			query.autorun(state)
 			expect(vim.wait(2000, function()
 				return not item.client.busy
 			end, 10)).toBeTruthy()
-			expect(item.execution).toBe(1)
+			expect(item.execution).toBe(4)
 			expect(item.status).toContain("Read-only")
 			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "" })
 			local saved = storage.load(root, "private/session.json")
@@ -234,7 +323,7 @@ describe("FoxQuerier live workflow", function()
 		end)
 	end)
 
-	it("keeps results below SQL and removes the connection sidebar for the half-width diagram", function()
+	it("keeps results below SQL and defaults to a 30/70 editor/diagram split", function()
 		project(function()
 			query.show("standard")
 			local state = query.state()
@@ -243,7 +332,7 @@ describe("FoxQuerier live workflow", function()
 			query.show("visual")
 			expect(state.connections_win).toBeNil()
 			expect(vim.api.nvim_win_get_position(state.result_win)[1] > vim.api.nvim_win_get_position(state.sql_win)[1]).toBeTruthy()
-			expect(math.abs(vim.api.nvim_win_get_width(state.side_win) - vim.o.columns / 2) < 4).toBeTruthy()
+			expect(math.abs(vim.api.nvim_win_get_width(state.side_win) - vim.o.columns * 0.7) < 4).toBeTruthy()
 		end)
 	end)
 

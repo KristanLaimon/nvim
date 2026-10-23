@@ -36,6 +36,215 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("manages nested SQL files and folders without losing open edits or recreating old paths", function()
+		project(function(root)
+			query.show("standard")
+			local state, files = query.state(), require("fox.query.files")
+			local old_input, old_select = vim.ui.input, query.select
+			local value, choice = nil, "Delete"
+			local ok, err = pcall(function()
+				vim.ui.input = function(_, callback)
+					callback(value)
+				end
+				query.select = function(_, _, callback)
+					callback(choice)
+				end
+				local function select(relative)
+					query.refresh_view(state)
+					vim.api.nvim_set_current_win(state.queries_win)
+					for row, entry in pairs(state.query_nodes) do
+						if entry.relative == relative then
+							vim.api.nvim_win_set_cursor(0, { row, 0 })
+							return
+						end
+					end
+					error("SQL entry missing: " .. relative)
+				end
+				vim.api.nvim_set_current_win(state.queries_win)
+				value = "reports"
+				vim.fn.maparg("A", "n", false, true).callback()
+				select("reports")
+				value = "reports/monthly"
+				vim.fn.maparg("a", "n", false, true).callback()
+				local buf = state.active
+				vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT 42;" })
+				select("reports/monthly.sql")
+				value = "reports/renamed.sql"
+				vim.fn.maparg("r", "n", false, true).callback()
+				expect(vim.bo[buf].modified).toBeTruthy()
+				expect(vim.b[buf].fox_query_document).toBe("queries/reports/renamed.sql")
+				vim.api.nvim_buf_call(buf, function()
+					vim.cmd("write")
+				end)
+				expect(storage.read(root, "queries/reports/renamed.sql")).toBe("SELECT 42;")
+				expect(storage.read(root, "queries/reports/monthly.sql")).toBeNil()
+				expect(files.rename(state, "reports", "archive")).toBeTruthy()
+				expect(files.rename(state, "archive", "reports")).toBeTruthy()
+				expect(files.rename(state, "reports", "archive")).toBeTruthy()
+				vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT 43;" })
+				expect(files.delete(state, "archive")).toBeNil()
+				vim.api.nvim_buf_call(buf, function()
+					vim.cmd("write")
+				end)
+				expect(storage.read(root, "queries/archive/renamed.sql")).toBe("SELECT 43;")
+				expect(storage.read(root, "queries/reports/renamed.sql")).toBeNil()
+				expect(query.workspace_save("nested-sql")).toBeTruthy()
+				query.workspace_load("nested-sql")
+				state = query.state()
+				local restored
+				for console in pairs(state.consoles) do
+					if vim.b[console].fox_query_document == "queries/archive/renamed.sql" then
+						restored = console
+					end
+				end
+				expect(restored ~= nil).toBeTruthy()
+				state.query_expanded.archive = true
+				select("archive/renamed.sql")
+				state.consoles[restored].client = { busy = true }
+				expect(files.delete(state, "archive")).toBeNil()
+				state.consoles[restored].client = nil
+				choice = "Cancel"
+				vim.fn.maparg("d", "n", false, true).callback()
+				expect(storage.read(root, "queries/archive/renamed.sql")).toBe("SELECT 43;")
+				choice = "Delete"
+				vim.fn.maparg("d", "n", false, true).callback()
+				expect(vim.api.nvim_buf_is_valid(restored)).toBeFalsy()
+				expect(storage.read(root, "queries/archive/renamed.sql")).toBeNil()
+				expect(files.delete(state, "archive")).toBeTruthy()
+				expect(vim.fn.isdirectory(storage.path(root, "queries/archive"))).toBe(0)
+			end)
+			vim.ui.input, query.select = old_input, old_select
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
+	it("rejects SQL file escapes, overwrites, symlinks, and deletion of modified queries", function()
+		project(function(root)
+			query.show()
+			local state, files = query.state(), require("fox.query.files")
+			for _, name in ipairs({ "../outside.sql", "/outside.sql", "C:/outside.sql", "./outside.sql", "a/../outside.sql" }) do
+				expect(files.create(state, name, false)).toBeNil()
+				expect(files.rename(state, "one.sql", name)).toBeNil()
+				expect(files.delete(state, name)).toBeNil()
+			end
+			expect(files.create(state, "one.sql", false)).toBeTruthy()
+			expect(files.create(state, "one.sql", false)).toBeNil()
+			expect(files.create(state, "two.sql", false)).toBeTruthy()
+			expect(files.rename(state, "one.sql", "two.sql")).toBeNil()
+			local buf = query.new("one.sql")
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT 'unsaved';" })
+			expect(files.delete(state, "one.sql")).toBeNil()
+			expect(vim.api.nvim_buf_is_valid(buf)).toBeTruthy()
+			expect(files.create(state, "folder", true)).toBeTruthy()
+			expect(files.rename(state, "folder", "folder/child")).toBeNil()
+			local uv = vim.uv or vim.loop
+			local outside = root .. "/outside"
+			vim.fn.mkdir(outside, "p")
+			local link = storage.path(root, "queries/folder/link")
+			if uv.fs_symlink(outside, link, { dir = true, junction = vim.fn.has("win32") == 1 }) then
+				expect(files.path(root, "folder/link/outside.sql")).toBeNil()
+				expect(files.delete(state, "folder")).toBeNil()
+				uv.fs_unlink(link)
+			end
+		end)
+	end)
+
+	it("keeps table details in the inspector and relationship maps independent of pane geometry", function()
+		project(function()
+			query.show("standard")
+			local state = query.state()
+			local item = { key = "Season", name = "Season", columns = { { name = "id", type = "INTEGER" } } }
+			state.metadata = { tables = { item }, relations = {} }
+			state.consoles[state.active].metadata = state.metadata
+			query.refresh_view(state)
+			vim.api.nvim_set_current_win(state.side_win)
+			for row, object in pairs(state.objects) do
+				if object == item then
+					vim.api.nvim_win_set_cursor(0, { row, 0 })
+				end
+			end
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			expect(state.selected).toBe("Season")
+			vim.fn.maparg("q", "n", false, true).callback()
+			query.refresh_view(state)
+			expect(table.concat(vim.api.nvim_buf_get_lines(state.side_buf, 0, -1, false), "\n"):find("INDEXES", 1, true)).toBeNil()
+			for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(state.side_buf, "n")) do
+				expect(mapping.lhs == "/" or mapping.lhs == "n").toBeFalsy()
+			end
+			local sizes = {}
+			for _, win in ipairs(vim.api.nvim_tabpage_list_wins(state.tab)) do
+				sizes[win] = { vim.api.nvim_win_get_width(win), vim.api.nvim_win_get_height(win) }
+			end
+			query.graph(false)
+			expect(vim.api.nvim_win_get_config(0).relative ~= "").toBeTruthy()
+			for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(0, "n")) do
+				expect(mapping.lhs == "/").toBeFalsy()
+			end
+			vim.fn.maparg("q", "n", false, true).callback()
+			for win, size in pairs(sizes) do
+				expect(vim.api.nvim_win_get_width(win)).toBe(size[1])
+				expect(vim.api.nvim_win_get_height(win)).toBe(size[2])
+			end
+		end)
+	end)
+
+	it("labels JOINs with real column mappings and suggests unique table initials", function()
+		project(function()
+			query.show("visual")
+			local state, old_select, old_input = query.state(), query.select, vim.ui.input
+			local metadata = {
+				engine = "sqlite",
+				tables = {
+					{ key = "PlayerKisses", name = "PlayerKisses", columns = { { name = "member_1" }, { name = "member_2" } } },
+					{ key = "Player", name = "Player", columns = { { name = "id" } } },
+				},
+				relations = {},
+			}
+			for at = 1, 2 do
+				metadata.relations[at] = {
+					name = "PlayerKisses:" .. (at - 1),
+					source = "PlayerKisses",
+					target = "Player",
+					columns = { { source = "member_" .. at, target = "id" } },
+				}
+			end
+			local buf = state.active
+			state.metadata, state.consoles[buf].metadata = metadata, metadata
+			state.consoles[buf].profile = { id = "offline", engine = "sqlite" }
+			state.autorun = false
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "SELECT * FROM PlayerKisses;" })
+			local labels, aliases = {}, {}
+			local ok, err = pcall(function()
+				query.select = function(items, opts, callback)
+					if opts.format_item then
+						for _, candidate in ipairs(items) do
+							labels[#labels + 1] = opts.format_item(candidate)
+						end
+					end
+					callback(items[1])
+				end
+				vim.ui.input = function(opts, callback)
+					aliases[#aliases + 1] = opts.default
+					callback(opts.default)
+				end
+				query.insert_join(metadata.tables[2])
+				query.insert_join(metadata.tables[2])
+				expect(labels[1]).toBe("PlayerKisses.member_1 = Player.id")
+				expect(labels[2]).toBe("PlayerKisses.member_2 = Player.id")
+				expect(aliases).toEqual({ "p", "p2" })
+				expect(table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")).toContain(
+					"INNER JOIN Player AS p ON PlayerKisses.member_1 = p.id"
+				)
+			end)
+			query.select, vim.ui.input = old_select, old_input
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
 	it("registers query keys without collisions and keeps result actions scoped to results", function()
 		project(function()
 			local registry = require("fox.core.keymap_registry")
@@ -82,7 +291,7 @@ describe("FoxQuerier live workflow", function()
 			query.show("standard")
 			local state = query.state()
 			expect(
-				vim.api.nvim_win_get_position(state.queries_win)[1] > vim.api.nvim_win_get_position(state.connections_win)[1]
+				vim.api.nvim_win_get_position(state.queries_win)[1] < vim.api.nvim_win_get_position(state.connections_win)[1]
 			).toBeTruthy()
 			local lines = vim.api.nvim_buf_get_lines(state.queries_buf, 0, -1, false)
 			local selected

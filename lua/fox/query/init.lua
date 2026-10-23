@@ -292,42 +292,129 @@ function M.copy_activity(state)
 end
 
 function M.draw_queries(state)
-	local files = {}
-	for _, file in ipairs(vim.fn.glob(storage.path(state.root, "queries/*.sql"), false, true)) do
-		files[#files + 1] = vim.fn.fnamemodify(file, ":t")
-	end
-	for buf in pairs(state.consoles) do
-		if valid(buf, "buf") then
-			local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t")
-			if not vim.tbl_contains(files, name) then
-				files[#files + 1] = name
+	local entries = require("fox.query.files").list(state)
+	local lines, objects, files = { "SQL FILES" }, {}, {}
+	state.query_expanded = state.query_expanded or {}
+	for _, entry in ipairs(entries) do
+		if not entry.directory then
+			files[#files + 1] = entry.relative
+		end
+		local parent, visible = vim.fs.dirname(entry.relative), true
+		while parent ~= "." do
+			if not state.query_expanded[parent] then
+				visible = false
 			end
+			parent = vim.fs.dirname(parent)
+		end
+		if visible then
+			local depth = select(2, entry.relative:gsub("/", ""))
+			local current = valid(state.active, "buf") and vim.b[state.active].fox_query_document
+			local marker = entry.directory and (state.query_expanded[entry.relative] and "[-] " or "[+] ")
+				or current == "queries/" .. entry.relative and "* "
+				or "  "
+			lines[#lines + 1] = string.rep("  ", depth) .. marker .. vim.fs.basename(entry.relative)
+			objects[#lines] = entry
 		end
 	end
-	table.sort(files)
-	state.query_files = files
-	local lines = { "SQL FILES" }
-	for _, file in ipairs(files) do
-		local current = valid(state.active, "buf") and vim.fn.fnamemodify(vim.api.nvim_buf_get_name(state.active), ":t")
-		lines[#lines + 1] = (file == current and "* " or "  ") .. file
-	end
-	if #files == 0 then
+	state.query_files, state.query_nodes = files, objects
+	if #entries == 0 then
 		lines[#lines + 1] = "No saved SQL files"
 	end
 	local height = valid(state.queries_win, "win") and vim.api.nvim_win_get_height(state.queries_win) or 0
-	while #lines < height - 2 do
+	while #lines < height - 3 do
 		lines[#lines + 1] = ""
 	end
-	vim.list_extend(lines, { "------", "Enter Open | gN New" })
+	vim.list_extend(lines, { "------", "a SQL  A Folder  r Rename  d Delete", "Enter Open / Toggle folder" })
 	local buf = panel(state, "queries_buf")
 	set_lines(buf, lines)
 	vim.keymap.set("n", "<CR>", function()
-		local file = files[vim.api.nvim_win_get_cursor(0)[1] - 1]
-		if file then
-			M.new(file)
-			vim.api.nvim_set_current_win(state.sql_win)
+		local entry = objects[vim.api.nvim_win_get_cursor(0)[1]]
+		if entry and entry.directory then
+			state.query_expanded[entry.relative] = not state.query_expanded[entry.relative]
+			M.draw_queries(state)
+		elseif entry then
+			M.new(entry.relative)
 		end
 	end, { buffer = buf, silent = true })
+	for key, action in pairs({ a = "create", A = "folder", r = "rename", d = "delete" }) do
+		vim.keymap.set("n", key, function()
+			M.file_action(action)
+		end, { buffer = buf, silent = true })
+	end
+end
+
+function M.file_action(action)
+	local state, files = M.state(), require("fox.query.files")
+	if action and not vim.tbl_contains({ "create", "folder", "rename", "delete" }, action) then
+		notify("Choose create, folder, rename, or delete", vim.log.levels.WARN)
+		return
+	end
+	if not action then
+		M.focus_panel("queries")
+		return
+	end
+	local win = valid(state.queries_win, "win") and state.queries_win or state.sql_win
+	local entry = valid(win, "win") and state.query_nodes and state.query_nodes[vim.api.nvim_win_get_cursor(win)[1]]
+	if (action == "rename" or action == "delete") and not entry then
+		notify("Select a SQL file or folder first", vim.log.levels.WARN)
+		return
+	end
+	local function finish(ok, err)
+		if not ok then
+			notify(tostring(err), vim.log.levels.ERROR)
+		end
+		M.refresh_view(state)
+	end
+	if action == "delete" then
+		M.select(
+			{ "Delete", "Cancel" },
+			{ prompt = "Delete " .. entry.relative .. (entry.directory and " and its contents?" or "?") },
+			function(choice)
+				if M.states[state.root] ~= state or storage.root() ~= state.root then
+					return
+				end
+				if choice == "Delete" then
+					finish(files.delete(state, entry.relative))
+				end
+			end
+		)
+		return
+	end
+	local parent = entry and (entry.directory and entry.relative or vim.fs.dirname(entry.relative)) or "."
+	local prefix = parent == "." and "" or parent .. "/"
+	vim.ui.input({
+		prompt = action == "rename" and "Rename to: " or action == "folder" and "New folder: " or "New SQL file: ",
+		default = action == "rename" and entry.relative or prefix,
+	}, function(value)
+		if M.states[state.root] ~= state or storage.root() ~= state.root then
+			return
+		end
+		if not value or value == "" then
+			return
+		end
+		if action == "rename" then
+			finish(files.rename(state, entry.relative, value))
+			return
+		end
+		if action == "create" and not value:match("%.sql$") then
+			value = value .. ".sql"
+		end
+		local ok, err = files.create(state, value, action == "folder")
+		if ok then
+			local folder = vim.fs.dirname(value)
+			while folder ~= "." do
+				state.query_expanded[folder] = true
+				folder = vim.fs.dirname(folder)
+			end
+		end
+		if ok and action == "folder" then
+			state.query_expanded[value] = true
+		end
+		if ok and action == "create" then
+			M.new(value)
+		end
+		finish(ok, err)
+	end)
 end
 
 local function current_metadata(state)
@@ -424,12 +511,6 @@ function M.refresh_view(state)
 	else
 		local lines, objects = render.explorer(state.metadata, state.filter, state.selected, state.note_keys)
 		state.objects = objects
-		if state.selected then
-			local item = sql.table(state.metadata, state.selected)
-			if item then
-				vim.list_extend(lines, { "", unpack(render.inspect(item, state.metadata)) })
-			end
-		end
 		set_lines(panel(state, "side_buf"), lines)
 	end
 	local result_lines = {}
@@ -613,14 +694,14 @@ function M.show(view)
 		if state.view == "standard" then
 			vim.api.nvim_set_current_win(state.sql_win)
 			vim.cmd("topleft vsplit")
-			state.connections_win = vim.api.nvim_get_current_win()
-			vim.api.nvim_win_set_buf(state.connections_win, panel(state, "connections_buf"))
-			vim.api.nvim_win_set_width(state.connections_win, math.max(12, math.floor(vim.o.columns * sizes.connections)))
-			vim.wo[state.connections_win].wrap = false
-			vim.cmd("belowright split")
 			state.queries_win = vim.api.nvim_get_current_win()
 			vim.api.nvim_win_set_buf(state.queries_win, panel(state, "queries_buf"))
+			vim.api.nvim_win_set_width(state.queries_win, math.max(12, math.floor(vim.o.columns * sizes.connections)))
 			vim.wo[state.queries_win].wrap = false
+			vim.cmd("belowright split")
+			state.connections_win = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_buf(state.connections_win, panel(state, "connections_buf"))
+			vim.wo[state.connections_win].wrap = false
 		end
 	end
 	vim.cmd("botright split")
@@ -637,35 +718,11 @@ function M.show(view)
 		vim.api.nvim_win_set_height(state.result_win, math.max(3, math.floor(vim.o.lines * sizes.results)))
 	end
 	map(state.side_buf, "C", M.column_limit)
-	map(state.side_buf, "/", function()
-		if state.view == "visual" then
-			M.select(state.metadata.tables, {
-				prompt = "Inspect cached table",
-				format_item = function(item)
-					return item.key
-				end,
-			}, function(item)
-				if item then
-					M.inspect(item, state)
-				end
-			end)
-			return
-		end
-		vim.ui.input({ prompt = "Find cached table: " }, function(value)
-			if value then
-				state.filter = value
-				M.refresh_view(state)
-			end
-		end)
-	end)
 	map(state.side_buf, "<CR>", function()
 		M.inspect(nil, state)
 	end)
 	map(state.side_buf, "J", function()
 		M.insert_join(selected_object(state))
-	end)
-	map(state.side_buf, "n", function()
-		M.notes(selected_object(state))
 	end)
 	map(state.side_buf, "b", function()
 		M.browse(selected_object(state))
@@ -799,8 +856,8 @@ end
 
 function M.new(relative)
 	local state = M.state()
-	if relative and not relative:match("^[%w_-]+%.sql$") then
-		notify("Use a simple query-name.sql", vim.log.levels.ERROR)
+	if relative and (not relative:match("%.sql$") or not require("fox.query.files").path(state.root, relative)) then
+		notify("Use a relative .sql path inside the queries folder", vim.log.levels.ERROR)
 		return
 	end
 	state.next_query = (state.next_query or 0) + 1
@@ -1513,13 +1570,16 @@ function M.insert_join(target)
 	M.select(candidates, {
 		prompt = "Choose foreign key mapping",
 		format_item = function(candidate)
-			return candidate.node.alias .. " -> " .. candidate.target .. " (" .. candidate.relation.name .. ")"
+			return sql.join_label(candidate)
 		end,
 	}, function(candidate)
 		if not candidate then
 			return
 		end
-		vim.ui.input({ prompt = "Target alias: ", default = "t" .. (#graph.nodes + 1) }, function(alias)
+		vim.ui.input({
+			prompt = "Target alias: ",
+			default = sql.suggest_alias(candidate.target_table or { name = candidate.target }, graph),
+		}, function(alias)
 			if not alias then
 				return
 			end
@@ -1582,9 +1642,9 @@ function M.graph(all)
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.b[buf].fox_query_root = state.root
 	query_keys(buf)
-	vim.cmd("botright split")
-	local win = vim.api.nvim_get_current_win()
-	vim.api.nvim_win_set_buf(win, buf)
+	local width, height = layout.popup("relationships", math.min(110, vim.o.columns - 4), math.min(30, vim.o.lines - 6))
+	local _, win = require("fox.core.ui").float(buf, { title = " Relationships ", width = width, height = height })
+	layout.watch(win, "relationships")
 	vim.wo[win].wrap = false
 	local function draw()
 		local lines, objects = render.map(state.metadata, key, state.depth, vim.api.nvim_win_get_width(win))
@@ -1605,19 +1665,6 @@ function M.graph(all)
 	map(buf, "-", function()
 		state.depth = math.max(1, state.depth - 1)
 		draw()
-	end)
-	map(buf, "/", function()
-		M.select(state.metadata.tables, {
-			prompt = "Find / recenter table",
-			format_item = function(item)
-				return item.key
-			end,
-		}, function(item)
-			if item then
-				key, state.selected = item.key, item.key
-				draw()
-			end
-		end)
 	end)
 	map(buf, "q", function()
 		vim.api.nvim_win_close(win, true)
@@ -1687,10 +1734,11 @@ function M.help()
 			"FoxQueryRun statement / selection / section / file",
 			"FoxQueryCancel: cancel; reconnect if session is uncertain",
 			"FoxQueryResults / FoxQueryActivity: results / submitted SQL",
-			"Explorer/diagram: Enter inspect, J Insert JOIN, C column limit, n notes, b browse",
-			"SQL files: Enter opens; Alt+h/l switches SQL tabs | Status: click/y copies; Enter error details",
+			"Explorer/diagram: Enter inspect, J Insert JOIN, C column limit, b browse; / and n search",
+			"SQL files: Enter opens/toggles folders; a SQL, A folder, r rename, d delete; Alt+h/l tabs",
+			"Status: click/y copies; Enter error details",
 			"Results: H/L columns, J/K rows, Enter expand row, y copy, e export, gR follow FK",
-			"Map: / table search, Enter recenter, +/- depth, zh/zl pan, q back",
+			"Map: / native search, Enter recenter, +/- depth, zh/zl pan, q back",
 			"Diagram markers: * selected, k JOIN, f filter, ? candidate FK; dim unused",
 			"Parameters: Ctrl-C cancels; NULL is null; text:NULL is literal text",
 			"Workspaces: save SQL first; explicit saves restore disconnected",
@@ -1983,7 +2031,7 @@ function M.workspace_save(id)
 				return nil, "Save modified query documents before saving this workspace"
 			end
 			documents[#documents + 1] = {
-				file = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t"),
+				file = vim.b[buf].fox_query_document:sub(#"queries/" + 1),
 				profile = item.profile and item.profile.id,
 				fingerprint = item.profile and storage.fingerprint(item.profile),
 				cursor = item.cursor,
@@ -2002,7 +2050,7 @@ function M.workspace_save(id)
 		queries = documents,
 		selected = state.selected,
 		depth = state.depth,
-		active = state.active and vim.fn.fnamemodify(vim.api.nvim_buf_get_name(state.active), ":t"),
+		active = state.active and vim.b[state.active].fox_query_document:sub(#"queries/" + 1),
 	})
 end
 
@@ -2041,7 +2089,8 @@ function M.workspace_load(id)
 		if
 			type(document) == "table"
 			and type(document.file) == "string"
-			and document.file:match("^[%w_-]+%.sql$")
+			and document.file:match("%.sql$")
+			and require("fox.query.files").path(state.root, document.file)
 			and storage.read(state.root, "queries/" .. document.file)
 		then
 			local buf = M.new(document.file)

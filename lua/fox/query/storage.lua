@@ -242,12 +242,13 @@ function M.document_buffer(root, relative, filetype)
 		vim.api.nvim_create_autocmd("BufWriteCmd", {
 			buffer = buf,
 			callback = function()
-				local current = M.read(root, relative) or ""
+				local document = vim.b[buf].fox_query_document
+				local current = M.read(root, document) or ""
 				if current ~= vim.b[buf].fox_query_disk then
 					error("File changed externally; reload or resolve the conflict before saving")
 				end
 				local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
-				local ok, err = M.write(root, relative, text)
+				local ok, err = M.write(root, document, text)
 				if not ok then
 					error(err)
 				end

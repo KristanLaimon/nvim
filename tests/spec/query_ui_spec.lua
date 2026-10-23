@@ -176,7 +176,7 @@ describe("FoxQuerier editing actions", function()
 			end
 			query.insert_join(sql_module.table(metadata, "customers"))
 			local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
-			expect(text).toContain('INNER JOIN "customers" AS "c" ON "o"."customer_id" = "c"."id"')
+			expect(text).toContain("INNER JOIN customers AS c ON o.customer_id = c.id")
 			expect(text:find("INNER JOIN", 1, true) < text:find("WHERE", 1, true)).toBeTruthy()
 			expect(state.consoles[buf].client).toBeNil()
 			vim.bo[buf].modified = false

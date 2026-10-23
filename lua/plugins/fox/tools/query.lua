@@ -5,6 +5,7 @@ local commands = {
 	"FoxQueryConnections",
 	"FoxQueryNew",
 	"FoxQueryOpen",
+	"FoxQueryFiles",
 	"FoxQueryRun",
 	"FoxQueryAutoRun",
 	"FoxQueryComplete",
@@ -87,6 +88,18 @@ return {
 			query.show()
 			query.open()
 		end)
+		command("FoxQueryFiles", function(args)
+			query.show("standard")
+			query.focus_panel("queries")
+			if args.args ~= "" then
+				query.file_action(args.args)
+			end
+		end, {
+			nargs = "?",
+			complete = function()
+				return { "create", "folder", "rename", "delete" }
+			end,
+		})
 		command("FoxQueryRun", function(args)
 			query.run(args.args ~= "" and args.args or "statement")
 		end, {

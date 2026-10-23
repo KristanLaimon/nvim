@@ -67,6 +67,17 @@ describe("FoxQuerier SQL structure", function()
 			"LEFT JOIN `customers` AS `c` ON `o`.`customer_id` = `c`.`id`"
 		)
 		expect(sql.join_sql(candidates[1], "bad alias;", "LEFT", "mysql")).toBeNil()
+		expect(sql.join_sql(candidates[1], "c", "LEFT", "sqlite")).toBe("LEFT JOIN customers AS c ON o.customer_id = c.id")
+		local unusual = vim.deepcopy(candidates[1])
+		unusual.target_table.name = "Order"
+		unusual.relation.columns[1].target = 'odd"column'
+		expect(sql.join_sql(unusual, "c", "LEFT", "sqlite")).toBe(
+			'LEFT JOIN "Order" AS c ON o.customer_id = c."odd""column"'
+		)
+		expect(sql.suggest_alias({ name = "PlayerSecondaryNames" }, { nodes = { { alias = "PSN" }, { alias = "psn2" } } })).toBe(
+			"psn3"
+		)
+		expect(sql.suggest_alias({ name = "player_trust" }, { nodes = {} })).toBe("pt")
 	end)
 
 	it("preserves every composite-key predicate in either direction", function()

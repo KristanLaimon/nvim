@@ -379,6 +379,68 @@ function M.quote(name, engine)
 	return quote .. name:gsub(quote, quote .. quote) .. quote
 end
 
+function M.suggest_alias(item, graph)
+	local base = ""
+	for word in item.name:gsub("(%l)(%u)", "%1_%2"):gmatch("[%a%d]+") do
+		base = base .. word:sub(1, 1):lower()
+	end
+	if not base:match("^[%a]") then
+		base = "t"
+	end
+	local used = {}
+	for _, node in ipairs(graph.nodes) do
+		used[node.alias:lower()] = true
+	end
+	local alias, suffix = base, 2
+	while used[alias] or reserved[alias:upper()] do
+		alias, suffix = base .. suffix, suffix + 1
+	end
+	return alias
+end
+
+function M.join_label(candidate)
+	local pairs = {}
+	for _, pair in ipairs(candidate.relation.columns) do
+		local own, other = pair.source, pair.target
+		if candidate.relation.source ~= candidate.node.table.key then
+			own, other = other, own
+		end
+		pairs[#pairs + 1] = candidate.node.alias
+			.. "."
+			.. tostring(own)
+			.. " = "
+			.. candidate.target
+			.. "."
+			.. tostring(other)
+	end
+	return table.concat(pairs, " AND ")
+end
+
+-- SQLite's identifier keywords: https://www.sqlite.org/lang_keywords.html
+local sqlite_keywords = {}
+for word in
+	([[ABORT ACTION ADD AFTER ALL ALTER ALWAYS ANALYZE AND AS ASC ATTACH AUTOINCREMENT
+BEFORE BEGIN BETWEEN BY CASCADE CASE CAST CHECK COLLATE COLUMN COMMIT CONFLICT CONSTRAINT
+CREATE CROSS CURRENT CURRENT_DATE CURRENT_TIME CURRENT_TIMESTAMP DATABASE DEFAULT DEFERRABLE
+DEFERRED DELETE DESC DETACH DISTINCT DO DROP EACH ELSE END ESCAPE EXCEPT EXCLUDE EXCLUSIVE
+EXISTS EXPLAIN FAIL FILTER FIRST FOLLOWING FOR FOREIGN FROM FULL GENERATED GLOB GROUP GROUPS
+HAVING IF IGNORE IMMEDIATE IN INDEX INDEXED INITIALLY INNER INSERT INSTEAD INTERSECT INTO IS
+ISNULL JOIN KEY LAST LEFT LIKE LIMIT MATCH MATERIALIZED NATURAL NO NOT NOTHING NOTNULL NULL
+NULLS OF OFFSET ON OR ORDER OTHERS OUTER OVER PARTITION PLAN PRAGMA PRECEDING PRIMARY QUERY
+RAISE RANGE RECURSIVE REFERENCES REGEXP REINDEX RELEASE RENAME REPLACE RESTRICT RETURNING RIGHT
+ROLLBACK ROW ROWS SAVEPOINT SELECT SET TABLE TEMP TEMPORARY THEN TIES TO TRANSACTION TRIGGER
+UNBOUNDED UNION UNIQUE UPDATE USING VACUUM VALUES VIEW VIRTUAL WHEN WHERE WINDOW WITH WITHOUT]]):gmatch("%S+")
+do
+	sqlite_keywords[word] = true
+end
+
+local function join_identifier(name, engine)
+	if engine == "sqlite" and name:match("^[%a_][%w_]*$") and not sqlite_keywords[name:upper()] then
+		return name
+	end
+	return M.quote(name, engine)
+end
+
 function M.join_sql(candidate, target_alias, kind, engine)
 	if not target_alias:match("^[%a_][%w_]*$") then
 		return nil, "Use a simple SQL alias"
@@ -391,9 +453,9 @@ function M.join_sql(candidate, target_alias, kind, engine)
 		return nil, "Target table is not in the selected metadata; refresh its schema first"
 	end
 	if candidate.target_table.schema then
-		qualified[#qualified + 1] = M.quote(candidate.target_table.schema, engine)
+		qualified[#qualified + 1] = join_identifier(candidate.target_table.schema, engine)
 	end
-	qualified[#qualified + 1] = M.quote(candidate.target_table.name, engine)
+	qualified[#qualified + 1] = join_identifier(candidate.target_table.name, engine)
 	for _, pair in ipairs(relation.columns) do
 		if type(pair.source) ~= "string" or type(pair.target) ~= "string" then
 			return nil, "Foreign-key mapping is incomplete; refresh or inspect the target table"
@@ -402,13 +464,13 @@ function M.join_sql(candidate, target_alias, kind, engine)
 		if relation.source ~= candidate.node.table.key then
 			own, other = other, own
 		end
-		predicates[#predicates + 1] = M.quote(candidate.node.alias, engine)
+		predicates[#predicates + 1] = join_identifier(candidate.node.alias, engine)
 			.. "."
-			.. M.quote(own, engine)
+			.. join_identifier(own, engine)
 			.. " = "
-			.. M.quote(target_alias, engine)
+			.. join_identifier(target_alias, engine)
 			.. "."
-			.. M.quote(other, engine)
+			.. join_identifier(other, engine)
 	end
 	if #predicates == 0 then
 		return nil, "Relationship has no key mapping"
@@ -417,7 +479,7 @@ function M.join_sql(candidate, target_alias, kind, engine)
 		.. " JOIN "
 		.. table.concat(qualified, ".")
 		.. " AS "
-		.. M.quote(target_alias, engine)
+		.. join_identifier(target_alias, engine)
 		.. " ON "
 		.. table.concat(predicates, " AND ")
 end

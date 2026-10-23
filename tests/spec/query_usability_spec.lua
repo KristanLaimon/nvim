@@ -197,12 +197,20 @@ describe("FoxQuerier usability", function()
 			columns = {
 				{ name = "id", type = "BIGINT", pk = true, nullable = false },
 				{ name = "parent", type = "TEXT", nullable = true },
+				{ name = "表名", type = "BOOLEAN", pk = true, nullable = false },
 			},
 			indexes = { { name = string.rep("index", 15), unique = true } },
 		}
 		local lines = require("fox.query.render").inspect(item, {
 			relations = {
-				{ source = item.key, target = "parents", columns = { { source = "parent", target = "id" } } },
+				{
+					source = item.key,
+					target = "parents",
+					columns = {
+						{ source = "parent", target = "id" },
+						{ source = "表名", target = "other_id" },
+					},
+				},
 			},
 		}, 44)
 		expect(lines[1]:sub(1, #"┌")).toBe("┌")
@@ -210,8 +218,34 @@ describe("FoxQuerier usability", function()
 			expect(vim.fn.strdisplaywidth(line)).toBe(44)
 		end
 		local text = table.concat(lines, "\n")
-		expect(text).toContain("BIGINT  PK  NN")
-		expect(text).toContain("parent  TEXT  FK")
+		local header, id, parent, wide
+		for _, line in ipairs(lines) do
+			if line:find("│ NAME", 1, true) then
+				header = line
+			end
+			if line:find("│ id ", 1, true) then
+				id = line
+			end
+			if line:find("│ parent ", 1, true) then
+				parent = line
+			end
+			if line:find("│ 表名 ", 1, true) then
+				wide = line
+			end
+		end
+		local function position(line, value)
+			return vim.fn.strdisplaywidth(line:sub(1, assert(line:find(value, 1, true)) - 1))
+		end
+		expect(position(id, "BIGINT")).toBe(position(header, "TYPE"))
+		expect(position(parent, "TEXT")).toBe(position(header, "TYPE"))
+		expect(position(wide, "BOOLEAN")).toBe(position(header, "TYPE"))
+		expect(position(id, "PK")).toBe(position(header, "PK"))
+		expect(position(id, "NN")).toBe(position(header, "NN"))
+		expect(position(parent, "FK")).toBe(position(header, "FK"))
+		for _, flag in ipairs({ "PK", "FK", "NN" }) do
+			expect(position(wide, flag)).toBe(position(header, flag))
+		end
+		expect(parent:find("NN", 1, true)).toBeNil()
 		expect(text).toContain("INDEXES")
 		expect(text).toContain("RELATIONSHIPS")
 	end)

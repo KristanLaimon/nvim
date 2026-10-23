@@ -40,7 +40,7 @@ end
 
 function M.explorer(metadata, filter, selected, notes)
 	local lines, objects =
-		{ "DATABASE EXPLORER", "/: filter  Enter: inspect  b: browse  n: notes", "Filter: " .. (filter or ""), "" }, {}
+		{ "DATABASE EXPLORER", "Enter: inspect  b: browse  :FoxQueryNotes", "Filter: " .. (filter or ""), "" }, {}
 	local candidates = {}
 	for _, item in ipairs(metadata.tables or {}) do
 		candidates[#candidates + 1] = item.key
@@ -80,13 +80,24 @@ function M.inspect(item, metadata, width)
 			end
 		end
 	end
+	local name_width, type_width = 4, 4
 	for _, column in ipairs(item.columns or {}) do
-		rows[#rows + 1] = column.name
+		local name, kind = column.name:gsub("[%c]", " "), tostring(column.type):gsub("[%c]", " ")
+		name_width = math.max(name_width, vim.fn.strdisplaywidth(name))
+		type_width = math.max(type_width, vim.fn.strdisplaywidth(kind))
+	end
+	local function padded(value, cell_width)
+		local text = tostring(value):gsub("[%c]", " ")
+		return text .. string.rep(" ", cell_width - vim.fn.strdisplaywidth(text))
+	end
+	rows[#rows + 1] = padded("NAME", name_width) .. "  " .. padded("TYPE", type_width) .. "  PK  FK  NN"
+	for _, column in ipairs(item.columns or {}) do
+		rows[#rows + 1] = padded(column.name, name_width)
 			.. "  "
-			.. tostring(column.type)
-			.. (column.pk and "  PK" or "")
-			.. (foreign[column.name] and "  FK" or "")
-			.. (not column.nullable and "  NN" or "")
+			.. padded(column.type, type_width)
+			.. (column.pk and "  PK" or "    ")
+			.. (foreign[column.name] and "  FK" or "    ")
+			.. (not column.nullable and "  NN" or "    ")
 	end
 	rows[#rows + 1] = false
 	rows[#rows + 1] = "INDEXES / UNIQUE KEYS"
@@ -199,7 +210,7 @@ function M.map(metadata, key, depth, width)
 		.. " | "
 		.. #tables
 		.. " nodes"
-	lines[#lines + 1] = "Enter recenter | i inspect | / table search | +/- depth | zh/zl pan | q back"
+	lines[#lines + 1] = "Enter recenter | i inspect | / search | +/- depth | zh/zl pan | q back"
 	return lines, objects
 end
 

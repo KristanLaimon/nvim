@@ -232,7 +232,7 @@ describe("FoxQuerier live workflow", function()
 			header = scroll(40)
 			local gutter = vim.fn.getwininfo(win)[1].textoff
 			expect(header:sub(1, gutter)).toBe(string.rep(" ", gutter))
-			expect(header:sub(gutter + 1, gutter + 2)).toBe("| ")
+			expect(header:sub(gutter + 1, gutter + #"│ ")).toBe("│ ")
 			header = scroll(item.result_headers[2].first + 20)
 			expect(header).toContain("other_id")
 			expect(header:find("表nombre%", 1, true)).toBeNil()
@@ -362,7 +362,7 @@ describe("FoxQuerier live workflow", function()
 			item.result = { sets = { set } }
 			query.refresh_view(state)
 			local lines = vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false)
-			expect(vim.wo[state.result_win].winbar).toContain("| text")
+			expect(vim.wo[state.result_win].winbar).toContain("│ text")
 			expect(lines[2]).toContain(vim.json.encode(text))
 			expect(lines[2]).toContain("9007199254740993")
 			expect(lines[2]).toContain("NULL")
@@ -390,6 +390,69 @@ describe("FoxQuerier live workflow", function()
 			vim.fn.maparg("q", "n", false, true).callback()
 			expect(vim.api.nvim_win_is_valid(win)).toBeFalsy()
 			expect(vim.api.nvim_get_current_win()).toBe(state.result_win)
+		end)
+	end)
+
+	it("runs and browses in a large popup without moving dashboard panes", function()
+		project(function(root)
+			local fixture = vim.fn.stdpath("config") .. "/config/tests/query/fixture.db"
+			vim.fn.writefile(vim.fn.readfile(fixture, "b"), root .. "/fixture.db", "b")
+			storage.save(root, "connections.json", {
+				profiles = { { id = "local", engine = "sqlite", path = "fixture.db" } },
+			})
+			query.show("standard")
+			local state = query.state()
+			local item = state.consoles[state.active]
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "SELECT 42 AS answer;" })
+			local function panes()
+				local sizes = {}
+				for _, win in ipairs(vim.api.nvim_tabpage_list_wins(state.tab)) do
+					if vim.api.nvim_win_get_config(win).relative == "" then
+						sizes[win] = { vim.api.nvim_win_get_width(win), vim.api.nvim_win_get_height(win) }
+					end
+				end
+				return sizes
+			end
+			local layout = panes()
+			query.run_popup()
+			expect(vim.wait(5000, function()
+				return state.result_popup and vim.api.nvim_win_is_valid(state.result_popup)
+			end, 10)).toBeTruthy()
+			local popup = state.result_popup
+			expect(vim.api.nvim_win_get_width(popup)).toBe(math.floor(vim.o.columns * 0.9))
+			expect(vim.api.nvim_win_get_height(popup)).toBe(math.floor(vim.o.lines * 0.9))
+			expect(vim.api.nvim_win_get_config(popup).relative).toBe("editor")
+			expect(vim.api.nvim_win_get_buf(popup)).toBe(state.result_buf)
+			expect(vim.wo[popup].winbar).toContain("answer")
+			expect(item.result.sets[1].rows[1][1]).toBe("42")
+			vim.fn.maparg("<Esc>", "n", false, true).callback()
+			expect(vim.api.nvim_win_is_valid(popup)).toBeFalsy()
+			expect(panes()).toEqual(layout)
+			expect(vim.wait(5000, function()
+				return state.metadata.tables and #state.metadata.tables > 0
+			end, 10)).toBeTruthy()
+			vim.api.nvim_set_current_win(state.side_win)
+			for row, object in pairs(state.objects) do
+				if object.key == "things" then
+					vim.api.nvim_win_set_cursor(state.side_win, { row, 0 })
+				end
+			end
+			vim.fn.maparg("B", "n", false, true).callback()
+			expect(vim.wait(5000, function()
+				return state.result_popup and vim.api.nvim_win_is_valid(state.result_popup)
+			end, 10)).toBeTruthy()
+			expect(item.result_table).toBe("things")
+			expect(item.executed_sql).toContain("SELECT * FROM")
+			vim.fn.maparg("q", "n", false, true).callback()
+			vim.api.nvim_set_current_win(state.sql_win)
+			query.run()
+			expect(vim.wait(5000, function()
+				return item.execution == 3 and not item.client.busy
+			end, 10)).toBeTruthy()
+			expect(state.result_popup).toBeNil()
+			query.new()
+			query.results_popup(state, item)
+			expect(state.result_popup).toBeNil()
 		end)
 	end)
 
@@ -567,7 +630,7 @@ describe("FoxQuerier live workflow", function()
 			expect(table.concat(lines, "\n")).toContain("> Player")
 			for row, line in ipairs(lines) do
 				local column = line:find("Bridge", 1, true)
-				if column and line:find("|", 1, true) then
+				if column and line:find("│", 1, true) then
 					vim.api.nvim_win_set_cursor(win, { row, column - 1 })
 					break
 				end
@@ -981,7 +1044,7 @@ describe("FoxQuerier live workflow", function()
 		expect(text:find("more;", 1, true)).toBeNil()
 	end)
 
-	it("renders bordered ASCII result tables and keeps row actions aligned across sets", function()
+	it("renders Unicode result tables and keeps row actions aligned across sets", function()
 		project(function()
 			query.show()
 			local state = query.state()
@@ -991,23 +1054,26 @@ describe("FoxQuerier live workflow", function()
 			item.result = { sets = { first, second, { columns = { "empty" }, rows = {} } } }
 			query.refresh_view(state)
 			local lines = vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false)
-			expect(lines[1]).toBe("+------------+")
+			expect(lines[1]).toBe("┌────────────┐")
 			expect(vim.wo[state.result_win].winbar).toContain("actualRank")
-			expect(table.concat(lines, "\n"):find("| actualRank |", 1, true)).toBeNil()
-			expect(lines[2]).toBe("| CA         |")
+			expect(table.concat(lines, "\n"):find("│ actualRank │", 1, true)).toBeNil()
+			expect(lines[2]).toBe("│ CA         │")
+			expect(lines[4]).toBe("└────────────┘")
+			expect(lines[7]).toContain("┬")
+			expect(lines[10]).toContain("┴")
 			expect(table.concat(lines, "\n")).toContain("NULL")
 			expect(table.concat(lines, "\n")).toContain("表\\ntext")
 			vim.api.nvim_set_current_win(state.result_win)
 			for row, line in ipairs(lines) do
 				vim.api.nvim_win_set_cursor(0, { row, 0 })
 				local set, value = query.row()
-				if line:find("| CA ", 1, true) then
+				if line:find("│ CA ", 1, true) then
 					expect(set).toBe(first)
 					expect(value).toBe(first.rows[1])
-				elseif line:find("| 1 ", 1, true) then
+				elseif line:find("│ 1 ", 1, true) then
 					expect(set).toBe(second)
 					expect(value).toBe(second.rows[1])
-				elseif line:sub(1, 1) == "+" or line:find("actualRank", 1, true) then
+				elseif line:sub(1, #"┌") == "┌" or line:sub(1, #"└") == "└" or line:find("actualRank", 1, true) then
 					expect(value).toBeNil()
 				end
 			end
@@ -1201,8 +1267,9 @@ describe("FoxQuerier live workflow", function()
 					vim.fn.maparg(key, "i", false, true).callback()
 				end
 				expect(shown).toBe(4)
-				query.run = function(kind)
+				query.run = function(kind, _, _, _, _, popup)
 					expect(kind).toBe("statement")
+					expect(popup).toBeNil()
 					runs = runs + 1
 				end
 				for _, mode in ipairs({ "n", "i" }) do
@@ -1211,6 +1278,17 @@ describe("FoxQuerier live workflow", function()
 					end
 				end
 				expect(runs).toBe(8)
+				query.run = function(kind, _, _, _, _, popup)
+					expect(kind).toBe("statement")
+					expect(popup).toBeTruthy()
+					runs = runs + 1
+				end
+				for _, mode in ipairs({ "n", "i" }) do
+					for _, key in ipairs({ "<C-S-CR>", "\27[13;6u", "\27[27;6;13~" }) do
+						vim.fn.maparg(key, mode, false, true).callback()
+					end
+				end
+				expect(runs).toBe(14)
 			end)
 			package.loaded.lazy, package.loaded["blink.cmp"], vim.api.nvim_get_mode, query.run =
 				old_lazy, old_blink, old_mode, old_run

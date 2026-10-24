@@ -490,7 +490,7 @@ end
 
 local function result_header(state)
 	local active = console(state)
-	for _, name in ipairs({ "result_win", "sql_win" }) do
+	for _, name in ipairs({ "result_win", "sql_win", "result_popup" }) do
 		local win = state[name]
 		if valid(win, "win") and vim.api.nvim_win_get_buf(win) == state.result_buf then
 			local info = vim.fn.getwininfo(win)[1]
@@ -678,7 +678,7 @@ function M.inspect(item, state)
 		{ width = width, height = height, title = " Table: " .. item.name:gsub("[%c]", " ") .. " " }
 	)
 	vim.wo[win].wrap = false
-	vim.wo[win].winbar = "J Insert JOIN | b Browse | n Notes | g Relations | q Close"
+	vim.wo[win].winbar = "J Insert JOIN | b Browse | B Browse popup | n Notes | g Relations | q Close"
 	map(buf, "q", function()
 		vim.api.nvim_win_close(win, true)
 	end)
@@ -700,6 +700,10 @@ function M.inspect(item, state)
 	map(buf, "b", function()
 		vim.api.nvim_win_close(win, true)
 		M.browse(item)
+	end)
+	map(buf, "B", function()
+		vim.api.nvim_win_close(win, true)
+		M.browse(item, true)
 	end)
 end
 
@@ -841,6 +845,9 @@ function M.show(view)
 	map(state.side_buf, "b", function()
 		M.browse(selected_object(state))
 	end)
+	map(state.side_buf, "B", function()
+		M.browse(selected_object(state), true)
+	end)
 	map(state.side_buf, "q", function()
 		vim.api.nvim_set_current_win(state.sql_win)
 		if state.compact then
@@ -852,9 +859,20 @@ function M.show(view)
 	map(state.result_buf, "y", M.copy_row)
 	map(state.result_buf, "e", M.export)
 	map(state.result_buf, "q", function()
+		if valid(state.result_popup, "win") and vim.api.nvim_get_current_win() == state.result_popup then
+			vim.api.nvim_win_close(state.result_popup, true)
+			state.result_popup = nil
+			return
+		end
 		vim.api.nvim_set_current_win(state.sql_win)
 		if state.compact then
 			vim.api.nvim_win_set_buf(state.sql_win, state.active or M.empty(state))
+		end
+	end)
+	map(state.result_buf, "<Esc>", function()
+		if valid(state.result_popup, "win") and vim.api.nvim_get_current_win() == state.result_popup then
+			vim.api.nvim_win_close(state.result_popup, true)
+			state.result_popup = nil
 		end
 	end)
 	map(state.result_buf, "?", M.help)
@@ -992,6 +1010,11 @@ function M.new(relative)
 		vim.keymap.set({ "n", "i" }, key, function()
 			M.run("statement")
 		end, { buffer = buf, silent = true, desc = "Query: run statement" })
+	end
+	for _, key in ipairs({ "<C-S-CR>", "\27[13;6u", "\27[27;6;13~" }) do
+		vim.keymap.set({ "n", "i" }, key, function()
+			M.run_popup("statement")
+		end, { buffer = buf, silent = true, desc = "Query: run statement in popup" })
 	end
 	for _, key in ipairs({ "<C-Space>", "<C-@>", "<C-x><C-o>", "\27[32;5u", "\27[27;5;32~" }) do
 		vim.keymap.set("i", key, M.complete, { buffer = buf, silent = true, desc = "Query: database completion" })
@@ -1505,7 +1528,7 @@ function M.autorun(state)
 	M.run("statement", statement, nil, nil, true)
 end
 
-function M.run(kind, supplied_sql, supplied_params, source_table, automatic)
+function M.run(kind, supplied_sql, supplied_params, source_table, automatic, popup)
 	if kind and not vim.tbl_contains({ "statement", "selection", "section", "file" }, kind) then
 		notify("Choose statement, selection, section, or file", vim.log.levels.WARN)
 		return
@@ -1566,7 +1589,7 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic)
 				and item.client.connected
 				and storage.fingerprint(item.profile) == storage.fingerprint(profile)
 			then
-				M.run(kind, query, supplied_params, source_table, automatic)
+				M.run(kind, query, supplied_params, source_table, automatic, popup)
 			end
 		end
 		if not (item.client and item.client.connecting) then
@@ -1629,6 +1652,9 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic)
 					end
 				end
 				M.refresh_view(state)
+				if result and popup then
+					M.results_popup(state, item)
+				end
 				if item.auto_pending then
 					item.auto_pending = nil
 					M.autorun(state)
@@ -1736,7 +1762,11 @@ function M.note_badges(state, profile)
 	end
 end
 
-function M.browse(item)
+function M.run_popup(kind)
+	M.run(kind or "statement", nil, nil, nil, nil, true)
+end
+
+function M.browse(item, popup)
 	local state, active = M.state(), console(M.state())
 	item = item or selected_object(state)
 	if not item or not active or not active.profile then
@@ -1752,7 +1782,7 @@ function M.browse(item)
 		end
 	end
 	local order = #ordering > 0 and (" ORDER BY " .. table.concat(ordering, ", ")) or ""
-	M.run("statement", "SELECT * FROM " .. name .. order .. " LIMIT 200", {}, item.key)
+	M.run("statement", "SELECT * FROM " .. name .. order .. " LIMIT 200", {}, item.key, nil, popup)
 end
 
 function M.insert_join(target)
@@ -1901,6 +1931,32 @@ function M.graph(all)
 	end)
 end
 
+function M.results_popup(state, item)
+	state = state or M.state()
+	item = item or console(state)
+	if
+		not valid(state.tab, "tab")
+		or vim.api.nvim_get_current_tabpage() ~= state.tab
+		or console(state) ~= item
+		or not item
+		or not item.result
+	then
+		return
+	end
+	M.refresh_view(state)
+	if valid(state.result_popup, "win") then
+		vim.api.nvim_win_close(state.result_popup, true)
+	end
+	local _, win = require("fox.core.ui").float(panel(state, "result_buf"), {
+		width = 0.9,
+		height = 0.9,
+		title = " Query results | q / Esc close ",
+	})
+	state.result_popup = win
+	vim.wo[win].wrap = false
+	result_header(state)
+end
+
 function M.results()
 	local state = M.state()
 	if not valid(state.sql_win, "win") then
@@ -1953,6 +2009,7 @@ function M.help()
 		lines = {
 			"F3: Editor / Query | Shift+F3 or gV: toggle diagram | gC: connections sidebar",
 			"Ctrl+Enter or F5: run (Normal / Insert); Ctrl+Space or Ctrl+X Ctrl+O: complete (Insert)",
+			"Ctrl+Shift+Enter: run in a 90% results popup; B: browse table in popup; q / Esc: close popup",
 			"Ctrl+h/j/k/l: focus pane | gN: new query | gE: explorer/diagram",
 			"Connections pane: a add, e edit, d delete profile, Enter connect, D disconnect",
 			"FoxQueryNew / FoxQueryOpen: SQL tabs; :write saves locally",

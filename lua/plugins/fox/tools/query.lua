@@ -7,6 +7,8 @@ local commands = {
 	"FoxQueryOpen",
 	"FoxQueryFiles",
 	"FoxQueryRun",
+	"FoxQueryRunPopup",
+	"FoxQueryBrowsePopup",
 	"FoxQueryAutoRun",
 	"FoxQueryComplete",
 	"FoxQueryCancel",
@@ -109,6 +111,18 @@ return {
 			end,
 		})
 		command("FoxQueryCancel", query.cancel)
+		command("FoxQueryRunPopup", function(args)
+			query.run_popup(args.args ~= "" and args.args or "statement")
+		end, {
+			nargs = "?",
+			range = true,
+			complete = function()
+				return { "statement", "selection", "section", "file" }
+			end,
+		})
+		command("FoxQueryBrowsePopup", function()
+			query.browse(nil, true)
+		end)
 		command("FoxQueryComplete", query.complete)
 		command("FoxQueryAutoRun", function()
 			local state = query.state()

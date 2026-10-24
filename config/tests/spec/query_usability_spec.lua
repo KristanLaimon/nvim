@@ -36,6 +36,10 @@ describe("FoxQuerier usability", function()
 				end
 			end
 			local text = table.concat(lines, "\n")
+			for _, glyph in ipairs({ "┌", "┐", "└", "┘", "─", "│", "├" }) do
+				expect(text).toContain(glyph)
+			end
+			expect(text:find("+---", 1, true)).toBeNil()
 			expect(text).toContain("> Main")
 			expect(positions.Neighbor1.x < positions.Main.x).toBeTruthy()
 			expect(positions.Neighbor2.x > positions.Main.x).toBeTruthy()

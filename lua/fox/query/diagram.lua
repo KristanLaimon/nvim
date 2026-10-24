@@ -41,6 +41,40 @@ function M.render(graph, metadata, width, column_limit)
 	local function style(row, column, length, group)
 		styles[#styles + 1] = { row = row, column = column, length = length, group = group }
 	end
+	-- Merge up/right/down/left strokes so bends and intersecting links keep their junctions.
+	local strokes = {}
+	local glyphs =
+		{ "│", "─", "└", "│", "│", "┌", "├", "─", "┘", "─", "┴", "┐", "┤", "┬", "┼" }
+	local masks = {
+		["│"] = 5,
+		["─"] = 10,
+		["┄"] = 10,
+		["┌"] = 6,
+		["┐"] = 12,
+		["└"] = 3,
+		["┘"] = 9,
+		["├"] = 7,
+		["┤"] = 13,
+		["┬"] = 14,
+		["┴"] = 11,
+		["┼"] = 15,
+	}
+	local function segment(r1, c1, r2, c2, dotted)
+		local dr, dc = r2 == r1 and 0 or (r2 > r1 and 1 or -1), c2 == c1 and 0 or (c2 > c1 and 1 or -1)
+		local length = math.abs(r2 - r1) + math.abs(c2 - c1)
+		local forward = dr == 1 and 4 or dr == -1 and 1 or dc == 1 and 2 or 8
+		local backward = dr == 1 and 1 or dr == -1 and 4 or dc == 1 and 8 or 2
+		for at = 0, length do
+			local row, col = r1 + dr * at, c1 + dc * at
+			local mask = bit.bor(at < length and forward or 0, at > 0 and backward or 0)
+			strokes[row] = strokes[row] or {}
+			mask = bit.bor(mask, strokes[row][col] or masks[cells[row] and cells[row][col]] or 0)
+			strokes[row][col] = mask
+			if mask > 0 then
+				put(row, col, dotted and (mask == 2 or mask == 8 or mask == 10) and "┄" or glyphs[mask])
+			end
+		end
+	end
 	put(1, 1, graph.kind == "schema" and "SCHEMA RELATIONSHIP MAP" or "LIVE QUERY DIAGRAM")
 	style(1, 1, 100, "Title")
 	local state = graph.partial and "Partial SQL: resolved portions only" or "Diagram follows SQL at the cursor"
@@ -172,12 +206,12 @@ function M.render(graph, metadata, width, column_limit)
 		local visible = math.min(#rows, math.max(column_limit, selected))
 		local height = visible + 4 + (#rows > visible and 1 or 0)
 		for row = y, y + height - 1 do
-			put(row, x, "|" .. string.rep(" ", card_width - 2) .. "|")
+			put(row, x, "│" .. string.rep(" ", card_width - 2) .. "│")
 			objects[row] = objects[row] or { regions = {} }
 			objects[row].regions[#objects[row].regions + 1] = { first = x - 1, last = x + card_width - 1, item = item }
 		end
-		put(y, x, "+" .. string.rep("-", card_width - 2) .. "+")
-		put(y + height - 1, x, "+" .. string.rep("-", card_width - 2) .. "+")
+		put(y, x, "┌" .. string.rep("─", card_width - 2) .. "┐")
+		put(y + height - 1, x, "└" .. string.rep("─", card_width - 2) .. "┘")
 		put(y + 1, x + 2, (node.focus and "> " or "") .. node.alias, card_width - 4)
 		style(y + 1, x + 1, card_width - 2, node.focus and "Search" or item and "Title" or "DiagnosticWarn")
 		put(y + 2, x + 2, graph.kind == "schema" and "PK FK Column" or node.name, card_width - 4)
@@ -230,16 +264,10 @@ function M.render(graph, metadata, width, column_limit)
 					end
 				end
 			end
-			local stroke = edge.predicate and vim.trim(edge.predicate) ~= "" and "-" or "."
-			for x = math.min(sx, gutter), math.max(sx, gutter) do
-				put(sr, x, stroke)
-			end
-			for row = math.min(sr, tr), math.max(sr, tr) do
-				put(row, gutter, "|")
-			end
-			for x = math.min(tx, gutter), math.max(tx, gutter) do
-				put(tr, x, stroke)
-			end
+			local dotted = not edge.predicate or vim.trim(edge.predicate) == ""
+			segment(sr, sx, sr, gutter, dotted)
+			segment(sr, gutter, tr, gutter)
+			segment(tr, gutter, tr, tx, dotted)
 			put(tr, tx, stem_target and "^" or tx == target.x and ">" or "<")
 			style(sr, math.min(sx, gutter), math.abs(sx - gutter) + 1, "DiagnosticInfo")
 			style(tr, math.min(tx, gutter), math.abs(tx - gutter) + 1, "DiagnosticInfo")

@@ -301,21 +301,20 @@ function M.results(result)
 				end
 				values[#values + 1] = text .. string.rep(" ", widths[at] - vim.fn.strdisplaywidth(text))
 			end
-			return "| " .. table.concat(values, " | ") .. " |"
+			return "│ " .. table.concat(values, " │ ") .. " │"
 		end
 		local segments = {}
 		for _, width in ipairs(widths) do
-			segments[#segments + 1] = string.rep("-", width + 2)
+			segments[#segments + 1] = string.rep("─", width + 2)
 		end
-		local border = "+" .. table.concat(segments, "+") .. "+"
 		headers[#headers + 1] = { first = #lines + 1, text = format_row(set.columns) }
-		lines[#lines + 1] = border
+		lines[#lines + 1] = "┌" .. table.concat(segments, "┬") .. "┐"
 		for row_index, row in ipairs(set.rows) do
 			local strings = set.strings and set.strings[row_index]
 			lines[#lines + 1] = format_row(row, strings)
 			rows[#lines] = { set = set, row = row, widths = widths, strings = strings }
 		end
-		lines[#lines + 1] = border
+		lines[#lines + 1] = "└" .. table.concat(segments, "┴") .. "┘"
 		lines[#lines + 1] = "Result "
 			.. index
 			.. " | "

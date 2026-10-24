@@ -6,6 +6,13 @@ M.settings = {
 	store_file = vim.fn.stdpath("config") .. "/.foxnvim/theme.json",
 }
 
+local function palette_stamp()
+	local stat = (vim.uv or vim.loop).fs_stat(M.settings.palette_file)
+	if stat then
+		return table.concat({ stat.ino, stat.size, stat.mtime.sec, stat.mtime.nsec, stat.ctime.sec, stat.ctime.nsec }, ":")
+	end
+end
+
 function M.is_available()
 	local env = require("fox.core.environment").detect()
 	return env.is_ryoku and not env.is_wsl
@@ -26,6 +33,8 @@ function M.translate(raw)
 			c[key] = value
 		end
 	end
+	c.background = c.background or c.color0
+	c.foreground = c.foreground or c.color7
 	if not c.background or not c.foreground then
 		return nil
 	end
@@ -55,6 +64,7 @@ function M.apply(opts)
 	if not M.is_available() then
 		return false
 	end
+	local stamp = palette_stamp()
 	local raw = store.load(M.settings.palette_file, {})
 	local colors = M.translate(raw)
 	if not colors then
@@ -72,9 +82,22 @@ function M.apply(opts)
 	for i = 0, 15 do
 		vim.g["terminal_color_" .. i] = raw["color" .. i]
 	end
-	M._last = vim.json.encode(raw)
+	M._stamp = stamp
 	vim.api.nvim_exec_autocmds("ColorScheme", { pattern = "ryoku-fox", modeline = false })
 	return true
+end
+
+function M.refresh()
+	if not M.is_sync_enabled() then
+		return
+	end
+	local stamp = palette_stamp()
+	if stamp and stamp ~= M._stamp then
+		-- Keep the previous stamp on failure so a partial write is retried.
+		if M.apply({ quiet = true }) then
+			M._stamp = stamp
+		end
+	end
 end
 
 function M.stop_watcher()
@@ -91,18 +114,7 @@ function M.start_watcher()
 	end
 	-- Polling survives atomic replacement of the palette and missing cache dirs.
 	M._timer = (vim.uv or vim.loop).new_timer()
-	M._timer:start(
-		1000,
-		1000,
-		vim.schedule_wrap(function()
-			if M.is_sync_enabled() then
-				local raw = store.load(M.settings.palette_file, {})
-				if vim.json.encode(raw) ~= M._last then
-					M.apply({ quiet = true })
-				end
-			end
-		end)
-	)
+	M._timer:start(1000, 1000, vim.schedule_wrap(M.refresh))
 end
 
 function M.set_sync_enabled(enabled, opts)
@@ -155,6 +167,7 @@ function M.setup()
 		vim.notify("Ryoku theme sync: " .. (M.is_sync_enabled() and "ON" or "OFF"))
 	end, { desc = "Show Ryoku theme synchronization status" })
 	vim.api.nvim_create_autocmd("VimLeavePre", { callback = M.stop_watcher })
+	vim.api.nvim_create_autocmd("FocusGained", { callback = M.refresh })
 end
 
 return setmetatable({

@@ -84,8 +84,10 @@ Choose **Toggle Ryoku Theme Auto Sync** in `:CommandPalette`, or run
 `:FoxRyokuSyncToggle`, to enable or disable persistent desktop theme sync.
 `:FoxRyokuSyncNow` applies the current palette once; `:FoxRyokuSyncStatus`
 shows whether automatic sync is enabled. Sync follows wallpaper and theme
-changes by reading `~/.cache/ryoku/colors.json` every second, including atomic
-file replacements. No Ryoku configuration is modified. Turning sync off restores
+changes by checking `~/.cache/ryoku/colors.json` every second and on editor focus,
+reading the palette only when the file changes, including atomic replacements.
+Both Material palettes and terminal-only `color0`–`color15` palettes are supported.
+No Ryoku configuration is modified. Turning sync off restores
 the previous editor theme; selecting an editor theme disables desktop sync.
 
 Kitty sessions are supported through Neovim's terminal UI. FoxVim's managed

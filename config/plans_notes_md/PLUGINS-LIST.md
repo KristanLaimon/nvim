@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **39 externos** y **63 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **38 externos** y **63 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -43,7 +43,6 @@ Total actual: **39 externos** y **63 specs locales**. El plan de sustitución es
 **LSP**
 
 - `b0o/schemastore.nvim` — [`lsp/blink_sources.lua`](../../lua/plugins/lsp/blink_sources.lua), [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
-- `Hoffs/omnisharp-extended-lsp.nvim` — [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `jwalton512/vim-blade` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
 - `neovim/nvim-lspconfig` — [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `rafamadriz/friendly-snippets` — [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
@@ -163,6 +162,8 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 ### Submódulos y soporte local
 
 No son plugins externos ni specs independientes adicionales:
+
+- `lua/fox/langs/csharp/navigation.lua`: navegación OmniSharp y fuentes de metadata/generadas asíncronas.
 
 - `lua/fox/projects/history.lua` y `lua/telescope/_extensions/projects.lua`: historial local persistente y compatibilidad de `:Telescope projects`.
 - `lua/fox/dap/virtual_text.lua`: variables DAP con extmarks, controles y seguimiento del ciclo de sesión; sustituye a `nvim-dap-virtual-text`.

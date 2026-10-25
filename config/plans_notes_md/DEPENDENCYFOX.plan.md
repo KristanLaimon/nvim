@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **10 reemplazos completados: 39 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **11 reemplazos completados: 38 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -27,7 +27,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 8 | `goolord/alpha-nvim` | Media | Completado | Buffer inicial propio con botones, acciones, geometría y navegación por teclado. |
 | 9 | `windwp/nvim-ts-autotag` | Media | Completado | Cerrar/renombrar etiquetas con Treesitter; cubrir JSX, fragmentos y etiquetas vacías. |
 | 10 | `Wansmer/symbol-usage.nvim` | Media | Completado | Referencias LSP y extmarks con debounce y protección ante respuestas atrasadas. |
-| 11 | `Hoffs/omnisharp-extended-lsp.nvim` | Media | Pendiente | Traducir respuestas de OmniSharp y abrir fuentes de metadatos; conservar navegación C#. |
+| 11 | `Hoffs/omnisharp-extended-lsp.nvim` | Media | Completado | Traducir respuestas de OmniSharp y abrir fuentes de metadatos; conservar navegación C#. |
 | 12 | `nvim-tree/nvim-web-devicons` | Media | Pendiente | Cubrir API mediante iconos locales y retirar specs consumidoras; hoy mini.icons aporta un mock. |
 | 13 | `nvim-mini/mini.icons` | Media | Pendiente | Catálogo local, colores, sufijos compuestos, overrides por lenguaje y API devicons. |
 | 14 | `brenoprata10/nvim-highlight-colors` | Media | Pendiente | Colores CSS/Tailwind a extmarks; preservar formatos configurados y rendimiento al editar. |
@@ -138,6 +138,10 @@ Implementación propia en fox.editor.autotag: cierre con Treesitter, respeto de 
 
 Contador propio en fox.lsp.symbol_usage con documentSymbol/references, virt_lines, debounce, cancelación, límite de cuatro peticiones simultáneas y rechazo de respuestas antiguas o clientes desconectados. Mantiene los formatos bubbles/plain/labels del picker. Seis pruebas con respuestas controladas y comprobación real con gopls: función Foo con dos usos mostró 2 references. Retirada la dependencia externa y el lockfile.
 
+## Reemplazo 11: Hoffs/omnisharp-extended-lsp.nvim
+
+Navegación propia en fox.langs.csharp.navigation. Traduce los cuatro endpoints utilizados y carga metadata/sourcegeneratedfile de forma asíncrona en buffers readonly aislados por cliente; conserva el nombre del servidor al navegar desde esos buffers y no sobrescribe ediciones. Mantiene saltos únicos, Telescope y quickfix, posiciones UTF-16 y rechazo de respuestas tardías. Ocho pruebas con respuestas de protocolo controladas cubren estas rutas; no había OmniSharp/.NET instalado para verificar un servidor C# real.
+
 ## Siguiente ítem
 
-`Hoffs/omnisharp-extended-lsp.nvim`: continuar con el alcance indicado en la tabla.
+`nvim-tree/nvim-web-devicons`: continuar con el alcance indicado en la tabla.

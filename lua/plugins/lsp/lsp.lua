@@ -144,10 +144,6 @@ return {
 		opts = {},
 	},
 	{
-		"Hoffs/omnisharp-extended-lsp.nvim",
-		lazy = true,
-	},
-	{
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufReadPost", "BufNewFile", "FileType" },
 		cmd = { "LspInfo", "LspInstall", "LspStart" },
@@ -155,7 +151,6 @@ return {
 			"williamboman/mason.nvim",
 			"williamboman/mason-lspconfig.nvim",
 			"b0o/schemastore.nvim",
-			"Hoffs/omnisharp-extended-lsp.nvim",
 		},
 		opts = function()
 			return {

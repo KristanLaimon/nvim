@@ -153,7 +153,7 @@ local function goto_definition()
 	local clients = attached_clients()
 	for _, client in ipairs(clients) do
 		if client.name == "omnisharp" or client.name == "omnisharp_mono" then
-			local ok_oe, oe = pcall(require, "omnisharp_extended")
+			local ok_oe, oe = pcall(require, "fox.langs.csharp.navigation")
 			if ok_oe then
 				if has_telescope then
 					oe.telescope_lsp_definitions()
@@ -266,7 +266,7 @@ local function show_symbol_usages()
 
 	for _, client in ipairs(clients) do
 		if client.name == "omnisharp" or client.name == "omnisharp_mono" then
-			local ok_oe, oe = pcall(require, "omnisharp_extended")
+			local ok_oe, oe = pcall(require, "fox.langs.csharp.navigation")
 			if ok_oe then
 				if has_telescope then
 					oe.telescope_lsp_references()

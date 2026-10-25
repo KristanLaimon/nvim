@@ -25,28 +25,28 @@ M.lsp_config = {
 		enable_decompilation_support = true,
 		handlers = {
 			["textDocument/definition"] = function(...)
-				local ok, oe = pcall(require, "omnisharp_extended")
+				local ok, oe = pcall(require, "fox.langs.csharp.navigation")
 				if ok then
 					return oe.handler(...)
 				end
 				return vim.lsp.handlers["textDocument/definition"](...)
 			end,
 			["textDocument/typeDefinition"] = function(...)
-				local ok, oe = pcall(require, "omnisharp_extended")
+				local ok, oe = pcall(require, "fox.langs.csharp.navigation")
 				if ok then
 					return oe.type_definition_handler(...)
 				end
 				return vim.lsp.handlers["textDocument/typeDefinition"](...)
 			end,
 			["textDocument/references"] = function(...)
-				local ok, oe = pcall(require, "omnisharp_extended")
+				local ok, oe = pcall(require, "fox.langs.csharp.navigation")
 				if ok then
 					return oe.references_handler(...)
 				end
 				return vim.lsp.handlers["textDocument/references"](...)
 			end,
 			["textDocument/implementation"] = function(...)
-				local ok, oe = pcall(require, "omnisharp_extended")
+				local ok, oe = pcall(require, "fox.langs.csharp.navigation")
 				if ok then
 					return oe.implementation_handler(...)
 				end

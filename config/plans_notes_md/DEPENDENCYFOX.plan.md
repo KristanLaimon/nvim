@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. Siete reemplazos completados: **42 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **8 reemplazos completados: 41 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -24,7 +24,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 5 | `jay-babu/mason-nvim-dap.nvim` | Fácil-media | Completado | Resolver adaptadores desde los metadatos y rutas Mason locales; verificar cada adaptador. |
 | 6 | `doki-theme/doki-theme-vim` | Fácil-media | Completado | Conservar temas seleccionables, recursos y atribuciones; restaurar selección al iniciar. |
 | 7 | `ahmedkhalf/project.nvim` | Media | Completado | Historial y raíz locales; migrar datos y consumidores sin perder favoritos ni WSL. |
-| 8 | `goolord/alpha-nvim` | Media | Pendiente | Buffer inicial propio con botones, acciones, geometría y navegación por teclado. |
+| 8 | `goolord/alpha-nvim` | Media | Completado | Buffer inicial propio con botones, acciones, geometría y navegación por teclado. |
 | 9 | `windwp/nvim-ts-autotag` | Media | Pendiente | Cerrar/renombrar etiquetas con Treesitter; cubrir JSX, fragmentos y etiquetas vacías. |
 | 10 | `Wansmer/symbol-usage.nvim` | Media | Pendiente | Referencias LSP y extmarks con debounce y protección ante respuestas atrasadas. |
 | 11 | `Hoffs/omnisharp-extended-lsp.nvim` | Media | Pendiente | Traducir respuestas de OmniSharp y abrir fuentes de metadatos; conservar navegación C#. |
@@ -126,6 +126,10 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 - `:ProjectRoot` busca el marcador más cercano y usa el root del LSP como fallback; solo cambia cwd cuando se invoca. La extensión local conserva `:Telescope projects` y la selección de proyectos de Environments.
 - Retiradas ambas declaraciones externas y el lockfile. Siete pruebas del historial y dos del comando pasaron; una comprobación de integración abrió el picker real desde la extensión local de Telescope.
 
+## Reemplazo 8: goolord/alpha-nvim
+
+Dashboard propio en fox.ui.dashboard con buffer scratch, botones originales, navegación, centrado responsive, comandos Alpha/AlphaRedraw y evento AlphaReady. Conserva el filetype alpha para los consumidores FOX, WSL, pines y restauración al cerrar el último buffer. Tres pruebas con buffers reales cubren render, navegación, acciones y protección de cambios sin guardar. No requiere clonar Alpha.
+
 ## Siguiente ítem
 
-`goolord/alpha-nvim`: implementar el dashboard local, conservando sus botones, acciones, geometría y navegación por teclado.
+`windwp/nvim-ts-autotag`: continuar con el alcance indicado en la tabla.

@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **42 externos** y **60 specs locales**. El plan de sustitución está en [PLAN.md](PLAN.md).
+Total actual: **41 externos** y **61 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -59,7 +59,6 @@ Total actual: **42 externos** y **60 specs locales**. El plan de sustitución es
 
 - `akinsho/bufferline.nvim` — [`ui/bufferline.lua`](../../lua/plugins/ui/bufferline.lua)
 - `brenoprata10/nvim-highlight-colors` — [`ui/css-colors.lua`](../../lua/plugins/ui/css-colors.lua)
-- `goolord/alpha-nvim` — [`ui/dashboard.lua`](../../lua/plugins/ui/dashboard.lua)
 - `nvim-lualine/lualine.nvim` — [`ui/themes.lua`](../../lua/plugins/ui/themes.lua)
 - `nvim-mini/mini.icons` — [`ui/devicons.lua`](../../lua/plugins/ui/devicons.lua)
 - `rcarriga/nvim-notify` — [`ui/notify.lua`](../../lua/plugins/ui/notify.lua)
@@ -156,6 +155,8 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox_sneak_peek` — [`fox/dev/sneak_peek.lua`](../../lua/plugins/fox/dev/sneak_peek.lua)
 - `fox_tasks` — [`fox/dev/tasks.lua`](../../lua/plugins/fox/dev/tasks.lua)
 - `fox_terminal` — [`fox/dev/terminal.lua`](../../lua/plugins/fox/dev/terminal.lua)
+
+- `fox_dashboard` — [`ui/dashboard.lua`](../../lua/plugins/ui/dashboard.lua)
 
 ### Submódulos y soporte local
 

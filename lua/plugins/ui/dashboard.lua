@@ -1,5 +1,5 @@
 -- ============================================================================
--- PLUGINS: Starter Dashboard (alpha-nvim) with Environment Detection & Responsive Banners
+-- PLUGINS: Native FoxVim Dashboard with Environment Detection & Responsive Banners
 -- ============================================================================
 
 local env_lib = require("fox.core.environment")
@@ -30,13 +30,13 @@ local settings = {
 }
 
 return {
-	"goolord/alpha-nvim",
+	name = "fox_dashboard",
+	dir = require("fox.core.lazyspec").for_module(),
 	cmd = { "Alpha", "AlphaRedraw" },
 	event = "VimEnter",
-	dependencies = { "nvim-tree/nvim-web-devicons" },
 	config = function()
-		local alpha = require("alpha")
-		local dashboard = require("alpha.themes.dashboard")
+		local alpha = require("fox.ui.dashboard")
+		local dashboard = alpha.layout()
 		local env = env_lib.detect()
 
 		--- Determines the visible width of the dashboard window, accounting for Neo-tree width.

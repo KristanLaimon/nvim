@@ -1,5 +1,4 @@
 {
-  "alpha-nvim": { "branch": "main", "commit": "6c6a89d5b068b5251c8bdf0dd57bb921bcfeeb09" },
   "baleia.nvim": { "branch": "main", "commit": "710537ff5cd669c5a76c5f5b6a9169fd9b913d18" },
   "blade-nav.nvim": { "branch": "main", "commit": "909825e2cfa5171867f2109f7cedc5e3e5d60956" },
   "blink.cmp": { "branch": "main", "commit": "78336bc89ee5365633bcf754d93df01678b5c08f" },

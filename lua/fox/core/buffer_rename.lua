@@ -46,7 +46,10 @@ function M.update_buffers_path(old_path, new_path)
 								"Rename target has unsaved changes; preserving both buffers: " .. target_new_path,
 								vim.log.levels.WARN
 							)
-							target_new_path = nil
+							local recovered = "fox-recovered://" .. existing .. "/" .. target_new_path
+							if not pcall(vim.api.nvim_buf_set_name, existing, recovered) then
+								target_new_path = nil
+							end
 						else
 							pcall(vim.api.nvim_buf_delete, existing, { force = false })
 						end

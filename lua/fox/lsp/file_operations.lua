@@ -117,7 +117,7 @@ function M.dispatch(phase, operation, filename, destination)
 				end
 				local ticks = snapshot()
 				local ok, response = pcall(client.request_sync, client, method, params, timeout)
-				if ok and response and response.result then
+				if ok and response and type(response.result) == "table" then
 					local applied, err = M.apply(response.result, client.offset_encoding, ticks)
 					if not applied then
 						vim.notify("File operation LSP edit skipped: " .. tostring(err), vim.log.levels.WARN)

@@ -59,9 +59,13 @@ t.describe("LSP filesystem operations", function()
 		vim.api.nvim_buf_set_name(b, root .. "/a.ts")
 		vim.api.nvim_buf_set_lines(b, 0, -1, false, { "😀foo unchanged" })
 		local uri = vim.uri_from_bufnr(b)
-		local edit = { changes = { [uri] = {
-			{ range = { start = { line = 0, character = 2 }, ["end"] = { line = 0, character = 5 } }, newText = "bar" },
-		} } }
+		local edit = {
+			changes = {
+				[uri] = {
+					{ range = { start = { line = 0, character = 2 }, ["end"] = { line = 0, character = 5 } }, newText = "bar" },
+				},
+			},
+		}
 		t.expect(m.apply(edit, "utf-16", { [b] = vim.api.nvim_buf_get_changedtick(b) })).toBe(true)
 		t.expect(vim.api.nvim_buf_get_lines(b, 0, -1, false)[1]).toBe("😀bar unchanged")
 		local ok = m.apply(edit, "utf-16", { [b] = -1 })
@@ -72,11 +76,19 @@ t.describe("LSP filesystem operations", function()
 		t.expect(m.apply({ documentChanges = { { kind = "delete", uri = "file:///tmp/a" } } }, "utf-16", {})).toBe(false)
 		t.expect(
 			m.apply(
-				{ documentChanges = { { textDocument = { uri = vim.uri_from_fname(root .. "/x.ts"), version = 999 }, edits = {} } } },
+				{
+					documentChanges = {
+						{ textDocument = { uri = vim.uri_from_fname(root .. "/x.ts"), version = 999 }, edits = {} },
+					},
+				},
 				"utf-16",
 				{}
 			)
 		).toBe(false)
+		client.request_sync = function()
+			return { result = vim.NIL }
+		end
+		m.dispatch("will", "Rename", root .. "/a.ts", root .. "/b.ts")
 		client.request_sync = function()
 			error("disconnected")
 		end

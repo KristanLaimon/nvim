@@ -15,12 +15,9 @@
 --   :GitBlameCopyFileURL    -- Copy file URL to clipboard
 -- ============================================================================
 
-local function set_gitblame_highlight()
-	vim.api.nvim_set_hl(0, "GitBlame", { default = false, link = "Comment", italic = true })
-end
-
 return {
-	"f-person/git-blame.nvim",
+	name = "fox_inline_blame",
+	dir = require("fox.core.lazyspec").for_module(),
 	event = { "BufReadPost" },
 	cmd = {
 		"GitBlameToggle",
@@ -51,14 +48,6 @@ return {
 		},
 	},
 	config = function(_, opts)
-		set_gitblame_highlight()
-		vim.api.nvim_create_autocmd("ColorScheme", {
-			group = vim.api.nvim_create_augroup("fox_gitblame_hl", { clear = true }),
-			callback = set_gitblame_highlight,
-		})
-		local ok, gitblame = pcall(require, "gitblame")
-		if ok and gitblame and gitblame.setup then
-			gitblame.setup(opts)
-		end
+		require("fox.git.inline_blame").setup(opts)
 	end,
 }

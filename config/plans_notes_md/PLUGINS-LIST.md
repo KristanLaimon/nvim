@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **30 externos** y **67 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **29 externos** y **68 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -17,7 +17,6 @@ Total actual: **30 externos** y **67 specs locales**. El plan de sustitución es
 
 **Editor**
 
-- `f-person/git-blame.nvim` — [`editor/git_blame.lua`](../../lua/plugins/editor/git_blame.lua)
 - `folke/snacks.nvim` — [`editor/neo-tree.lua`](../../lua/plugins/editor/neo-tree.lua)
 - `iamcco/markdown-preview.nvim` — [`editor/markdown.lua`](../../lua/plugins/editor/markdown.lua)
 - `lewis6991/gitsigns.nvim` — [`editor/gitsigns.lua`](../../lua/plugins/editor/gitsigns.lua)
@@ -64,6 +63,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 ### Core
 
+- `fox_icons` — [`ui/devicons.lua`](../../lua/plugins/ui/devicons.lua)
 - `fox_theme_startup` — [`ui/themes.lua`](../../lua/plugins/ui/themes.lua)
 - `image_viewer` — [`fox/ui/image_viewer.lua`](../../lua/plugins/fox/ui/image_viewer.lua)
 
@@ -79,17 +79,19 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox_line_endings` — [`fox/editor/line_endings.lua`](../../lua/plugins/fox/editor/line_endings.lua)
 - `fox_neotree_hidden` — [`fox/editor/neotree_hidden.lua`](../../lua/plugins/fox/editor/neotree_hidden.lua)
 - `fox_neotree_mover` — [`fox/editor/neotree_mover.lua`](../../lua/plugins/fox/editor/neotree_mover.lua)
-- `fox_neotree_wrap` — [`fox/editor/neotree_wrap.lua`](../../lua/plugins/fox/editor/neotree_wrap.lua)
 - `fox_relative_path` — [`fox/editor/relative_path.lua`](../../lua/plugins/fox/editor/relative_path.lua)
 - `fox_smart_check` — [`fox/editor/smart_check.lua`](../../lua/plugins/fox/editor/smart_check.lua)
 - `fox_tailwind_organizer` — [`fox/editor/tailwind_organizer.lua`](../../lua/plugins/fox/editor/tailwind_organizer.lua)
 
 **LSP**
 
+- `fox_blade` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
+- `fox_laravel` — [`lsp/blade_navigation.lua`](../../lua/plugins/lsp/blade_navigation.lua)
 - `fox_php_tools` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
 
 **UI**
 
+- `fox_color_highlights` — [`ui/css-colors.lua`](../../lua/plugins/ui/css-colors.lua)
 - `fox_colorscheme_preview` — [`fox/ui/colorscheme_preview.lua`](../../lua/plugins/fox/ui/colorscheme_preview.lua)
 - `fox_font` — [`fox/ui/font.lua`](../../lua/plugins/fox/ui/font.lua)
 - `fox_help_modal` — [`fox/ui/help_modal.lua`](../../lua/plugins/fox/ui/help_modal.lua)
@@ -110,6 +112,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox_dotnet_creator` — [`fox/tools/dotnet_creator.lua`](../../lua/plugins/fox/tools/dotnet_creator.lua)
 - `fox_environments` — [`fox/tools/environments.lua`](../../lua/plugins/fox/tools/environments.lua)
 - `fox_file_explorer` — [`fox/tools/file_explorer.lua`](../../lua/plugins/fox/tools/file_explorer.lua)
+- `fox_query` — [`fox/tools/query.lua`](../../lua/plugins/fox/tools/query.lua)
 - `fox_installer` — [`fox/tools/installer.lua`](../../lua/plugins/fox/tools/installer.lua)
 - `fox_lsp_references` — [`fox/tools/lsp_references.lua`](../../lua/plugins/fox/tools/lsp_references.lua)
 - `fox_notes` — [`fox/tools/notes.lua`](../../lua/plugins/fox/tools/notes.lua)
@@ -127,6 +130,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 **Git**
 
+- `fox_inline_blame` — [`editor/git_blame.lua`](../../lua/plugins/editor/git_blame.lua)
 - `fox_conflict_resolver` — [`fox/git/conflict_resolver.lua`](../../lua/plugins/fox/git/conflict_resolver.lua)
 - `fox_git_accounts` — [`fox/git/git_accounts.lua`](../../lua/plugins/fox/git/git_accounts.lua)
 - `fox_git_center` — [`fox/git/git_center/init.lua`](../../lua/plugins/fox/git/git_center/init.lua)
@@ -151,23 +155,15 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 - `fox_symbol_usage` — [`lsp/symbol_usage.lua`](../../lua/plugins/lsp/symbol_usage.lua)
 
-- `fox_icons` — [`ui/devicons.lua`](../../lua/plugins/ui/devicons.lua)
-
-- `fox_color_highlights` — [`ui/css-colors.lua`](../../lua/plugins/ui/css-colors.lua)
-
-- `fox.lsp.tooling`: acciones Mason explícitas integradas en la spec LSP existente.
-
-- `fox.core.file_buffers`: reconciliación de buffers integrada en Neo-tree.
-
-- `fox.lsp.file_operations`: eventos LSP de archivos integrados en Neo-tree.
-
-- `fox_blade` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
-
-- `fox_laravel` — [`lsp/blade_navigation.lua`](../../lua/plugins/lsp/blade_navigation.lua)
-
 ### Submódulos y soporte local
 
+- `fox.lsp.tooling`: acciones Mason explícitas integradas en la spec LSP existente.
+- `fox.core.file_buffers`: reconciliación de buffers integrada en Neo-tree.
+- `fox.lsp.file_operations`: eventos LSP de archivos integrados en Neo-tree.
+
 No son plugins externos ni specs independientes adicionales:
+
+- `fox_neotree_wrap`: spec desactivada; sus helpers se usan desde Neo-tree.
 
 - `lua/fox/ui/devicons.lua` y `lua/nvim-web-devicons.lua`: API local para los consumidores de iconos; catálogo propio en `lua/fox/ui/icons.lua`.
 

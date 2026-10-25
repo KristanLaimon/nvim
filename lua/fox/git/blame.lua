@@ -62,4 +62,25 @@ function M.query(file, rev, cwd)
 	return M.parse_porcelain(git.lines(args, cwd))
 end
 
+-- Metadata for the inline view of a single porcelain blame entry.
+function M.parse_line(output)
+	local sha, original, final = output:match("^(%x+) (%d+) (%d+)")
+	if not sha then
+		return
+	end
+	local info = { sha = sha, original_line = tonumber(original), line = tonumber(final) }
+	for key, value in output:gmatch("\n([%w-]+) ([^\n]*)") do
+		if key == "author" then
+			info.author = value
+		elseif key == "author-time" then
+			info.time = tonumber(value)
+		elseif key == "summary" then
+			info.summary = value
+		elseif key == "filename" then
+			info.filename = value
+		end
+	end
+	return info
+end
+
 return M

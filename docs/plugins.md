@@ -110,18 +110,18 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | `nvim-lualine/lualine.nvim` | Statusline |
 | `fox_color_highlights` | Inline CSS colour previews (`:HighlightColors`) |
 | `fox.core.window_picker` (local) | Visual window selector for Neo-tree; no external plugin |
-| `nvim-file-operations` | Keeps buffers in sync with disk renames/moves |
+| `fox.core.file_buffers` | Preserves buffers/undo on Neo-tree renames; recovers unsaved deleted-file edits |
 
-- `mini.icons`: sustituido por `fox_icons`. Catálogo propio en fox.ui.icons, resolución de sufijos compuestos, filetypes y rutas Windows; conserva overrides por lenguaje, colores al cambiar tema y compatibilidad mini.icons/devicons. Ocho pruebas unitarias y dos integraciones NestJS aprobadas; sin copiar datos upstream.
+Local dependency replacements also include:
 
-- `nvim-highlight-colors`: sustituido por `fox_color_highlights`. Previews nativos con extmarks, CSS hex/rgb/hsl, nombres y variables; Tailwind opt-in reutiliza colorify. Debounce y render limitado a ventanas visibles y líneas acotadas. Conserva HighlightColors y añade acción de paleta. Tres pruebas con buffers reales cubren Unicode, edición, formatos y variables; sin dependencias externas.
+| Module | Behavior |
+|---|---|
+| `fox.ui.icons` / `fox.ui.devicons` | File and language icon catalog, compound suffixes, colors and compatibility APIs |
+| `fox.ui.color_highlights` | CSS previews and `:HighlightColors`; Tailwind previews can be enabled in setup |
+| `fox.lsp.tooling` | Explicit `:LspInstall` / `:LspUninstall` using language metadata |
+| `fox.lsp.file_operations` | Filtered LSP will/did file operations; edits remain unsaved for review |
+| `fox.langs.php.blade` | Blade syntax/indentation on top of Neovim PHP/HTML support |
+| `fox.langs.php.laravel` | Laravel navigation, completion, value annotations and scoped caches |
+| `fox.git.inline_blame` | Async inline authorship and the `:GitBlame*` commands |
 
-- `mason-lspconfig.nvim`: sustituido por `fox_lsp_tooling`. Mapeo desde metadatos de lenguajes y genéricos existentes, sin instalaciones automáticas. Conserva LspInstall con selección cancelable, versiones y LspUninstall; activación mediante vim.lsp.config/enable. 17 pruebas de tooling/installer aprobadas e integración real LuaLS adjunto sin mason-lspconfig.
-
-- `nvim-file-operations`: sustituido por `fox_file_buffers`. Sincronización nativa integrada en Neo-tree: renombrado conserva buffer/undo; borrado conserva ediciones en fox-recovered:// para guardar con saveas. No auto-guarda ni intercepta globalmente workspace edits. Seis pruebas unitarias y una integración real de eventos y archivo movido aprobadas. El plugin anterior no tenía consumidores de sus APIs públicas.
-
-- `nvim-lsp-file-operations`: sustituido por `fox_lsp_file_operations`. Bridge nativo para will/did Rename/Create/Delete, filtros por workspace/scheme/glob/tipo, timeout total de 1.5s y workspace edits con encoding del cliente. Rechaza versiones obsoletas, cambios concurrentes y operaciones de recursos recursivas; nunca guarda ediciones automáticamente. Cuatro pruebas unitarias y una integración stdio con servidor fixture verifican edición y notificación reales; sin servidor opcional instalado.
-
-- `vim-blade`: sustituido por `fox_blade`. Sintaxis e indentación propias en fox.langs.php.blade y puentes syntax/indent; reutiliza sintaxis PHP/HTML de Neovim, conserva comentarios, ecos, verbatim y pares personalizados script/assets. Detección Blade propiedad del módulo PHP; Treesitter respeta el indentexpr local. Cinco pruebas unitarias y una integración real gg=G aprobadas. Sin copiar código upstream.
-
-- `blade-nav.nvim`: sustituido por `fox_laravel`. Índice propio por proyecto Artisan para vistas/componentes/Livewire/rutas/config/env/traducciones/Inertia, gf y fuente Blink cancelable. Caché con TTL, invalidación al guardar y rechazo de procesos antiguos; consultas Artisan asíncronas para rutas y aliases. Conserva los tres comandos de paleta y helper local de instalación exclusiva. Nueve pruebas unitarias y una integración real de navegación/completado aprobadas. PHP y parser PHP no disponibles: no se ejecutó el helper contra Laravel real.
+All local Lazy specs use separate directories so each configuration runs independently. Completed replacements and their validation are tracked in [the dependency plan](../config/plans_notes_md/DEPENDENCYFOX.plan.md).

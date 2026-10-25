@@ -118,9 +118,9 @@ edit directly.
 
 ---
 
-## 🔍 VS Code-Style Git Blame (`git-blame.nvim`)
+## 🔍 Inline Git Blame (local)
 
-FoxVim integrates `f-person/git-blame.nvim` configured to emulate the VS Code GitLens inline blame virtual text.
+FoxVim implements inline blame in `fox.git.inline_blame`, using the shared FOX Git command builder. Queries run asynchronously against the file’s repository, including nested repositories and WSL paths, and include unsaved buffer text. Late responses are discarded after edits or buffer changes.
 
 ### Features:
 - **Inline Virtual Text**: Displays `  <author>, <date> • <summary>` at the end of the active cursor line.

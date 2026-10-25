@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **19 reemplazos completados: 30 externos actuales**, de los cuales **13 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **20 reemplazos completados: 29 externos actuales**, de los cuales **12 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -36,7 +36,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 17 | `antosha417/nvim-lsp-file-operations` | Media | Completado | Eventos will/didRename, create y delete; filtrar clientes y aplicar workspace edits de forma segura. |
 | 18 | `jwalton512/vim-blade` | Media | Completado | Syntax, detección e indentación locales de Blade; cubrir mezcla HTML/PHP y directivas. |
 | 19 | `ricardoramirezr/blade-nav.nvim` | Media | Completado | Resolver vistas, componentes y rutas Laravel con caché local. |
-| 20 | `f-person/git-blame.nvim` | Media | Pendiente | Reutilizar fox.git para blame asíncrono y enlaces; conservar comandos y repositorios anidados. |
+| 20 | `f-person/git-blame.nvim` | Media | Completado | Reutilizar fox.git para blame asíncrono y enlaces; conservar comandos y repositorios anidados. |
 | 21 | `nvim-lualine/lualine.nvim` | Media-alta | Pendiente | Statusline nativa con diseños del picker y actualizaciones Git/LSP sin bloqueos. |
 | 22 | `akinsho/bufferline.nvim` | Media-alta | Pendiente | Tabline nativa con fijados, diagnósticos, cierre y desbordamiento. |
 | 23 | `rafamadriz/friendly-snippets` | Media-alta | Pendiente | Snippets locales de los lenguajes usados; conservar cobertura y licencias de datos migrados. |
@@ -175,12 +175,24 @@ Bridge nativo para will/did Rename/Create/Delete, filtros por workspace/scheme/g
 
 ## Reemplazo 18: jwalton512/vim-blade
 
-Sintaxis e indentación propias en fox.langs.php.blade y puentes syntax/indent; reutiliza sintaxis PHP/HTML de Neovim, conserva comentarios, ecos, verbatim y pares personalizados script/assets. Detección Blade propiedad del módulo PHP; Treesitter respeta el indentexpr local. Cinco pruebas unitarias y una integración real gg=G aprobadas. Sin copiar código upstream.
+Sintaxis e indentación propias en fox.langs.php.blade y puentes syntax/indent; reutiliza sintaxis PHP/HTML de Neovim, conserva comentarios, ecos, verbatim y pares personalizados script/assets. Detección Blade propiedad del módulo PHP; Treesitter respeta el indentexpr local. Seis pruebas unitarias y una integración real gg=G aprobadas. Sin copiar código upstream.
 
 ## Reemplazo 19: ricardoramirezr/blade-nav.nvim
 
 Índice propio por proyecto Artisan para vistas/componentes/Livewire/rutas/config/env/traducciones/Inertia, gf y fuente Blink cancelable. Caché con TTL, invalidación al guardar y rechazo de procesos antiguos; consultas Artisan asíncronas para rutas y aliases. Conserva los tres comandos de paleta y helper local de instalación exclusiva. Nueve pruebas unitarias y una integración real de navegación/completado aprobadas. PHP y parser PHP no disponibles: no se ejecutó el helper contra Laravel real.
 
+## Reemplazo 20: f-person/git-blame.nvim
+
+Blame asíncrono propio en fox.git.inline_blame y parser compartido en fox.git.blame; reutiliza el constructor Git con soporte WSL. Conserva comandos, fechas relativas, cambios sin guardar, repositorios anidados, URL por forge y copia de SHA. Cancela procesos y rechaza resultados antiguos; ignora archivos excluidos por Git. Once pruebas unitarias relacionadas y cuatro integraciones con Git real aprobadas.
+
+## Validación del lote Media (2026-10-25)
+
+- Ocho reemplazos pendientes completados; 29 externos y 68 specs locales activas, verificados desde el registro real de Lazy. Los directorios de specs locales son únicos mediante fox.core.lazyspec.
+- Suite completa: 892 aprobadas y dos fallos en autotag TSX y aislamiento del selector de temas. Ambos casos también fallan al ejecutar el commit inicial 255bb17 en un worktree separado (857 aprobadas y dos fallos); no se atribuyen a este lote.
+- Once integraciones del lote aprobadas juntas: registro de specs, iconos NestJS, buffers Neo-tree, transporte LSP stdio, indentación Blade, navegación/completado Laravel y cuatro casos Git reales. LuaLS inicializó y respondió documentSymbol sin mason-lspconfig.
+- 824 archivos Lua sin errores de sintaxis; StyLua y Luacheck aprobados para los 46 archivos Lua modificados, sin advertencias. Los artefactos binarios reconstruidos por las pruebas se restauraron y el worktree de comparación se retiró.
+- No hay PHP ni parser PHP disponibles: las respuestas Artisan se validaron con procesos controlados; el helper PHP no se ejecutó contra Laravel real. No se instalaron bundles opcionales ni se eliminaron directorios de plugins instalados.
+
 ## Siguiente ítem
 
-`f-person/git-blame.nvim`: continuar con el alcance indicado en la tabla.
+`nvim-lualine/lualine.nvim`: continuar con el alcance indicado en la tabla.

@@ -1,4 +1,4 @@
-for _, plugin in ipairs({ "neo-tree.nvim", "nui.nvim", "plenary.nvim", "mini.icons" }) do
+for _, plugin in ipairs({ "neo-tree.nvim", "nui.nvim", "plenary.nvim", "fox_icons" }) do
 	vim.opt.runtimepath:append(vim.fn.stdpath("data") .. "/lazy/" .. plugin)
 end
 local icons = require("plugins.ui.devicons")[1]

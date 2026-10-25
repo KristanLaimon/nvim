@@ -1,5 +1,4 @@
--- Devicons compatibility owned by FoxVim. mini.icons remains the catalog backend
--- until its separate replacement in DEPENDENCYFOX.plan.md; no devicons clone.
+-- Devicons compatibility owned by FoxVim, backed by the local icon catalog.
 local M = {}
 local overrides, by_ft = {}, {}
 local default_enabled = false

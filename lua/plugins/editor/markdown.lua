@@ -12,7 +12,7 @@ return {
 		ft = { "markdown" },
 		dependencies = {
 			"nvim-treesitter/nvim-treesitter",
-			"nvim-mini/mini.icons",
+			{ name = "fox_icons", dir = vim.fn.stdpath("config") },
 		},
 		opts = {
 			heading = {

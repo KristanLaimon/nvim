@@ -111,3 +111,5 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | `nvim-highlight-colors` | Inline CSS colour previews |
 | `fox.core.window_picker` (local) | Visual window selector for Neo-tree; no external plugin |
 | `nvim-file-operations` | Keeps buffers in sync with disk renames/moves |
+
+- `mini.icons`: sustituido por `fox_icons`. Catálogo propio en fox.ui.icons, resolución de sufijos compuestos, filetypes y rutas Windows; conserva overrides por lenguaje, colores al cambiar tema y compatibilidad mini.icons/devicons. Ocho pruebas unitarias y dos integraciones NestJS aprobadas; sin copiar datos upstream.

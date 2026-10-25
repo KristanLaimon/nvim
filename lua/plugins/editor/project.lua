@@ -90,7 +90,7 @@ return {
 	},
 	dependencies = {
 		"nvim-telescope/telescope.nvim",
-		"nvim-mini/mini.icons",
+		{ name = "fox_icons", dir = vim.fn.stdpath("config") },
 	},
 	config = function()
 		local history = require("fox.projects.history")

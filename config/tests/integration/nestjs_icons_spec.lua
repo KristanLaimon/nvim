@@ -1,7 +1,7 @@
 local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
-require("lazy").load({ plugins = { "mini.icons" } })
+require("lazy").load({ plugins = { "fox_icons" } })
 
 describe("NestJS file icons", function()
 	it("gives controllers, modules, services, and specs distinct role icons", function()

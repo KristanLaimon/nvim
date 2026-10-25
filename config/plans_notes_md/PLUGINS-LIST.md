@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **37 externos** y **63 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **36 externos** y **64 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -56,14 +56,13 @@ Total actual: **37 externos** y **63 specs locales**. El plan de sustitución es
 - `akinsho/bufferline.nvim` — [`ui/bufferline.lua`](../../lua/plugins/ui/bufferline.lua)
 - `brenoprata10/nvim-highlight-colors` — [`ui/css-colors.lua`](../../lua/plugins/ui/css-colors.lua)
 - `nvim-lualine/lualine.nvim` — [`ui/themes.lua`](../../lua/plugins/ui/themes.lua)
-- `nvim-mini/mini.icons` — [`ui/devicons.lua`](../../lua/plugins/ui/devicons.lua)
 - `rcarriga/nvim-notify` — [`ui/notify.lua`](../../lua/plugins/ui/notify.lua)
 
 **Misc**
 
 - `vyfor/cord.nvim` — [`ui/discord.lua`](../../lua/plugins/ui/discord.lua)
 
-`nvim-web-devicons` es ahora una API local en `lua/fox/ui/devicons.lua`; `mini.icons` sigue aportando el catálogo hasta el siguiente reemplazo.
+El catálogo de iconos y la API devicons son locales: `fox.ui.icons` y `fox.ui.devicons`.
 
 ## (Fox-Made)
 
@@ -158,11 +157,13 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 - `fox_symbol_usage` — [`lsp/symbol_usage.lua`](../../lua/plugins/lsp/symbol_usage.lua)
 
+- `fox_icons` — [`ui/devicons.lua`](../../lua/plugins/ui/devicons.lua)
+
 ### Submódulos y soporte local
 
 No son plugins externos ni specs independientes adicionales:
 
-- `lua/fox/ui/devicons.lua` y `lua/nvim-web-devicons.lua`: API local para los consumidores de iconos; el catálogo sigue en mini.icons.
+- `lua/fox/ui/devicons.lua` y `lua/nvim-web-devicons.lua`: API local para los consumidores de iconos; catálogo propio en `lua/fox/ui/icons.lua`.
 
 - `lua/fox/langs/csharp/navigation.lua`: navegación OmniSharp y fuentes de metadata/generadas asíncronas.
 

@@ -5,10 +5,16 @@ local ns = vim.api.nvim_create_namespace("fox_dashboard")
 local state = {}
 
 function M.layout()
-	local d = { section = { header = { val = {}, opts = {} }, buttons = { val = {}, opts = { spacing = 1 } }, footer = {
-		val = "",
-		opts = {},
-	} } }
+	local d = {
+		section = {
+			header = { val = {}, opts = {} },
+			buttons = { val = {}, opts = { spacing = 1 } },
+			footer = {
+				val = "",
+				opts = {},
+			},
+		},
+	}
 	d.opts = { layout = { { val = 1 } }, sections = d.section }
 	function d.button(key, label, command)
 		return { key = key, label = label, command = command }
@@ -41,8 +47,9 @@ function M.draw()
 		local pad = math.max(0, math.floor((width - vim.fn.strdisplaywidth(text)) / 2))
 		lines[#lines + 1] = string.rep(" ", pad) .. text
 		if hl then
-			highlights[#highlights + 1] = { #lines - 1, pad, hl }
+			highlights[#highlights + 1] = { #lines - 1, pad, hl, #lines[#lines] }
 		end
+		return pad
 	end
 	for _ = 1, value(state.opts.layout[1].val) do
 		add("")
@@ -53,8 +60,11 @@ function M.draw()
 	add("")
 	add("")
 	for i, button in ipairs(sections.buttons.val) do
-		add(button.label .. "  [" .. button.key .. "]", "Function")
-		rows[#rows + 1] = { line = #lines, button = button }
+		local gap = math.max(0, math.min(50, width) - vim.fn.strdisplaywidth(button.label .. button.key))
+		local text = button.label .. string.rep(" ", gap) .. button.key
+		local pad = add(text)
+		highlights[#highlights + 1] = { #lines - 1, pad + #text - #button.key, "Keyword", pad + #text }
+		rows[#rows + 1] = { line = #lines, column = pad + 3, button = button }
 		if i < #sections.buttons.val then
 			for _ = 1, sections.buttons.opts.spacing or 1 do
 				add("")
@@ -62,18 +72,18 @@ function M.draw()
 		end
 	end
 	add("")
-	add(value(sections.footer.val), "Comment")
+	add(value(sections.footer.val), "Number")
 	vim.bo[state.buf].modifiable = true
 	vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
 	vim.bo[state.buf].modifiable = false
 	vim.api.nvim_buf_clear_namespace(state.buf, ns, 0, -1)
 	for _, hl in ipairs(highlights) do
-		vim.api.nvim_buf_set_extmark(state.buf, ns, hl[1], hl[2], { end_col = #lines[hl[1] + 1], hl_group = hl[3] })
+		vim.api.nvim_buf_set_extmark(state.buf, ns, hl[1], hl[2], { end_col = hl[4], hl_group = hl[3] })
 	end
 	state.rows = rows
 	local selected = math.min(state.selected or 1, #rows)
 	if rows[selected] then
-		vim.api.nvim_win_set_cursor(win, { rows[selected].line, 0 })
+		vim.api.nvim_win_set_cursor(win, { rows[selected].line, rows[selected].column })
 	end
 end
 M.redraw = M.draw
@@ -144,11 +154,15 @@ function M.setup(opts)
 				relativenumber = vim.wo.relativenumber,
 				signcolumn = vim.wo.signcolumn,
 				wrap = vim.wo.wrap,
+				cursorline = vim.wo.cursorline,
+				cursorcolumn = vim.wo.cursorcolumn,
 			}
 			vim.wo.number = false
 			vim.wo.relativenumber = false
 			vim.wo.signcolumn = "no"
 			vim.wo.wrap = false
+			vim.wo.cursorline = false
+			vim.wo.cursorcolumn = false
 		end,
 	})
 	vim.api.nvim_create_autocmd("BufWinLeave", {

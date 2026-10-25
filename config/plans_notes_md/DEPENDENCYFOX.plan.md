@@ -135,7 +135,7 @@ Dependencias que el usuario decidió conservar. Quedan fuera del plan de impleme
 
 ## Reemplazo 8: goolord/alpha-nvim
 
-Dashboard propio en fox.ui.dashboard con buffer scratch, botones originales, navegación, centrado responsive, comandos Alpha/AlphaRedraw y evento AlphaReady. Conserva el filetype alpha para los consumidores FOX, WSL, pines y restauración al cerrar el último buffer. Tres pruebas con buffers reales cubren render, navegación, acciones y protección de cambios sin guardar. No requiere clonar Alpha.
+Dashboard propio en fox.ui.dashboard con buffer scratch, botones originales, navegación, centrado responsive, comandos Alpha/AlphaRedraw y evento AlphaReady. Conserva el filetype alpha para los consumidores FOX, WSL, pines y restauración al cerrar el último buffer. Cinco pruebas con buffers reales cubren render, navegación, acciones, protección de cambios y restauración de opciones de ventana. Corregida la paridad visual: botones de 50 columnas, texto alineado a la izquierda y atajos a la derecha; cursor dentro de la opción, sin resaltar la fila completa. Comparación directa con Alpha: nueve filas con emoji idénticas a 40, 80 y 120 columnas. No requiere clonar Alpha.
 
 ## Reemplazo 9: windwp/nvim-ts-autotag
 

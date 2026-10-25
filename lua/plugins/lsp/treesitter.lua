@@ -26,7 +26,7 @@ return {
 	event = { "BufReadPost", "BufNewFile" },
 	config = function()
 		local env_ok, env_mod = pcall(require, "fox.core.environment")
-		local is_native_termux = false -- only true for bare Termux (Android, no proot)
+		local is_native_termux -- only true for bare Termux (Android, no proot)
 		if env_ok then
 			local env = env_mod.detect()
 			-- proot Ubuntu is a full Linux container — treat it like desktop Linux.
@@ -44,7 +44,7 @@ return {
 			pcall(ts.install, core_parsers)
 		end
 
-		local is_mobile_or_proot = false
+		local is_mobile_or_proot
 		if env_ok then
 			local env = env_mod.detect()
 			is_mobile_or_proot = env.is_termux or env.is_proot or env.is_mobile
@@ -65,7 +65,9 @@ return {
 				if not is_mobile_or_proot and ft and ft ~= "" and line_count <= 3500 then
 					local lang = vim.treesitter.language.get_lang(ft) or ft
 					local has_parser = pcall(vim.treesitter.get_parser, buf, lang)
-					if has_parser then
+					if vim.b[buf].fox_indentexpr then
+						vim.bo[buf].indentexpr = vim.b[buf].fox_indentexpr
+					elseif has_parser then
 						vim.bo[buf].indentexpr = "v:lua.require'nvim-treesitter.indent'.get_indent(v:lnum)"
 					end
 				end

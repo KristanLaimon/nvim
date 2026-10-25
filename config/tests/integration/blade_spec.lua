@@ -1,0 +1,18 @@
+local t = require("fox.lib.foxnvim.test")
+t.describe("Blade editor integration", function()
+	t.it("loads local syntax/indent and formats a mixed template with =", function()
+		local file = vim.fn.tempname() .. ".blade.php"
+		vim.fn.writefile({ "<div>", "@if($ok)", "<p>{{ $value }}</p>", "@else", "<br>", "@endif", "</div>" }, file)
+		vim.cmd.edit(file)
+		local b = vim.api.nvim_get_current_buf()
+		vim.bo.shiftwidth = 2
+		t.expect(vim.bo.filetype).toBe("blade")
+		t.expect(vim.bo.indentexpr:find("fox.langs.php.blade", 1, true) ~= nil).toBe(true)
+		vim.cmd("normal! gg=G")
+		t.expect(vim.api.nvim_buf_get_lines(b, 0, -1, false))
+			.toEqual({ "<div>", "  @if($ok)", "    <p>{{ $value }}</p>", "  @else", "    <br>", "  @endif", "</div>" })
+		t.expect(vim.b.current_syntax).toBe("blade")
+		vim.api.nvim_buf_delete(b, { force = true })
+		vim.fn.delete(file)
+	end)
+end)

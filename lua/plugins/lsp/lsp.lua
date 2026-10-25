@@ -128,7 +128,6 @@ vim.filetype.add({
 		["npmrc"] = "dosini",
 	},
 	pattern = {
-		[".*%.blade%.php"] = "blade",
 		[".*%.npmrc.*"] = "dosini",
 		[".*%.sln"] = "sln",
 	},

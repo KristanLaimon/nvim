@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **32 externos** y **65 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **31 externos** y **66 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -40,7 +40,6 @@ Total actual: **32 externos** y **65 specs locales**. El plan de sustitución es
 **LSP**
 
 - `b0o/schemastore.nvim` — [`lsp/blink_sources.lua`](../../lua/plugins/lsp/blink_sources.lua), [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
-- `jwalton512/vim-blade` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
 - `neovim/nvim-lspconfig` — [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `rafamadriz/friendly-snippets` — [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `ricardoramirezr/blade-nav.nvim` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
@@ -162,6 +161,8 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox.core.file_buffers`: reconciliación de buffers integrada en Neo-tree.
 
 - `fox.lsp.file_operations`: eventos LSP de archivos integrados en Neo-tree.
+
+- `fox_blade` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
 
 ### Submódulos y soporte local
 

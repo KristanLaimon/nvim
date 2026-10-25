@@ -15,7 +15,8 @@
 return {
 	-- Blade filetype syntax highlighting
 	{
-		"jwalton512/vim-blade",
+		name = "fox_blade",
+		dir = vim.fn.stdpath("config"),
 		ft = { "blade" },
 		init = function()
 			vim.g.blade_custom_directives_pairs = {

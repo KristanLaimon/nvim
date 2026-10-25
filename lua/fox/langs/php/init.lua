@@ -299,6 +299,7 @@ end
 
 --- Initialize PHP language configurations.
 function M.setup()
+	vim.filetype.add({ pattern = { [".*%.blade%.php"] = "blade" } })
 	M.composer.setup()
 	vim.api.nvim_create_autocmd("FileType", {
 		pattern = { "php", "blade" },

@@ -64,3 +64,5 @@ Blade templates frequently incorporate JavaScript blocks for frontend interactio
    - Embedded `<style>` blocks default to standard `css`. Only when explicitly declared via `<style lang="scss">`, `<style type="text/scss">`, or containing SCSS syntax (`$variable:`, `@mixin`, `@include`), does it switch to `scss`.
 
 
+
+Blade syntax and indentation are local (`fox.langs.php.blade`), using Neovim’s built-in PHP/HTML syntax. `@script`/`@assets` pairs and `g:blade_custom_directives_pairs` are supported. The `=` operator uses the local Blade indent function even when a Treesitter parser is installed.

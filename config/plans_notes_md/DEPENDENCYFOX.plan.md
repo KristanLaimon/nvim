@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **9 reemplazos completados: 40 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **10 reemplazos completados: 39 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -26,7 +26,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 7 | `ahmedkhalf/project.nvim` | Media | Completado | Historial y raíz locales; migrar datos y consumidores sin perder favoritos ni WSL. |
 | 8 | `goolord/alpha-nvim` | Media | Completado | Buffer inicial propio con botones, acciones, geometría y navegación por teclado. |
 | 9 | `windwp/nvim-ts-autotag` | Media | Completado | Cerrar/renombrar etiquetas con Treesitter; cubrir JSX, fragmentos y etiquetas vacías. |
-| 10 | `Wansmer/symbol-usage.nvim` | Media | Pendiente | Referencias LSP y extmarks con debounce y protección ante respuestas atrasadas. |
+| 10 | `Wansmer/symbol-usage.nvim` | Media | Completado | Referencias LSP y extmarks con debounce y protección ante respuestas atrasadas. |
 | 11 | `Hoffs/omnisharp-extended-lsp.nvim` | Media | Pendiente | Traducir respuestas de OmniSharp y abrir fuentes de metadatos; conservar navegación C#. |
 | 12 | `nvim-tree/nvim-web-devicons` | Media | Pendiente | Cubrir API mediante iconos locales y retirar specs consumidoras; hoy mini.icons aporta un mock. |
 | 13 | `nvim-mini/mini.icons` | Media | Pendiente | Catálogo local, colores, sufijos compuestos, overrides por lenguaje y API devicons. |
@@ -134,6 +134,10 @@ Dashboard propio en fox.ui.dashboard con buffer scratch, botones originales, nav
 
 Implementación propia en fox.editor.autotag: cierre con Treesitter, respeto de etiquetas vacías/autocerradas, JSX con miembros y fragmentos, y renombrado de ambos extremos mediante extmarks. No adivina si falta parser. Cinco casos con parsers HTML/TSX reales y comprobación de inserción real verifican cierre, cursor, texto dentro de la etiqueta, renombrado y entradas incompletas. TSX se compiló solo en /tmp para verificarlo; no se instaló ningún bundle opcional.
 
+## Reemplazo 10: Wansmer/symbol-usage.nvim
+
+Contador propio en fox.lsp.symbol_usage con documentSymbol/references, virt_lines, debounce, cancelación, límite de cuatro peticiones simultáneas y rechazo de respuestas antiguas o clientes desconectados. Mantiene los formatos bubbles/plain/labels del picker. Seis pruebas con respuestas controladas y comprobación real con gopls: función Foo con dos usos mostró 2 references. Retirada la dependencia externa y el lockfile.
+
 ## Siguiente ítem
 
-`Wansmer/symbol-usage.nvim`: continuar con el alcance indicado en la tabla.
+`Hoffs/omnisharp-extended-lsp.nvim`: continuar con el alcance indicado en la tabla.

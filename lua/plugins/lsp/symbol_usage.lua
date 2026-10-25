@@ -8,7 +8,8 @@
 -- ============================================================================
 
 return {
-	"Wansmer/symbol-usage.nvim",
+	name = "fox_symbol_usage",
+	dir = require("fox.core.lazyspec").for_module(),
 	event = "LspAttach",
 	config = function(_, opts)
 		local ok, picker = pcall(require, "plugins.fox.tools.usages_picker")
@@ -25,6 +26,6 @@ return {
 			opts.text_format = picker.get_text_format()
 		end
 
-		require("symbol-usage").setup(opts)
+		require("fox.lsp.symbol_usage").setup(opts)
 	end,
 }

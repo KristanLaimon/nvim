@@ -200,7 +200,7 @@ function M.set_style(style_name)
 	end
 
 	store.save(M.settings.store_file, { style = style_name })
-	local ok_su, su = pcall(require, "symbol-usage")
+	local ok_su, su = pcall(require, "fox.lsp.symbol_usage")
 	if ok_su then
 		su.setup({
 			text_format = M.get_text_format(style_name),
@@ -221,7 +221,7 @@ function M.open_picker()
 
 	local original_style = M.get_current_style()
 
-	local has_telescope, builtin = pcall(require, "telescope.builtin")
+	local has_telescope = pcall(require, "telescope.builtin")
 	local has_actions, actions = pcall(require, "telescope.actions")
 	local has_action_state, action_state = pcall(require, "telescope.actions.state")
 

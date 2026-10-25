@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **15 reemplazos completados: 34 externos actuales**, de los cuales **17 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **16 reemplazos completados: 33 externos actuales**, de los cuales **16 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -32,7 +32,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 13 | `nvim-mini/mini.icons` | Media | Completado | Catálogo local, colores, sufijos compuestos, overrides por lenguaje y API devicons. |
 | 14 | `brenoprata10/nvim-highlight-colors` | Media | Completado | Colores CSS/Tailwind a extmarks; preservar formatos configurados y rendimiento al editar. |
 | 15 | `williamboman/mason-lspconfig.nvim` | Media | Completado | Mapear paquetes a servidores desde metadatos locales; mantener activación y selección mínima. |
-| 16 | `Crysthamus/nvim-file-operations` | Media | Pendiente | Sincronizar buffers con operaciones Neo-tree sin perder cambios sin guardar. |
+| 16 | `Crysthamus/nvim-file-operations` | Media | Completado | Sincronizar buffers con operaciones Neo-tree sin perder cambios sin guardar. |
 | 17 | `antosha417/nvim-lsp-file-operations` | Media | Pendiente | Eventos will/didRename, create y delete; filtrar clientes y aplicar workspace edits de forma segura. |
 | 18 | `jwalton512/vim-blade` | Media | Pendiente | Syntax, detección e indentación locales de Blade; cubrir mezcla HTML/PHP y directivas. |
 | 19 | `ricardoramirezr/blade-nav.nvim` | Media | Pendiente | Resolver vistas, componentes y rutas Laravel con caché local. |
@@ -165,6 +165,10 @@ Previews nativos con extmarks, CSS hex/rgb/hsl, nombres y variables; Tailwind op
 
 Mapeo desde metadatos de lenguajes y genéricos existentes, sin instalaciones automáticas. Conserva LspInstall con selección cancelable, versiones y LspUninstall; activación mediante vim.lsp.config/enable. 17 pruebas de tooling/installer aprobadas e integración real LuaLS adjunto sin mason-lspconfig.
 
+## Reemplazo 16: Crysthamus/nvim-file-operations
+
+Sincronización nativa integrada en Neo-tree: renombrado conserva buffer/undo; borrado conserva ediciones en fox-recovered:// para guardar con saveas. No auto-guarda ni intercepta globalmente workspace edits. Seis pruebas unitarias y una integración real de eventos y archivo movido aprobadas. El plugin anterior no tenía consumidores de sus APIs públicas.
+
 ## Siguiente ítem
 
-`Crysthamus/nvim-file-operations`: continuar con el alcance indicado en la tabla.
+`antosha417/nvim-lsp-file-operations`: continuar con el alcance indicado en la tabla.

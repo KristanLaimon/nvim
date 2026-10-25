@@ -42,3 +42,5 @@ FOX Neovim includes native floating file explorers for Desktop, WSL, folder pick
 - `<C-;>` (in Neo-tree): Toggle the selected terminal panel
 - `<C-k>` / `<C-/>`: Search files respecting `.gitignore`
 - `<C-A-k>` / `<C-S-/>`: Search all files ignoring `.gitignore`
+
+Los renombrados de Neo-tree conservan el buffer y su historial de deshacer. Si borras un archivo con cambios sin guardar, el buffer se conserva con nombre `fox-recovered://…`; usa `:saveas ruta` para guardar esas ediciones.

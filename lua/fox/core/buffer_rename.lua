@@ -33,7 +33,7 @@ function M.update_buffers_path(old_path, new_path)
 
 				if path.equals(norm_buf, norm_old) then
 					target_new_path = norm_new
-				elseif norm_buf:sub(1, #old_dir_prefix):lower() == old_dir_prefix:lower() then
+				elseif path.equals(norm_buf:sub(1, #old_dir_prefix), old_dir_prefix) then
 					target_new_path = norm_new .. "/" .. norm_buf:sub(#old_dir_prefix + 1)
 				end
 
@@ -41,11 +41,19 @@ function M.update_buffers_path(old_path, new_path)
 					-- Delete any duplicate buffer handle that might already have target_new_path
 					local existing = vim.fn.bufnr(target_new_path)
 					if existing ~= -1 and existing ~= bufnr and vim.api.nvim_buf_is_valid(existing) then
-						pcall(vim.api.nvim_buf_delete, existing, { force = true })
+						if vim.bo[existing].modified then
+							vim.notify(
+								"Rename target has unsaved changes; preserving both buffers: " .. target_new_path,
+								vim.log.levels.WARN
+							)
+							target_new_path = nil
+						else
+							pcall(vim.api.nvim_buf_delete, existing, { force = false })
+						end
 					end
 
 					-- Rename the active buffer handle
-					local ok_rename = pcall(vim.api.nvim_buf_set_name, bufnr, target_new_path)
+					local ok_rename = target_new_path and pcall(vim.api.nvim_buf_set_name, bufnr, target_new_path)
 					if ok_rename then
 						vim.bo[bufnr].buflisted = true
 						-- Trigger filetype detection for extension changes
@@ -77,7 +85,7 @@ function M.update_buffers_path(old_path, new_path)
 				local rel = path.relative_to(norm_new, project_root) or norm_new
 				table.insert(updated_pins, rel)
 				changed_pins = true
-			elseif full:sub(1, #old_dir_prefix):lower() == old_dir_prefix:lower() then
+			elseif path.equals(full:sub(1, #old_dir_prefix), old_dir_prefix) then
 				local new_full = norm_new .. "/" .. full:sub(#old_dir_prefix + 1)
 				local rel = path.relative_to(new_full, project_root) or new_full
 				table.insert(updated_pins, rel)

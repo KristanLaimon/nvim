@@ -499,6 +499,8 @@ return {
 				})
 			end
 
+			require("fox.core.file_buffers").setup()
+
 			local neotree_hidden = require("plugins.fox.editor.neotree_hidden")
 			neotree_hidden.setup()
 			local neotree_wrap = require("plugins.fox.editor.neotree_wrap")
@@ -793,17 +795,6 @@ return {
 					},
 				},
 			})
-		end,
-	},
-
-	-- Keeps LSP-aware file operations (imports follow a rename) working with the
-	-- tree's own create/rename/move commands.
-	{
-		"Crysthamus/nvim-file-operations",
-		lazy = true,
-		dependencies = { "nvim-neo-tree/neo-tree.nvim" },
-		config = function()
-			require("nvim-file-operations").setup()
 		end,
 	},
 }

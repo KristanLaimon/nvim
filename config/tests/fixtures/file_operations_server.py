@@ -23,6 +23,8 @@ while True:
     method = msg.get("method")
     result = None
     if method == "initialize":
+        flags = msg["params"]["capabilities"]["workspace"]["fileOperations"]
+        assert all(flags.get(phase + op) for phase in ("will", "did") for op in ("Rename", "Create", "Delete"))
         operations = {
             phase + op: {"filters": [{"scheme": "file", "pattern": {"glob": "**/*.ts"}}]}
             for phase in ("will", "did") for op in ("Rename", "Create", "Delete")

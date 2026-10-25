@@ -238,6 +238,13 @@ return {
 						cfg.capabilities = blink.get_lsp_capabilities(cfg.capabilities)
 					end
 
+					cfg.capabilities = vim.tbl_deep_extend(
+						"force",
+						vim.lsp.protocol.make_client_capabilities(),
+						cfg.capabilities or {},
+						require("fox.lsp.file_operations").capabilities()
+					)
+
 					if vim.fn.has("win32") == 1 then
 						cfg.capabilities = cfg.capabilities or vim.lsp.protocol.make_client_capabilities()
 						cfg.capabilities.workspace = cfg.capabilities.workspace or {}

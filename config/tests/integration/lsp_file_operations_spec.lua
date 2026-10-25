@@ -8,14 +8,12 @@ t.describe("LSP file operation transport", function()
 		vim.fn.writefile({ "old value" }, old)
 		local buf = vim.fn.bufadd(old)
 		vim.fn.bufload(buf)
-		local id = vim.lsp.start(
-			{
-				name = "fox_file_operation_fixture",
-				root_dir = dir,
-				cmd = { "python3", vim.fn.stdpath("config") .. "/config/tests/fixtures/file_operations_server.py", log },
-			},
-			{ bufnr = buf }
-		)
+		local id = vim.lsp.start({
+			name = "fox_file_operation_fixture",
+			capabilities = require("fox.lsp.file_operations").capabilities(),
+			root_dir = dir,
+			cmd = { "python3", vim.fn.stdpath("config") .. "/config/tests/fixtures/file_operations_server.py", log },
+		}, { bufnr = buf })
 		t.expect(vim.wait(3000, function()
 			local c = vim.lsp.get_client_by_id(id)
 			return c and c.initialized

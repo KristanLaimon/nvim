@@ -1,5 +1,20 @@
 -- LSP file operation bridge for Neo-tree. Filesystem changes remain in Neo-tree.
 local M = {}
+function M.capabilities()
+	return {
+		workspace = {
+			fileOperations = {
+				dynamicRegistration = false,
+				willRename = true,
+				didRename = true,
+				willCreate = true,
+				didCreate = true,
+				willDelete = true,
+				didDelete = true,
+			},
+		},
+	}
+end
 local kinds = {}
 local path = require("fox.core.path")
 local function under(name, root)

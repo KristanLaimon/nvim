@@ -22,11 +22,12 @@ old_block = '# >>> FOXVIM KITTY ENVIRONMENTS >>>\n' + maps + '# <<< FOXVIM KITTY
 shortcuts = maps + 'map ctrl+shift+enter\nmap ctrl+shift+p\n'
 previous_block = '# >>> FOXVIM KITTY SHORTCUTS >>>\n' + shortcuts + '# <<< FOXVIM KITTY SHORTCUTS <<<\n'
 # Override the sequence prefix itself, so Kitty does not wait for another key.
-block = previous_block.replace('map ctrl+shift+p\n', 'map ctrl+shift+p no_op\n')
+prefix_block = previous_block.replace('map ctrl+shift+p\n', 'map ctrl+shift+p no_op\n')
+block = prefix_block.replace('map ctrl+shift+p no_op\n', 'map ctrl+shift+p no_op\nmap ctrl+shift+a no_op\nmap ctrl+shift+q no_op\n')
 if block in text:
     print('FoxVim Kitty shortcuts are already set up.')
 else:
-    updated = text.replace(previous_block, '').replace(old_block, '').replace(legacy, '')
+    updated = text.replace(prefix_block, '').replace(previous_block, '').replace(old_block, '').replace(legacy, '')
     if updated and not updated.endswith('\n'):
         updated += '\n'
     updated += block
@@ -36,7 +37,7 @@ else:
         shutil.copy2(config, backup)
         print(f'Backup: {backup}')
     config.write_text(updated)
-    print(f'Enabled Ctrl+Shift+Enter, Ctrl+Shift+P and Ctrl+Shift+1..9 passthrough in {config}')
+    print(f'Enabled Ctrl+Shift+Enter, Ctrl+Shift+P, Ctrl+Shift+A, Ctrl+Shift+Q and Ctrl+Shift+1..9 passthrough in {config}')
 PY
 
 if command -v pkill >/dev/null && pkill -USR1 -u "$(id -u)" -x kitty; then

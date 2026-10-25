@@ -22,8 +22,9 @@ old_block = '# >>> FOXVIM KITTY ENVIRONMENTS >>>\n' + maps + '# <<< FOXVIM KITTY
 shortcuts = maps + 'map ctrl+shift+enter\nmap ctrl+shift+p\n'
 previous_block = '# >>> FOXVIM KITTY SHORTCUTS >>>\n' + shortcuts + '# <<< FOXVIM KITTY SHORTCUTS <<<\n'
 # Override the sequence prefix itself, so Kitty does not wait for another key.
-block = previous_block.replace('map ctrl+shift+p\n', 'map ctrl+shift+p no_op\n')
-updated = text.replace(block, '').replace(previous_block, '').replace(old_block, '').replace(legacy, '')
+prefix_block = previous_block.replace('map ctrl+shift+p\n', 'map ctrl+shift+p no_op\n')
+block = prefix_block.replace('map ctrl+shift+p no_op\n', 'map ctrl+shift+p no_op\nmap ctrl+shift+a no_op\nmap ctrl+shift+q no_op\n')
+updated = text.replace(block, '').replace(prefix_block, '').replace(previous_block, '').replace(old_block, '').replace(legacy, '')
 if updated == text:
     print('No FoxVim Kitty shortcut overrides found.')
 else:

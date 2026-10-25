@@ -18,8 +18,10 @@ fox.console.log(data)
 ```
 
 LuaLS searches `?.lua`, `?/init.lua`, `lua/?.lua` and `lua/?/init.lua` in the
-project, and loads FoxVim libraries, installed plugin Lua directories and LuaRocks
-trees through the type injector. Optional type schemas remain project selections.
+project. The type injector loads Neovim, FoxVim and plugin Lua libraries only
+inside the Neovim configuration directory, or when the project explicitly selects
+`vim_nvim` in `:TypeInjector`. Plain Lua projects get their own modules, LuaRocks
+trees and selected type schemas. Changing types only refreshes that project’s LuaLS client.
 For custom module layouts, add `runtime.path` entries in the project's `.luarc.json`.
 LuaLS infers members from modules that return a table; C modules need type definitions.
 See [LuaLS settings](https://luals.github.io/wiki/settings/#runtimepath).

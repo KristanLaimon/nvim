@@ -43,16 +43,34 @@ local function get_local_luarocks_paths(root)
 	return results
 end
 
---- Library paths lua_ls should load: the Neovim runtime plus every active schema.
+--- Whether a workspace is the Neovim configuration or explicitly opts into its types.
+--- @param root string|nil
+--- @param core table
+--- @return boolean
+function M.is_neovim_project(root, core)
+	if root then
+		local resolved = vim.uv.fs_realpath(root) or root
+		local config = vim.fn.stdpath("config")
+		config = vim.uv.fs_realpath(config) or config
+		if path.relative_to(resolved, config) ~= nil then
+			return true
+		end
+	end
+	return vim.tbl_contains(core.load_project_types(root).lua or {}, "vim_nvim")
+end
+
+--- Library paths for this project, with Neovim libraries restricted to Neovim projects.
 --- @param root string|nil Project root.
 --- @param core table type_injector core module.
 --- @return string[] paths
 function M.get_active_lua_libraries(root, core)
-	local config_lua = vim.fn.stdpath("config") .. "/lua"
-	local paths = { vim.env.VIMRUNTIME, config_lua }
-	for _, dir in ipairs(vim.api.nvim_get_runtime_file("lua", true)) do
-		if not vim.tbl_contains(paths, dir) then
-			table.insert(paths, dir)
+	local paths = {}
+	if M.is_neovim_project(root, core) then
+		paths = { vim.env.VIMRUNTIME, vim.fn.stdpath("config") .. "/lua" }
+		for _, dir in ipairs(vim.api.nvim_get_runtime_file("lua", true)) do
+			if not vim.tbl_contains(paths, dir) then
+				table.insert(paths, dir)
+			end
 		end
 	end
 	for _, name in ipairs(core.load_project_types(root).lua) do
@@ -114,15 +132,16 @@ function M.get_ignored_lua_directories(root, core)
 end
 
 function M.apply_lsp_settings(root, core)
-	local lua_libs = M.get_active_lua_libraries(root, core)
-	local lua_ignored = M.get_ignored_lua_directories(root, core)
 	for _, client in ipairs(vim.lsp.get_clients({ name = "lua_ls" })) do
 		local settings = client.config and client.config.settings
-		if settings and settings.Lua then
+		local client_root = client.config.root_dir or client.root_dir
+		if settings and settings.Lua and client_root and (not root or path.equals(client_root, root)) then
+			local lua_libs = M.get_active_lua_libraries(client_root, core)
+			local lua_ignored = M.get_ignored_lua_directories(client_root, core)
 			settings.Lua.workspace = settings.Lua.workspace or {}
 			settings.Lua.workspace.library = lua_libs
 			settings.Lua.workspace.ignoreDir = lua_ignored
-			client.notify("workspace/didChangeConfiguration", { settings = settings })
+			client:notify("workspace/didChangeConfiguration", { settings = settings })
 		end
 	end
 end

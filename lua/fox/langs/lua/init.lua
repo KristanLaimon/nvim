@@ -37,11 +37,16 @@ M.lsp_config = {
 		before_init = function(_, config)
 			local type_injector = require("plugins.fox.tools.type_injector")
 			local libs = type_injector.get_active_lua_libraries(config.root_dir)
+			local neovim = require("plugins.fox.tools.type_injector_lua").is_neovim_project(config.root_dir, type_injector)
+			if neovim then
+				config.settings.Lua.diagnostics.globals =
+					{ "vim", "fetch", "console", "import", "foxnvim", "cli", "terminal", "fs" }
+			end
 			local ignored = type_injector.get_ignored_lua_directories(config.root_dir)
 
 			-- Detect Omarchy and inject hyprland and omarchy types
 			local env = require("fox.core.environment").detect()
-			if env.is_omarchy then
+			if neovim and env.is_omarchy then
 				table.insert(libs, "/usr/share/hypr")
 				table.insert(libs, "/usr/share/omarchy")
 				-- Optionally also append to globals if not done in the diagnostics below
@@ -61,7 +66,7 @@ M.lsp_config = {
 					path = { "?.lua", "?/init.lua", "lua/?.lua", "lua/?/init.lua" },
 				},
 				diagnostics = {
-					globals = { "vim", "fetch", "console", "import", "foxnvim", "cli", "terminal", "fs" },
+					globals = {},
 				},
 				workspace = {
 					checkThirdParty = false,

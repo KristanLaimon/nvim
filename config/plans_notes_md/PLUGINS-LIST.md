@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **33 externos** y **65 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **32 externos** y **65 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -17,7 +17,6 @@ Total actual: **33 externos** y **65 specs locales**. El plan de sustitución es
 
 **Editor**
 
-- `antosha417/nvim-lsp-file-operations` — [`editor/neo-tree.lua`](../../lua/plugins/editor/neo-tree.lua)
 - `f-person/git-blame.nvim` — [`editor/git_blame.lua`](../../lua/plugins/editor/git_blame.lua)
 - `folke/snacks.nvim` — [`editor/neo-tree.lua`](../../lua/plugins/editor/neo-tree.lua)
 - `iamcco/markdown-preview.nvim` — [`editor/markdown.lua`](../../lua/plugins/editor/markdown.lua)
@@ -161,6 +160,8 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox.lsp.tooling`: acciones Mason explícitas integradas en la spec LSP existente.
 
 - `fox.core.file_buffers`: reconciliación de buffers integrada en Neo-tree.
+
+- `fox.lsp.file_operations`: eventos LSP de archivos integrados en Neo-tree.
 
 ### Submódulos y soporte local
 

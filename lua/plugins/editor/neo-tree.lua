@@ -487,7 +487,6 @@ return {
 			"nvim-lua/plenary.nvim",
 			"MunifTanjim/nui.nvim",
 			{ name = "fox_icons", dir = vim.fn.stdpath("config") },
-			"antosha417/nvim-lsp-file-operations",
 			"folke/snacks.nvim",
 		},
 		config = function()
@@ -500,6 +499,7 @@ return {
 			end
 
 			require("fox.core.file_buffers").setup()
+			require("fox.lsp.file_operations").setup()
 
 			local neotree_hidden = require("plugins.fox.editor.neotree_hidden")
 			neotree_hidden.setup()

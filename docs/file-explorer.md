@@ -44,3 +44,5 @@ FOX Neovim includes native floating file explorers for Desktop, WSL, folder pick
 - `<C-A-k>` / `<C-S-/>`: Search all files ignoring `.gitignore`
 
 Los renombrados de Neo-tree conservan el buffer y su historial de deshacer. Si borras un archivo con cambios sin guardar, el buffer se conserva con nombre `fox-recovered://…`; usa `:saveas ruta` para guardar esas ediciones.
+
+Las operaciones de Neo-tree notifican a los LSP del workspace que anuncian filtros compatibles. Los cambios de imports devueltos por `willRenameFiles` quedan en buffers modificados para revisión y guardado.

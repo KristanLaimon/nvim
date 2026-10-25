@@ -31,7 +31,7 @@ return {
 	"akinsho/bufferline.nvim",
 	version = "*",
 	event = "VimEnter",
-	dependencies = { { name = "fox_icons", dir = vim.fn.stdpath("config") } },
+	dependencies = { "fox_icons" },
 	config = function()
 		local function apply_tab_highlights()
 			local white_selected = { fg = "#ffffff", bold = true }

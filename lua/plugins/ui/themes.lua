@@ -27,7 +27,7 @@ return {
 		"nvim-lualine/lualine.nvim",
 		event = "VimEnter",
 		dependencies = {
-			{ name = "fox_icons", dir = vim.fn.stdpath("config") },
+			"fox_icons",
 		},
 		opts = function()
 			local has_picker, picker = pcall(require, "plugins.fox.ui.statusline_picker")

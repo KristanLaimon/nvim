@@ -486,7 +486,7 @@ return {
 		dependencies = {
 			"nvim-lua/plenary.nvim",
 			"MunifTanjim/nui.nvim",
-			{ name = "fox_icons", dir = vim.fn.stdpath("config") },
+			"fox_icons",
 			"folke/snacks.nvim",
 		},
 		config = function()

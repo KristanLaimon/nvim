@@ -1,7 +1,7 @@
 return {
 	{
 		name = "fox_icons",
-		dir = vim.fn.stdpath("config"),
+		dir = require("fox.core.lazyspec").for_module(),
 		lazy = false,
 		priority = 10000,
 		config = function()

@@ -163,7 +163,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 - `fox_blade` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
 
-- `fox_laravel` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
+- `fox_laravel` — [`lsp/blade_navigation.lua`](../../lua/plugins/lsp/blade_navigation.lua)
 
 ### Submódulos y soporte local
 

@@ -15,24 +15,13 @@ return {
 	-- Blade filetype syntax highlighting
 	{
 		name = "fox_blade",
-		dir = vim.fn.stdpath("config"),
+		dir = require("fox.core.lazyspec").for_module(),
 		ft = { "blade" },
 		init = function()
 			vim.g.blade_custom_directives_pairs = {
 				script = "endscript",
 				assets = "endassets",
 			}
-		end,
-	},
-
-	-- Local Laravel navigation, completion indexes and compatibility commands.
-	{
-		name = "fox_laravel",
-		dir = vim.fn.stdpath("config"),
-		ft = { "blade", "php" },
-		cmd = { "BladeNavClearCache", "BladeNavToggleShowValues", "BladeNavInstallArtisanCommand", "BladeNavGoToFile" },
-		config = function()
-			require("fox.langs.php.laravel").setup()
 		end,
 	},
 

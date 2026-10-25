@@ -15,6 +15,7 @@ local schema = {
 	description = "Master CLI to run FOXNVIM setup, tests, syntax check, and utility scripts.",
 	options = {
 		["tests"] = "Run project test suite (run_tests)",
+		["only-failure"] = "Show failed test cases and totals; hide passing test output",
 		["syntax"] = "Run syntax check on all Lua files (run_sintaxcheck)",
 		["setup"] = "Run dependency setup script (install.ps1 / install.sh)",
 		["setup-ps"] = "Configure Windows Terminal keymaps (setup-powershell.ps1)",
@@ -44,10 +45,12 @@ local function safe_dofile(path)
 	return exit_code
 end
 
+local test_options = {}
+
 local function run_tests()
 	console.log("[run_me] Running Test Suite...")
 	local runner = dofile(root .. "/config/tests/run.lua")
-	local code = runner.run(root, nil)
+	local code = runner.run(root, nil, test_options)
 	if code ~= 0 then
 		print(cli.colorize("[run_me] Tests failed (exit " .. code .. ").", cli.colors.red))
 	end
@@ -181,6 +184,7 @@ end
 -- Parse CLI Flags
 local raw_args = arg or {}
 local parsed = cli.parse_args(raw_args, schema)
+test_options.only_failure = parsed.flags["only-failure"] == true
 
 if parsed.flags.help or parsed.flags.h then
 	print(cli.help(schema))

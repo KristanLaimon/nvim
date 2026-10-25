@@ -13,13 +13,20 @@ typo in a plugin file is invisible until then.
 | Command | What it checks | Speed |
 | :--- | :--- | :--- |
 | `nvim -l config/tests/syntax_check.lua` | Every `.lua` file parses | instant |
-| `nvim -l config/tests/run.lua` | Unit specs, no plugins loaded | ~1s |
-| `nvim -l config/tests/run.lua tasks` | Only specs whose name contains "tasks" | ~1s |
-| `nvim --headless -S config/tests/integration/run.lua` | Specs that need the real editor | a few seconds |
+| `nvim -l config/tests/run.lua --only-failure` | Unit specs, no plugins loaded | ~1s |
+| `nvim -l config/tests/run.lua tasks --only-failure` | Only specs whose name contains "tasks" | ~1s |
+| `nvim --headless -S config/tests/integration/run.lua -- --only-failure` | Specs that need the real editor | a few seconds |
 | `node config/tests/integration/markdown_browser.mjs` | GFM and Mermaid rendering and live updates in Chromium | a few seconds |
-| `nvim --headless -S config/tests/integration/run.lua kitty_shortcuts` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
-| `:FoxTest` | The unit specs, from inside the editor | ~1s |
-| `:FoxTest git` | Filtered, from inside the editor | ~1s |
+| `nvim --headless -S config/tests/integration/run.lua -- kitty_shortcuts --only-failure` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
+| `:FoxTest --only-failure` | The unit specs, from inside the editor | ~1s |
+| `:FoxTest git --only-failure` | Filtered, from inside the editor | ~1s |
+
+AI assistants use `--only-failure` by default, for full and filtered Lua test
+runs. It hides passing cases, passing suite headings, and their `print`,
+`vim.notify`, and `nvim_echo` output. Failed cases retain their diagnostics and
+errors, and the final totals and exit
+status remain unchanged. Omit the flag when verbose output is useful. The flag
+also works with `run_me.lua --tests` or `--all`.
 
 The browser test runs from the config root and requires Node 22+, `chromium`,
 `nvim`, and the installed `markdown-preview.nvim` plugin. It starts an isolated
@@ -51,8 +58,8 @@ config/tests/
 `config/tests/spec/` has one `*_spec.lua` per feature (`tasks_spec.lua`, `git_status_spec.lua`,
 `wiki_modal_spec.lua`, and so on) — the filename always matches the module it pins down, so
 if you're editing `lua/plugins/fox/tasks.lua`, its test is `config/tests/spec/tasks_spec.lua`. This
-list grows constantly, so don't trust a snapshot of it here — `nvim -l config/tests/run.lua` prints
-every spec currently in the suite, and `ls config/tests/spec/` shows the files directly.
+list grows constantly, so don't trust a snapshot of it here — `nvim -l config/tests/run.lua --only-failure` summarizes
+the current suite (omit `--only-failure` to list passing cases), and `ls config/tests/spec/` shows the files directly.
 
 The Lua in Neovim library keeps its own suite in `lua/fox/lib/foxnvim/tests/`, run with
 `require("fox.lib.foxnvim.tests").run_all()`.
@@ -141,10 +148,10 @@ layout (window size, border color, title text), skip it; see the note above.
 2. **Write the case in plain language first**, then the assertion:
    `it("does not share its open key with LSP go-to-definition", ...)` reads as a
    sentence on its own, before you ever look at the `expect(...)` line.
-3. **Run just that spec while you iterate**: `nvim -l config/tests/run.lua tasks` (or
-   `:FoxTest tasks` inside the editor) filters by filename substring, so you're
+3. **Run just that spec while you iterate**: `nvim -l config/tests/run.lua tasks --only-failure` (or
+   `:FoxTest tasks --only-failure` inside the editor) filters by filename substring, so you're
    not waiting on the whole suite every save.
-4. **Run everything once before you're done**: `nvim -l config/tests/run.lua` — a change
+4. **Run everything once before you're done**: `nvim -l config/tests/run.lua --only-failure` — a change
    in a shared module (`lua/fox/core/*.lua`) can break a spec for a completely
    different feature that happens to depend on it.
 

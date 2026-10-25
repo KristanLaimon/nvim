@@ -134,12 +134,23 @@ Detailed setup, Ex commands, DAP debug profiles, and plugin integrations for eac
 
 ## 🧪 5. Headless Quality Checks (CI / CLI)
 
+AI assistants MUST use `--only-failure` by default for test runs, including filtered
+runs. This keeps failed cases, their captured diagnostics, and final totals
+without printing hundreds of passing tests. Use verbose output only when a
+specific investigation needs it. Prefer focused tests while iterating:
+
+```bash
+nvim -l config/tests/run.lua --only-failure
+nvim -l config/tests/run.lua tasks --only-failure
+nvim --headless -S config/tests/integration/run.lua -- kitty_shortcuts --only-failure
+```
+
 Run all quality gates from the command line without opening the UI:
 
 ### All checks at once (lint + syntax + tests)
 
 ```bash
-nvim --headless -c "lua _G.arg = {'--all'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
+nvim --headless -c "lua _G.arg = {'--all', '--only-failure'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
 ```
 
 ### Individual checks
@@ -152,7 +163,7 @@ nvim --headless -c "lua _G.arg = {'--lint'}; dofile(vim.fn.stdpath('config') .. 
 nvim --headless -c "lua _G.arg = {'--syntax'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
 
 # Test suite
-nvim --headless -c "lua _G.arg = {'--tests'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
+nvim --headless -c "lua _G.arg = {'--tests', '--only-failure'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
 ```
 
 ### Required tools

@@ -2,9 +2,9 @@
 -- config/tests/run.lua -- Headless entry point for the FOX test suite.
 -- ============================================================================
 -- HOW TO RUN
---   nvim -l config/tests/run.lua              # everything
---   nvim -l config/tests/run.lua core_path    # only specs whose name contains "core_path"
---   :FoxTest                           # from inside the editor (same runner)
+--   nvim -l config/tests/run.lua --only-failure              # everything, compact output
+--   nvim -l config/tests/run.lua core_path --only-failure    # only specs whose name contains "core_path"
+--   :FoxTest --only-failure            # from inside the editor (same runner)
 --
 -- HOW IT WORKS
 --   1. Every `config/tests/spec/*_spec.lua` file is a module returning nothing; it
@@ -79,12 +79,17 @@ function M.load_specs(root, filter)
 	return loaded, errors
 end
 
+function M.parse_args(args)
+	return require("fox.lib.foxnvim.test").parse_args(args)
+end
+
 --- Runs the whole suite and returns the exit code.
 ---
 --- @param root string Config root directory.
 --- @param filter string|nil Optional spec name filter.
+--- @param options table|nil Reporter options, including only_failure.
 --- @return integer exit_code 0 on success, 1 on any failure.
-function M.run(root, filter)
+function M.run(root, filter, options)
 	vim.g.fox_testing = true
 	_G.fox_testing = true
 	local loaded, errors = M.load_specs(root, filter)
@@ -97,7 +102,7 @@ function M.run(root, filter)
 		return #errors > 0 and 1 or 0
 	end
 
-	local ok, result = pcall(require("fox.lib.foxnvim.test").run)
+	local ok, result = pcall(require("fox.lib.foxnvim.test").run, options)
 	if not ok or #errors > 0 then
 		if not ok then
 			print(tostring(result))
@@ -122,7 +127,8 @@ end
 if is_entry then
 	local root = vim.fn.fnamemodify(script_source, ":p:h:h:h")
 	bootstrap_paths(root)
-	os.exit(M.run(root, _G.arg and _G.arg[1] or nil))
+	local filter, options = M.parse_args(_G.arg)
+	os.exit(M.run(root, filter, options))
 end
 
 return M

@@ -534,7 +534,29 @@ end
 -- Test Suite Execution & Output Formatting
 -- ----------------------------------------------------------------------------
 
+--- Parse one optional spec filter and compact-output flags, in either order.
+--- @param args string[]|nil
+--- @return string|nil filter
+--- @return table options
+function M.parse_args(args)
+	local filter, options = nil, { only_failure = false }
+	for _, argument in ipairs(args or {}) do
+		if argument == "--only-failure" then
+			options.only_failure = true
+		elseif argument:sub(1, 2) == "--" and argument ~= "--" then
+			error("Unknown test option: " .. argument)
+		elseif argument ~= "--" then
+			if filter then
+				error("Expected one spec filter, got: " .. argument)
+			end
+			filter = argument
+		end
+	end
+	return filter, options
+end
+
 --- Executes all registered `describe` and `test` blocks and prints formatted results.
+--- @param options table|nil Set only_failure=true to hide passing cases and their print output.
 ---
 --- @return table summary Object containing `passed`, `failed`, and `duration` (ms).
 ---
@@ -546,7 +568,12 @@ end
 ---     end)
 --- end)
 --- test_runner.run()
-function M.run()
+function M.run(options)
+	options = options or {}
+	local report = print
+	local notify_output = vim and vim.notify
+	local echo_output = vim and vim.api and vim.api.nvim_echo
+	local only_failure = options.only_failure == true
 	init_utf8()
 	local total_passed = 0
 	local total_failed = 0
@@ -564,49 +591,94 @@ function M.run()
 	local icon_pass = get_icon("pass")
 	local icon_fail = get_icon("fail")
 
-	print("\n==========================================")
-	print(string.format(" %s Running foxnvim.test Test Runner", icon_runner))
-	print("==========================================")
+	if not only_failure then
+		report("\n==========================================")
+		report(string.format(" %s Running foxnvim.test Test Runner", icon_runner))
+		report("==========================================")
+	end
 
+	local function execute(fn)
+		local output, original_print = {}, print
+		local original_notify = vim and vim.notify
+		local original_echo = vim and vim.api and vim.api.nvim_echo
+		if only_failure then
+			_G.print = function(...)
+				local arguments = { n = select("#", ...), ... }
+				output[#output + 1] = arguments
+			end
+			if original_notify and original_notify == notify_output then
+				vim.notify = function(message)
+					output[#output + 1] = { n = 1, "Notification: " .. tostring(message) }
+				end
+			end
+			if original_echo and original_echo == echo_output then
+				vim.api.nvim_echo = function(chunks)
+					local text = {}
+					for _, chunk in ipairs(chunks) do
+						text[#text + 1] = chunk[1]
+					end
+					output[#output + 1] = { n = 1, table.concat(text) }
+				end
+			end
+		end
+		local ok, result = pcall(fn)
+		_G.print = original_print
+		if original_notify then
+			vim.notify = original_notify
+		end
+		if original_echo then
+			vim.api.nvim_echo = original_echo
+		end
+		return ok, result, output
+	end
 	for _, suite in ipairs(state.suites) do
-		print(string.format("\n %s %s", icon_suite, suite.name))
-
+		local reported = false
+		if not only_failure then
+			report(string.format("\n %s %s", icon_suite, suite.name))
+		end
 		for _, fn in ipairs(suite.before_all) do
 			pcall(fn)
 		end
-
-		for _, t in ipairs(suite.tests) do
-			for _, fn in ipairs(suite.before_each) do
-				pcall(fn)
-			end
-
+		for _, test in ipairs(suite.tests) do
 			local t_start = get_time()
-			local ok, err = pcall(t.fn)
+			local _, outcome, output = execute(function()
+				for _, fn in ipairs(suite.before_each) do
+					pcall(fn)
+				end
+				local ok, err = pcall(test.fn)
+				for _, fn in ipairs(suite.after_each) do
+					pcall(fn)
+				end
+				return { ok = ok, err = err }
+			end)
 			local elapsed = math.floor(get_time() - t_start)
-
-			if ok then
+			if outcome.ok then
 				total_passed = total_passed + 1
-				print(string.format("   %s %s (%dms)", icon_pass, t.name, elapsed))
+				if not only_failure then
+					report(string.format("   %s %s (%dms)", icon_pass, test.name, elapsed))
+				end
 			else
 				total_failed = total_failed + 1
-				print(string.format("   %s %s (%dms)", icon_fail, t.name, elapsed))
-				print("      Error: " .. tostring(err))
-			end
-
-			for _, fn in ipairs(suite.after_each) do
-				pcall(fn)
+				if only_failure and not reported then
+					report(string.format("\n %s %s", icon_suite, suite.name))
+					reported = true
+				end
+				report(string.format("   %s %s (%dms)", icon_fail, test.name, elapsed))
+				report("      Error: " .. tostring(outcome.err))
+				for _, arguments in ipairs(output) do
+					report(unpack(arguments, 1, arguments.n))
+				end
 			end
 		end
-
 		for _, fn in ipairs(suite.after_all) do
 			pcall(fn)
 		end
 	end
 
 	local total_time = math.floor(get_time() - start_time)
-	print("\n==========================================")
-	print(string.format(" Test Results: %d Passed, %d Failed (%dms)", total_passed, total_failed, total_time))
-	print("==========================================\n")
+	report("\n==========================================")
+	report(string.format(" Test Results: %d Passed, %d Failed (%dms)", total_passed, total_failed, total_time))
+	report("==========================================\n")
 
 	-- Reset state for subsequent test runs
 	state.suites = {}

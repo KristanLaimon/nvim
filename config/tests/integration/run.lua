@@ -7,8 +7,8 @@
 --   has to boot the full config -- that is what this runner does.
 --
 -- HOW TO RUN
---   nvim --headless -S config/tests/integration/run.lua
---   nvim --headless -S config/tests/integration/run.lua dap    # name filter
+--   nvim --headless -S config/tests/integration/run.lua -- --only-failure
+--   nvim --headless -S config/tests/integration/run.lua -- dap --only-failure    # name filter
 --
 -- WRITING AN INTEGRATION SPEC
 --   Same shape as config/tests/spec (foxnvim.test describe/it/expect), but plugins may
@@ -17,10 +17,16 @@
 -- ============================================================================
 
 local root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h:h:h")
-local filter = vim.v.argv and vim.v.argv[#vim.v.argv] or nil
-if filter and filter:match("%.lua$") then
-	filter = nil
+local arguments = {}
+local found_script = false
+for _, argument in ipairs(vim.v.argv or {}) do
+	if found_script then
+		arguments[#arguments + 1] = argument
+	elseif vim.fn.fnamemodify(argument, ":p") == vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p") then
+		found_script = true
+	end
 end
+local filter, options = require("fox.lib.foxnvim.test").parse_args(arguments)
 
 local failed = 0
 
@@ -35,7 +41,7 @@ for _, file in ipairs(vim.fn.glob(root .. "/config/tests/integration/*_spec.lua"
 	end
 end
 
-local ok, result = pcall(require("fox.lib.foxnvim.test").run)
+local ok, result = pcall(require("fox.lib.foxnvim.test").run, options)
 if not ok then
 	print(tostring(result))
 end

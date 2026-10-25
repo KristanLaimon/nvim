@@ -33,7 +33,9 @@ For each plugin, before moving to the next:
    removing shared dependencies.
 4. Test observable behavior with focused tests and relevant real editor/LSP/parser
    integration checks. Cover the plan's specific requirements and meaningful
-   failure paths. Run syntax and applicable formatting/lint checks. Fix failures
+   failure paths. Use `--only-failure` by default for full and filtered Lua test
+   runs (e.g. `nvim -l config/tests/run.lua tasks --only-failure`); inspect failed
+   cases and totals without filling context with passing cases. Run syntax and applicable formatting/lint checks. Fix failures
    before treating the rewrite as complete; do not mark an unverified substitute
    complete just to meet the requested count.
 5. Update the dependency plan's status, completion notes and next item, and the

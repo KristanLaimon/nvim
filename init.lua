@@ -54,8 +54,9 @@ end, {})
 vim.api.nvim_create_user_command("FoxTest", function(command)
 	local root = vim.fn.stdpath("config")
 	local runner = dofile(root .. "/config/tests/run.lua")
-	runner.run(root, command.args ~= "" and command.args or nil)
-end, { nargs = "?", desc = "Run the FOX unit test suite (optionally filtered by spec name)" })
+	local filter, options = runner.parse_args(vim.split(command.args, "%s+", { trimempty = true }))
+	runner.run(root, filter, options)
+end, { nargs = "*", desc = "Run FOX tests with an optional spec filter and --only-failure" })
 
 -- ============ NEOVIDE Exclusive config ==================================
 if vim.g.neovide then

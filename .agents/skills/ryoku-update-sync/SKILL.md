@@ -67,7 +67,7 @@ existing Ryoku support. Do not alter the updater to prevent future seeding unles
 separately requested.
 
 Run `nvim -l config/tests/syntax_check.lua` and relevant existing specs, e.g.
-`nvim -l config/tests/run.lua ryoku_theme`. For implementation changes, also run
+`nvim -l config/tests/run.lua ryoku_theme --only-failure`. For implementation changes, also run
 applicable formatting/lint checks and tests; avoid repository-wide autoformatting
 that alters unrelated work. Validate skill edits with the available skill-creator
 validator.

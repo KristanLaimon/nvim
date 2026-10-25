@@ -152,8 +152,8 @@ function M.close(buf, row, col)
 	local parent = node:parent()
 	local finish
 	if parent then
-		local start
-		start, finish = children(parent)
+		local _start
+		_start, finish = children(parent)
 	end
 	if finish then
 		return false

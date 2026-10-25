@@ -155,7 +155,7 @@ API de compatibilidad propia en fox.ui.devicons y lua/nvim-web-devicons.lua. Con
 
 ## Reemplazo 13: nvim-mini/mini.icons
 
-Catálogo propio en fox.ui.icons, resolución de sufijos compuestos, filetypes y rutas Windows; conserva overrides por lenguaje, colores al cambiar tema y compatibilidad mini.icons/devicons. Ocho pruebas unitarias y dos integraciones NestJS aprobadas; sin copiar datos upstream.
+Resolución propia en fox.ui.icons con los metadatos originales de mini.icons en icon_data.lua (atribución y licencia MIT en licenses/mini.icons.txt). Conserva el catálogo completo, sufijos compuestos, filetypes, rutas Windows, overrides por lenguaje y colores. Corrección de paridad visual: 1.281 consultas comparadas con el plugin instalado sin diferencias; nueve pruebas unitarias de iconos/devicons y dos integraciones NestJS aprobadas.
 
 ## Reemplazo 14: brenoprata10/nvim-highlight-colors
 

@@ -165,7 +165,7 @@ No son plugins externos ni specs independientes adicionales:
 
 - `fox_neotree_wrap`: spec desactivada; sus helpers se usan desde Neo-tree.
 
-- `lua/fox/ui/devicons.lua` y `lua/nvim-web-devicons.lua`: API local para los consumidores de iconos; catálogo propio en `lua/fox/ui/icons.lua`.
+- `lua/fox/ui/devicons.lua` y `lua/nvim-web-devicons.lua`: API local para los consumidores de iconos; resolución propia en `lua/fox/ui/icons.lua` con metadatos originales atribuidos en `icon_data.lua` (licencia MIT en `licenses/mini.icons.txt`).
 
 - `lua/fox/langs/csharp/navigation.lua`: navegación OmniSharp y fuentes de metadata/generadas asíncronas.
 

@@ -1,6 +1,23 @@
 local t = require("fox.lib.foxnvim.test")
 t.describe("FOX icon catalog", function()
 	local icons = require("fox.ui.icons")
+	t.it("preserves the original config-file glyphs through the devicons consumer API", function()
+		local saved = vim.deepcopy(icons.config)
+		require("plugins.ui.devicons")[1].config()
+		local devicons = require("fox.ui.devicons")
+		for filename, expected in pairs({
+			["settings.toml"] = { "", "MiniIconsOrange" },
+			["data.json"] = { "󰘦", "MiniIconsYellow" },
+			[".luacheckrc"] = { "󰢱", "MiniIconsBlue" },
+			[".gitignore"] = { "󰊢", "MiniIconsPurple" },
+		}) do
+			local glyph, hl = devicons.get_icon(filename, filename:match("[^.]+$"))
+			t.expect(glyph).toBe(expected[1])
+			t.expect(hl).toBe(expected[2])
+		end
+		t.expect(#icons.list("filetype") > 900).toBe(true)
+		icons.setup(saved)
+	end)
 	t.it("covers supported languages with native filetype detection and Windows paths", function()
 		for _, ft in ipairs({
 			"lua",

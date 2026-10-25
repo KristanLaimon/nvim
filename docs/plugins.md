@@ -108,8 +108,10 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | `fox_theme_startup` (local) | Restore FOX palettes from config/colors/ at startup, including Ryoku/Omarchy sync |
 | `akinsho/bufferline.nvim` | Buffer tab bar |
 | `nvim-lualine/lualine.nvim` | Statusline |
-| `nvim-highlight-colors` | Inline CSS colour previews |
+| `fox_color_highlights` | Inline CSS colour previews (`:HighlightColors`) |
 | `fox.core.window_picker` (local) | Visual window selector for Neo-tree; no external plugin |
 | `nvim-file-operations` | Keeps buffers in sync with disk renames/moves |
 
 - `mini.icons`: sustituido por `fox_icons`. Catálogo propio en fox.ui.icons, resolución de sufijos compuestos, filetypes y rutas Windows; conserva overrides por lenguaje, colores al cambiar tema y compatibilidad mini.icons/devicons. Ocho pruebas unitarias y dos integraciones NestJS aprobadas; sin copiar datos upstream.
+
+- `nvim-highlight-colors`: sustituido por `fox_color_highlights`. Previews nativos con extmarks, CSS hex/rgb/hsl, nombres y variables; Tailwind opt-in reutiliza colorify. Debounce y render limitado a ventanas visibles y líneas acotadas. Conserva HighlightColors y añade acción de paleta. Tres pruebas con buffers reales cubren Unicode, edición, formatos y variables; sin dependencias externas.

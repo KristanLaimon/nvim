@@ -235,6 +235,7 @@ M.commands = {
 	{ name = "📊 GitKraken Commit Graph Viewer (Current / --all)", cmd = "GitGraph", category = "Git" },
 	{ name = "📜 Git Log Diff Dashboard (4-Panel Commit History Diff)", cmd = "GitLogDiff", category = "Git" },
 	{ name = "📄 Git File History (Select File)", cmd = "GitFileHistory", category = "Git" },
+	{ name = "Toggle inline color previews", cmd = "HighlightColors Toggle", category = "Editor" },
 	{ name = "👀 Toggle Git Blame Inline Virtual Text (VSCode Style)", cmd = "GitBlameToggle", category = "Git" },
 	{ name = "🌐 Open Git Blame Commit URL in Browser", cmd = "GitBlameOpenCommitURL", category = "Git" },
 	{ name = "📋 Copy Git Blame Commit SHA to Clipboard", cmd = "GitBlameCopySHA", category = "Git" },

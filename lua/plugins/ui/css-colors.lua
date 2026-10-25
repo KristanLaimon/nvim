@@ -1,14 +1,9 @@
--- ============================================================================
--- PLUGIN: nvim-highlight-colors -- colour previews inside the code.
--- ============================================================================
--- Renders `#rrggbb`, `rgb()`, `hsl()` and Tailwind class colours with their actual
--- colour, in CSS and anywhere else a colour literal appears.
--- ============================================================================
-
 return {
-	"brenoprata10/nvim-highlight-colors",
+	name = "fox_color_highlights",
+	dir = vim.fn.stdpath("config"),
 	event = { "BufReadPre", "BufNewFile" },
+	cmd = "HighlightColors",
 	config = function()
-		require("nvim-highlight-colors").setup({})
+		require("fox.ui.color_highlights").setup({})
 	end,
 }

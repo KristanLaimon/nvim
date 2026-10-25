@@ -7,7 +7,8 @@
 -- ============================================================================
 
 return {
-	"windwp/nvim-ts-autotag",
+	name = "fox_autotag",
+	dir = require("fox.core.lazyspec").for_module(),
 	ft = {
 		"html",
 		"xml",
@@ -24,5 +25,7 @@ return {
 		"tsx",
 		"markdown",
 	},
-	opts = {},
+	config = function()
+		require("fox.editor.autotag").setup()
+	end,
 }

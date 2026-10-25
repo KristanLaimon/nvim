@@ -2,18 +2,18 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **12 reemplazos completados: 37 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **12 reemplazos completados: 37 externos actuales**, de los cuales **20 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
 - Un reemplazo por cambio: revisar consumidores y comandos, implementar o reutilizar módulos locales, probar, retirar specs/lockfile y actualizar ambos documentos.
 - Mantener APIs utilizadas y datos existentes. Usar Neovim y lua/fox/ antes de añadir código. Las posiciones cercanas pueden ajustarse al revisar cada implementación.
 - Mantener Lua como instalación mínima; lenguajes opcionales solo por selección explícita en LanguageManager.
-- Nui, Nio y Plenary tienen consumidores compartidos. Su posición indica dificultad; retirarlos exige migrar antes esos consumidores.
+- Los plugins de la tabla Vital-Exceptions se conservan como dependencias externas; no forman parte de los reemplazos pendientes.
 - Menos clones no significa cero herramientas: LSPs, formateadores, adaptadores, Git, runtimes y gramáticas siguen siendo necesarios.
 - Una copia vendorizada sigue siendo código externo. Preferir implementación propia; conservar licencias y atribuciones al reutilizar código o recursos.
 
-## Lista completa, de más fácil a más difícil
+## Plan de implementación, de más fácil a más difícil
 
 | Orden | Plugin externo | Dificultad | Estado | Sustitución del uso actual |
 |---|---|---|---|---|
@@ -48,24 +48,31 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 29 | `b0o/schemastore.nvim` | Alta | Pendiente | Catálogo local y selección de schemas; definir cómo mantener actualizados sus datos. |
 | 30 | `nvim-telescope/telescope-file-browser.nvim` | Alta | Pendiente | Migrar consumidores al explorador propio conservando navegación y operaciones. |
 | 31 | `sindrets/diffview.nvim` | Alta | Pendiente | Diff e historial con fox.git; conservar integración de Neogit. |
-| 32 | `folke/snacks.nvim` | Alta | Pendiente | Inventariar APIs consumidas y sustituirlas con módulos FOX; cubrir solo funciones utilizadas. |
-| 33 | `iamcco/markdown-preview.nvim` | Alta | Pendiente | Servidor y vista web locales con recarga, scroll y renderizado seguro; quitar build externo. |
 | 34 | `MeanderingProgrammer/render-markdown.nvim` | Alta | Pendiente | Renderizado incremental con Treesitter y extmarks; tablas, bloques y modos de edición. |
-| 35 | `stevearc/conform.nvim` | Alta | Pendiente | Procesos asíncronos, condiciones, rangos, errores y guardado sin perder cambios. |
-| 36 | `neovim/nvim-lspconfig` | Alta | Pendiente | Usar vim.lsp con datos por lenguaje y migrar utilidades/root_dir consumidos. |
-| 37 | `lewis6991/gitsigns.nvim` | Muy alta | Pendiente | Hunks incrementales, signos y stage/reset parcial sin dañar el índice de Git. |
-| 38 | `NeogitOrg/neogit` | Muy alta | Pendiente | Completar funciones equivalentes en Git Center antes de retirar comandos e integraciones. |
-| 39 | `rcarriga/nvim-dap-ui` | Muy alta | Pendiente | Paneles scopes, stacks, watches, REPL y consola con layouts y sesiones. |
-| 40 | `nvim-neo-tree/neo-tree.nvim` | Muy alta | Pendiente | Árbol, watchers y operaciones seguras; migrar extensiones FOX y estado Git/ventanas. |
-| 41 | `MunifTanjim/nui.nvim` | Muy alta | Pendiente | Migrar APIs de UI de todos sus consumidores; retirar después de Neo-tree/package-info. |
-| 42 | `nvim-neotest/nvim-nio` | Muy alta | Pendiente | Migrar async y cancelación de dap-ui; eliminar tras su consumidor si deja de necesitarse. |
-| 43 | `nvim-lua/plenary.nvim` | Muy alta | Pendiente | Migrar jobs, async y paths de todos los consumidores, incluidos módulos FOX. |
-| 44 | `nvim-telescope/telescope.nvim` | Muy alta | Pendiente | Buscador/framework propios; migrar pickers FOX, extensiones y acciones. |
-| 45 | `williamboman/mason.nvim` | Muy alta | Pendiente | Descargas, versiones, extracción y binarios multiplataforma; conservar selección explícita. |
-| 46 | `folke/lazy.nvim` | Muy alta | Pendiente | Carga diferida, dependencias, bootstrap, lockfile y actualizaciones; migrar specs primero. |
-| 47 | `saghen/blink.cmp` | Extrema | Pendiente | Motor de completion, ranking, LSP/snippets y fuentes FOX; cancelación y edición rápida. |
-| 48 | `mfussenegger/nvim-dap` | Extrema | Pendiente | Cliente DAP con transportes, sesiones, breakpoints y REPL compatible con adaptadores. |
-| 49 | `nvim-treesitter/nvim-treesitter` | Extrema | Pendiente | API Treesitter nativa, queries y gestión/compilación de parsers; gramáticas siguen externas. |
+
+## Vital-Exceptions
+
+Dependencias que el usuario decidió conservar. Quedan fuera del plan de implementación y no se reescriben al invocar `$dependency-rewriter`. Se mantienen sus números originales para referencia.
+
+| Orden original | Plugin externo | Dificultad estimada original |
+|---|---|---|
+| 32 | `folke/snacks.nvim` | Alta |
+| 33 | `iamcco/markdown-preview.nvim` | Alta |
+| 35 | `stevearc/conform.nvim` | Alta |
+| 36 | `neovim/nvim-lspconfig` | Alta |
+| 37 | `lewis6991/gitsigns.nvim` | Muy alta |
+| 38 | `NeogitOrg/neogit` | Muy alta |
+| 39 | `rcarriga/nvim-dap-ui` | Muy alta |
+| 40 | `nvim-neo-tree/neo-tree.nvim` | Muy alta |
+| 41 | `MunifTanjim/nui.nvim` | Muy alta |
+| 42 | `nvim-neotest/nvim-nio` | Muy alta |
+| 43 | `nvim-lua/plenary.nvim` | Muy alta |
+| 44 | `nvim-telescope/telescope.nvim` | Muy alta |
+| 45 | `williamboman/mason.nvim` | Muy alta |
+| 46 | `folke/lazy.nvim` | Muy alta |
+| 47 | `saghen/blink.cmp` | Extrema |
+| 48 | `mfussenegger/nvim-dap` | Extrema |
+| 49 | `nvim-treesitter/nvim-treesitter` | Extrema |
 
 ## Primer ítem completado: mason-conform.nvim
 

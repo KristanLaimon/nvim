@@ -9,6 +9,9 @@ Resume `config/plans_notes_md/DEPENDENCYFOX.plan.md`. Read the project AGENTS.md
 that plan, `config/plans_notes_md/PLUGINS-LIST.md`, and Git status/history first.
 Determine the next pending replacement from actual code and completed commits;
 never restart completed work just because an older plan entry is stale.
+Select pending items only from the implementation table. Plugins listed under
+`Vital-Exceptions` are retained dependencies: skip them and do not move them back
+into the rewrite queue unless the user explicitly requests it.
 
 A bare invocation authorizes continuing the next pending replacement. If the
 user specifies a count, finish that many replacements sequentially. For a bare

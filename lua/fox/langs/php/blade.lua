@@ -93,6 +93,14 @@ function M.syntax()
 	vim.b.current_syntax = "blade"
 end
 local function strip(line, state)
+	if state.html_comment then
+		local stop = line:find("-->", 1, true)
+		if not stop then
+			return ""
+		end
+		line = line:sub(stop + 3)
+		state.html_comment = false
+	end
 	if state.comment then
 		local stop = line:find("--}}", 1, true)
 		if not stop then
@@ -102,6 +110,11 @@ local function strip(line, state)
 		state.comment = false
 	end
 	line = line:gsub("{{--.-%-%-}}", ""):gsub("<!%-%-.-%-%->", "")
+	local html_start = line:find("<!--", 1, true)
+	if html_start then
+		state.html_comment = true
+		line = line:sub(1, html_start - 1)
+	end
 	local start = line:find("{{--", 1, true)
 	if start then
 		state.comment = true
@@ -114,6 +127,12 @@ local function strip(line, state)
 end
 local function delta(line, state, starts, closes)
 	local depth = 0
+	local raw = state.raw
+	if line:match("<script[%s>]") then
+		state.raw = "script"
+	elseif line:match("<style[%s>]") then
+		state.raw = "style"
+	end
 	for directive, pos in line:gmatch("@([%w_]+)()") do
 		if closes[directive] then
 			depth = depth - 1
@@ -135,13 +154,17 @@ local function delta(line, state, starts, closes)
 	if line:find("<?", 1, true) or line:match("@php%s*$") then
 		state.php = true
 	end
-	if state.php then
-		local _, opens = line:gsub("{", "")
-		local _, closed = line:gsub("}", "")
+	if state.php or state.raw or raw then
+		local braces = line:gsub("{{.-}}", ""):gsub("{!!.-!!}", ""):gsub("//.*$", "")
+		local _, opens = braces:gsub("{", "")
+		local _, closed = braces:gsub("}", "")
 		depth = depth + opens - closed
 		if line:find("?>", 1, true) or line:match("@endphp") then
 			state.php = false
 		end
+	end
+	if line:match("</script%s*>") or line:match("</style%s*>") then
+		state.raw = nil
 	end
 	return depth
 end
@@ -173,7 +196,7 @@ function M.indent(lnum)
 	then
 		depth = depth - 1
 	end
-	if current:match("^</") or (state.php and current:match("^}")) then
+	if current:match("^</") or ((state.php or state.raw) and current:match("^}")) then
 		depth = depth - 1
 	end
 	return math.max(0, depth) * vim.fn.shiftwidth()

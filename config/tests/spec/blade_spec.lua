@@ -24,22 +24,16 @@ t.describe("Local Blade support", function()
 		end
 	end)
 	t.it("keeps inline section/slot/php, escaped directives and comments balanced", function()
-		vim.api.nvim_buf_set_lines(
-			b,
-			0,
-			-1,
-			false,
-			{
-				"@section('title', 'Hi')",
-				"@php($x = 1)",
-				"@@if($x)",
-				"{{-- @if($x) --}}",
-				"@script",
-				"text",
-				"@endscript",
-				"tail",
-			}
-		)
+		vim.api.nvim_buf_set_lines(b, 0, -1, false, {
+			"@section('title', 'Hi')",
+			"@php($x = 1)",
+			"@@if($x)",
+			"{{-- @if($x) --}}",
+			"@script",
+			"text",
+			"@endscript",
+			"tail",
+		})
 		for row, expected in ipairs({ 0, 0, 0, 0, 0, 2, 0, 0 }) do
 			t.expect(m.indent(row)).toBe(expected)
 		end
@@ -65,6 +59,32 @@ t.describe("Local Blade support", function()
 			{ "@forelse($items as $item)", "{{ $item }}", "@empty", "<p>Nothing</p>", "@endforelse", "tail" }
 		)
 		for row, expected in ipairs({ 0, 2, 0, 2, 0, 0 }) do
+			t.expect(m.indent(row)).toBe(expected)
+		end
+	end)
+	t.it("ignores multiline HTML comments and indents embedded script/style braces", function()
+		vim.api.nvim_buf_set_lines(
+			b,
+			0,
+			-1,
+			false,
+			{
+				"<!--",
+				"<div>",
+				"-->",
+				"<script>",
+				"if (ready) {",
+				"run();",
+				"}",
+				"</script>",
+				"<style>",
+				".foo {",
+				"color: red;",
+				"}",
+				"</style>",
+			}
+		)
+		for row, expected in ipairs({ 0, 0, 0, 0, 2, 4, 2, 0, 0, 2, 4, 2, 0 }) do
 			t.expect(m.indent(row)).toBe(expected)
 		end
 	end)

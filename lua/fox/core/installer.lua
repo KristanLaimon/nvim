@@ -67,10 +67,6 @@ end
 --- @param pkg string
 --- @return string
 function M.get_mason_package_name(pkg)
-	local ok, mappings = pcall(require, "mason-lspconfig.mappings.server")
-	if ok and mappings.lspconfig_to_package and mappings.lspconfig_to_package[pkg] then
-		return mappings.lspconfig_to_package[pkg]
-	end
 	local tool = M.tools[pkg]
 	return (tool and tool.mason) or pkg
 end
@@ -711,7 +707,7 @@ function M.install_all()
 			local has_lazy, lazy = pcall(require, "lazy")
 			if has_lazy then
 				pcall(function()
-					lazy.load({ plugins = { "mason.nvim", "mason-lspconfig.nvim", "nvim-treesitter" } })
+					lazy.load({ plugins = { "mason.nvim", "nvim-treesitter" } })
 				end)
 			end
 

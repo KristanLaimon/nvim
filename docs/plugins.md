@@ -70,7 +70,7 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 |---|---|
 | `neovim/nvim-lspconfig` | LSP server configuration |
 | `williamboman/mason.nvim` | Package manager for LSPs, formatters, linters, debug adapters |
-| `williamboman/mason-lspconfig.nvim` | Mason ↔ lspconfig bridge |
+| `fox.lsp.tooling` | Explicit Mason actions using local language metadata |
 | FoxVim LanguageManager (local) | Installs selected language formatters; Mason exposes executables to Conform through PATH |
 | FoxVim language modules (local) | Register adapters; LanguageManager installs selected tools |
 | `saghen/blink.cmp` | Completion engine |
@@ -115,3 +115,5 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 - `mini.icons`: sustituido por `fox_icons`. Catálogo propio en fox.ui.icons, resolución de sufijos compuestos, filetypes y rutas Windows; conserva overrides por lenguaje, colores al cambiar tema y compatibilidad mini.icons/devicons. Ocho pruebas unitarias y dos integraciones NestJS aprobadas; sin copiar datos upstream.
 
 - `nvim-highlight-colors`: sustituido por `fox_color_highlights`. Previews nativos con extmarks, CSS hex/rgb/hsl, nombres y variables; Tailwind opt-in reutiliza colorify. Debounce y render limitado a ventanas visibles y líneas acotadas. Conserva HighlightColors y añade acción de paleta. Tres pruebas con buffers reales cubren Unicode, edición, formatos y variables; sin dependencias externas.
+
+- `mason-lspconfig.nvim`: sustituido por `fox_lsp_tooling`. Mapeo desde metadatos de lenguajes y genéricos existentes, sin instalaciones automáticas. Conserva LspInstall con selección cancelable, versiones y LspUninstall; activación mediante vim.lsp.config/enable. 17 pruebas de tooling/installer aprobadas e integración real LuaLS adjunto sin mason-lspconfig.

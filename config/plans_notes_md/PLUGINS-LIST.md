@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **35 externos** y **65 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **34 externos** y **65 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -48,7 +48,6 @@ Total actual: **35 externos** y **65 specs locales**. El plan de sustitución es
 - `ricardoramirezr/blade-nav.nvim` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
 - `saghen/blink.cmp` — [`lsp/blink_sources.lua`](../../lua/plugins/lsp/blink_sources.lua), [`lsp/editorconfig.lua`](../../lua/plugins/lsp/editorconfig.lua), [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua), [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `stevearc/conform.nvim` — [`lsp/formatting.lua`](../../lua/plugins/lsp/formatting.lua)
-- `williamboman/mason-lspconfig.nvim` — [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `williamboman/mason.nvim` — [`lsp/formatting.lua`](../../lua/plugins/lsp/formatting.lua), [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 
 **UI**
@@ -159,6 +158,8 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox_icons` — [`ui/devicons.lua`](../../lua/plugins/ui/devicons.lua)
 
 - `fox_color_highlights` — [`ui/css-colors.lua`](../../lua/plugins/ui/css-colors.lua)
+
+- `fox.lsp.tooling`: acciones Mason explícitas integradas en la spec LSP existente.
 
 ### Submódulos y soporte local
 

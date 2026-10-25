@@ -149,7 +149,6 @@ return {
 		cmd = { "LspInfo", "LspInstall", "LspStart" },
 		dependencies = {
 			"williamboman/mason.nvim",
-			"williamboman/mason-lspconfig.nvim",
 			"b0o/schemastore.nvim",
 		},
 		opts = function()
@@ -230,33 +229,7 @@ return {
 
 			-- 1. Initialize Mason
 			require("mason").setup()
-			require("mason-lspconfig").setup({
-				automatic_installation = false,
-				automatic_enable = false,
-				ensure_installed = {},
-				handlers = {
-					function(server_name)
-						local config = opts.servers[server_name] or {}
-						if config.enabled == false then
-							return
-						end
-						if has_blink then
-							config.capabilities = blink.get_lsp_capabilities(config.capabilities)
-						end
-
-						if vim.fn.has("win32") == 1 then
-							config.capabilities = config.capabilities or vim.lsp.protocol.make_client_capabilities()
-							config.capabilities.workspace = config.capabilities.workspace or {}
-							config.capabilities.workspace.didChangeWatchedFiles = config.capabilities.workspace.didChangeWatchedFiles
-								or {}
-							config.capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = false
-						end
-
-						vim.lsp.config(server_name, config)
-						vim.lsp.enable(server_name)
-					end,
-				},
-			})
+			require("fox.lsp.tooling").setup(opts.servers)
 
 			-- 2. Setup configured servers in opts.servers
 			for server_name, config in pairs(opts.servers) do
@@ -320,10 +293,6 @@ return {
 						-- "System.ArgumentOutOfRangeException: Range must not span multiple lines"
 						client.server_capabilities.semanticTokensProvider = nil
 					end
-
-					local env_ok, env_mod = pcall(require, "fox.core.environment")
-					local env = env_ok and env_mod.detect() or {}
-					local is_mobile_or_proot = env.is_termux or env.is_proot or env.is_mobile or (vim.env.TERMUX_VERSION ~= nil)
 
 					-- Inlay hints are kept disabled on attach by default to prevent Neovim 0.10's upstream
 					-- runtime decoration provider bug (/usr/share/nvim/runtime/lua/vim/lsp/inlay_hint.lua:362)

@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **11 reemplazos completados: 38 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **12 reemplazos completados: 37 restantes**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -28,7 +28,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 9 | `windwp/nvim-ts-autotag` | Media | Completado | Cerrar/renombrar etiquetas con Treesitter; cubrir JSX, fragmentos y etiquetas vacías. |
 | 10 | `Wansmer/symbol-usage.nvim` | Media | Completado | Referencias LSP y extmarks con debounce y protección ante respuestas atrasadas. |
 | 11 | `Hoffs/omnisharp-extended-lsp.nvim` | Media | Completado | Traducir respuestas de OmniSharp y abrir fuentes de metadatos; conservar navegación C#. |
-| 12 | `nvim-tree/nvim-web-devicons` | Media | Pendiente | Cubrir API mediante iconos locales y retirar specs consumidoras; hoy mini.icons aporta un mock. |
+| 12 | `nvim-tree/nvim-web-devicons` | Media | Completado | API local compatible; mini.icons conserva el catálogo hasta el siguiente reemplazo. |
 | 13 | `nvim-mini/mini.icons` | Media | Pendiente | Catálogo local, colores, sufijos compuestos, overrides por lenguaje y API devicons. |
 | 14 | `brenoprata10/nvim-highlight-colors` | Media | Pendiente | Colores CSS/Tailwind a extmarks; preservar formatos configurados y rendimiento al editar. |
 | 15 | `williamboman/mason-lspconfig.nvim` | Media | Pendiente | Mapear paquetes a servidores desde metadatos locales; mantener activación y selección mínima. |
@@ -142,6 +142,10 @@ Contador propio en fox.lsp.symbol_usage con documentSymbol/references, virt_line
 
 Navegación propia en fox.langs.csharp.navigation. Traduce los cuatro endpoints utilizados y carga metadata/sourcegeneratedfile de forma asíncrona en buffers readonly aislados por cliente; conserva el nombre del servidor al navegar desde esos buffers y no sobrescribe ediciones. Mantiene saltos únicos, Telescope y quickfix, posiciones UTF-16 y rechazo de respuestas tardías. Ocho pruebas con respuestas de protocolo controladas cubren estas rutas; no había OmniSharp/.NET instalado para verificar un servidor C# real.
 
+## Reemplazo 12: nvim-tree/nvim-web-devicons
+
+API de compatibilidad propia en fox.ui.devicons y lua/nvim-web-devicons.lua. Conserva resolución por archivo/extensión/filetype, sufijos compuestos, overrides por lenguaje, colores, defaults y catálogo. Los consumidores dependen ahora del catálogo mini.icons (su sustitución es el siguiente ítem), sin clonar devicons ni usar su mock. Cinco pruebas de API, las 36 pruebas de Query y arranque real con Neo-tree/Telescope/bufferline/lualine verifican iconos y ausencia de la spec externa. Suite completa: 853 aprobadas y 2 fallos preexistentes en ProjectRoot y aislamiento del tema Ryoku, reproducidos con el código anterior.
+
 ## Siguiente ítem
 
-`nvim-tree/nvim-web-devicons`: continuar con el alcance indicado en la tabla.
+`nvim-mini/mini.icons`: continuar con el alcance indicado en la tabla.

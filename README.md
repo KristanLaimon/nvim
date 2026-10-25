@@ -62,7 +62,7 @@ The shell-keybinding setup supports **Windows Terminal, Kitty, Foot, WezTerm, Al
 
 ## Plugin inventory
 
-FoxVim has **48 hand-crafted local plugins** in [`lua/plugins/fox/`](lua/plugins/fox) and **48 pinned external plugins** in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
+FoxVim has **63 local plugin specs** across [`lua/plugins/`](lua/plugins) and **37 external plugins**, including lazy.nvim, pinned in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
 
 ### Hand-crafted FoxVim plugins
 
@@ -78,9 +78,9 @@ FoxVim has **48 hand-crafted local plugins** in [`lua/plugins/fox/`](lua/plugins
 
 | Area | Packages pinned in `lazy-lock.json` |
 |---|---|
-| UI and themes | `bufferline.nvim`, `lualine.nvim`, `mini.icons`, `nvim-highlight-colors`, `nvim-notify`, `nvim-web-devicons`, `render-markdown.nvim` |
+| UI and themes | `bufferline.nvim`, `lualine.nvim`, `mini.icons`, `nvim-highlight-colors`, `nvim-notify`, `render-markdown.nvim` |
 | Navigation and Git | `diffview.nvim`, `git-blame.nvim`, `gitsigns.nvim`, `neo-tree.nvim`, `neogit`, `nui.nvim`, `nvim-file-operations`, `nvim-lsp-file-operations`, `package-info.nvim`, `plenary.nvim`, `snacks.nvim`, `telescope-file-browser.nvim`, `telescope.nvim` |
-| LSP and editing | `blink.cmp`, `conform.nvim`, `friendly-snippets`, `mason-lspconfig.nvim`, `mason.nvim`, `nvim-lspconfig`, `nvim-treesitter`, `schemastore.nvim`, `symbol-usage.nvim` |
+| LSP and editing | `blink.cmp`, `conform.nvim`, `friendly-snippets`, `mason-lspconfig.nvim`, `mason.nvim`, `nvim-lspconfig`, `nvim-treesitter`, `schemastore.nvim` |
 | Debugging | `baleia.nvim`, `nvim-dap`, `nvim-dap-ui`, `nvim-nio` |
 | Language and extras | `blade-nav.nvim`, `cord.nvim`, `lazy.nvim`, `markdown-preview.nvim`, `nvim-autopairs`, `vim-blade` |
 

@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **38 externos** y **63 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **37 externos** y **63 specs locales**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -33,7 +33,6 @@ Total actual: **38 externos** y **63 specs locales**. El plan de sustitución es
 - `nvim-neotest/nvim-nio` — [`editor/dap.lua`](../../lua/plugins/editor/dap.lua)
 - `nvim-telescope/telescope-file-browser.nvim` — [`editor/telescope.lua`](../../lua/plugins/editor/telescope.lua)
 - `nvim-telescope/telescope.nvim` — [`editor/neogit.lua`](../../lua/plugins/editor/neogit.lua), [`editor/project.lua`](../../lua/plugins/editor/project.lua), [`editor/telescope.lua`](../../lua/plugins/editor/telescope.lua), [`fox/dev/tasks.lua`](../../lua/plugins/fox/dev/tasks.lua), [`fox/git/git_accounts.lua`](../../lua/plugins/fox/git/git_accounts.lua), [`fox/git/git_center/init.lua`](../../lua/plugins/fox/git/git_center/init.lua), [`fox/tools/command_palette.lua`](../../lua/plugins/fox/tools/command_palette.lua), [`fox/tools/environments.lua`](../../lua/plugins/fox/tools/environments.lua), [`fox/tools/file_explorer.lua`](../../lua/plugins/fox/tools/file_explorer.lua), [`fox/tools/nuget.lua`](../../lua/plugins/fox/tools/nuget.lua), [`fox/tools/workspaces.lua`](../../lua/plugins/fox/tools/workspaces.lua)
-- `nvim-tree/nvim-web-devicons` — [`editor/markdown.lua`](../../lua/plugins/editor/markdown.lua), [`editor/neo-tree.lua`](../../lua/plugins/editor/neo-tree.lua), [`editor/project.lua`](../../lua/plugins/editor/project.lua), [`ui/bufferline.lua`](../../lua/plugins/ui/bufferline.lua), [`ui/dashboard.lua`](../../lua/plugins/ui/dashboard.lua), [`ui/themes.lua`](../../lua/plugins/ui/themes.lua)
 - `nvim-treesitter/nvim-treesitter` — [`editor/markdown.lua`](../../lua/plugins/editor/markdown.lua), [`lsp/treesitter.lua`](../../lua/plugins/lsp/treesitter.lua)
 - `rcarriga/nvim-dap-ui` — [`editor/dap.lua`](../../lua/plugins/editor/dap.lua)
 - `sindrets/diffview.nvim` — [`editor/neogit.lua`](../../lua/plugins/editor/neogit.lua), [`fox/git/git_center/init.lua`](../../lua/plugins/fox/git/git_center/init.lua)
@@ -64,7 +63,7 @@ Total actual: **38 externos** y **63 specs locales**. El plan de sustitución es
 
 - `vyfor/cord.nvim` — [`ui/discord.lua`](../../lua/plugins/ui/discord.lua)
 
-`nvim-web-devicons` sigue declarado como dependencia externa; `mini.icons` proporciona además su API mediante un mock. No se considera eliminado hasta retirar sus specs consumidoras.
+`nvim-web-devicons` es ahora una API local en `lua/fox/ui/devicons.lua`; `mini.icons` sigue aportando el catálogo hasta el siguiente reemplazo.
 
 ## (Fox-Made)
 
@@ -162,6 +161,8 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 ### Submódulos y soporte local
 
 No son plugins externos ni specs independientes adicionales:
+
+- `lua/fox/ui/devicons.lua` y `lua/nvim-web-devicons.lua`: API local para los consumidores de iconos; el catálogo sigue en mini.icons.
 
 - `lua/fox/langs/csharp/navigation.lua`: navegación OmniSharp y fuentes de metadata/generadas asíncronas.
 

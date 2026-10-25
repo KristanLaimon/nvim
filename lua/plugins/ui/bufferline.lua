@@ -31,7 +31,7 @@ return {
 	"akinsho/bufferline.nvim",
 	version = "*",
 	event = "VimEnter",
-	dependencies = { "nvim-tree/nvim-web-devicons" },
+	dependencies = { "nvim-mini/mini.icons" },
 	config = function()
 		local function apply_tab_highlights()
 			local white_selected = { fg = "#ffffff", bold = true }

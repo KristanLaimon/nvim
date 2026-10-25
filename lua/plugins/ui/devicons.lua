@@ -5,9 +5,8 @@
 -- "JS"/"TS" brand-logo icons; mini.icons draws its default set from Material
 -- Design Icons instead, which is what this file is picking on purpose.
 --
--- `mock_nvim_web_devicons()` makes `require("nvim-web-devicons")` (used by
--- bufferline, neo-tree, telescope, etc.) transparently resolve to mini.icons,
--- so none of those plugin configs need to change.
+-- `lua/nvim-web-devicons.lua` supplies FoxVim's compatibility API for consumers.
+-- mini.icons supplies the catalog until its own planned replacement.
 --
 -- The `.foxnvim` and `.proto` icons are registered as both extension and
 -- filetype, same as before, because each consumer looks them up differently.
@@ -43,7 +42,7 @@ return {
 		version = false,
 		event = "VeryLazy",
 		-- Must configure before bufferline/neo-tree/telescope/devicons.lua ever
-		-- call require("nvim-web-devicons"), so the mock is in place first.
+		-- call require("nvim-web-devicons"), so the catalog is configured first.
 		priority = 10000,
 		opts = {
 			style = "glyph",
@@ -63,7 +62,6 @@ return {
 				opts = vim.tbl_deep_extend("force", opts, lang.icons or {})
 			end
 			require("mini.icons").setup(opts)
-			require("mini.icons").mock_nvim_web_devicons()
 			apply_mini_icons_palette()
 			vim.api.nvim_create_autocmd("ColorScheme", {
 				group = vim.api.nvim_create_augroup("fox_mini_icons_palette", { clear = true }),

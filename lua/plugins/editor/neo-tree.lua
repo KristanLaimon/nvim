@@ -486,7 +486,7 @@ return {
 		dependencies = {
 			"nvim-lua/plenary.nvim",
 			"MunifTanjim/nui.nvim",
-			"nvim-tree/nvim-web-devicons",
+			"nvim-mini/mini.icons",
 			"antosha417/nvim-lsp-file-operations",
 			"folke/snacks.nvim",
 		},

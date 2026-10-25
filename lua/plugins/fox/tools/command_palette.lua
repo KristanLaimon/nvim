@@ -298,7 +298,8 @@ M.commands = {
 	-- 🐘 PHP & Laravel
 	-- --------------------------------------------------------------------------
 	{ name = "🐘 Check PHP & Laravel Environment Status", cmd = "PHPCheckTools", category = "PHP / Laravel" },
-	{ name = "🧹 Clear Blade & Laravel Caches (blade-nav)", cmd = "BladeNavClearCache", category = "PHP / Laravel" },
+	{ name = "Open Laravel reference at cursor", cmd = "BladeNavGoToFile", category = "PHP / Laravel" },
+	{ name = "🧹 Clear Blade & Laravel Caches", cmd = "BladeNavClearCache", category = "PHP / Laravel" },
 	{
 		name = "👁️ Toggle Blade Inline Value Annotations",
 		cmd = "BladeNavToggleShowValues",

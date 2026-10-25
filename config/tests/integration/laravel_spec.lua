@@ -1,0 +1,38 @@
+local t = require("fox.lib.foxnvim.test")
+t.describe("Local Laravel editor integration", function()
+	t.it("navigates with local gf and supplies Blink completions without blade-nav", function()
+		local root = vim.fn.tempname()
+		vim.fn.mkdir(root .. "/resources/views", "p")
+		vim.fn.writefile({}, root .. "/artisan")
+		vim.fn.writefile({ "{}" }, root .. "/composer.json")
+		local view = root .. "/resources/views/home.blade.php"
+		vim.fn.writefile({ "<p>Home</p>" }, view)
+		local file = root .. "/test.php"
+		vim.fn.writefile({ "<?php view('home');" }, file)
+		vim.cmd.edit(file)
+		local original = vim.api.nvim_get_current_buf()
+		local mapping = vim.fn.maparg("gf", "n", false, true)
+		t.expect(mapping.desc).toBe("FOX Laravel navigation")
+		vim.api.nvim_win_set_cursor(0, { 1, 13 })
+		mapping.callback()
+		local dest = vim.api.nvim_get_current_buf()
+		t.expect(vim.api.nvim_buf_get_name(dest)).toBe(view)
+		local done, result = false, nil
+		require("fox.langs.php.blink")
+			.new()
+			:get_completions({ bufnr = original, line = "view('ho", cursor = { 1, 8 } }, function(value)
+				result = value
+				done = true
+			end)
+		t.expect(vim.wait(1000, function()
+			return done
+		end, 10)).toBe(true)
+		t.expect(result.items[1].label).toBe("home")
+		t.expect(result.items[1].textEdit.newText).toBe("home')")
+		t.expect(package.loaded["blade-nav"]).toBe(nil)
+		require("fox.langs.php.laravel").clear()
+		vim.api.nvim_buf_delete(original, { force = true })
+		vim.api.nvim_buf_delete(dest, { force = true })
+		vim.fn.delete(root, "rf")
+	end)
+end)

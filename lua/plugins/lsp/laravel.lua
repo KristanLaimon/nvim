@@ -1,15 +1,14 @@
 -- ============================================================================
 -- PLUGINS: PHP & Laravel support.
 -- ============================================================================
--- 1. vim-blade      Syntax highlighting for `.blade.php` templates.
--- 2. blade-nav      Jump to and complete Blade components and routes.
+-- 1. fox_blade      Native syntax and indentation for `.blade.php` templates.
+-- 2. fox_laravel    Jump to and complete Laravel references.
 -- 3. fox_php_tools  Registers `:PHPCheckTools`, which reports whether PHP and
 --                   Composer are actually installed (on Windows or in WSL) and
 --                   how to install what is missing.
 -- 4. PATH vendor/bin  Prepends project `./vendor/bin` to `PATH` for local Composer binaries.
 --
--- The heavy lifting -- intelephense, pint formatting, the blade filetype pattern
--- -- lives in lsp.lua and formatting.lua.
+-- Language tools, formatting and detection live in fox.langs.php.
 -- ============================================================================
 
 return {
@@ -26,29 +25,15 @@ return {
 		end,
 	},
 
-	-- Laravel Blade component navigation & completion
+	-- Local Laravel navigation, completion indexes and compatibility commands.
 	{
-		"ricardoramirezr/blade-nav.nvim",
-		dependencies = {
-			"saghen/blink.cmp",
-		},
+		name = "fox_laravel",
+		dir = vim.fn.stdpath("config"),
 		ft = { "blade", "php" },
-		opts = {
-			close_tag_on_complete = true,
-			-- Keep `K` available for the LSP hover mapping. BladeNav's annotation
-			-- feature otherwise installs a buffer-local `K` mapping for PHP files.
-			annotations = {
-				create_keymaps = false,
-			},
-			-- Blink is registered below as a direct source provider. Disable the
-			-- optional nvim-cmp/coq integrations so blade-nav does not emit a
-			-- misleading "nvim-cmp not found" warning on every Blade buffer.
-			integrations = {
-				gf = true,
-				cmp = false,
-				coq = false,
-			},
-		},
+		cmd = { "BladeNavClearCache", "BladeNavToggleShowValues", "BladeNavInstallArtisanCommand", "BladeNavGoToFile" },
+		config = function()
+			require("fox.langs.php.laravel").setup()
+		end,
 	},
 
 	-- Register blade-nav autocompletion provider in blink.cmp
@@ -59,7 +44,7 @@ return {
 			opts.sources.providers = opts.sources.providers or {}
 			opts.sources.providers["blade-nav"] = {
 				name = "blade-nav",
-				module = "blade-nav.integrations.blink",
+				module = "fox.langs.php.blink",
 				score_offset = 100,
 				enabled = function()
 					local ft = vim.bo.filetype

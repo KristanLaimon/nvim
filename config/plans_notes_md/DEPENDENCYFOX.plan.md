@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **18 reemplazos completados: 31 externos actuales**, de los cuales **14 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **19 reemplazos completados: 30 externos actuales**, de los cuales **13 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -35,7 +35,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 16 | `Crysthamus/nvim-file-operations` | Media | Completado | Sincronizar buffers con operaciones Neo-tree sin perder cambios sin guardar. |
 | 17 | `antosha417/nvim-lsp-file-operations` | Media | Completado | Eventos will/didRename, create y delete; filtrar clientes y aplicar workspace edits de forma segura. |
 | 18 | `jwalton512/vim-blade` | Media | Completado | Syntax, detección e indentación locales de Blade; cubrir mezcla HTML/PHP y directivas. |
-| 19 | `ricardoramirezr/blade-nav.nvim` | Media | Pendiente | Resolver vistas, componentes y rutas Laravel con caché local. |
+| 19 | `ricardoramirezr/blade-nav.nvim` | Media | Completado | Resolver vistas, componentes y rutas Laravel con caché local. |
 | 20 | `f-person/git-blame.nvim` | Media | Pendiente | Reutilizar fox.git para blame asíncrono y enlaces; conservar comandos y repositorios anidados. |
 | 21 | `nvim-lualine/lualine.nvim` | Media-alta | Pendiente | Statusline nativa con diseños del picker y actualizaciones Git/LSP sin bloqueos. |
 | 22 | `akinsho/bufferline.nvim` | Media-alta | Pendiente | Tabline nativa con fijados, diagnósticos, cierre y desbordamiento. |
@@ -177,6 +177,10 @@ Bridge nativo para will/did Rename/Create/Delete, filtros por workspace/scheme/g
 
 Sintaxis e indentación propias en fox.langs.php.blade y puentes syntax/indent; reutiliza sintaxis PHP/HTML de Neovim, conserva comentarios, ecos, verbatim y pares personalizados script/assets. Detección Blade propiedad del módulo PHP; Treesitter respeta el indentexpr local. Cinco pruebas unitarias y una integración real gg=G aprobadas. Sin copiar código upstream.
 
+## Reemplazo 19: ricardoramirezr/blade-nav.nvim
+
+Índice propio por proyecto Artisan para vistas/componentes/Livewire/rutas/config/env/traducciones/Inertia, gf y fuente Blink cancelable. Caché con TTL, invalidación al guardar y rechazo de procesos antiguos; consultas Artisan asíncronas para rutas y aliases. Conserva los tres comandos de paleta y helper local de instalación exclusiva. Nueve pruebas unitarias y una integración real de navegación/completado aprobadas. PHP y parser PHP no disponibles: no se ejecutó el helper contra Laravel real.
+
 ## Siguiente ítem
 
-`ricardoramirezr/blade-nav.nvim`: continuar con el alcance indicado en la tabla.
+`f-person/git-blame.nvim`: continuar con el alcance indicado en la tabla.

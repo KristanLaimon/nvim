@@ -13,11 +13,11 @@ FoxVim provides a complete development environment for **PHP** and **Laravel** a
 | **Language Server (LSP)** | `intelephense` | Serves both `.php` and `.blade.php` files; loaded with Laravel, PHPUnit & core stubs and a 5 MB file-index limit for Laravel Composer metadata |
 | **Formatters (Conform)** | `pint`, `php-cs-fixer`, `blade-formatter` | `pint` or `php-cs-fixer` for PHP; `blade-formatter` for `.blade.php` |
 | **Treesitter Parsers** | `php`, `phpdoc`, `blade` | Syntax trees for highlighting, indentation, and structure |
-| **Autocompletion** | `blink.cmp` + `blade-nav.nvim` | Intelephense LSP + Laravel routes, views, components, livewire, config, env, & translations |
+| **Autocompletion** | `blink.cmp` + `fox.langs.php.laravel` | Intelephense LSP + Laravel routes, views, components, livewire, config, env, & translations |
 | **Debug Adapter (DAP)** | `php-debug-adapter` (Xdebug) | Listening on port `9003` for web server & CLI debugging |
 | **Local Vendor Scripts** | `vendor/bin` | Automatically prepended to `PATH` on launch & directory change for local Composer scripts |
 
-`blade-nav.nvim` supplies Laravel-aware routes, views, component, Livewire, config, environment, and translation completions through Blink. Its unused `nvim-cmp` integration is disabled, so opening a Blade buffer does not produce a misleading `nvim-cmp not found` warning.
+The local Laravel index supplies routes, views, components, Livewire, config, environment, translation and Inertia references through Blink and buffer-local `gf`. Indexes are scoped to the nearest `artisan` project, expire after five seconds, and clear on writes or `:BladeNavClearCache`. PHP Artisan is queried asynchronously for runtime routes and registered aliases when available; static references work without PHP or a parser. Value annotations are opt-in with `:BladeNavToggleShowValues`.
 
 ---
 
@@ -28,7 +28,7 @@ All commands below are registered in the **Command Palette** (`<C-S-p>` or `:Com
 * `:PHPCheckTools` – Runs an environment check modal reporting PHP CLI, Composer, and WSL availability.
 * `:BladeNavClearCache` – Clears cached Laravel routes, views, config, env, and translation entries.
 * `:BladeNavToggleShowValues` – Toggles inline config/env/translation virtual text annotations.
-* `:BladeNavInstallArtisanCommand` – Copies the helper artisan command to `app/Console/Commands/BladeNav.php`.
+* `:BladeNavInstallArtisanCommand` – Installs the local component-alias helper command without overwriting existing files; copies it to `app/Console/Commands/BladeNav.php`.
 * `:FormatDocument` (or `:ConformFormat`) – Formats active `.php` or `.blade.php` buffer using Pint / PHP-CS-Fixer / blade-formatter.
 * `:LanguageManager` – Opens the interactive UI manager to install or uninstall the PHP & Laravel language bundle.
 
@@ -58,7 +58,7 @@ Blade templates frequently incorporate JavaScript blocks for frontend interactio
 2. **Formatting**:
    - `:FormatDocument` (`blade-formatter`) automatically cleans up and indents HTML, Blade directives, and embedded `<script>` blocks.
 3. **Autocompletion & Tooling**:
-   - `html-lsp` (`vscode-html-language-server`), `tailwindcss`, and `blade-nav` attach to Blade buffers, providing HTML/script completion, component navigation, and Tailwind utility class suggestions.
+   - `html-lsp` (`vscode-html-language-server`), `tailwindcss`, and local Laravel completion attach to Blade buffers, providing HTML/script completion, component navigation, and Tailwind utility class suggestions.
 4. **Tailwind CSS & SCSS Dynamic Scoping**:
    - `tailwindcss` LSP only attaches to a `.blade.php` buffer if the file actually contains at least one Tailwind class, variant, or directive (e.g. `class="flex..."`, `@apply`, `hover:`). Buffers without Tailwind classes remain lean with no unnecessary background LSP overhead.
    - Embedded `<style>` blocks default to standard `css`. Only when explicitly declared via `<style lang="scss">`, `<style type="text/scss">`, or containing SCSS syntax (`$variable:`, `@mixin`, `@include`), does it switch to `scss`.

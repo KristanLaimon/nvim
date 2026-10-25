@@ -63,27 +63,21 @@ t.describe("Local Blade support", function()
 		end
 	end)
 	t.it("ignores multiline HTML comments and indents embedded script/style braces", function()
-		vim.api.nvim_buf_set_lines(
-			b,
-			0,
-			-1,
-			false,
-			{
-				"<!--",
-				"<div>",
-				"-->",
-				"<script>",
-				"if (ready) {",
-				"run();",
-				"}",
-				"</script>",
-				"<style>",
-				".foo {",
-				"color: red;",
-				"}",
-				"</style>",
-			}
-		)
+		vim.api.nvim_buf_set_lines(b, 0, -1, false, {
+			"<!--",
+			"<div>",
+			"-->",
+			"<script>",
+			"if (ready) {",
+			"run();",
+			"}",
+			"</script>",
+			"<style>",
+			".foo {",
+			"color: red;",
+			"}",
+			"</style>",
+		})
 		for row, expected in ipairs({ 0, 0, 0, 0, 2, 4, 2, 0, 0, 2, 4, 2, 0 }) do
 			t.expect(m.indent(row)).toBe(expected)
 		end

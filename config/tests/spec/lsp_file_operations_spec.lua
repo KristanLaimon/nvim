@@ -74,17 +74,11 @@ t.describe("LSP filesystem operations", function()
 	end)
 	t.it("rejects resource operations and stale versions, tolerates request errors", function()
 		t.expect(m.apply({ documentChanges = { { kind = "delete", uri = "file:///tmp/a" } } }, "utf-16", {})).toBe(false)
-		t.expect(
-			m.apply(
-				{
-					documentChanges = {
-						{ textDocument = { uri = vim.uri_from_fname(root .. "/x.ts"), version = 999 }, edits = {} },
-					},
-				},
-				"utf-16",
-				{}
-			)
-		).toBe(false)
+		t.expect(m.apply({
+			documentChanges = {
+				{ textDocument = { uri = vim.uri_from_fname(root .. "/x.ts"), version = 999 }, edits = {} },
+			},
+		}, "utf-16", {})).toBe(false)
 		client.request_sync = function()
 			return { result = vim.NIL }
 		end

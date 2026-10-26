@@ -227,93 +227,9 @@ function M.python_status()
 	return ""
 end
 
---- Cache for git branch resolution keyed by directory.
-M._branch_cache = {}
-
---- Resolves the git branch of the given directory or current buffer accurately.
---- Never assumes "main" if not on main.
---- @param dir string|nil
---- @return string branch_name
+--- Returns cached branch immediately; resolution completes asynchronously.
 function M.resolve_git_branch(dir)
-	dir = dir or vim.fn.getcwd()
-	if M._branch_cache[dir] then
-		return M._branch_cache[dir]
-	end
-
-	local sep = package.config:sub(1, 1)
-	local root = dir
-	while root and root ~= "" do
-		local git_path = root .. sep .. ".git"
-		local stat = (vim.uv or vim.loop).fs_stat(git_path)
-		if stat then
-			local head_file = nil
-			if stat.type == "directory" then
-				head_file = git_path .. sep .. "HEAD"
-			elseif stat.type == "file" then
-				local f = io.open(git_path, "r")
-				if f then
-					local content = f:read("*l") or ""
-					f:close()
-					local gitdir = content:match("^gitdir:%s*(.+)$")
-					if gitdir then
-						if gitdir:sub(1, 1) ~= sep and not gitdir:match("^%a:") then
-							gitdir = root .. sep .. gitdir
-						end
-						head_file = gitdir .. sep .. "HEAD"
-					end
-				end
-			end
-
-			if head_file then
-				local hf = io.open(head_file, "r")
-				if hf then
-					local head = hf:read("*l") or ""
-					hf:close()
-					local branch = head:match("^ref: refs/heads/(.+)$")
-					if branch and branch ~= "" then
-						M._branch_cache[dir] = branch
-						return branch
-					end
-					if #head >= 7 then
-						local short_hash = head:sub(1, 7)
-						M._branch_cache[dir] = short_hash
-						return short_hash
-					end
-				end
-			end
-
-			-- Secondary git repos or reftable fallback
-			local sec_ok, sec = pcall(require, "fox.git.secondary")
-			if sec_ok and sec and sec.is_secondary_active and sec.is_secondary_active(root) then
-				local sec_branch = sec.get_active_branch and sec.get_active_branch(root)
-				if sec_branch and sec_branch ~= "" then
-					M._branch_cache[dir] = sec_branch
-					return sec_branch
-				end
-			end
-
-			local out = vim.fn.systemlist({ "git", "-C", root, "branch", "--show-current" })
-			if vim.v.shell_error == 0 and #out > 0 and out[1] ~= "" then
-				M._branch_cache[dir] = out[1]
-				return out[1]
-			end
-			local out_hash = vim.fn.systemlist({ "git", "-C", root, "rev-parse", "--short", "HEAD" })
-			if vim.v.shell_error == 0 and #out_hash > 0 and out_hash[1] ~= "" then
-				M._branch_cache[dir] = out_hash[1]
-				return out_hash[1]
-			end
-			break
-		end
-
-		local parent = vim.fs.dirname(root)
-		if not parent or parent == root then
-			break
-		end
-		root = parent
-	end
-
-	M._branch_cache[dir] = ""
-	return ""
+	return require("fox.ui.statusline_git").branch(dir or vim.fn.getcwd())
 end
 
 --- Formats active git branch for statusline.
@@ -333,14 +249,14 @@ function M.git_branch()
 	local name = vim.api.nvim_buf_get_name(buf)
 	if name and name:find("^term://") then
 		local extracted = name:gsub("term://(.-)//.*", "%1")
-		if extracted and extracted ~= "" and vim.fn.isdirectory(extracted) == 1 then
+		if extracted and extracted ~= "" then
 			return M.resolve_git_branch(extracted)
 		end
 	end
 
 	if name and name ~= "" and vim.bo[buf].buftype == "" then
 		local fdir = vim.fs.dirname(name)
-		if fdir and fdir ~= "" and vim.fn.isdirectory(fdir) == 1 then
+		if fdir and fdir ~= "" then
 			return M.resolve_git_branch(fdir)
 		end
 	end
@@ -355,10 +271,10 @@ function M.get_current_theme()
 	return data.theme or M.settings.default_theme
 end
 
---- Generates Lualine options table for a given statusline theme.
+--- Generates native statusline layout for a given statusline theme.
 --- @param theme_name string
---- @return table lualine_options
-function M.get_lualine_config(theme_name)
+--- @return table statusline_options
+function M.get_config(theme_name)
 	M.setup()
 	theme_name = theme_name or M.get_current_theme()
 
@@ -389,18 +305,18 @@ function M.get_lualine_config(theme_name)
 				section_separators = { left = "", right = "" },
 			},
 			sections = {
-				lualine_a = { { "mode", fmt = M.format_mode } },
-				lualine_b = {
+				a = { { "mode", fmt = M.format_mode } },
+				b = {
 					M.fileformat_status,
 					M.environment_status,
 					{ M.git_branch, icon = "" },
 					common_diff,
 					common_diagnostics,
 				},
-				lualine_c = { M.workflow_status, common_filename },
-				lualine_x = { M.python_status, M.lsp_status, "filetype" },
-				lualine_y = { "encoding", "fileformat" },
-				lualine_z = { { "location", icon = "" }, "progress" },
+				c = { M.workflow_status, common_filename },
+				x = { M.python_status, M.lsp_status, "filetype" },
+				y = { "encoding", "fileformat" },
+				z = { { "location", icon = "" }, "progress" },
 			},
 		}
 	elseif theme_name == "nvchad_round" then
@@ -412,18 +328,18 @@ function M.get_lualine_config(theme_name)
 				section_separators = { left = "", right = "" },
 			},
 			sections = {
-				lualine_a = { { "mode", fmt = M.format_mode } },
-				lualine_b = {
+				a = { { "mode", fmt = M.format_mode } },
+				b = {
 					M.fileformat_status,
 					M.environment_status,
 					{ M.git_branch, icon = "" },
 					common_diff,
 					common_diagnostics,
 				},
-				lualine_c = { M.workflow_status, common_filename },
-				lualine_x = { M.python_status, M.lsp_status, "filetype" },
-				lualine_y = { "encoding" },
-				lualine_z = { { "location", icon = "" }, "progress" },
+				c = { M.workflow_status, common_filename },
+				x = { M.python_status, M.lsp_status, "filetype" },
+				y = { "encoding" },
+				z = { { "location", icon = "" }, "progress" },
 			},
 		}
 	elseif theme_name == "vscode" then
@@ -435,12 +351,12 @@ function M.get_lualine_config(theme_name)
 				section_separators = { left = "", right = "" },
 			},
 			sections = {
-				lualine_a = { "mode" },
-				lualine_b = { M.fileformat_status, M.environment_status, { M.git_branch, icon = "" }, common_diagnostics },
-				lualine_c = { M.workflow_status, common_filename },
-				lualine_x = { M.python_status, M.lsp_status, "filetype" },
-				lualine_y = { "progress" },
-				lualine_z = { "location" },
+				a = { "mode" },
+				b = { M.fileformat_status, M.environment_status, { M.git_branch, icon = "" }, common_diagnostics },
+				c = { M.workflow_status, common_filename },
+				x = { M.python_status, M.lsp_status, "filetype" },
+				y = { "progress" },
+				z = { "location" },
 			},
 		}
 	elseif theme_name == "minimal" then
@@ -452,12 +368,12 @@ function M.get_lualine_config(theme_name)
 				section_separators = "",
 			},
 			sections = {
-				lualine_a = { "mode" },
-				lualine_b = { M.fileformat_status, M.environment_status, common_filename },
-				lualine_c = { M.workflow_status },
-				lualine_x = { M.python_status, { M.git_branch, icon = "" }, M.lsp_status },
-				lualine_y = { "filetype" },
-				lualine_z = { "location" },
+				a = { "mode" },
+				b = { M.fileformat_status, M.environment_status, common_filename },
+				c = { M.workflow_status },
+				x = { M.python_status, { M.git_branch, icon = "" }, M.lsp_status },
+				y = { "filetype" },
+				z = { "location" },
 			},
 		}
 	elseif theme_name == "nagatoro_classic" then
@@ -467,16 +383,16 @@ function M.get_lualine_config(theme_name)
 				globalstatus = true,
 			},
 			sections = {
-				lualine_a = {
+				a = {
 					M.fileformat_status,
 					M.environment_status,
 					{ M.git_branch, icon = "🌿" },
 					common_diff,
 					common_diagnostics,
 				},
-				lualine_b = { common_filename },
-				lualine_c = { M.workflow_status },
-				lualine_x = {
+				b = { common_filename },
+				c = { M.workflow_status },
+				x = {
 					{
 						"mode",
 						fmt = function(str)
@@ -488,8 +404,8 @@ function M.get_lualine_config(theme_name)
 					"fileformat",
 					"filetype",
 				},
-				lualine_y = { "progress" },
-				lualine_z = { "location" },
+				y = { "progress" },
+				z = { "location" },
 			},
 		}
 	end
@@ -503,18 +419,18 @@ function M.get_lualine_config(theme_name)
 			section_separators = { left = "", right = "" },
 		},
 		sections = {
-			lualine_a = { { "mode", fmt = M.format_mode } },
-			lualine_b = {
+			a = { { "mode", fmt = M.format_mode } },
+			b = {
 				M.fileformat_status,
 				M.environment_status,
 				{ M.git_branch, icon = "" },
 				common_diff,
 				common_diagnostics,
 			},
-			lualine_c = { M.workflow_status, common_filename },
-			lualine_x = { M.python_status, M.lsp_status, "filetype" },
-			lualine_y = { "encoding" },
-			lualine_z = { { "location", icon = "" }, "progress" },
+			c = { M.workflow_status, common_filename },
+			x = { M.python_status, M.lsp_status, "filetype" },
+			y = { "encoding" },
+			z = { { "location", icon = "" }, "progress" },
 		},
 	}
 end
@@ -527,11 +443,12 @@ function M.set_theme(theme_name)
 		return
 	end
 
-	store.save(M.settings.store_file, { theme = theme_name })
-	local has_lualine, lualine = pcall(require, "lualine")
-	if has_lualine then
-		lualine.setup(M.get_lualine_config(theme_name))
+	local ok, err = store.save(M.settings.store_file, { theme = theme_name })
+	if not ok then
+		vim.notify("Cannot save statusline theme: " .. tostring(err), vim.log.levels.ERROR)
+		return
 	end
+	require("fox.ui.statusline").setup(M.get_config(theme_name))
 	vim.notify("Statusline theme set to: " .. M.available_themes[theme_name], vim.log.levels.INFO)
 end
 
@@ -572,22 +489,6 @@ function M.setup()
 		group = group,
 		callback = function()
 			vim.cmd("redrawstatus")
-		end,
-	})
-
-	local branch_group = vim.api.nvim_create_augroup("FoxStatuslineBranchWatcher", { clear = true })
-	vim.api.nvim_create_autocmd({ "DirChanged", "FocusGained", "BufEnter" }, {
-		group = branch_group,
-		callback = function(ev)
-			if ev.event == "DirChanged" then
-				M._branch_cache = {}
-			end
-			pcall(function()
-				local lualine = package.loaded["lualine"]
-				if lualine then
-					lualine.refresh()
-				end
-			end)
 		end,
 	})
 

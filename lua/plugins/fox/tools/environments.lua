@@ -1081,13 +1081,13 @@ function M.switch_environment(target_slot, callback)
 
 	-- 10. Statusline & bufferline refresh
 	pcall(function()
-		local sl = package.loaded["plugins.fox.ui.statusline_picker"]
-		if sl and sl._branch_cache then
-			sl._branch_cache = {}
+		local git = package.loaded["fox.ui.statusline_git"]
+		if git then
+			git.invalidate()
 		end
-		local lualine = package.loaded["lualine"]
-		if lualine then
-			lualine.refresh()
+		local statusline = package.loaded["fox.ui.statusline"]
+		if statusline then
+			statusline.refresh()
 		end
 	end)
 
@@ -1236,9 +1236,9 @@ function M.close_environment(slot, callback)
 			pcall(vim.cmd, "silent! only")
 			vim.cmd("enew")
 			pcall(function()
-				local lualine = package.loaded["lualine"]
-				if lualine then
-					lualine.refresh()
+				local statusline = package.loaded["fox.ui.statusline"]
+				if statusline then
+					statusline.refresh()
 				end
 			end)
 			vim.cmd("redrawtabline")
@@ -1246,9 +1246,9 @@ function M.close_environment(slot, callback)
 		end
 	else
 		pcall(function()
-			local lualine = package.loaded["lualine"]
-			if lualine then
-				lualine.refresh()
+			local statusline = package.loaded["fox.ui.statusline"]
+			if statusline then
+				statusline.refresh()
 			end
 		end)
 		vim.cmd("redrawtabline")
@@ -1287,9 +1287,9 @@ function M.rename_environment(slot, new_name, callback)
 			sync_internal_state()
 			M.save_index()
 			pcall(function()
-				local lualine = package.loaded["lualine"]
-				if lualine then
-					lualine.refresh()
+				local statusline = package.loaded["fox.ui.statusline"]
+				if statusline then
+					statusline.refresh()
 				end
 			end)
 			notify(string.format("Environment #%d renamed to '%s'", slot, name))

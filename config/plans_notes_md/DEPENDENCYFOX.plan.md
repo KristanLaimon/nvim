@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **20 reemplazos completados: 29 externos actuales**, de los cuales **12 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **21 reemplazos completados: 28 externos actuales**, de los cuales **11 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -37,7 +37,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 18 | `jwalton512/vim-blade` | Media | Completado | Syntax, detección e indentación locales de Blade; cubrir mezcla HTML/PHP y directivas. |
 | 19 | `ricardoramirezr/blade-nav.nvim` | Media | Completado | Resolver vistas, componentes y rutas Laravel con caché local. |
 | 20 | `f-person/git-blame.nvim` | Media | Completado | Reutilizar fox.git para blame asíncrono y enlaces; conservar comandos y repositorios anidados. |
-| 21 | `nvim-lualine/lualine.nvim` | Media-alta | Pendiente | Statusline nativa con diseños del picker y actualizaciones Git/LSP sin bloqueos. |
+| 21 | `nvim-lualine/lualine.nvim` | Media-alta | Completado | Statusline nativa con diseños del picker y actualizaciones Git/LSP sin bloqueos. |
 | 22 | `akinsho/bufferline.nvim` | Media-alta | Pendiente | Tabline nativa con fijados, diagnósticos, cierre y desbordamiento. |
 | 23 | `rafamadriz/friendly-snippets` | Media-alta | Pendiente | Snippets locales de los lenguajes usados; conservar cobertura y licencias de datos migrados. |
 | 24 | `rcarriga/nvim-notify` | Media-alta | Pendiente | Cola de ventanas, expiración, historial y protección del foco. |
@@ -193,6 +193,14 @@ Blame asíncrono propio en fox.git.inline_blame y parser compartido en fox.git.b
 - 824 archivos Lua sin errores de sintaxis; StyLua y Luacheck aprobados para los 46 archivos Lua modificados, sin advertencias. Los artefactos binarios reconstruidos por las pruebas se restauraron y el worktree de comparación se retiró.
 - No hay PHP ni parser PHP disponibles: las respuestas Artisan se validaron con procesos controlados; el helper PHP no se ejecutó contra Laravel real. No se instalaron bundles opcionales ni se eliminaron directorios de plugins instalados.
 
+## Reemplazo 21: nvim-lualine/lualine.nvim
+
+- Renderer propio en `fox.ui.statusline` con statusline global nativa, seis diseños del picker, separadores, colores por modo/colorscheme, truncamiento nativo, diagnósticos y símbolos de archivos modificados/readonly. Conserva Editor/Query, entorno, Python, LSP y títulos de terminal/tarea.
+- Git asíncrono con timeout, caché, cancelación y rechazo de respuestas antiguas; reutiliza `fox.git.cmd` para Windows/WSL. Ramas normales, sin commits, HEAD separado y worktrees; contadores de GitSigns con fallback a diff asíncrono del archivo guardado. Refresca al guardar, cambiar de directorio/foco y recibir eventos de editor/LSP/GitSigns.
+- Se conserva `:FoxStatuslineTheme`, su acción de paleta y `.foxnvim/statusline.json`; cancelar no escribe y un fallo de guardado informa sin aplicar el diseño. Consumidores de Environments migrados; retirada la spec externa y el lockfile. No se copia código upstream ni se eliminan directorios instalados.
+- 17 pruebas unitarias de statusline aprobadas y tres integraciones reales: arranque/persistencia, Git/diff/worktree y terminal/LSP stdio con fixture. Integración de registro de specs aprobada; Lazy verifica 28 externos y 69 locales. No se ejecutó Windows/WSL en esta máquina Linux.
+- Suite completa: 902 aprobadas y dos fallos ajenos al cambio (autotag TSX y aislamiento del selector de temas), reproducidos también desde el commit inicial 538703b. Syntax y StyLua/Luacheck sin errores para los archivos del cambio.
+
 ## Siguiente ítem
 
-`nvim-lualine/lualine.nvim`: continuar con el alcance indicado en la tabla.
+`akinsho/bufferline.nvim`: continuar con el alcance indicado en la tabla.

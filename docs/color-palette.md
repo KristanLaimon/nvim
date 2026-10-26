@@ -14,7 +14,7 @@ This guide explains how to manage, customize, and extend colorschemes in this Ne
 ## 📁 Key Files & Directories
 
 - **Nagatoro Theme System & Picker:** [`lua/plugins/fox/ui/theme_picker.lua`](../lua/plugins/fox/ui/theme_picker.lua)
-- **Statusline Theme Picker:** [`lua/plugins/fox/statusline_picker.lua`](../lua/plugins/fox/statusline_picker.lua)
+- **Statusline Theme Picker:** [`lua/plugins/fox/ui/statusline_picker.lua`](../lua/plugins/fox/ui/statusline_picker.lua)
 - **Colorify Engine (CMP Completion):** [`lua/fox/lsp/colorify.lua`](../lua/fox/lsp/colorify.lua)
 - **Theme Palette Files:** `config/colors/nagatoro-fox.lua`, `config/colors/nagatoro-light.lua`, `config/colors/onedark-fox.lua`, `config/colors/catppuccin-fox.lua`, `config/colors/nord-fox.lua`
 - **Customization Guide:** [`how-to-customize-editor.md`](how-to-customize-editor.md)
@@ -53,6 +53,12 @@ When running under [Omarchy Linux](https://omarchy.org/) (Hyprland), FoxVim can 
 ---
 
 ## 📊 NvChad Statusline & Statusline Theme Picker
+
+The statusline is rendered locally by `fox.ui.statusline`, with no lualine dependency.
+The six layouts keep their saved choice in `.foxnvim/statusline.json`. Git branch and
+diff queries run asynchronously; GitSigns counters include unsaved edits when available.
+Diagnostics, attached LSP names, terminal/task titles and environment indicators update
+from editor events. Colors follow the active colorscheme and mode.
 
 Run `:FoxStatuslineTheme` (or select from Command Palette `<C-Shift-P>`) to switch statusline layouts:
 - `nvchad_pills` (Rounded pill blocks with mode icons ` NORMAL`, Git diff icons, LSP server info ` lua_ls`, and diagnostics)

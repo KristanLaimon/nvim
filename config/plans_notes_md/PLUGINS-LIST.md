@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **29 externos** y **68 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **28 externos** y **69 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -48,7 +48,6 @@ Total actual: **29 externos** y **68 specs locales activas**. El plan de sustitu
 **UI**
 
 - `akinsho/bufferline.nvim` — [`ui/bufferline.lua`](../../lua/plugins/ui/bufferline.lua)
-- `nvim-lualine/lualine.nvim` — [`ui/themes.lua`](../../lua/plugins/ui/themes.lua)
 - `rcarriga/nvim-notify` — [`ui/notify.lua`](../../lua/plugins/ui/notify.lua)
 
 **Misc**
@@ -99,6 +98,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox_omarchy_theme` — [`fox/ui/omarchy_theme.lua`](../../lua/plugins/fox/ui/omarchy_theme.lua)
 - `fox_pinned_tabs` — [`fox/ui/pinned_tabs.lua`](../../lua/plugins/fox/ui/pinned_tabs.lua)
 - `fox_ryoku_theme` — [`fox/ui/ryoku_theme.lua`](../../lua/plugins/fox/ui/ryoku_theme.lua)
+- `fox_statusline` — [`ui/statusline.lua`](../../lua/plugins/ui/statusline.lua)
 - `fox_statusline_picker` — [`fox/ui/statusline_picker.lua`](../../lua/plugins/fox/ui/statusline_picker.lua)
 - `fox_theme_picker` — [`fox/ui/theme_picker.lua`](../../lua/plugins/fox/ui/theme_picker.lua)
 - `fox_wiki_modal` — [`fox/ui/wiki_modal.lua`](../../lua/plugins/fox/ui/wiki_modal.lua)

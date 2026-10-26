@@ -3,7 +3,7 @@
 -- ============================================================================
 -- All selectable FOX palettes and highlights live locally in config/colors/.
 --
--- lualine renders the single global statusline (`laststatus = 3`): branch, diff
+-- fox.ui.statusline renders the single global statusline (`laststatus = 3`): branch, diff
 -- and diagnostics on the left, file name next, mode and position on the right.
 -- ============================================================================
 
@@ -21,30 +21,6 @@ return {
 			else
 				pcall(vim.cmd.colorscheme, "nagatoro-fox")
 			end
-		end,
-	},
-	{
-		"nvim-lualine/lualine.nvim",
-		event = "VimEnter",
-		dependencies = {
-			"fox_icons",
-		},
-		opts = function()
-			local has_picker, picker = pcall(require, "plugins.fox.ui.statusline_picker")
-			if has_picker then
-				return picker.get_lualine_config()
-			end
-			return {
-				options = { theme = "auto", globalstatus = true },
-				sections = {
-					lualine_a = { "mode" },
-					lualine_b = { "branch", "diff", "diagnostics" },
-					lualine_c = { "filename" },
-					lualine_x = { "filetype" },
-					lualine_y = { "progress" },
-					lualine_z = { "location" },
-				},
-			}
 		end,
 	},
 }

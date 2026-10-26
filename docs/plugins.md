@@ -107,7 +107,7 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | `fox_dashboard` (local) | Start dashboard |
 | `fox_theme_startup` (local) | Restore FOX palettes from config/colors/ at startup, including Ryoku/Omarchy sync |
 | `akinsho/bufferline.nvim` | Buffer tab bar |
-| `nvim-lualine/lualine.nvim` | Statusline |
+| `fox_statusline` (local) | Native global statusline with six saved layouts |
 | `fox_color_highlights` | Inline CSS colour previews (`:HighlightColors`) |
 | `fox.core.window_picker` (local) | Visual window selector for Neo-tree; no external plugin |
 | `fox.core.file_buffers` | Preserves buffers/undo on Neo-tree renames; recovers unsaved deleted-file edits |

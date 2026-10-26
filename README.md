@@ -84,7 +84,7 @@ FoxVim has **73 local plugin specs** across [`lua/plugins/`](lua/plugins) and **
 | Debugging | `baleia.nvim`, `nvim-dap`, `nvim-dap-ui`, `nvim-nio` |
 | Language and extras | `cord.nvim`, `lazy.nvim`, `markdown-preview.nvim` |
 
-For loading mode, dependencies, and source locations, see [PLUGINS-LIST.md](config/plans_notes_md/PLUGINS-LIST.md).
+See [PLUGIN-LIST.md](PLUGIN-LIST.md) for external dependencies and local `fox-<name>` implementations. For loading modes and dependency relationships, see the [detailed inventory](config/plans_notes_md/PLUGINS-LIST.md).
 
 ---
 

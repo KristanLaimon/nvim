@@ -1,67 +1,51 @@
-1. In Query Mode; 
+1. When seeing table details:
 
-In results panel, it shows:
-
-+------+------------------------+
-| id   | name                   |  (sticky heaer)
-+------+------------------------+
-| "BG" | "Grupo para bugs"      |
-| "GE" | "General"              |
-| "GF" | "General Full"         |
-| "GV" | "Validador de Gc's"    |
-| "R1" | "Rankeds 1S"           |
-| "R2" | "Rankeds 2S"           |
-| "TV" | "Validador de torneos" |
-+------+------------------------+
-Result 1 | 7 loaded rows
-
-RESULTS | run #1 | KLDB | 16:11:19 | query-20261022-231253-1.sql
-Enter: expand row | y: copy row | e: export | gR: follow foreign key
-
-which is ok. But i dont want +--- style i want:
-
-Example:
-┌────────┬──────────────────┬──────────────┐
-│ ID     │ Nombre           │ Estado       │
-├────────┼──────────────────┼──────────────┤
-│ 001    │ Ana López        │ Activo       │
-│ 002    │ Carlos Ruiz      │ Pendiente    │
-│ 003    │ Sofía Pérez      │ Inactivo     │
-└────────┴──────────────────┴──────────────┘
-
-with ┌ ┐ └ ┘ ─ │ ┬ ┴ ├ ┤ ┼  characters! for smoother table rendering
-
-
-This should be the same for the dynamic submode of query mode. which uses this +- style as well:
-
-+--------------------------+       +--------------------------+
-| PlayerKisses             ----|---- Player                   |
-| PlayerKisses             |   |   | Player                   |
-| *   kisses_count         |   |   | *   username             |
-|  k  member_1             |   |   |  k  id                   |
-|     member_2             |   |   |     profilePicturePath   |
-+--------------------------+   |   |     actualRank           |
-                               |   |     whatsappNickName     |
-                               |   |     whatsappid           |
-                               |   |     whatsappid_pn        |
-                               |   |     whatsappid_lid       |
-                               |   |     role                 |
-                               |   |     joined_date          |
-                               |   |     is_active            |
-                               |   |     preffered_language   |
-                               |   |     PasswordHash         |
-                               |   |     TokenVersion         |
-                               |   +--------------------------+
-                               |
-                               |
-+--------------------------+   |
-| Player_titles            <----
-| Player_titles            |
-| *   title_id             |
-|  k  player_id            |
-+--------------------------+
-
-...
+│    ┌────────────────────────────────────┐                                                    ┌────────────────────────────────────┐ │
+│    │ escolar.alumnos                    <───┐                                            ┌───┤ escolar.residencias_asesorias      │ │
+│    │ PK FK Column                       │   │                                            │   │ PK FK Column                       │ │
+│    │ PK    id                           │   │                                            │   │ PK    id                           │ │
+│    │    FK carrera_id                   │   │                                            │   │    FK residencia_id                │ │
+│    │    FK plan_estudio_id              │   │                                            │   │       fecha                        │ │
+│    │    FK modulo_especialidad_id       │   │                                            │   │       actividad_asesoria           │ │
+│    │    FK aspirante_id                 │   │                                            │   │       hora_asesoria                │ │
+│    │    FK datos_facturacion_id         │   │                                            │   │       aceptado_asesor              │ │
+│    │       control                      │   │                                            │   │       created_at                   │ │
+│    │       nombre                       │   │                                            │   │       updated_at                   │ │
+│    │       apellido_paterno             │   │                                            │   └────────────────────────────────────┘ │
+│    │       apellido_materno             │   │                                            │                                          │
+│    │       genero                       │   │                                            │                                          │
+│    │       año_ingreso                  │   │                                            │   ┌────────────────────────────────────┐ │
+│    │       periodo_ingreso              │   │                                            ├───┤ escolar.residencias_reportes       │ │
+│    │       estatus                      │   │                                            │   │ PK FK Column                       │ │
+│    │       password                     │   │                                            │   │ PK    id                           │ │
+│    │       email                        │   │                                            │   │    FK residencia_id                │ │
+│    │       año_inscripcion              │   │                                            │   │       reporte_pdf                  │ │
+│    │       periodo_inscripcion          │   │                                            │   │       fecha                        │ │
+│    │       fecha_titulacion             │   │                                            │   │       tipo_reporte                 │ │
+│    │       fecha_egreso                 │   │                                            │   │       calificacion_externo         │ │
+│    │       notificacion_correo          │   │                                            │   │       calificacion_interno         │ │
+│    │       email_verified_at            │   │                                            │   │       created_at                   │ │
+│    │       remember_token               │   │                                            │   │       updated_at                   │ │
+│    │       created_at                   │   │                                            │   └────────────────────────────────────┘ │
+│    │       updated_at                   │   │                                            │                                          │
+│    └────────────────────────────────────┘   │                                            │                                          │
+│                                             │                                            │                                          │
 
 
 
+theres a "PK FK Column" everywhere. thats a bug.
+
+2.
+In table details: (same place as 1.)
+I want it to have the same "enter" (caret table aware) funciontality as the same of
+live mode, if my careta is in a table in that part, i want the b, enter and other shorcuts available for it!,
+if using "enter" it would open another popup with table details on top of my alread existing, so when closing that, my focus would be back where I was
+previous table, like a stack!
+
+
+
+
+2. When opening a table details: (same place as 1.)
+
+It could happen that, if my caret goes focusingg another part of my nvim editor, it won't close the table details popup,
+and somtimes the "q" doesn´t work and doesnt close it. happens too much and i have to use the mouse to focus again there and close it....

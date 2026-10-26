@@ -1,5 +1,4 @@
 local M = {}
-local sql = require("fox.query.sql")
 
 function M.classification(item, metadata)
 	local outgoing, incoming, keys, pk = 0, 0, {}, {}
@@ -38,30 +37,24 @@ function M.graph(graph, metadata, width, column_limit)
 	return require("fox.query.diagram").render(graph, metadata, width, column_limit)
 end
 
-function M.explorer(metadata, filter, selected, notes, height)
+function M.explorer(metadata, selected, notes, height)
 	local lines, objects = {}, {}
-	local candidates = {}
 	for _, item in ipairs(metadata.tables or {}) do
-		candidates[#candidates + 1] = item.key
+		local key = item.key
+		objects[#lines + 1] = item
+		local label = metadata.engine == "mysql" and item.name or key
+		lines[#lines + 1] = (selected == key and "> " or "  ") .. label .. (notes and notes[key] and " [note]" or "")
 	end
-	if filter and filter ~= "" then
-		candidates = vim.fn.matchfuzzy(candidates, filter)
+	if #lines == 0 then
+		lines[#lines + 1] = "No cached tables; connect/refresh"
 	end
-	for _, key in ipairs(candidates) do
-		objects[#lines + 1] = sql.table(metadata, key)
-		lines[#lines + 1] = (selected == key and "> " or "  ") .. key .. (notes and notes[key] and " [note]" or "")
-	end
-	if #candidates == 0 then
-		lines[#lines + 1] = "No matching cached tables; connect/refresh"
-	end
-	while #lines < (height or 4) - 4 do
+	while #lines < (height or 3) - 3 do
 		lines[#lines + 1] = ""
 	end
 	vim.list_extend(lines, {
 		"──────",
 		"DATABASE EXPLORER",
-		"/: filter  Enter: inspect  b: browse  n: notes",
-		"Filter: " .. (filter or ""),
+		"/ ? n N: search  Enter: inspect  b: browse  gn: notes",
 	})
 	return lines, objects
 end
@@ -307,8 +300,10 @@ function M.results(result)
 		for _, width in ipairs(widths) do
 			segments[#segments + 1] = string.rep("─", width + 2)
 		end
-		headers[#headers + 1] = { first = #lines + 1, text = format_row(set.columns) }
 		lines[#lines + 1] = "┌" .. table.concat(segments, "┬") .. "┐"
+		headers[#headers + 1] = { first = #lines + 1, text = format_row(set.columns) }
+		lines[#lines + 1] = format_row(set.columns)
+		lines[#lines + 1] = "├" .. table.concat(segments, "┼") .. "┤"
 		for row_index, row in ipairs(set.rows) do
 			local strings = set.strings and set.strings[row_index]
 			lines[#lines + 1] = format_row(row, strings)

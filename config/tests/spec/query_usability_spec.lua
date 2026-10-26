@@ -6,13 +6,30 @@ describe("FoxQuerier usability", function()
 	it("keeps explorer objects above a padded footer", function()
 		local render = require("fox.query.render")
 		local item = { key = "Player", name = "Player" }
-		local lines, objects = render.explorer({ tables = { item } }, "", "Player", {}, 12)
+		local lines, objects = render.explorer({ tables = { item } }, "Player", {}, 12)
 		expect(#lines).toBe(12)
 		expect(objects[1]).toBe(item)
-		expect(lines[9]).toBe("──────")
-		expect(lines[10]).toBe("DATABASE EXPLORER")
-		expect(lines[11]).toContain("/: filter")
-		expect(lines[12]).toBe("Filter: ")
+		expect(lines[10]).toBe("──────")
+		expect(lines[11]).toBe("DATABASE EXPLORER")
+		expect(lines[12]).toContain("/ ? n N: search")
+	end)
+
+	it("shortens only MySQL explorer labels while retaining qualified objects", function()
+		local render = require("fox.query.render")
+		local item = { key = "school.students", name = "students", schema = "school" }
+		for _, engine in ipairs({ "mysql", "postgres" }) do
+			local lines, objects = render.explorer({ engine = engine, tables = { item } }, item.key, { [item.key] = true })
+			expect(lines[1]).toBe("> " .. (engine == "mysql" and item.name or item.key) .. " [note]")
+			expect(objects[1]).toBe(item)
+		end
+	end)
+
+	it("keeps searchable headers separate from result rows", function()
+		local set = { columns = { "unique_header" }, rows = { { "value" } } }
+		local lines, rows, headers = require("fox.query.render").results({ sets = { set } })
+		expect(lines[headers[1].first]).toContain("unique_header")
+		expect(rows[headers[1].first]).toBeNil()
+		expect(rows[4].row).toBe(set.rows[1])
 	end)
 
 	it("centers the focused schema card and connects incoming and outgoing neighbors at both widths", function()

@@ -191,6 +191,78 @@ describe("FoxQuerier live workflow", function()
 			end
 		end)
 	end)
+	it("searches result headers and keeps sidebar searches native", function()
+		project(function()
+			query.show("standard")
+			local state = query.state()
+			local item = state.consoles[state.active]
+			item.result = { sets = { { columns = { "searchable_header" }, rows = { { "value" } } } } }
+			query.refresh_view(state)
+			vim.api.nvim_set_current_win(state.side_win)
+			for _, key in ipairs({ "/", "?", "n", "N" }) do
+				expect(vim.fn.maparg(key, "n", false, true).buffer).toBeNil()
+			end
+			vim.api.nvim_set_current_win(state.result_win)
+			expect(vim.fn.maparg("?", "n", false, true).buffer).toBeNil()
+			vim.api.nvim_win_set_cursor(0, { 4, 0 })
+			expect(vim.fn.search("searchable_header", "bW")).toBe(item.result_headers[1].first)
+			expect(item.result_rows[vim.api.nvim_win_get_cursor(0)[1]]).toBeNil()
+			expect(vim.fn.search("value", "W")).toBe(4)
+		end)
+	end)
+
+	it("shows connection details before connecting and closes on cancellation", function()
+		project(function(root)
+			query.show("standard")
+			local state = query.state()
+			local profile = {
+				id = "school",
+				engine = "mysql",
+				host = "localhost",
+				port = 3306,
+				database = "school",
+				user = "reader",
+				password_env = "TEST_DB_PASSWORD",
+			}
+			storage.save(root, "connections.json", { profiles = { profile } })
+			query.draw_connections(state)
+			local old_connect, connected = query.connect, nil
+			local ok, err = pcall(function()
+				query.connect = function(value)
+					connected = value
+				end
+				vim.api.nvim_set_current_win(state.connections_win)
+				vim.api.nvim_win_set_cursor(0, { 2, 0 })
+				expect(vim.api.nvim_get_current_line()).toContain(" school")
+				local function open()
+					vim.fn.maparg("<CR>", "n", false, true).callback()
+				end
+				open()
+				local text = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
+				for _, detail in ipairs({
+					"engine: mysql",
+					"host: localhost",
+					"port: 3306",
+					"database: school",
+					"user: reader",
+					"password_env: TEST_DB_PASSWORD",
+				}) do
+					expect(text).toContain(detail)
+				end
+				expect(connected).toBeNil()
+				vim.fn.maparg("q", "n", false, true).callback()
+				expect(connected).toBeNil()
+				open()
+				open()
+				expect(connected.id).toBe(profile.id)
+			end)
+			query.connect = old_connect
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
 	it("keeps result headers visible and aligned while scrolling and switches them between result sets", function()
 		project(function()
 			query.show()
@@ -221,7 +293,7 @@ describe("FoxQuerier live workflow", function()
 			expect(vim.fn.winsaveview().topline > 3).toBeTruthy()
 			expect(header).toContain("id")
 			expect(header).toContain("表nombre%")
-			expect(item.result_rows[40].row).toBe(first.rows[39])
+			expect(item.result_rows[40].row).toBe(first.rows[37])
 			local original = item.result_headers[1].text
 			local start = original:find("表", 1, true)
 			local left = vim.fn.strdisplaywidth(original:sub(1, start - 1)) + 1
@@ -236,7 +308,7 @@ describe("FoxQuerier live workflow", function()
 			header = scroll(item.result_headers[2].first + 20)
 			expect(header).toContain("other_id")
 			expect(header:find("表nombre%", 1, true)).toBeNil()
-			header = scroll(item.result_headers[3].first)
+			header = scroll(item.result_headers[3].first + 1)
 			expect(header).toContain("empty_result")
 			item.result, item.result_lines = nil, nil
 			query.refresh_view(state)
@@ -254,7 +326,9 @@ describe("FoxQuerier live workflow", function()
 				local item = state.consoles[state.active]
 				item.result = { sets = { { columns = { "compact_header" }, rows = { { "value" } } } } }
 				query.results()
-				expect(vim.wo[state.sql_win].winbar).toContain("compact_header")
+				expect(table.concat(vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false), "\n")).toContain(
+					"compact_header"
+				)
 				vim.api.nvim_win_set_buf(state.sql_win, state.active)
 				query.refresh_view(state)
 				expect(vim.wo[state.sql_win].winbar).toContain("Ctrl+Enter Run")
@@ -362,14 +436,14 @@ describe("FoxQuerier live workflow", function()
 			item.result = { sets = { set } }
 			query.refresh_view(state)
 			local lines = vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false)
-			expect(vim.wo[state.result_win].winbar).toContain("│ text")
-			expect(lines[2]).toContain(vim.json.encode(text))
-			expect(lines[2]).toContain("9007199254740993")
-			expect(lines[2]).toContain("NULL")
-			expect(lines[2]).toContain('""')
-			expect(lines[2]).toContain('…"')
+			expect(lines[2]).toContain("│ text")
+			expect(lines[4]).toContain(vim.json.encode(text))
+			expect(lines[4]).toContain("9007199254740993")
+			expect(lines[4]).toContain("NULL")
+			expect(lines[4]).toContain('""')
+			expect(lines[4]).toContain('…"')
 			vim.api.nvim_set_current_win(state.result_win)
-			vim.api.nvim_win_set_cursor(state.result_win, { 2, 0 })
+			vim.api.nvim_win_set_cursor(state.result_win, { 4, 0 })
 			vim.fn.maparg("<CR>", "n", false, true).callback()
 			local win, buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
 			local config = vim.api.nvim_win_get_config(win)
@@ -423,7 +497,7 @@ describe("FoxQuerier live workflow", function()
 			expect(vim.api.nvim_win_get_height(popup)).toBe(math.floor(vim.o.lines * 0.9))
 			expect(vim.api.nvim_win_get_config(popup).relative).toBe("editor")
 			expect(vim.api.nvim_win_get_buf(popup)).toBe(state.result_buf)
-			expect(vim.wo[popup].winbar).toContain("answer")
+			expect(vim.api.nvim_buf_get_lines(state.result_buf, 1, 2, false)[1]).toContain("answer")
 			expect(item.result.sets[1].rows[1][1]).toBe("42")
 			vim.fn.maparg("<Esc>", "n", false, true).callback()
 			expect(vim.api.nvim_win_is_valid(popup)).toBeFalsy()
@@ -780,8 +854,8 @@ describe("FoxQuerier live workflow", function()
 			query.refresh_view(state)
 			expect(table.concat(vim.api.nvim_buf_get_lines(state.side_buf, 0, -1, false), "\n"):find("INDEXES", 1, true)).toBeNil()
 			vim.api.nvim_buf_call(state.side_buf, function()
-				expect(vim.fn.maparg("/", "n", false, true).buffer).toBe(1)
-				expect(vim.fn.maparg("n", "n", false, true).buffer).toBe(1)
+				expect(vim.fn.maparg("/", "n", false, true).buffer).toBeNil()
+				expect(vim.fn.maparg("n", "n", false, true).buffer).toBeNil()
 			end)
 			local sizes = {}
 			for _, win in ipairs(vim.api.nvim_tabpage_list_wins(state.tab)) do
@@ -945,7 +1019,7 @@ describe("FoxQuerier live workflow", function()
 			local lines = vim.api.nvim_buf_get_lines(state.connections_buf, 0, -1, false)
 			expect(lines[2]).toContain("test")
 			expect(lines[#lines - 2]).toBe("------")
-			expect(lines[#lines]).toBe("Enter Connect  D Disconnect")
+			expect(lines[#lines]).toBe("Enter Details  D Disconnect")
 			local old_setreg, old_mouse, registers = vim.fn.setreg, vim.fn.getmousepos, {}
 			local ok, err = pcall(function()
 				vim.fn.setreg = function(register, text)
@@ -1055,12 +1129,12 @@ describe("FoxQuerier live workflow", function()
 			query.refresh_view(state)
 			local lines = vim.api.nvim_buf_get_lines(state.result_buf, 0, -1, false)
 			expect(lines[1]).toBe("┌────────────┐")
-			expect(vim.wo[state.result_win].winbar).toContain("actualRank")
-			expect(table.concat(lines, "\n"):find("│ actualRank │", 1, true)).toBeNil()
-			expect(lines[2]).toBe("│ CA         │")
-			expect(lines[4]).toBe("└────────────┘")
-			expect(lines[7]).toContain("┬")
-			expect(lines[10]).toContain("┴")
+			expect(lines[2]).toContain("actualRank")
+			expect(lines[2]).toBe("│ actualRank │")
+			expect(lines[4]).toBe("│ CA         │")
+			expect(lines[6]).toBe("└────────────┘")
+			expect(lines[9]).toContain("┬")
+			expect(lines[14]).toContain("┴")
 			expect(table.concat(lines, "\n")).toContain("NULL")
 			expect(table.concat(lines, "\n")).toContain("表\\ntext")
 			vim.api.nvim_set_current_win(state.result_win)
@@ -1427,7 +1501,7 @@ describe("FoxQuerier live workflow", function()
 			)
 			query.draw_connections(state)
 			expect(table.concat(vim.api.nvim_buf_get_lines(state.connections_buf, 0, -1, false), "\n")).toContain(
-				"[Can't connect] missing"
+				"[Can't connect]  missing"
 			)
 		end)
 	end)

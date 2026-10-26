@@ -25,7 +25,6 @@ function M.state(root)
 			view = "standard",
 			metadata = { tables = {}, relations = {} },
 			consoles = {},
-			filter = "",
 			depth = 3,
 			autorun = false,
 			diagram_columns = type(limit) == "number" and limit >= 1 and limit <= 200 and limit % 1 == 0 and limit or 15,
@@ -497,7 +496,7 @@ local function result_header(state)
 			local view = vim.api.nvim_win_call(win, vim.fn.winsaveview)
 			local header
 			for _, entry in ipairs(active and active.result and active.result_headers or {}) do
-				if not header or entry.first <= view.topline then
+				if entry.first < view.topline then
 					header = entry.text
 				else
 					break
@@ -596,7 +595,6 @@ function M.refresh_view(state)
 	else
 		local lines, objects = render.explorer(
 			state.metadata,
-			state.filter,
 			state.selected,
 			state.note_keys,
 			valid(state.side_win, "win") and vim.api.nvim_win_get_height(state.side_win) or 0
@@ -829,19 +827,9 @@ function M.show(view)
 	map(state.side_buf, "J", function()
 		M.insert_join(selected_object(state))
 	end)
-	map(state.side_buf, "n", function()
+	map(state.side_buf, "gn", function()
 		M.notes(selected_object(state))
 	end)
-	if state.view == "standard" then
-		map(state.side_buf, "/", function()
-			vim.ui.input({ prompt = "Filter tables: ", default = state.filter }, function(value)
-				if value and M.states[state.root] == state then
-					state.filter = value
-					M.refresh_view(state)
-				end
-			end)
-		end)
-	end
 	map(state.side_buf, "b", function()
 		M.browse(selected_object(state))
 	end)
@@ -854,7 +842,6 @@ function M.show(view)
 			vim.api.nvim_win_set_buf(state.sql_win, state.active or M.empty(state))
 		end
 	end)
-	map(state.side_buf, "?", M.help)
 	map(state.result_buf or panel(state, "result_buf"), "<CR>", M.expand_row)
 	map(state.result_buf, "y", M.copy_row)
 	map(state.result_buf, "e", M.export)
@@ -875,7 +862,6 @@ function M.show(view)
 			state.result_popup = nil
 		end
 	end)
-	map(state.result_buf, "?", M.help)
 	for key, direction in pairs({ H = "left", L = "right", J = "down", K = "up" }) do
 		map(state.result_buf, key, function()
 			M.move_cell(direction)
@@ -1075,7 +1061,10 @@ function M.draw_connections(state)
 	for _, profile in ipairs(profiles or {}) do
 		local status = state.connection_status[profile.id]
 		local selected = active and active.profile and active.profile.id == profile.id
-		lines[#lines + 1] = (status == "failed" and "[Can't connect] " or selected and "* " or "  ") .. profile.id
+		lines[#lines + 1] = (status == "failed" and "[Can't connect] " or selected and "* " or "  ")
+			.. ({ sqlite = "", postgres = "", mysql = "" })[profile.engine]
+			.. " "
+			.. profile.id
 		objects[#lines] = profile
 	end
 	if profiles and #profiles == 0 then
@@ -1085,7 +1074,7 @@ function M.draw_connections(state)
 	while #lines < height - 3 do
 		lines[#lines + 1] = ""
 	end
-	vim.list_extend(lines, { "------", "a Add  e Edit  d Delete", "Enter Connect  D Disconnect" })
+	vim.list_extend(lines, { "------", "a Add  e Edit  d Delete", "Enter Details  D Disconnect" })
 	set_lines(buf, lines)
 	local function selected()
 		return objects[vim.api.nvim_win_get_cursor(0)[1]]
@@ -1093,7 +1082,7 @@ function M.draw_connections(state)
 	map(buf, "a", M.add_profile)
 	map(buf, "<CR>", function()
 		if selected() then
-			M.connect(selected(), state)
+			M.connection_details(selected(), state)
 		else
 			M.add_profile()
 		end
@@ -1118,6 +1107,47 @@ function M.draw_connections(state)
 				vim.api.nvim_win_set_buf(state.sql_win, state.active or M.empty(state))
 			end
 		end
+	end)
+end
+
+function M.connection_details(profile, state)
+	state = state or M.state()
+	local lines = {}
+	for _, key in ipairs({
+		"id",
+		"engine",
+		"path",
+		"host",
+		"port",
+		"database",
+		"user",
+		"schema",
+		"schemas",
+		"sslmode",
+		"sslrootcert",
+		"ssl_ca",
+		"password_env",
+	}) do
+		local value = profile[key]
+		if value ~= nil then
+			lines[#lines + 1] = key
+				.. ": "
+				.. (type(value) == "table" and table.concat(value, ", ") or tostring(value)):gsub("[%c]", " ")
+		end
+	end
+	lines[#lines + 1] = ""
+	lines[#lines + 1] = "Enter: connect | q / Esc: back"
+	local buf, win = require("fox.core.ui").float({
+		title = " Connection details ",
+		lines = lines,
+		width = math.min(80, vim.o.columns - 4),
+		height = math.min(#lines, vim.o.lines - 6),
+		close_keys = { "q", "<Esc>", "<C-c>" },
+	})
+	vim.b[buf].fox_query_root = state.root
+	map(buf, "<CR>", function()
+		vim.api.nvim_win_close(win, true)
+		M.connect(profile, state)
 	end)
 end
 
@@ -2016,7 +2046,7 @@ function M.help()
 			"FoxQueryRun statement / selection / section / file",
 			"FoxQueryCancel: cancel; reconnect if session is uncertain",
 			"FoxQueryResults / FoxQueryActivity: results / submitted SQL",
-			"Explorer/diagram: Enter inspect, J Insert JOIN, C column limit, b browse; / and n search",
+			"Explorer/diagram: Enter inspect, J Insert JOIN, C column limit, b browse; / ? n N search; gn notes",
 			"SQL files: Enter opens/toggles folders; a SQL, A folder, r rename, d delete; Alt+h/l tabs",
 			"Status: click/y copies; Enter error details",
 			"Results: H/L columns, J/K rows, Enter expand row, y copy, e export, gR follow FK",

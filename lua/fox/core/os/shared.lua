@@ -36,14 +36,14 @@ M.is_linux = not M.is_windows and not M.is_mac
 -- ============================================================================
 
 --- True when Caps Lock is toggled on.
---- ponytail: only Windows has an implementation (Win32 `GetKeyState`). Linux/macOS
---- have no portable no-dependency equivalent from inside Neovim; add a linux.lua/
---- mac.lua implementation (X11 XkbGetIndicatorState / IOKit) if this is ever needed
---- there -- until then this always reports off.
+--- Windows uses GetKeyState; Linux reads the kernel keyboard LED brightness.
+--- Linux detection refers to keyboards on this machine, not a remote SSH client.
 --- @return boolean
 function M.is_caps_lock_on()
 	if M.is_windows then
 		return require("fox.core.os.windows").is_caps_lock_on()
+	elseif M.is_linux then
+		return require("fox.core.os.linux").is_caps_lock_on()
 	end
 	return false
 end

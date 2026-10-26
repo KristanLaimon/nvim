@@ -125,6 +125,60 @@ describe("plugins.fox.editor.caps_lock state management and notification trigger
 		expect(notified_messages[1].msg:len() > 0).toBe(true)
 	end)
 
+	it("shows one warning per activation and starts a fresh delay after Caps Lock is turned off", function()
+		local on, count = true, 0
+		caps_lock.is_caps_lock_on = function()
+			return on
+		end
+		vim.notify = function(_, _, opts)
+			if opts and opts.title == caps_lock.settings.notification_title then
+				count = count + 1
+			end
+		end
+		caps_lock.set_caps_on_since((vim.uv or vim.loop).now() - 4500)
+		caps_lock.check()
+		assert(vim.wait(100, function()
+			return count == 1
+		end, 1))
+		caps_lock.check()
+		expect(count).toBe(1)
+		on = false
+		caps_lock.check()
+		on = true
+		caps_lock.check()
+		expect(caps_lock.get_state().notified).toBe(false)
+		caps_lock.set_caps_on_since((vim.uv or vim.loop).now() - 4500)
+		caps_lock.check()
+		assert(vim.wait(100, function()
+			return count == 2
+		end, 1))
+	end)
+	it("drops queued notifications when Caps Lock turns off or focus is lost", function()
+		local on, count = true, 0
+		caps_lock.is_caps_lock_on = function()
+			return on
+		end
+		vim.notify = function()
+			count = count + 1
+		end
+		caps_lock.set_caps_on_since((vim.uv or vim.loop).now() - 4500)
+		caps_lock.check()
+		on = false
+		caps_lock.check()
+		vim.wait(20, function()
+			return false
+		end, 1)
+		expect(count).toBe(0)
+		on = true
+		caps_lock.set_caps_on_since((vim.uv or vim.loop).now() - 4500)
+		caps_lock.check()
+		caps_lock.set_focused(false)
+		vim.wait(20, function()
+			return false
+		end, 1)
+		expect(count).toBe(0)
+	end)
+
 	it("resets state when Caps Lock turns off", function()
 		local caps_status = true
 		caps_lock.is_caps_lock_on = function()

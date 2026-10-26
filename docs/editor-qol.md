@@ -200,3 +200,17 @@ searchable history picker. History lasts for the current editor session.
 
 Existing `require("notify")` callers use a local compatibility entrypoint. Progress
 updates keep the same window and can remain open until completion or cancellation.
+
+## Caps Lock warning
+
+FoxVim shows one warning when Caps Lock stays on for about three seconds while
+Neovim is focused. Switching it off starts a new activation; leaving the editor
+pauses polling and resets the delay. `:CapsLockCheck` reports the current state
+immediately. The delay and polling interval are configured in
+`plugins.fox.editor.caps_lock.settings` (`delay_ms` and `poll_interval_ms`).
+
+Windows reads the Win32 keyboard state. Linux reads keyboard LED brightness under
+`/sys/class/leds`, including local Wayland, X11 and console sessions, without shell
+commands or elevated permissions. Linux requires readable Caps Lock LED entries;
+it cannot infer the keyboard state of a remote SSH client. macOS does not yet have
+a state backend.

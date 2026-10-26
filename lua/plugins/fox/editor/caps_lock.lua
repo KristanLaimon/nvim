@@ -10,7 +10,7 @@
 -- HOW IT WORKS
 --   * State queries go through lua/fox/core/os/shared.lua, which on Windows uses
 --     LuaJIT FFI with `user32.dll` (`GetKeyState(0x14)`) for zero-overhead, 0ms
---     latency; no other OS has an implementation yet (see that file for why).
+--     latency. Linux reads keyboard LEDs from sysfs, including Wayland sessions.
 --   * Uses a focus-aware libuv timer and autocmds (`CursorHold`, `WinEnter`, `BufEnter`,
 --     `ModeChanged`) to check state without background CPU waste when unfocused.
 --   * Throttles notifications so only one toast is shown per Caps Lock session.
@@ -52,6 +52,7 @@ local is_focused = true
 local check_timer = nil
 local caps_on_since = nil
 local notified = false
+local warning_session = 0
 
 -- ============================================================================
 -- API
@@ -85,6 +86,7 @@ end
 
 --- Resets the tracking state (e.g. when Caps Lock is turned off).
 function M.reset_state()
+	warning_session = warning_session + 1
 	caps_on_since = nil
 	notified = false
 end
@@ -106,6 +108,7 @@ end
 function M.get_state()
 	return {
 		is_focused = is_focused,
+		polling = check_timer ~= nil and check_timer:is_active(),
 		caps_on_since = caps_on_since,
 		notified = notified,
 		is_on = M.is_caps_lock_on(),
@@ -139,7 +142,12 @@ function M.check(force)
 				)
 			end
 
+			local session = warning_session
 			vim.schedule(function()
+				-- A pending toast must not outlive the Caps Lock session or focus.
+				if session ~= warning_session or not is_focused or not M.is_caps_lock_on() then
+					return
+				end
 				vim.notify(msg, M.settings.notification_level, {
 					title = M.settings.notification_title,
 					id = "caps_lock_warning",
@@ -229,6 +237,17 @@ function M.setup()
 		})
 	end, { desc = "Check Caps Lock status and notify" })
 
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		group = group,
+		callback = function()
+			stop_timer()
+			if check_timer then
+				check_timer:close()
+				check_timer = nil
+			end
+			M.reset_state()
+		end,
+	})
 	M.check()
 	start_timer()
 end
@@ -243,6 +262,10 @@ M.name = "fox_caps_lock"
 M.dir = require("fox.core.lazyspec").for_module()
 M.event = "VeryLazy"
 M.cmd = "CapsLockCheck"
-M.config = M.setup
+M.config = function()
+	-- Lazy evaluates spec files without caching them as Lua modules. Load one
+	-- canonical instance for commands, timers and the public CapsLock API.
+	require("plugins.fox.editor.caps_lock").setup()
+end
 
 return M

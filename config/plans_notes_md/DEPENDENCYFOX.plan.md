@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **24 reemplazos completados: 25 externos actuales**, de los cuales **8 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **25 reemplazos completados: 24 externos actuales**, de los cuales **7 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -41,7 +41,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 22 | `akinsho/bufferline.nvim` | Media-alta | Completado | Tabline nativa con fijados, diagnósticos, cierre y desbordamiento. |
 | 23 | `rafamadriz/friendly-snippets` | Media-alta | Completado | Snippets locales de los lenguajes usados; conservar cobertura y licencias de datos migrados. |
 | 24 | `rcarriga/nvim-notify` | Media-alta | Completado | Cola de ventanas, expiración, historial y protección del foco. |
-| 25 | `windwp/nvim-autopairs` | Media-alta | Pendiente | Reglas de inserción/borrado, undo, completion y exclusiones de sintaxis. |
+| 25 | `windwp/nvim-autopairs` | Media-alta | Completado | Reglas de inserción/borrado, undo, completion y exclusiones de sintaxis. |
 | 26 | `vuki656/package-info.nvim` | Media-alta | Pendiente | Versiones y acciones por gestor con caché, errores de red y edición segura del manifiesto. |
 | 27 | `m00qek/baleia.nvim` | Media-alta | Pendiente | Parser ANSI incremental a highlights; escapes fragmentados y buffers DAP. |
 | 28 | `vyfor/cord.nvim` | Alta | Pendiente | IPC Discord con reconexión y presencia; validar Windows, Linux y entornos remotos. |
@@ -227,6 +227,15 @@ Blame asíncrono propio en fox.git.inline_blame y parser compartido en fox.git.b
 
 - Validación final: 924 pruebas aprobadas y los mismos dos fallos preexistentes (autotag TSX y aislamiento del selector de temas). 839 archivos Lua sin errores de sintaxis; StyLua y Luacheck aprobados para los nueve archivos Lua del cambio. Inventario verificado desde Lazy: 25 externos y 71 specs locales.
 
+## Reemplazo 25: windwp/nvim-autopairs
+
+- Implementación original en `fox.editor.autopairs`, con mappings expr y operaciones nativas de inserción: pares básicos, salto de cierres balanceados, borrado conjunto, Enter e indentación, envoltura de argumentos entre comillas, cercas Markdown, comillas triples, strings Nix y comentarios HTML. No se copia código upstream ni se eliminan directorios instalados.
+- Undo/redo conserva inserciones atómicas y movimientos sin cortar el bloque; macros y modo reemplazo permanecen literales. Respeta buffers no modificables, flotantes sin filetype y exclusiones TelescopePrompt/vim. Treesitter excluye strings/comentarios con fallback sin parser y se desactiva solo en Termux nativo; proot mantiene la detección.
+- Spec local eager pequeña, anterior a Blink, para que sus fallbacks de BS/Enter capturen los mappings correctos. Completion manual dentro de pares vacíos y expansión de snippets continúan en Blink/Neovim, sin hooks de completion adicionales ni instalaciones opcionales.
+- Diez pruebas enfocadas y siete integraciones aprobadas, incluida UI RPC con Blink real: menú manual dentro de pares, aceptación por Enter de un snippet con tabstops, Unicode, macros, reemplazo, indentación y undo/redo. Diez pruebas de entorno/configuración aprobadas. Windows/WSL y Termux físicos no ejecutados; gating de Termux/proot verificado con fixtures.
+
+- Validación final: 934 pruebas aprobadas y dos fallos preexistentes (autotag TSX y aislamiento del selector de temas), reproducidos en una copia limpia del commit inicial `20d434f` (924 aprobadas y los mismos dos fallos). 842 archivos Lua sin errores de sintaxis; StyLua/Luacheck sin advertencias en los cinco archivos Lua del cambio. Registro Lazy verificado: 24 externos y 72 specs locales.
+
 ## Siguiente ítem
 
-`windwp/nvim-autopairs`: continuar con el alcance indicado en la tabla.
+`vuki656/package-info.nvim`: continuar con el alcance indicado en la tabla. No iniciado; esta sesión está limitada a nvim-autopairs.

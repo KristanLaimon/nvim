@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **25 externos** y **71 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **24 externos** y **72 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -34,7 +34,6 @@ Total actual: **25 externos** y **71 specs locales activas**. El plan de sustitu
 - `rcarriga/nvim-dap-ui` — [`editor/dap.lua`](../../lua/plugins/editor/dap.lua)
 - `sindrets/diffview.nvim` — [`editor/neogit.lua`](../../lua/plugins/editor/neogit.lua), [`fox/git/git_center/init.lua`](../../lua/plugins/fox/git/git_center/init.lua)
 - `vuki656/package-info.nvim` — [`editor/package-info.lua`](../../lua/plugins/editor/package-info.lua)
-- `windwp/nvim-autopairs` — [`editor/autopairs.lua`](../../lua/plugins/editor/autopairs.lua)
 
 **LSP**
 
@@ -56,6 +55,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 ### Core
 
+- `fox_autopairs` — [`editor/autopairs.lua`](../../lua/plugins/editor/autopairs.lua)
 - `fox_icons` — [`ui/devicons.lua`](../../lua/plugins/ui/devicons.lua)
 - `fox_theme_startup` — [`ui/themes.lua`](../../lua/plugins/ui/themes.lua)
 - `image_viewer` — [`fox/ui/image_viewer.lua`](../../lua/plugins/fox/ui/image_viewer.lua)

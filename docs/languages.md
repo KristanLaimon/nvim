@@ -92,6 +92,14 @@ Two behaviours are tuned:
 
 **Completion is off entirely** in the `foxinputmodal` filetype (so the [input modal](input-modal.md) stays a plain text field) and in any buffer setting `vim.b.completion = false`.
 
+Pair editing is local (`fox.editor.autopairs`): brackets, quotes, paired Backspace,
+balanced closing skips and Enter between empty pairs. It also handles Markdown fences,
+triple quotes and HTML comments. Treesitter excludes string/comment contexts when a
+parser is available; bare Termux uses lexical rules. `TelescopePrompt` and `vim`
+buffers, recorded/executed macros and Replace mode keep literal input. Pair insertion
+and deletion use native undo; completion/snippet edits are applied directly by Blink
+and Neovim without retyping the generated brackets.
+
 **The menu does not auto-open inside a freshly inserted empty pair** — right after autopairs turns `{` into `{}`, `[` into `[]`, `(` into `()`. This used to be a hard `enabled = false`, which also killed `<C-space>`: you couldn't ask for completion inside `import { | }`, which is the one place you always want it. Now only `menu.auto_show` is suppressed:
 
 ```lua

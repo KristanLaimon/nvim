@@ -136,9 +136,10 @@ describe("environment-based mobile gating (proot treated as desktop)", function(
 	local proot_ubuntu = { is_termux = true, is_proot = true, is_ubuntu = true, is_mobile = true }
 	local desktop = { is_termux = false, is_proot = false, is_mobile = false }
 
-	it("nvim-autopairs: check_ts is off on bare Termux, on for proot Ubuntu and desktop", function()
+	it("fox.editor.autopairs: check_ts is off on bare Termux, on for proot Ubuntu and desktop", function()
 		local captured = {}
-		package.loaded["nvim-autopairs"] = {
+		local original = package.loaded["fox.editor.autopairs"]
+		package.loaded["fox.editor.autopairs"] = {
 			setup = function(opts)
 				table.insert(captured, opts.check_ts)
 			end,
@@ -151,7 +152,7 @@ describe("environment-based mobile gating (proot treated as desktop)", function(
 			end)
 		end
 
-		package.loaded["nvim-autopairs"] = nil
+		package.loaded["fox.editor.autopairs"] = original
 		package.loaded["plugins.editor.autopairs"] = nil
 
 		expect(captured).toEqual({ false, true, true })

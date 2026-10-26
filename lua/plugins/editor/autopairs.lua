@@ -1,19 +1,10 @@
--- ============================================================================
--- PLUGIN: nvim-autopairs -- closes brackets, quotes and tags as you type.
--- ============================================================================
--- `check_ts` uses Treesitter to decide whether a pair really should close, so it
--- does not add a quote inside a string or a comment. Disabled in the telescope
--- prompt, where a stray closing bracket breaks the search pattern.
---
--- The completion menu is deliberately suppressed inside a freshly inserted empty
--- pair -- see the blink.cmp `auto_show` rule in lua/plugins/lsp/lsp.lua.
--- ============================================================================
-
+-- Local pair editing loads before Blink captures fallback insert mappings.
 return {
-	"windwp/nvim-autopairs",
-	event = "InsertEnter",
+	name = "fox_autopairs",
+	dir = require("fox.core.lazyspec").for_module(),
+	lazy = false,
 	config = function()
-		local is_native_termux = false
+		local is_native_termux
 		local env_ok, env_mod = pcall(require, "fox.core.environment")
 		if env_ok then
 			local env = env_mod.detect()
@@ -26,7 +17,7 @@ return {
 				and vim.fn.filereadable("/etc/os-release") == 0
 		end
 
-		require("nvim-autopairs").setup({
+		require("fox.editor.autopairs").setup({
 			check_ts = not is_native_termux,
 			disable_filetype = { "TelescopePrompt", "vim" },
 		})

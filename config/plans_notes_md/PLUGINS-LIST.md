@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **27 externos** y **70 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **26 externos** y **70 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -40,7 +40,6 @@ Total actual: **27 externos** y **70 specs locales activas**. El plan de sustitu
 
 - `b0o/schemastore.nvim` — [`lsp/blink_sources.lua`](../../lua/plugins/lsp/blink_sources.lua), [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `neovim/nvim-lspconfig` — [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
-- `rafamadriz/friendly-snippets` — [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `saghen/blink.cmp` — [`lsp/blink_sources.lua`](../../lua/plugins/lsp/blink_sources.lua), [`lsp/editorconfig.lua`](../../lua/plugins/lsp/editorconfig.lua), [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua), [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `stevearc/conform.nvim` — [`lsp/formatting.lua`](../../lua/plugins/lsp/formatting.lua)
 - `williamboman/mason.nvim` — [`lsp/formatting.lua`](../../lua/plugins/lsp/formatting.lua), [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
@@ -157,6 +156,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 ### Submódulos y soporte local
 
+- `fox.lsp.snippets`: carga del catálogo JSON atribuido en `config/snippet_catalog/` y overrides de usuario; expansión nativa de Blink/Neovim, sin spec adicional.
 - `fox.lsp.tooling`: acciones Mason explícitas integradas en la spec LSP existente.
 - `fox.core.file_buffers`: reconciliación de buffers integrada en Neo-tree.
 - `fox.lsp.file_operations`: eventos LSP de archivos integrados en Neo-tree.

@@ -407,7 +407,6 @@ return {
 	{
 		"saghen/blink.cmp",
 		event = { "InsertEnter", "CmdlineEnter" },
-		dependencies = { "rafamadriz/friendly-snippets" },
 		-- Prebuilt fuzzy-match libraries are published for release tags. Tracking
 		-- main leaves Blink unable to determine which binary to download.
 		version = "1.*",
@@ -422,18 +421,6 @@ return {
 			else
 				is_native_termux = vim.env.TERMUX_VERSION ~= nil or vim.fn.isdirectory("/data/data/com.termux") == 1
 				is_mobile = is_native_termux
-			end
-			-- Guard against malformed snippet entries (e.g. $schema keys without a body)
-			-- that cause table.concat(nil) errors in blink.cmp's default snippet registry.
-			local ok_utils, snip_utils = pcall(require, "blink.cmp.sources.snippets.utils")
-			if ok_utils and snip_utils.read_snippet then
-				local orig_read = snip_utils.read_snippet
-				snip_utils.read_snippet = function(snippet, fallback)
-					if type(snippet) ~= "table" or not snippet.body then
-						return {}
-					end
-					return orig_read(snippet, fallback)
-				end
 			end
 
 			local merged = vim.tbl_deep_extend("force", opts or {}, {
@@ -523,8 +510,11 @@ return {
 					providers = {
 						dap = { name = "DAP", module = "fox.lsp.dap_repl_source", async = true },
 						snippets = {
+							module = "fox.lsp.snippets",
 							opts = {
 								search_paths = { vim.fn.stdpath("config") .. "/config/snippets" },
+								friendly_snippets = false,
+								catalog_path = vim.fn.stdpath("config") .. "/config/snippet_catalog",
 								filter_snippets = function(_, file)
 									return not file:match("schema%.json$")
 								end,

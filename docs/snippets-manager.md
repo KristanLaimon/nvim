@@ -2,6 +2,22 @@
 
 The **FoxVim Snippet Manager** lets you create, edit, override, delete, and list snippets per language in standard **VSCode JSON format**, fully integrated into Neovim's `blink.cmp` autocompletion engine — plus **full IntelliSense** (validation, field hints, hover docs) while editing snippet files themselves.
 
+The bundled defaults live in `config/snippet_catalog/`, an attributed snapshot of
+friendly-snippets (143 JSON files, 6,194 definitions, 129 language names and aliases).
+Its MIT license is in `licenses/friendly-snippets.txt`. These are retained upstream
+snippet resources; no external friendly-snippets plugin is cloned or loaded.
+
+`fox.lsp.snippets` loads the catalog through Blink's built-in snippet engine. Your
+files in `config/snippets/` stay separate: a custom prefix replaces matching bundled
+suggestions, including each prefix in an array. Built-in variables, native tabstops,
+mirrors and snippet expansion continue through Blink/Neovim. Schema metadata and
+malformed individual entries are skipped; malformed JSON reports an error without
+breaking the completion menu.
+
+Saving a custom JSON file or writing through the manager rescans snippets, including
+new files. `:FoxSnippetReload` also rescans without resetting Blink or its mappings.
+Catalog updates are manual and documented in `config/snippet_catalog/README.md`.
+
 ---
 
 ## 🚀 Commands

@@ -80,7 +80,7 @@ FoxVim has **63 local plugin specs** across [`lua/plugins/`](lua/plugins) and **
 |---|---|
 | UI and themes | native FOX tabline and statusline, `nvim-notify`, `render-markdown.nvim` |
 | Navigation and Git | `diffview.nvim`, `gitsigns.nvim`, `neo-tree.nvim`, `neogit`, `nui.nvim`, `package-info.nvim`, `plenary.nvim`, `snacks.nvim`, `telescope-file-browser.nvim`, `telescope.nvim` |
-| LSP and editing | `blink.cmp`, `conform.nvim`, `friendly-snippets`, `mason.nvim`, `nvim-lspconfig`, `nvim-treesitter`, `schemastore.nvim` |
+| LSP and editing | `blink.cmp`, `conform.nvim`, local snippet catalog, `mason.nvim`, `nvim-lspconfig`, `nvim-treesitter`, `schemastore.nvim` |
 | Debugging | `baleia.nvim`, `nvim-dap`, `nvim-dap-ui`, `nvim-nio` |
 | Language and extras | `cord.nvim`, `lazy.nvim`, `markdown-preview.nvim`, `nvim-autopairs` |
 

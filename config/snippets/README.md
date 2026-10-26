@@ -143,3 +143,12 @@ You can manage all snippets directly from Neovim:
 | `:FoxSnippetReload` | **Snippets: Reload Snippets** | Hot-reloads definitions into `blink.cmp` |
 
 Saved snippet changes apply **immediately** upon saving (`:w`) without restarting Neovim!
+
+## Bundled defaults and overrides
+
+The complete attributed default catalog is stored separately in
+`../snippet_catalog/` (license: `../../licenses/friendly-snippets.txt`). It is resource
+data from friendly-snippets; FoxVim does not clone or load that plugin. Keep edits
+in this directory: your prefixes take precedence over bundled suggestions.
+Saving JSON files, using the manager or running `:FoxSnippetReload` rescans both
+new and existing definitions without restarting Blink.

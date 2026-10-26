@@ -14,9 +14,6 @@
 --   :FoxSnippetReload                    Reload snippet definitions.
 -- ============================================================================
 
-local lazy_req = require("fox.core.lazy_require")
-local store = lazy_req("fox.core.store")
-
 local M = {}
 
 M.settings = {
@@ -161,6 +158,7 @@ function M.write_snippets(lang, snippets)
 
 	f:write(encoded)
 	f:close()
+	M.reload_snippets()
 	notify("Updated snippets for " .. lang .. " (" .. filepath .. ")")
 
 	-- Format open buffer if currently editing it
@@ -310,10 +308,10 @@ function M.open_manager()
 		"📋 List Snippets for Current Filetype (" .. ft .. ")",
 		"🌐 Select Specific Language to Edit...",
 		"📂 Open Snippets Directory in Neo-tree",
-		"🔄 Reload Completion Engine (blink.cmp)",
+		"🔄 Reload Snippet Definitions",
 	}
 
-	vim.ui.select(options, { prompt = "⚡ FOX Snippet Manager" }, function(choice, idx)
+	vim.ui.select(options, { prompt = "⚡ FOX Snippet Manager" }, function(_, idx)
 		if not idx then
 			return
 		end
@@ -337,14 +335,33 @@ function M.open_manager()
 			local dir = M.ensure_dir()
 			vim.cmd("Neotree " .. vim.fn.fnameescape(dir))
 		elseif idx == 6 then
-			vim.cmd("lazy reload blink.cmp")
-			notify("Reloaded blink.cmp completion engine!")
+			M.reload_snippets()
+			notify("Reloaded snippet definitions!")
 		end
 	end)
 end
 
+--- Rescan snippets without resetting the completion engine or its keymaps.
+function M.reload_snippets()
+	local blink = package.loaded["blink.cmp"]
+	if blink and blink.reload then
+		blink.reload("snippets")
+	end
+end
+
 --- Registers user commands and keymaps.
 function M.setup()
+	local group = vim.api.nvim_create_augroup("FoxSnippetReload", { clear = true })
+	vim.api.nvim_create_autocmd("BufWritePost", {
+		group = group,
+		callback = function(event)
+			local file = vim.fs.normalize(vim.api.nvim_buf_get_name(event.buf))
+			local dir = vim.fs.normalize(M.settings.snippets_dir):gsub("/+$", "")
+			if file:sub(1, #dir + 1) == dir .. "/" and file:match("%.json$") then
+				M.reload_snippets()
+			end
+		end,
+	})
 	vim.api.nvim_create_user_command("SnippetManager", function()
 		M.open_manager()
 	end, { desc = "Open FOX Snippet Manager" })
@@ -362,8 +379,8 @@ function M.setup()
 	end, { nargs = "?", desc = "Add a new snippet interactively" })
 
 	vim.api.nvim_create_user_command("FoxSnippetReload", function()
-		vim.cmd("lazy reload blink.cmp")
-		notify("Reloaded blink.cmp completion engine!")
+		M.reload_snippets()
+		notify("Reloaded snippet definitions!")
 	end, { desc = "Reload completion snippets" })
 end
 

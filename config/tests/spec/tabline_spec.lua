@@ -125,6 +125,46 @@ t.describe("native buffer tab bar", function()
 		t.expect(result).toContain("ws%#Error#")
 		vim.diagnostic.reset(ns, b)
 	end)
+	t.it("keeps file icon colors on selected, visible and inactive tabs and refreshes color overrides", function()
+		local a, b = buffer("color.lua"), buffer("other.lua")
+		vim.api.nvim_set_current_buf(a)
+		local icons = require("fox.ui.icons")
+		local glyph, icon_group = icons.get("file", vim.api.nvim_buf_get_name(a))
+		local original = vim.api.nvim_get_hl(0, { name = icon_group, link = false })
+		local function check(buf, group)
+			text(200)
+			local name = "FoxTabIcon" .. group .. icon_group
+			local actual = vim.api.nvim_get_hl(0, { name = name, link = false })
+			local tab = vim.api.nvim_get_hl(0, { name = group, link = false })
+			local icon = vim.api.nvim_get_hl(0, { name = icon_group, link = false })
+			t.expect(actual.fg).toBe(icon.fg)
+			t.expect(actual.bg).toBe(tab.bg)
+			local evaluated =
+				vim.api.nvim_eval_statusline(tabs.render(), { use_tabline = true, maxwidth = 200, highlights = true })
+			local colored = false
+			for _, span in ipairs(evaluated.highlights) do
+				if span.group == name and evaluated.str:sub(span.start + 1, span.start + #glyph) == glyph then
+					colored = true
+				end
+			end
+			t.expect(colored).toBe(true)
+			t.expect(tabs.visible(buf)).toBe(true)
+		end
+		local ok, err = pcall(function()
+			check(a, "BufferLineBufferSelected")
+			check(b, "BufferLineBackground")
+			vim.cmd.vsplit()
+			local split = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_buf(split, b)
+			check(a, "BufferLineBufferVisible")
+			vim.api.nvim_win_close(split, true)
+			vim.api.nvim_set_current_buf(a)
+			vim.api.nvim_set_hl(0, icon_group, { fg = "#123456" })
+			check(a, "BufferLineBufferSelected")
+		end)
+		vim.api.nvim_set_hl(0, icon_group, original)
+		assert(ok, err)
+	end)
 	t.it("keeps the active tab visible through overflow and very small widths", function()
 		local last
 		for i = 1, 25 do

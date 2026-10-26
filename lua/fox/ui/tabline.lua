@@ -2,6 +2,7 @@
 local M = {}
 local order, pins, last_active = {}, {}, {}
 local scheduled
+local icon_styles = {}
 local function source(buf)
 	return vim.b[buf].fox_media_source or buf
 end
@@ -237,6 +238,7 @@ local function target(buf, callback, text)
 	return "%" .. buf .. "@v:lua.require'fox.ui.tabline'." .. callback .. "@" .. text .. "%X"
 end
 function M.highlights()
+	icon_styles = {}
 	local fill = vim.api.nvim_get_hl(0, { name = "TabLineFill", link = false })
 	local tab = vim.api.nvim_get_hl(0, { name = "TabLine", link = false })
 	local sel = vim.api.nvim_get_hl(0, { name = "TabLineSel", link = false })
@@ -297,6 +299,17 @@ local function badge(width)
 	end
 	return table.concat(result), size
 end
+local function icon_highlight(group, icon_group)
+	local icon = vim.api.nvim_get_hl(0, { name = icon_group, link = false })
+	local tab = vim.api.nvim_get_hl(0, { name = group, link = false })
+	local name = "FoxTabIcon" .. group .. icon_group:gsub("[^%w_]", "")
+	local style = { fg = icon.fg, ctermfg = icon.ctermfg, bg = tab.bg, ctermbg = tab.ctermbg }
+	if not vim.deep_equal(icon_styles[name], style) then
+		vim.api.nvim_set_hl(0, name, style)
+		icon_styles[name] = style
+	end
+	return hl(name)
+end
 local function card(buf, name, width)
 	if width < 8 then
 		local text = clip(name, width)
@@ -306,7 +319,7 @@ local function card(buf, name, width)
 		or vim.fn.bufwinid(buf) ~= -1 and "BufferLineBufferVisible"
 		or "BufferLineBackground"
 	local base = hl(group)
-	local icon = require("fox.ui.icons").get("file", vim.api.nvim_buf_get_name(source(buf)))
+	local icon, icon_group = require("fox.ui.icons").get("file", vim.api.nvim_buf_get_name(source(buf)))
 	local prefix = M.is_pinned(buf) and "📌 " or icon .. " "
 	local suffix = vim.bo[source(buf)].modified and " ●" or ""
 	local d = vim.diagnostic.count(source(buf))
@@ -318,7 +331,14 @@ local function card(buf, name, width)
 		label = clip(name, math.max(1, width - 5))
 	end
 	local body = " " .. prefix .. label .. suffix
-	local result = hl("FoxTabSep" .. group) .. "" .. base .. target(buf, "click", escape(body))
+	local styled_prefix = escape(prefix)
+	if prefix ~= "" and not M.is_pinned(buf) then
+		styled_prefix = icon_highlight(group, icon_group) .. styled_prefix .. base
+	end
+	local result = hl("FoxTabSep" .. group)
+		.. ""
+		.. base
+		.. target(buf, "click", " " .. styled_prefix .. escape(label .. suffix))
 	if diagnostic ~= "" then
 		result = result
 			.. hl((d[1] or 0) > 0 and "FoxTabError" or "FoxTabWarn")

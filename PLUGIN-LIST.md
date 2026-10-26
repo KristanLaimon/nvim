@@ -118,4 +118,3 @@ Shared modules under `lua/fox/`, language modules under `lua/fox/langs/`, and co
 
 Some local data catalogs retain upstream attribution and licenses: icons and bundled snippet definitions are resources, rather than newly authored FOX data. See `licenses/` and the catalog documentation.
 
-The detailed inventory, loading modes and dependency relationships are in [PLUGINS-LIST.md](config/plans_notes_md/PLUGINS-LIST.md). Replacement progress is tracked in [DEPENDENCYFOX.plan.md](config/plans_notes_md/DEPENDENCYFOX.plan.md).

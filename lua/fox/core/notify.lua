@@ -1,486 +1,613 @@
--- ============================================================================
--- FOX CORE: Non-Blocking Toast Notification Engine with Ease-In-Out Animation
--- ============================================================================
--- Features:
---   * Cubic Ease-In-Out smooth slide-in entry & slide-out exit animations.
---   * Auto slide-UP queue repositioning when the top toast disappears.
---   * Strict `focusable = false` on every frame -- guaranteed NEVER to steal focus.
---   * Duplicate notification throttling to prevent open-file toast spam.
--- ============================================================================
-
-local M = {}
-
-M.active_wins = {}
-M.last_messages = {}
-
-local uv = vim.uv or vim.loop
-
---- Cubic ease-in-out function (0 <= t <= 1).
---- @param t number Progress from 0.0 to 1.0
---- @return number Smoothly interpolated value between 0.0 and 1.0
-local function ease_in_out(t)
-	if t < 0.5 then
-		return 2 * t * t
-	else
-		return 1 - math.pow(-2 * t + 2, 2) / 2
+-- Native toast queue shared by vim.notify, progress messages and compatibility callers.
+local M = { active_wins = {}, _progress_toasts = {} }
+local uv = vim.uv
+local records, history, items, queue = {}, {}, {}, {}
+local serial, timer, last_editor, configured = 0
+local ns = vim.api.nvim_create_namespace("fox_notify")
+local names = { [0] = "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "OFF" }
+local icons = { TRACE = "✎", DEBUG = "", INFO = "", WARN = "", ERROR = "", OFF = "" }
+local config = { timeout = 3000, stages = "fade_in_slide_out", render = "default", fps = 30, level = 2 }
+local function now()
+	return uv.hrtime() / 1e6
+end
+local function safe(callback, ...)
+	if type(callback) == "function" then
+		local ok, err = pcall(callback, ...)
+		if not ok then
+			vim.api.nvim_echo({ { tostring(err), "ErrorMsg" } }, true, {})
+		end
 	end
 end
-
---- Smoothly recalculates and animates remaining active windows sliding UP into place.
-function M.reposition_wins()
-	local current_row = 1
-	for _, item in ipairs(M.active_wins) do
-		if item.win and vim.api.nvim_win_is_valid(item.win) then
-			local target_row = current_row
-			current_row = current_row + item.height + 1
-			item.target_row = target_row
-
-			-- Animate row slide-up over ~150ms
-			local start_row = item.current_row or target_row
-			if start_row ~= target_row then
-				local steps = 5
-				local step = 0
-				local timer = uv.new_timer()
-				timer:start(
-					0,
-					25,
-					vim.schedule_wrap(function()
-						step = step + 1
-						local t = math.min(1.0, step / steps)
-						local factor = ease_in_out(t)
-						local animated_row = math.floor(start_row + (target_row - start_row) * factor + 0.5)
-						item.current_row = animated_row
-
-						if item.win and vim.api.nvim_win_is_valid(item.win) then
-							pcall(vim.api.nvim_win_set_config, item.win, {
-								relative = "editor",
-								row = math.max(0, animated_row),
-								col = math.max(0, item.current_col or (vim.o.columns - item.width - 2)),
-								focusable = false,
-								noautocmd = true,
-							})
-						end
-
-						if step >= steps then
-							if not timer:is_closing() then
-								pcall(function()
-									timer:stop()
-								end)
-								pcall(function()
-									timer:close()
-								end)
-							end
-						end
-					end)
-				)
+local function level_number(level)
+	return type(level) == "number" and level or vim.log.levels[tostring(level or "INFO"):upper()] or 2
+end
+local function message_lines(message)
+	if type(message) == "table" then
+		message = table.concat(message, "\n")
+	end
+	return vim.split(tostring(message or ""), "\n", { plain = true })
+end
+local function limit(value, fallback)
+	if type(value) == "function" then
+		local ok, result = pcall(value)
+		return ok and tonumber(result) or fallback
+	end
+	return tonumber(value) or fallback
+end
+function M.highlights()
+	for _, name in pairs(names) do
+		local diagnostic = ({ ERROR = "Error", WARN = "Warn", INFO = "Info", DEBUG = "Hint", TRACE = "Hint", OFF = "Info" })[name]
+		for _, part in ipairs({ "Border", "Icon", "Title" }) do
+			vim.api.nvim_set_hl(0, "Notify" .. name .. part, { link = "Diagnostic" .. diagnostic })
+		end
+		vim.api.nvim_set_hl(0, "Notify" .. name .. "Body", { link = "NormalFloat" })
+	end
+end
+-- Wrap by display cells, preserving blank lines and the original full message for copying.
+function M.wrap(lines, width)
+	local result = {}
+	for _, line in ipairs(lines) do
+		local current = ""
+		for index = 0, vim.fn.strchars(line) - 1 do
+			local char = vim.fn.strcharpart(line, index, 1)
+			if char == "\t" then
+				char = string.rep(" ", 4 - vim.fn.strdisplaywidth(current) % 4)
 			end
+			if current ~= "" and vim.fn.strdisplaywidth(current .. char) > width then
+				result[#result + 1] = current
+				current = ""
+			end
+			current = current .. char
 		end
+		result[#result + 1] = current
 	end
+	return result
 end
-
---- Clears all active floating notifications.
-function M.dismiss_all()
-	for _, item in ipairs(M.active_wins) do
-		if item.win and vim.api.nvim_win_is_valid(item.win) then
-			pcall(vim.api.nvim_win_close, item.win, true)
-		end
-		if item.buf and vim.api.nvim_buf_is_valid(item.buf) then
-			pcall(vim.api.nvim_buf_delete, item.buf, { force = true })
-		end
-	end
-	M.active_wins = {}
-end
-
---- Custom bulletproof vim.notify implementation.
---- @param msg string|table Message to display
---- @param level number|nil Log level (vim.log.levels.INFO/WARN/ERROR)
---- @param opts table|nil Extra options (title, timeout, etc.)
-function M.notify(msg, level, opts)
-	if not msg or msg == "" then
-		return
-	end
-
-	opts = opts or {}
-	level = level or vim.log.levels.INFO
-	local msg_str = type(msg) == "table" and table.concat(msg, "\n") or tostring(msg)
-
-	-- Throttle duplicate messages within 2 seconds to prevent notification spam
-	local now = uv.now()
-	if M.last_messages[msg_str] and (now - M.last_messages[msg_str]) < 2000 then
-		return
-	end
-	M.last_messages[msg_str] = now
-
-	-- Format level icon
-	local icon = "ℹ️ "
-	local hl = "DiagnosticInfo"
-	if level == vim.log.levels.WARN then
-		icon = "⚠️ "
-		hl = "DiagnosticWarn"
-	elseif level == vim.log.levels.ERROR then
-		icon = "❌ "
-		hl = "DiagnosticError"
-	end
-
-	local title = opts.title or "Neovim"
-	local lines = {}
-	table.insert(lines, string.format("%s %s", icon, title))
-	table.insert(lines, string.rep("─", math.max(20, #title + 4)))
-	for line in msg_str:gmatch("[^\r\n]+") do
-		table.insert(lines, " " .. line)
-	end
-
-	-- Create unlisted scratch buffer
-	local buf = vim.api.nvim_create_buf(false, true)
-	vim.bo[buf].buftype = "nofile"
-	vim.bo[buf].bufhidden = "wipe"
-	vim.bo[buf].swapfile = false
-	vim.bo[buf].filetype = "notify"
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-	vim.bo[buf].modifiable = false
-
-	local copy_fn = function()
-		vim.fn.setreg("+", msg_str)
-		vim.fn.setreg("*", msg_str)
-		vim.api.nvim_echo({ { "📋 Notification text copied to clipboard!", "DiagnosticInfo" } }, true, {})
-	end
-	vim.keymap.set({ "n", "v", "i" }, "<LeftMouse>", copy_fn, { buffer = buf, silent = true, noremap = true })
-	vim.keymap.set({ "n", "v", "i" }, "<2-LeftMouse>", copy_fn, { buffer = buf, silent = true, noremap = true })
-
-	-- Compute geometry
-	local is_mobile
-	local env_ok, env_mod = pcall(require, "fox.core.environment")
-	if env_ok then
-		local env = env_mod.detect()
-		is_mobile = env.is_mobile or env.is_termux or env.is_proot
+local function geometry(record)
+	local max_width = math.max(1, math.min(vim.o.columns - 4, limit(record.options.max_width or config.max_width, 80)))
+	local raw = vim.deepcopy(record.message)
+	if config.render == "compact" then
+		raw[1] = record.icon .. " | " .. record.title[1] .. ": " .. raw[1]
 	else
-		is_mobile = vim.env.TERMUX_VERSION ~= nil
-			or vim.fn.isdirectory("/data/data/com.termux") == 1
-			or (vim.o.columns or 80) < 72
+		table.insert(raw, 1, record.icon .. " " .. record.title[1])
+		table.insert(raw, 2, "")
 	end
-
-	local max_w = is_mobile and math.max(25, math.min(45, math.floor((vim.o.columns or 80) * 0.7)))
-		or math.max(40, math.min(120, math.floor((vim.o.columns or 80) * 0.8)))
-
-	local max_line_len = 0
-	local total_visual_lines = 0
-
-	for _, l in ipairs(lines) do
-		max_line_len = math.max(max_line_len, #l + 2)
-		local visual_l = math.max(1, math.ceil((#l + 1) / math.max(1, max_w - 2)))
-		total_visual_lines = total_visual_lines + visual_l
+	local width = 1
+	for _, line in ipairs(raw) do
+		width = math.max(width, vim.fn.strdisplaywidth(line))
 	end
-
-	local width = math.min(max_line_len, max_w)
-	local max_h = is_mobile and 6 or 15
-	local height = math.min(total_visual_lines, max_h)
-
-	-- Calculate initial row in queue
-	local target_row = 1
-	for _, item in ipairs(M.active_wins) do
-		target_row = target_row + item.height + 1
+	width = math.min(max_width, math.max(math.min(20, max_width), width))
+	local lines = M.wrap(raw, width)
+	if config.render ~= "compact" and lines[2] == "" then
+		lines[2] = string.rep("━", width)
 	end
-
-	local target_col = math.max(0, vim.o.columns - width - 2)
-	local start_col = vim.o.columns -- Start off-screen right
-
-	-- Open floating window initially at off-screen position with focusable = false
-	local win_opts = {
+	local max_height =
+		math.max(1, math.min(vim.o.lines - vim.o.cmdheight - 5, limit(record.options.max_height or config.max_height, 12)))
+	local height = math.min(#lines, max_height)
+	local shown = vim.list_slice(lines, 1, height)
+	if #lines > height then
+		shown[height] = "… (full text: click or :Notifications)"
+		shown[height] = M.wrap({ shown[height] }, width)[1]
+	end
+	return shown, width, height
+end
+local function restore_focus(item)
+	if item.win and vim.api.nvim_get_current_win() == item.win then
+		local target = last_editor or item.origin
+		if target and vim.api.nvim_win_is_valid(target) then
+			pcall(vim.api.nvim_set_current_win, target)
+		end
+	end
+end
+local function stop_timer()
+	if timer then
+		local old = timer
+		timer = nil
+		old:stop()
+		old:close()
+	end
+end
+local function remove(item)
+	if item.closed then
+		return
+	end
+	item.closed = true
+	restore_focus(item)
+	if item.win and vim.api.nvim_win_is_valid(item.win) then
+		pcall(vim.api.nvim_win_close, item.win, true)
+	end
+	if item.buf and vim.api.nvim_buf_is_valid(item.buf) then
+		pcall(vim.api.nvim_buf_delete, item.buf, { force = true })
+	end
+	for key, record in pairs(M._progress_toasts) do
+		if items[record.id] == item then
+			M._progress_toasts[key] = nil
+		end
+	end
+	for id, value in pairs(items) do
+		if value == item then
+			items[id] = nil
+		end
+	end
+	for index = #M.active_wins, 1, -1 do
+		if M.active_wins[index] == item then
+			table.remove(M.active_wins, index)
+		end
+	end
+	safe(item.record.options.on_close, item.win)
+end
+local function arm(item)
+	local timeout = item.record.options.timeout
+	if timeout == nil then
+		timeout = config.timeout
+	end
+	local entry = config.stages ~= "static"
+			and item.record.options.animate ~= false
+			and math.max(0, 150 - (now() - item.opened))
+		or 0
+	item.deadline = type(timeout) == "number" and timeout > 0 and now() + timeout + entry or nil
+end
+local function paint(item)
+	local lines, width, height = geometry(item.record)
+	item.width, item.height = width, height
+	vim.bo[item.buf].modifiable = true
+	vim.api.nvim_buf_set_lines(item.buf, 0, -1, false, lines)
+	vim.bo[item.buf].modifiable = false
+	vim.b[item.buf].fox_notify_id = item.record.id
+	if item.win and vim.api.nvim_win_is_valid(item.win) then
+		vim.wo[item.win].winhl = "Normal:Notify"
+			.. item.record.level
+			.. "Body,FloatBorder:Notify"
+			.. item.record.level
+			.. "Border"
+	end
+	vim.api.nvim_buf_clear_namespace(item.buf, ns, 0, -1)
+	if config.render ~= "compact" then
+		vim.api.nvim_buf_set_extmark(
+			item.buf,
+			ns,
+			0,
+			0,
+			{ end_row = 1, hl_group = "Notify" .. item.record.level .. "Title" }
+		)
+	end
+end
+local function open(item, row)
+	item.buf = vim.api.nvim_create_buf(false, true)
+	vim.bo[item.buf].bufhidden = "wipe"
+	vim.bo[item.buf].filetype = "notify"
+	item.origin = vim.api.nvim_get_current_win()
+	paint(item)
+	local ok, win = pcall(vim.api.nvim_open_win, item.buf, false, {
 		relative = "editor",
-		width = width,
-		height = height,
-		row = math.max(0, target_row),
-		col = start_col,
 		style = "minimal",
 		border = "rounded",
-		focusable = false, -- CRITICAL: Never steal keyboard/touch input!
+		row = row,
+		col = math.max(0, vim.o.columns - item.width - 2),
+		width = item.width,
+		height = item.height,
+		focusable = false,
+		mouse = true,
 		noautocmd = true,
-		zindex = 10,
+		zindex = 60,
+	})
+	if not ok then
+		vim.api.nvim_echo({ { table.concat(item.record.message, "\n"), "WarningMsg" } }, true, {})
+		remove(item)
+		return false
+	end
+	item.win, item.row, item.opened = win, row, now()
+	item.layout = nil
+	vim.wo[win].wrap = false
+	vim.wo[win].winhl = "Normal:Notify" .. item.record.level .. "Body,FloatBorder:Notify" .. item.record.level .. "Border"
+	vim.keymap.set({ "n", "v", "i" }, "<LeftMouse>", function()
+		M.copy(item.record, true)
+	end, { buffer = item.buf, silent = true })
+	vim.keymap.set({ "n", "v", "i" }, "<2-LeftMouse>", function()
+		M.copy(item.record, true)
+	end, { buffer = item.buf, silent = true })
+	M.active_wins[#M.active_wins + 1] = item
+	arm(item)
+	safe(item.record.options.on_open, win)
+	if not vim.api.nvim_win_is_valid(win) then
+		remove(item)
+		return false
+	end
+	vim.api.nvim_win_set_config(win, { focusable = false, mouse = true })
+	restore_focus(item)
+	return not item.closed
+end
+local function animate(item, row, stamp)
+	local duration = (config.stages == "static" or item.record.options.animate == false) and 0 or 150
+	local progress = duration == 0 and 1 or math.max(0, math.min(1, (stamp - (item.exiting or item.opened)) / duration))
+	local ease = progress * progress * (3 - 2 * progress)
+	local fade = item.exiting and ease or 1 - ease
+	item.row = math.abs(item.row - row) < 0.1 and row or item.row + (row - item.row) * 0.5
+	local col = math.max(0, vim.o.columns - item.width - 2) + math.floor(math.min(20, item.width) * fade)
+	local layout = {
+		relative = "editor",
+		row = math.max(0, item.row),
+		col = col,
+		width = item.width,
+		height = item.height,
+		focusable = false,
+		mouse = true,
 	}
-
-	local ok_win, win = pcall(vim.api.nvim_open_win, buf, false, win_opts)
-	if not ok_win or not win or not vim.api.nvim_win_is_valid(win) then
-		vim.api.nvim_echo({ { string.format("[%s] %s", title, msg_str), hl } }, true, {})
-		return
+	if not vim.deep_equal(item.layout, layout) then
+		vim.api.nvim_win_set_config(item.win, layout)
+		item.layout = layout
+	end
+	local blend = math.floor(fade * 80)
+	if vim.wo[item.win].winblend ~= blend then
+		vim.wo[item.win].winblend = blend
 	end
 
-	pcall(vim.api.nvim_set_option_value, "wrap", true, { win = win })
-	pcall(vim.api.nvim_set_option_value, "linebreak", true, { win = win })
-	pcall(vim.api.nvim_win_set_option, win, "winblend", 80)
-
-	local win_item = {
-		win = win,
-		buf = buf,
-		width = width,
-		height = height,
-		current_row = target_row,
-		current_col = start_col,
-	}
-	table.insert(M.active_wins, win_item)
-
-	-- 1. Entry Animation: Ease-In-Out Slide from right to target_col
-	local anim_steps = 6
-	local anim_step = 0
-	local anim_timer = uv.new_timer()
-	anim_timer:start(
-		0,
-		25,
-		vim.schedule_wrap(function()
-			anim_step = anim_step + 1
-			local t = math.min(1.0, anim_step / anim_steps)
-			local factor = ease_in_out(t)
-			local animated_col = math.floor(start_col - (start_col - target_col) * factor + 0.5)
-			local blend = math.floor(80 - (80 - 15) * factor + 0.5)
-
-			win_item.current_col = animated_col
-
-			if win and vim.api.nvim_win_is_valid(win) then
-				pcall(vim.api.nvim_win_set_config, win, {
-					relative = "editor",
-					row = math.max(0, win_item.current_row),
-					col = math.max(0, animated_col),
-					focusable = false,
-					noautocmd = true,
-				})
-				pcall(vim.api.nvim_win_set_option, win, "winblend", math.max(0, blend))
-			end
-
-			if anim_step >= anim_steps then
-				if not anim_timer:is_closing() then
-					pcall(function()
-						anim_timer:stop()
-					end)
-					pcall(function()
-						anim_timer:close()
-					end)
+	if item.exiting and progress == 1 then
+		remove(item)
+	end
+end
+local pumping = false
+local function tick()
+	local stamp, row = now(), 1
+	local bottom = vim.o.lines - vim.o.cmdheight - 2
+	for _, item in ipairs(vim.list_slice(M.active_wins)) do
+		if not vim.api.nvim_win_is_valid(item.win) or not vim.api.nvim_buf_is_valid(item.buf) then
+			remove(item)
+		else
+			if not item.exiting and item.deadline and stamp >= item.deadline then
+				local keep = false
+				if item.record.options.keep then
+					local ok, value = pcall(item.record.options.keep)
+					keep = ok and value
+				end
+				if not keep then
+					item.exiting = stamp
 				end
 			end
-		end)
-	)
-
-	-- 2. Auto-dismiss & Exit Animation (Slide out right + Slide remaining up)
-	local timeout = opts.timeout or (is_mobile and 1800 or 2500)
-	vim.defer_fn(function()
-		local exit_steps = 5
-		local exit_step = 0
-		local exit_timer = uv.new_timer()
-
-		local exit_start_col = win_item.current_col or target_col
-		local exit_end_col = vim.o.columns
-
-		exit_timer:start(
-			0,
-			25,
-			vim.schedule_wrap(function()
-				exit_step = exit_step + 1
-				local t = math.min(1.0, exit_step / exit_steps)
-				local factor = ease_in_out(t)
-				local animated_col = math.floor(exit_start_col + (exit_end_col - exit_start_col) * factor + 0.5)
-				local blend = math.floor(15 + (90 - 15) * factor + 0.5)
-
-				if win and vim.api.nvim_win_is_valid(win) then
-					pcall(vim.api.nvim_win_set_config, win, {
-						relative = "editor",
-						row = math.max(0, win_item.current_row),
-						col = animated_col,
-						focusable = false,
-						noautocmd = true,
-					})
-					pcall(vim.api.nvim_win_set_option, win, "winblend", math.min(100, blend))
+			if row + item.height + 2 > bottom then
+				-- A resize can make an existing window too large: requeue it intact.
+				restore_focus(item)
+				pcall(vim.api.nvim_win_close, item.win, true)
+				if vim.api.nvim_buf_is_valid(item.buf) then
+					pcall(vim.api.nvim_buf_delete, item.buf, { force = true })
 				end
-
-				if exit_step >= exit_steps then
-					if not exit_timer:is_closing() then
-						pcall(function()
-							exit_timer:stop()
-						end)
-						pcall(function()
-							exit_timer:close()
-						end)
+				item.win, item.buf = nil, nil
+				for i, value in ipairs(M.active_wins) do
+					if value == item then
+						table.remove(M.active_wins, i)
+						break
 					end
-
-					-- Close window and buffer
-					if win and vim.api.nvim_win_is_valid(win) then
-						pcall(vim.api.nvim_win_close, win, true)
-					end
-					if buf and vim.api.nvim_buf_is_valid(buf) then
-						pcall(vim.api.nvim_buf_delete, buf, { force = true })
-					end
-
-					-- Remove item from active_wins
-					for idx, item in ipairs(M.active_wins) do
-						if item.win == win then
-							table.remove(M.active_wins, idx)
-							break
-						end
-					end
-
-					-- Trigger slide-UP queue repositioning for all remaining toasts!
-					M.reposition_wins()
 				end
-			end)
-		)
-	end, timeout)
-end
-
---- Persistent progress toast: first call creates one toast, subsequent calls
---- with the same `id` update the existing buffer in-place -- no new float.
---- Call `M.finish_progress(id)` when done so the toast auto-dismisses normally.
----
---- @param id      string   Unique key for this progress stream (e.g. "doc_download").
---- @param msg     string   New message text to show.
---- @param level   number|nil  vim.log.levels.*  (default INFO)
---- @param opts    table|nil   { title?, timeout? }
-M._progress_toasts = {}
-
-function M.notify_progress(id, msg, level, opts)
-	opts = opts or {}
-	level = level or vim.log.levels.INFO
-	local msg_str = tostring(msg or "")
-
-	local icon = "ℹ️ "
-	if level == vim.log.levels.WARN then
-		icon = "⚠️ "
-	end
-	if level == vim.log.levels.ERROR then
-		icon = "❌ "
-	end
-
-	local title = opts.title or "Neovim"
-	local new_lines = { string.format("%s %s", icon, title), string.rep("─", math.max(20, #title + 4)) }
-	for line in msg_str:gmatch("[^\r\n]+") do
-		table.insert(new_lines, " " .. line)
-	end
-
-	local existing = M._progress_toasts[id]
-	if existing and vim.api.nvim_buf_is_valid(existing.buf) then
-		-- Patch the existing buffer in-place — no new toast, no animation
-		vim.bo[existing.buf].modifiable = true
-		vim.api.nvim_buf_set_lines(existing.buf, 0, -1, false, new_lines)
-		vim.bo[existing.buf].modifiable = false
-		return
-	end
-
-	-- First call for this id: suppress throttle, create a sticky toast
-	-- Override the timeout to something very long so it doesn't self-dismiss
-	local long_opts = vim.tbl_extend("force", opts, { timeout = 3600000 })
-	-- Temporarily bypass the dedup filter
-	M.last_messages[msg_str] = nil
-	M.notify(msg_str, level, long_opts)
-
-	-- Grab the toast that was just pushed onto active_wins
-	local item = M.active_wins[#M.active_wins]
-	if item then
-		M._progress_toasts[id] = { buf = item.buf, win = item.win, item = item }
-	end
-end
-
---- Lets the progress toast for `id` auto-dismiss with a normal timeout.
---- @param id string
---- @param custom_timeout number|nil
-function M.finish_progress(id, custom_timeout)
-	local existing = M._progress_toasts[id]
-	M._progress_toasts[id] = nil
-	if not existing then
-		return
-	end
-	if not vim.api.nvim_win_is_valid(existing.win) then
-		return
-	end
-
-	-- Schedule a normal auto-dismiss (2.5s slide-out or custom)
-	local win = existing.win
-	local buf = existing.buf
-	local win_item = existing.item
-	local timeout = custom_timeout or 2500
-
-	vim.defer_fn(function()
-		local exit_steps = 5
-		local exit_step = 0
-		local exit_timer = uv.new_timer()
-		local exit_start_col = win_item.current_col or 0
-		local exit_end_col = vim.o.columns
-
-		exit_timer:start(
-			0,
-			25,
-			vim.schedule_wrap(function()
-				exit_step = exit_step + 1
-				local t = math.min(1.0, exit_step / exit_steps)
-				local factor = ease_in_out(t)
-				local col = math.floor(exit_start_col + (exit_end_col - exit_start_col) * factor + 0.5)
-				local blend = math.floor(15 + (90 - 15) * factor + 0.5)
-
-				if win and vim.api.nvim_win_is_valid(win) then
-					pcall(vim.api.nvim_win_set_config, win, {
-						relative = "editor",
-						row = math.max(0, win_item.current_row),
-						col = col,
-						focusable = false,
-						noautocmd = true,
-					})
-					pcall(vim.api.nvim_win_set_option, win, "winblend", math.min(100, blend))
-				end
-
-				if exit_step >= exit_steps then
-					if not exit_timer:is_closing() then
-						exit_timer:stop()
-						exit_timer:close()
-					end
-					if win and vim.api.nvim_win_is_valid(win) then
-						pcall(vim.api.nvim_win_close, win, true)
-					end
-					if buf and vim.api.nvim_buf_is_valid(buf) then
-						pcall(vim.api.nvim_buf_delete, buf, { force = true })
-					end
-					for idx, item in ipairs(M.active_wins) do
-						if item.win == win then
-							table.remove(M.active_wins, idx)
-							break
-						end
-					end
-					M.reposition_wins()
-				end
-			end)
-		)
-	end, timeout)
-end
-
---- Immediately dismisses the progress toast for `id`.
---- @param id string
-function M.dismiss_progress(id)
-	local existing = M._progress_toasts[id]
-	M._progress_toasts[id] = nil
-	if not existing then
-		return
-	end
-	if existing.win and vim.api.nvim_win_is_valid(existing.win) then
-		pcall(vim.api.nvim_win_close, existing.win, true)
-	end
-	if existing.buf and vim.api.nvim_buf_is_valid(existing.buf) then
-		pcall(vim.api.nvim_buf_delete, existing.buf, { force = true })
-	end
-	for idx, item in ipairs(M.active_wins) do
-		if item.win == existing.win then
-			table.remove(M.active_wins, idx)
-			break
+				table.insert(queue, 1, item)
+			elseif not item.closed and vim.api.nvim_win_is_valid(item.win) then
+				animate(item, row, stamp)
+				row = row + item.height + 3
+			end
 		end
 	end
-	M.reposition_wins()
+	while #queue > 0 do
+		local item = queue[1]
+		local _, _, height = geometry(item.record)
+		if item.closed then
+			table.remove(queue, 1)
+		elseif row + height + 2 > bottom then
+			break
+		else
+			table.remove(queue, 1)
+			if open(item, row) then
+				animate(item, row, stamp)
+				row = row + item.height + 3
+			end
+		end
+	end
+	if #M.active_wins == 0 and #queue == 0 then
+		stop_timer()
+	end
 end
-
-function M.setup()
-	vim.notify = M.notify
-
-	vim.api.nvim_create_user_command(
-		"NotifyDismiss",
-		M.dismiss_all,
-		{ desc = "Dismiss all floating toast notifications" }
-	)
-	vim.api.nvim_create_user_command("ClearToasts", M.dismiss_all, { desc = "Dismiss all floating toast notifications" })
-
-	vim.keymap.set("n", "<leader>nd", M.dismiss_all, { desc = "Dismiss active notifications" })
-	vim.keymap.set("n", "<leader>un", M.dismiss_all, { desc = "Dismiss active notifications" })
+function M._tick()
+	if pumping then
+		return
+	end
+	pumping = true
+	local ok, err = pcall(tick)
+	pumping = false
+	if not ok then
+		M.dismiss_all()
+		vim.api.nvim_echo({ { "Notification rendering failed: " .. tostring(err), "ErrorMsg" } }, true, {})
+	end
 end
-
-return M
+local function start()
+	if not timer then
+		local running = uv.new_timer()
+		timer = running
+		running:start(
+			0,
+			math.max(10, math.floor(1000 / config.fps)),
+			vim.schedule_wrap(function()
+				if timer == running then
+					M._tick()
+				end
+			end)
+		)
+	end
+end
+function M.notify(message, level, opts)
+	if not configured and not vim.in_fast_event() then
+		M.setup()
+	end
+	if vim.in_fast_event() then
+		vim.schedule(function()
+			M.notify(message, level, opts)
+		end)
+		return
+	end
+	opts = type(opts) == "string" and { title = opts } or vim.deepcopy(opts or {})
+	local previous_id = type(opts.replace) == "table" and opts.replace.id or opts.replace
+	local previous = previous_id and (items[previous_id] and items[previous_id].record or records[previous_id])
+	if previous then
+		opts = vim.tbl_extend("force", previous.options, opts)
+		if message == nil then
+			message = previous.message
+		end
+		level = level or previous.level
+	end
+	opts.replace = previous_id
+	serial = serial + 1
+	local title = opts.title or "Neovim"
+	local numeric = level_number(level)
+	local record = {
+		id = serial,
+		message = message_lines(message),
+		level = names[numeric] or "INFO",
+		title = type(title) == "table" and title or { title, "" },
+		time = os.time(),
+		options = opts,
+	}
+	record.icon = opts.icon or icons[record.level]
+	record.hide_from_history = opts.hide_from_history
+	records[record.id] = record
+	history[#history + 1] = record
+	local item = previous_id and items[previous_id]
+	if item then
+		item.record, item.exiting = record, nil
+		items[record.id] = item
+		if item.win and vim.api.nvim_win_is_valid(item.win) and vim.api.nvim_buf_is_valid(item.buf) then
+			paint(item)
+			arm(item)
+		end
+	elseif numeric >= level_number(config.level) then
+		item = { record = record }
+		items[record.id] = item
+		queue[#queue + 1] = item
+	end
+	if item then
+		start()
+	end
+	return vim.deepcopy(record)
+end
+function M.history(opts)
+	local result = {}
+	for _, record in ipairs(history) do
+		if not record.hide_from_history or opts and opts.include_hidden then
+			result[#result + 1] = vim.deepcopy(record)
+		end
+	end
+	return result
+end
+function M.clear_history()
+	history = {}
+	records = {}
+end
+function M.pending()
+	local result = {}
+	for _, item in ipairs(queue) do
+		if not item.closed then
+			result[#result + 1] = item.record.id
+		end
+	end
+	return result
+end
+function M.close(record)
+	local item = items[type(record) == "table" and record.id or record]
+	if item then
+		remove(item)
+		start()
+	end
+end
+function M.dismiss(opts)
+	opts = opts or {}
+	if opts.pending then
+		local pending = queue
+		queue = {}
+		for _, item in ipairs(pending) do
+			remove(item)
+		end
+	end
+	for _, item in ipairs(vim.list_slice(M.active_wins)) do
+		remove(item)
+	end
+	if #queue > 0 then
+		start()
+	else
+		stop_timer()
+	end
+end
+function M.dismiss_all()
+	M.dismiss({ pending = true, silent = true })
+end
+function M.copy(record, close)
+	record = type(record) == "table" and record or records[record]
+	if not record then
+		return false
+	end
+	local ok, result = pcall(vim.fn.setreg, "+", table.concat(record.message, "\n"), "v")
+	if not ok or result ~= 0 then
+		vim.api.nvim_echo({ { "Could not copy notification to clipboard", "ErrorMsg" } }, true, {})
+		return false
+	end
+	if close then
+		M.close(record)
+	end
+	return true
+end
+function M.copy_last()
+	local list = M.history()
+	if #list > 0 then
+		return M.copy(list[#list])
+	end
+	vim.api.nvim_echo({ { "No recent notifications", "WarningMsg" } }, false, {})
+end
+function M.open(record, opts)
+	opts = opts or {}
+	record = type(record) == "table" and record or records[record]
+	if not record then
+		return
+	end
+	local buf = opts.buffer or vim.api.nvim_create_buf(false, true)
+	local lines =
+		vim.list_extend({ record.icon .. " " .. table.concat(record.title, " "), "" }, vim.deepcopy(record.message))
+	vim.bo[buf].modifiable = true
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+	vim.bo[buf].filetype = "notify_history"
+	vim.bo[buf].modifiable = false
+	return {
+		buffer = buf,
+		width = math.min(opts.max_width or 100, vim.o.columns - 4),
+		height = #lines,
+		highlights = { body = "Notify" .. record.level .. "Body", border = "Notify" .. record.level .. "Border" },
+	}
+end
+function M.open_history()
+	local lines = {}
+	for _, record in ipairs(M.history()) do
+		lines[#lines + 1] = os.date("%H:%M:%S", record.time)
+			.. " "
+			.. record.level
+			.. " "
+			.. table.concat(record.title, " ")
+		vim.list_extend(lines, record.message)
+		lines[#lines + 1] = ""
+	end
+	if #lines == 0 then
+		lines = { "No notifications" }
+	end
+	local buf = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+	vim.bo[buf].filetype = "notify_history"
+	vim.bo[buf].modifiable = false
+	vim.api.nvim_set_current_buf(buf)
+	vim.keymap.set("n", "q", "<Cmd>bd!<CR>", { buffer = buf, silent = true })
+end
+function M.notify_progress(id, message, level, opts)
+	opts = vim.tbl_extend("force", opts or {}, { replace = M._progress_toasts[id], timeout = false })
+	local record = M.notify(message, level, opts)
+	M._progress_toasts[id] = record
+	return record
+end
+function M.finish_progress(id, timeout)
+	local record = M._progress_toasts[id]
+	M._progress_toasts[id] = nil
+	if record and items[record.id] then
+		return M.notify(nil, nil, { replace = record, timeout = timeout or 2500 })
+	end
+end
+function M.dismiss_progress(id)
+	local record = M._progress_toasts[id]
+	M._progress_toasts[id] = nil
+	if record then
+		M.close(record)
+	end
+end
+function M.setup(opts)
+	M.dismiss_all()
+	local env = require("fox.core.environment").detect()
+	local mobile = env.is_mobile or env.is_termux or env.is_proot
+	config = vim.tbl_extend("force", {
+		timeout = mobile and 1800 or 3000,
+		stages = mobile and "static" or "fade_in_slide_out",
+		render = mobile and "compact" or "default",
+		fps = mobile and 5 or 30,
+		level = 2,
+		max_width = function()
+			return math.max(
+				mobile and 25 or 40,
+				math.min(mobile and 45 or 120, math.floor(vim.o.columns * (mobile and 0.7 or 0.8)))
+			)
+		end,
+		max_height = function()
+			return math.max(
+				mobile and 3 or 8,
+				math.min(mobile and 6 or 20, math.floor(vim.o.lines * (mobile and 0.25 or 0.4)))
+			)
+		end,
+	}, opts or {})
+	config.fps = math.max(1, tonumber(config.fps) or 30)
+	M.highlights()
+	vim.notify = M
+	last_editor = vim.api.nvim_get_current_win()
+	local group = vim.api.nvim_create_augroup("FoxNativeNotify", { clear = true })
+	vim.api.nvim_create_autocmd("ColorScheme", { group = group, callback = M.highlights })
+	vim.api.nvim_create_autocmd("VimResized", {
+		group = group,
+		callback = function()
+			for _, item in ipairs(M.active_wins) do
+				if vim.api.nvim_buf_is_valid(item.buf) then
+					paint(item)
+				end
+			end
+			start()
+		end,
+	})
+	vim.api.nvim_create_autocmd("VimLeavePre", { group = group, callback = M.dismiss_all })
+	vim.api.nvim_create_autocmd("WinEnter", {
+		group = group,
+		callback = function()
+			local win = vim.api.nvim_get_current_win()
+			if vim.bo.filetype ~= "notify" then
+				last_editor = win
+			end
+		end,
+	})
+	for name, callback in pairs({
+		NotifyDismiss = M.dismiss_all,
+		ClearToasts = M.dismiss_all,
+		NotifyCopyLast = M.copy_last,
+		Notifications = M.open_history,
+		NotificationsClear = M.clear_history,
+	}) do
+		vim.api.nvim_create_user_command(name, callback, {})
+	end
+	-- Retain existing shortcuts; new actions are exposed through the Command Palette.
+	vim.keymap.set("n", "<leader>nc", M.copy_last, { desc = "Copy last notification full text" })
+	for _, key in ipairs({ "<leader>nd", "<leader>un" }) do
+		vim.keymap.set("n", key, M.dismiss_all, { desc = "Dismiss active notifications" })
+	end
+	local mouse_keys = {
+		[vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)] = true,
+		[vim.api.nvim_replace_termcodes("<2-LeftMouse>", true, false, true)] = true,
+	}
+	vim.on_key(function(key, typed)
+		if not mouse_keys[key] and not mouse_keys[typed] then
+			return
+		end
+		local position = vim.fn.getmousepos()
+		for _, item in ipairs(M.active_wins) do
+			if position.winid == item.win then
+				local record = item.record
+				vim.schedule(function()
+					M.copy(record, true)
+				end)
+				return ""
+			end
+		end
+	end, ns)
+	configured = true
+end
+return setmetatable(M, {
+	__call = function(_, ...)
+		if not configured then
+			M.setup()
+		end
+		return M.notify(...)
+	end,
+})

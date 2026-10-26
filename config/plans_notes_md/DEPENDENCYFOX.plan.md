@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **23 reemplazos completados: 26 externos actuales**, de los cuales **9 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **24 reemplazos completados: 25 externos actuales**, de los cuales **8 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -40,7 +40,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 21 | `nvim-lualine/lualine.nvim` | Media-alta | Completado | Statusline nativa con diseños del picker y actualizaciones Git/LSP sin bloqueos. |
 | 22 | `akinsho/bufferline.nvim` | Media-alta | Completado | Tabline nativa con fijados, diagnósticos, cierre y desbordamiento. |
 | 23 | `rafamadriz/friendly-snippets` | Media-alta | Completado | Snippets locales de los lenguajes usados; conservar cobertura y licencias de datos migrados. |
-| 24 | `rcarriga/nvim-notify` | Media-alta | Pendiente | Cola de ventanas, expiración, historial y protección del foco. |
+| 24 | `rcarriga/nvim-notify` | Media-alta | Completado | Cola de ventanas, expiración, historial y protección del foco. |
 | 25 | `windwp/nvim-autopairs` | Media-alta | Pendiente | Reglas de inserción/borrado, undo, completion y exclusiones de sintaxis. |
 | 26 | `vuki656/package-info.nvim` | Media-alta | Pendiente | Versiones y acciones por gestor con caché, errores de red y edición segura del manifiesto. |
 | 27 | `m00qek/baleia.nvim` | Media-alta | Pendiente | Parser ANSI incremental a highlights; escapes fragmentados y buffers DAP. |
@@ -218,6 +218,15 @@ Blame asíncrono propio en fox.git.inline_blame y parser compartido en fox.git.b
 
 - Validación final: 835 archivos Lua sin errores de sintaxis; StyLua/Luacheck sin advertencias en los cinco archivos Lua de este reemplazo. Suite completa: 914 aprobadas y los dos fallos preexistentes en autotag TSX y aislamiento del tema Ryoku. El commit inicial d8b3436 también abortaba por una aserción de grid de Neovim; corregida por separado en c046d67 al probar anchos pequeños sin redimensionar el editor.
 
+## Reemplazo 24: rcarriga/nvim-notify
+
+- Motor local compartido en `fox.core.notify`, con cola acotada por el espacio disponible, animación desktop, modo móvil compacto/estático, límites por celdas Unicode, historial de sesión, IDs de reemplazo y un único timer cancelable. No toma foco al abrir ni al copiar; cambios de tamaño redistribuyen/reencolan ventanas sin perder mensajes.
+- Feature adicional solicitada: un clic izquierdo copia el mensaje completo de esa notificación al registro `+` de Neovim y la cierra. Funciona con el proveedor de clipboard configurado en Windows/Linux; no usa comandos shell específicos del sistema. El texto original se conserva aunque la ventana lo trunque. Un error de copia mantiene el mensaje disponible.
+- Conserva NotifyCopyLast, NotifyDismiss, ClearToasts, Notifications y NotificationsClear; acciones de paleta, picker Telescope propio y entrada local `require("notify")`. Progreso de DocManager y Neo-tree comparte motor con vim.notify; soporta timeout=false, keep, reemplazos, callbacks e historial oculto. Retirados declaración externa y lockfile; ningún código upstream copiado ni directorio instalado eliminado.
+- Trece pruebas unitarias relacionadas y tres integraciones reales aprobadas: registro/comandos, picker Telescope y clic mediante editor RPC con UI real y proveedor de clipboard controlado. Verifican texto completo de la notificación seleccionada, cierre individual, foco, resize, expiración, animación, cola, progreso y callbacks. No se ejecutó un escritorio Windows aquí.
+
+- Validación final: 924 pruebas aprobadas y los mismos dos fallos preexistentes (autotag TSX y aislamiento del selector de temas). 839 archivos Lua sin errores de sintaxis; StyLua y Luacheck aprobados para los nueve archivos Lua del cambio. Inventario verificado desde Lazy: 25 externos y 71 specs locales.
+
 ## Siguiente ítem
 
-`rcarriga/nvim-notify`: continuar con el alcance indicado en la tabla.
+`windwp/nvim-autopairs`: continuar con el alcance indicado en la tabla.

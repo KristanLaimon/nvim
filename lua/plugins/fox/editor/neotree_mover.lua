@@ -89,7 +89,7 @@ function M.show_persistent_toast(item)
 		item.name
 	)
 
-	-- 1. Try nvim-notify (rcarriga/nvim-notify)
+	-- 1. Use the native notification compatibility API
 	local ok_notify, notify = pcall(require, "notify")
 	if ok_notify and type(notify) == "table" and type(notify.notify) == "function" then
 		pcall(function()
@@ -123,7 +123,7 @@ end
 function M.dismiss_toast(result_msg, level)
 	level = level or vim.log.levels.INFO
 
-	-- 1. Handle nvim-notify
+	-- 1. Update the native notification record
 	local ok_notify, notify = pcall(require, "notify")
 	if ok_notify and type(notify) == "table" and type(notify.notify) == "function" then
 		if M.toast_record and M.toast_record.id then

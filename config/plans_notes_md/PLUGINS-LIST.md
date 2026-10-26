@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **26 externos** y **70 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **25 externos** y **71 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -43,10 +43,6 @@ Total actual: **26 externos** y **70 specs locales activas**. El plan de sustitu
 - `saghen/blink.cmp` — [`lsp/blink_sources.lua`](../../lua/plugins/lsp/blink_sources.lua), [`lsp/editorconfig.lua`](../../lua/plugins/lsp/editorconfig.lua), [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua), [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
 - `stevearc/conform.nvim` — [`lsp/formatting.lua`](../../lua/plugins/lsp/formatting.lua)
 - `williamboman/mason.nvim` — [`lsp/formatting.lua`](../../lua/plugins/lsp/formatting.lua), [`lsp/lsp.lua`](../../lua/plugins/lsp/lsp.lua)
-
-**UI**
-
-- `rcarriga/nvim-notify` — [`ui/notify.lua`](../../lua/plugins/ui/notify.lua)
 
 **Misc**
 
@@ -96,6 +92,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox_omarchy_theme` — [`fox/ui/omarchy_theme.lua`](../../lua/plugins/fox/ui/omarchy_theme.lua)
 - `fox_pinned_tabs` — [`fox/ui/pinned_tabs.lua`](../../lua/plugins/fox/ui/pinned_tabs.lua)
 - `fox_ryoku_theme` — [`fox/ui/ryoku_theme.lua`](../../lua/plugins/fox/ui/ryoku_theme.lua)
+- `fox_notify` — [`ui/notify.lua`](../../lua/plugins/ui/notify.lua)
 - `fox_tabline` — [`ui/bufferline.lua`](../../lua/plugins/ui/bufferline.lua)
 - `fox_statusline` — [`ui/statusline.lua`](../../lua/plugins/ui/statusline.lua)
 - `fox_statusline_picker` — [`fox/ui/statusline_picker.lua`](../../lua/plugins/fox/ui/statusline_picker.lua)

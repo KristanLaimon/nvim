@@ -172,3 +172,31 @@ Distro detection and path translation, used by anything that needs to know wheth
 - the [WSL file explorer](file-explorer.md) (`:TelescopeFileBrowserWSL`)
 - the [terminal manager](terminals.md), which launches `wsl.exe -d <Distro> --cd <path>` instead of the Windows shell when the `cwd` is inside a distro
 - the dashboard, which only shows the WSL button when `wsl.available()` is true
+
+## Notifications
+
+FoxVim renders notifications locally through `fox.core.notify`. Desktop toasts fade
+and slide; mobile environments use compact static notifications. Toasts queue when
+the screen is full and retain their full messages in session history.
+
+**Left-click a notification to copy its full message to the system clipboard and
+close that notification.** This copies the clicked message, including text clipped
+or wrapped on screen. Keyboard focus stays in your editor. Clipboard copying uses
+Neovim's `+` register and its configured provider on Windows or Linux.
+
+Try it in a fresh editor instance:
+
+```vim
+:lua vim.notify("Click this notification to copy and close it", vim.log.levels.INFO, { title = "Copy test" })
+```
+
+Click the toast, then paste into another application to check the copied text.
+
+The Command Palette provides **Show Notification History**, **Copy Last
+Notification**, **Dismiss Notifications**, and **Clear Notification History**.
+The equivalent commands are `:Notifications`, `:NotifyCopyLast`, `:NotifyDismiss`
+(or `:ClearToasts`), and `:NotificationsClear`. `:Telescope notify` opens the
+searchable history picker. History lasts for the current editor session.
+
+Existing `require("notify")` callers use a local compatibility entrypoint. Progress
+updates keep the same window and can remain open until completion or cancellation.

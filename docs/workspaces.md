@@ -49,3 +49,23 @@ The **Workspaces Manager** allows saving, loading, restoring, and switching full
 - `:WorkspaceFocus` / `:WorkspaceBadgeFocus`: Focus the workspace badge for `<C-h>`/`<C-l>` slot switching.
 - `:WorkspaceBadgeToggle`: Toggle visibility of the floating top-right workspace badge.
 - `:WorkspaceBadgeUpdate`: Refresh the floating workspace badge.
+
+### Native buffer tab bar
+
+The top bar is rendered by `fox.ui.tabline` and requires no external bufferline plugin.
+`gt` / `gT` cycle through the current environment's buffers; the existing Alt navigation
+and reorder keys still work. The Command Palette includes buffer selection, closing
+and reordering actions. The corresponding `BufferLineCycle*`, `BufferLineMove*`,
+`BufferLinePick`, `BufferLinePickClose`, `BufferLineGoToBuffer` and
+`BufferLineCloseLeft` / `BufferLineCloseRight` / `BufferLineCloseOthers` commands remain available.
+
+Pins stay on the left and keep using `.foxnvim/pins.json` or workspace-specific
+`pins_<id>.json`. `:BufferLineTogglePin` uses the same persistent pin action as Ctrl+P.
+Reordered paths retain the existing `g:BufferlinePositions` session variable.
+
+Click a tab to focus it in the code window. Its close button, middle click and right
+click use FoxVim's smart closer, preserving unsaved edits. Deleted files retain `[D]`;
+modified files show a dot, and diagnostics show error/warning counts. Query consoles
+and media previews keep their labels and filtering. Overflow keeps the active buffer
+visible; clicking an overflow count opens the adjacent hidden buffer. The workspace
+badge and Neovim tabpage indicators remain at the right, with space reserved for Neo-tree.

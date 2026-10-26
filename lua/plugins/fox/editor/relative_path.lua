@@ -75,7 +75,7 @@ local function resolve_active_buffer()
 	end
 
 	-- 4. Check visual tabs from bufferline or listed buffers
-	local has_bl, bl = pcall(require, "bufferline")
+	local has_bl, bl = pcall(require, "fox.ui.tabline")
 	if has_bl and type(bl.get_elements) == "function" then
 		local res = bl.get_elements()
 		local elements = res and res.elements

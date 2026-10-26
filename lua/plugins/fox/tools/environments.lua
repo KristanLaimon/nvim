@@ -1092,7 +1092,7 @@ function M.switch_environment(target_slot, callback)
 	end)
 
 	pcall(function()
-		local bui = package.loaded["bufferline.ui"]
+		local bui = package.loaded["fox.ui.tabline"]
 		if bui and bui.refresh then
 			bui.refresh()
 		end

@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **21 reemplazos completados: 28 externos actuales**, de los cuales **11 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **22 reemplazos completados: 27 externos actuales**, de los cuales **10 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -38,7 +38,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 19 | `ricardoramirezr/blade-nav.nvim` | Media | Completado | Resolver vistas, componentes y rutas Laravel con caché local. |
 | 20 | `f-person/git-blame.nvim` | Media | Completado | Reutilizar fox.git para blame asíncrono y enlaces; conservar comandos y repositorios anidados. |
 | 21 | `nvim-lualine/lualine.nvim` | Media-alta | Completado | Statusline nativa con diseños del picker y actualizaciones Git/LSP sin bloqueos. |
-| 22 | `akinsho/bufferline.nvim` | Media-alta | Pendiente | Tabline nativa con fijados, diagnósticos, cierre y desbordamiento. |
+| 22 | `akinsho/bufferline.nvim` | Media-alta | Completado | Tabline nativa con fijados, diagnósticos, cierre y desbordamiento. |
 | 23 | `rafamadriz/friendly-snippets` | Media-alta | Pendiente | Snippets locales de los lenguajes usados; conservar cobertura y licencias de datos migrados. |
 | 24 | `rcarriga/nvim-notify` | Media-alta | Pendiente | Cola de ventanas, expiración, historial y protección del foco. |
 | 25 | `windwp/nvim-autopairs` | Media-alta | Pendiente | Reglas de inserción/borrado, undo, completion y exclusiones de sintaxis. |
@@ -201,6 +201,14 @@ Blame asíncrono propio en fox.git.inline_blame y parser compartido en fox.git.b
 - 17 pruebas unitarias de statusline aprobadas y tres integraciones reales: arranque/persistencia, Git/diff/worktree y terminal/LSP stdio con fixture. Integración de registro de specs aprobada; Lazy verifica 28 externos y 69 locales. No se ejecutó Windows/WSL en esta máquina Linux.
 - Suite completa: 902 aprobadas y dos fallos ajenos al cambio (autotag TSX y aislamiento del selector de temas), reproducidos también desde el commit inicial 538703b. Syntax y StyLua/Luacheck sin errores para los archivos del cambio.
 
+## Reemplazo 22: akinsho/bufferline.nvim
+
+- Tabline nativa propia en `fox.ui.tabline`: separadores inclinados, texto blanco para buffers seleccionados/visibles, iconos, modificaciones, diagnósticos, nombres duplicados y marcador de borrado `[D]`. Overflow con contadores clicables y prioridad para el buffer activo y los fijados; offset de Neo-tree, badge de workspace e indicadores de tabpages.
+- Conserva filtros de Environments/Query y representación de previews multimedia; selección en ventana de código, cierre por botón/clic medio/derecho mediante Smart_Close_Buffer, sin forzar borrado de cambios sin guardar. Comandos de ciclo, movimiento, selección, cierre y pin conservados; acciones de navegación/selección/movimiento en paleta, sin nuevos leader mappings.
+- Pins siguen en `.foxnvim/pins.json` y `pins_<id>.json`; restauración y consumidores locales migrados a la API nativa. Un fallo al guardar impide cambiar el pin visible. Conserva `g:BufferlinePositions` para el orden de sesiones. Se mantienen los highlights BufferLine que consume Git Center.
+- Siete pruebas de tabline y ocho de pins aprobadas (incluida la restauración antes desactivada). Tres integraciones reales: Neo-tree/badge/foco, cierre del último archivo al dashboard y eventos de ratón en un editor RPC con UI adjunta; verifican selección, protección de cambios, clic medio/derecho y botón de cierre. Suite completa: 911 aprobadas, con los mismos dos fallos preexistentes en autotag TSX y aislamiento del tema Ryoku ya reproducidos en el commit inicial del reemplazo anterior.
+- Syntax: 832 archivos sin errores; StyLua/Luacheck aprobados en los archivos Lua modificados. Registro Lazy: 27 externos y 70 locales. No se probó Windows/WSL aquí ni se eliminaron directorios de plugins instalados.
+
 ## Siguiente ítem
 
-`akinsho/bufferline.nvim`: continuar con el alcance indicado en la tabla.
+`rafamadriz/friendly-snippets`: continuar con el alcance indicado en la tabla.

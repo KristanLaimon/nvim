@@ -6,7 +6,7 @@
 --   * Restricts pinning to code buffer tabs only (buftype == "", valid file).
 --   * Stores pinned tab paths in `.foxnvim/pins.json` (or workspace-specific
 --     `.foxnvim/pins_<ws_id>.json` if a workspace is loaded).
---   * Syncs tab pin state with bufferline.nvim (`📌` icon, anchored on left).
+--   * Syncs tab pin state with the native FOX tab bar (`📌` icon, anchored on left).
 --   * Restores pinned tabs on editor startup, directory change, or workspace switch.
 -- ============================================================================
 
@@ -67,7 +67,7 @@ end
 --- @param pinned_list string[]
 function M.save_pins(pinned_list)
 	local file = M.get_pins_file()
-	store.save(file, { pinned = pinned_list })
+	return store.save(file, { pinned = pinned_list })
 end
 
 --- Checks if a buffer is a valid code buffer tab.
@@ -133,22 +133,13 @@ function M.toggle_pin()
 		is_now_pinned = true
 	end
 
-	M.save_pins(pins)
+	local ok, err = M.save_pins(pins)
+	if not ok then
+		vim.notify("Cannot save pinned tabs: " .. tostring(err), vim.log.levels.ERROR)
+		return
+	end
 
-	-- Toggle in bufferline
-	pcall(function()
-		local groups = require("bufferline.groups")
-		if groups then
-			if is_now_pinned then
-				groups.add_element("pinned", { id = bufnr })
-			else
-				groups.remove_element("pinned", { id = bufnr })
-			end
-			pcall(function()
-				require("bufferline.ui").refresh()
-			end)
-		end
-	end)
+	require("fox.ui.tabline").set_pin(bufnr, is_now_pinned)
 
 	local fname = vim.fn.fnamemodify(abs_path, ":t")
 	if is_now_pinned then
@@ -239,25 +230,12 @@ function M.restore_pins(opts)
 		end
 	end
 
-	-- Apply pin state in bufferline for open buffers
-	pcall(function()
-		local groups = require("bufferline.groups")
-		if groups then
-			for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-				if vim.api.nvim_buf_is_valid(bufnr) and M.is_code_buffer(bufnr) then
-					local bpath = path.normalize(vim.api.nvim_buf_get_name(bufnr))
-					if pin_map[bpath] then
-						groups.add_element("pinned", { id = bufnr })
-					else
-						groups.remove_element("pinned", { id = bufnr })
-					end
-				end
-			end
-			pcall(function()
-				require("bufferline.ui").refresh()
-			end)
+	local tabline = require("fox.ui.tabline")
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if M.is_code_buffer(buf) then
+			tabline.set_pin(buf, pin_map[path.normalize(vim.api.nvim_buf_get_name(buf))] == true)
 		end
-	end)
+	end
 
 	-- Focus the first pinned tab (leftmost) if applicable
 	if first_pinned_buf and vim.api.nvim_buf_is_valid(first_pinned_buf) then

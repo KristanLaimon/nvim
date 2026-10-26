@@ -131,7 +131,30 @@ describe("plugins.fox.ui.pinned_tabs", function()
 		expect(loaded[1]).toBe(file1)
 	end)
 
-	it.skip("registers pinned buffers in bufferline.groups and focuses the first pinned tab on restore", function()
+	it("keeps pins unchanged when writing the pins file fails", function()
+		local file = path.join(root, "save-failure.lua")
+		vim.fn.writefile({ "test" }, file)
+		local buf = vim.fn.bufadd(file)
+		vim.fn.bufload(buf)
+		vim.api.nvim_set_current_buf(buf)
+		local store = require("fox.core.store")
+		local save, notify = store.save, vim.notify
+		local message
+		store.save = function()
+			return false, "permission denied"
+		end
+		vim.notify = function(text)
+			message = text
+		end
+		local ok, err = pcall(pinned_tabs.toggle_pin)
+		store.save, vim.notify = save, notify
+		assert(ok, err)
+		expect(message).toContain("permission denied")
+		expect(require("fox.ui.tabline").is_pinned(buf)).toBe(false)
+		expect(#pinned_tabs.load_pins()).toBe(0)
+	end)
+
+	it("registers pinned buffers in the native tab bar and focuses the first pinned tab on restore", function()
 		local file1 = path.join(root, "pinned_first.lua")
 		local file2 = path.join(root, "pinned_second.lua")
 		vim.fn.writefile({ "-- 1" }, file1)
@@ -141,13 +164,13 @@ describe("plugins.fox.ui.pinned_tabs", function()
 		pinned_tabs.restore_pins({ focus = true })
 
 		-- 1. Check bufferline groups pin status (pin emoji icon state)
-		local ok_bg, groups = pcall(require, "bufferline.groups")
-		if ok_bg and groups and groups._is_pinned then
+		local ok_bg, groups = pcall(require, "fox.ui.tabline")
+		if ok_bg and groups and groups.is_pinned then
 			for _, b in ipairs(vim.api.nvim_list_bufs()) do
 				if vim.api.nvim_buf_is_valid(b) then
 					local bname = path.normalize(vim.api.nvim_buf_get_name(b))
 					if bname == path.normalize(file1) or bname == path.normalize(file2) then
-						expect(groups._is_pinned({ id = b })).toBeTruthy()
+						expect(groups.is_pinned(b)).toBeTruthy()
 					end
 				end
 			end

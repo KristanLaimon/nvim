@@ -9,8 +9,7 @@ t.describe("native buffer tab bar", function()
 		return buf
 	end
 	local function text(width)
-		vim.o.columns = width or 200
-		return vim.api.nvim_eval_statusline(tabs.render(), { use_tabline = true, maxwidth = width or 200 }).str
+		return vim.api.nvim_eval_statusline(tabs.render(width or 200), { use_tabline = true, maxwidth = width or 200 }).str
 	end
 	t.beforeEach(function()
 		created = {}
@@ -21,7 +20,6 @@ t.describe("native buffer tab bar", function()
 			deleted = _G.Is_File_Deleted,
 			close = _G.Smart_Close_Buffer,
 			ws = package.loaded["plugins.fox.tools.workspaces"],
-			columns = vim.o.columns,
 			tabline = vim.o.tabline,
 			show = vim.o.showtabline,
 			positions = vim.g.BufferlinePositions,
@@ -42,7 +40,7 @@ t.describe("native buffer tab bar", function()
 		tabs.setup()
 	end)
 	t.afterEach(function()
-		vim.o.tabline, vim.o.showtabline, vim.o.columns = saved.tabline, saved.show, saved.columns
+		vim.o.tabline, vim.o.showtabline = saved.tabline, saved.show
 		vim.api.nvim_set_current_buf(previous)
 		for _, buf in ipairs(created) do
 			if vim.api.nvim_buf_is_valid(buf) then

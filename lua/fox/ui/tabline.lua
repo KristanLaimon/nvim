@@ -348,8 +348,8 @@ local function card(buf, name, width)
 	result = result .. target(buf, "close_click", " 󰅖 ") .. hl("FoxTabSep" .. group) .. ""
 	return result, vim.fn.strdisplaywidth(body .. diagnostic .. " 󰅖 ") + 2
 end
-function M.render()
-	local width = vim.o.columns
+function M.render(width)
+	width = width or vim.o.columns
 	local left, offset = sidebar(width)
 	local right, badge_width = badge(math.max(0, math.floor((width - offset) / 3)))
 	local budget = math.max(1, width - offset - badge_width)

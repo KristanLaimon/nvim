@@ -74,6 +74,10 @@ No autocmd or pattern edits needed either way. For a full new language (server +
 
 FoxVim displays reference counts (`󰌹 3 references`, `1 reference`) above functions, methods, classes, and structs across all supported languages:
 
+Badges stay visible and follow the code while you type. Counts refresh after leaving
+Insert/Replace mode, and a complete set replaces the previous badges together.
+Transient LSP errors keep the last successful counts until the next refresh.
+
 - **Default State**: **ON** by default.
 - **Toggle Command**: Run `:FoxToggleReferences` or press `<leader>tr`.
 - **Command Palette**: Accessible inside Command Palette (`<C-Shift-P>`) under `👁️ Toggle LSP Reference Counts / CodeLens (Default: ON)`.

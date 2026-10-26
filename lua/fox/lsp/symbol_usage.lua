@@ -16,12 +16,15 @@ local function cancel(state)
 	end
 	state.requests = {}
 end
-function M.clear(buf)
+local function invalidate(buf)
 	local state = buffers[buf]
 	if state then
 		state.generation = state.generation + 1
 		cancel(state)
 	end
+end
+function M.clear(buf)
+	invalidate(buf)
 	if vim.api.nvim_buf_is_valid(buf) then
 		vim.api.nvim_buf_clear_namespace(buf, M.namespace, 0, -1)
 	end
@@ -30,13 +33,22 @@ local function state_for(buf)
 	buffers[buf] = buffers[buf] or { generation = 0, requests = {} }
 	return buffers[buf]
 end
+local function editing()
+	local mode = vim.api.nvim_get_mode().mode
+	return mode:match("^[iR]") ~= nil
+end
 function M.refresh(buf)
 	buf = buf or vim.api.nvim_get_current_buf()
 	if not vim.api.nvim_buf_is_loaded(buf) or vim.bo[buf].buftype ~= "" then
 		return
 	end
 	local state = state_for(buf)
-	M.clear(buf)
+	invalidate(buf)
+	-- Existing extmarks track edits. Incomplete syntax while typing must not
+	-- replace the last complete snapshot or move the text below the cursor.
+	if editing() then
+		return
+	end
 	local generation, tick = state.generation, vim.api.nvim_buf_get_changedtick(buf)
 	local client
 	for _, c in ipairs(vim.lsp.get_clients({ bufnr = buf })) do
@@ -46,6 +58,7 @@ function M.refresh(buf)
 		end
 	end
 	if not client then
+		M.clear(buf)
 		return
 	end
 	local function valid()
@@ -96,7 +109,7 @@ function M.refresh(buf)
 		end
 		visit(symbols)
 		local active, index = 0, 1
-		local results = {}
+		local results, failed = {}, false
 		local function render()
 			vim.api.nvim_buf_clear_namespace(buf, M.namespace, 0, -1)
 			for row, value in pairs(results) do
@@ -109,6 +122,10 @@ function M.refresh(buf)
 					vim.api.nvim_buf_set_extmark(buf, M.namespace, row, 0, { virt_lines = { chunks }, virt_lines_above = true })
 				end
 			end
+		end
+		if #entries == 0 then
+			render()
+			return
 		end
 		local pump
 		pump = function()
@@ -134,9 +151,18 @@ function M.refresh(buf)
 						end
 						value.stacked_count = value.stacked_count + 1
 						results[entry.row] = value
+					else
+						failed = true
 					end
-					render()
-					pump()
+					-- Publish only a complete snapshot. Keep the old badges on
+					-- transient server failures instead of flashing partial rows.
+					if active == 0 and index > #entries then
+						if not failed then
+							render()
+						end
+					else
+						pump()
+					end
 				end
 				if
 					not request(
@@ -154,7 +180,10 @@ function M.refresh(buf)
 end
 function M.schedule(buf)
 	local state = state_for(buf)
-	M.clear(buf)
+	invalidate(buf)
+	if editing() then
+		return
+	end
 	local timer = (vim.uv or vim.loop).new_timer()
 	state.timer = timer
 	timer:start(
@@ -181,6 +210,12 @@ function M.setup(opts)
 		group = group,
 		callback = function(ev)
 			M.schedule(ev.buf)
+		end,
+	})
+	vim.api.nvim_create_autocmd("InsertEnter", {
+		group = group,
+		callback = function(ev)
+			invalidate(ev.buf)
 		end,
 	})
 	vim.api.nvim_create_autocmd("LspDetach", {

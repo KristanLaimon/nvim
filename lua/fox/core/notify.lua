@@ -136,6 +136,19 @@ local function remove(item)
 	end
 	safe(item.record.options.on_close, item.win)
 end
+local function animated(item)
+	return config.stages ~= "static" and item.record.options.animate ~= false
+end
+local function exit(item)
+	if not item.win or not vim.api.nvim_win_is_valid(item.win) or not animated(item) then
+		remove(item)
+	elseif not item.exiting then
+		item.exiting = now()
+		local base = math.max(0, vim.o.columns - item.width - 2)
+		item.exit_offset = math.max(0, (item.layout and item.layout.col or base) - base)
+		item.exit_blend = vim.wo[item.win].winblend
+	end
+end
 local function arm(item)
 	local timeout = item.record.options.timeout
 	if timeout == nil then
@@ -218,16 +231,28 @@ local function open(item, row)
 	return not item.closed
 end
 local function animate(item, row, stamp)
-	local duration = (config.stages == "static" or item.record.options.animate == false) and 0 or 150
+	local duration = animated(item) and (item.exiting and 250 or 150) or 0
 	local progress = duration == 0 and 1 or math.max(0, math.min(1, (stamp - (item.exiting or item.opened)) / duration))
+	if item.exiting and progress == 1 then
+		remove(item)
+		return
+	end
 	local ease = progress * progress * (3 - 2 * progress)
 	local fade = item.exiting and ease or 1 - ease
 	item.row = math.abs(item.row - row) < 0.1 and row or item.row + (row - item.row) * 0.5
-	local col = math.max(0, vim.o.columns - item.width - 2) + math.floor(math.min(20, item.width) * fade)
+	local offset = math.min(20, item.width) * fade
+	if item.exiting then
+		local initial = item.exit_offset or 0
+		offset = initial + (item.width + 2 - initial) * ease
+	end
+	local col = math.max(0, vim.o.columns - item.width - 2) + math.floor(offset)
 	local layout = {
 		relative = "editor",
 		row = math.max(0, item.row),
 		col = col,
+		-- Otherwise Neovim shifts the float back inside the editor, hiding the
+		-- horizontal motion. Keep its left edge fixed and crop the right edge.
+		fixed = true,
 		width = item.width,
 		height = item.height,
 		focusable = false,
@@ -237,13 +262,10 @@ local function animate(item, row, stamp)
 		vim.api.nvim_win_set_config(item.win, layout)
 		item.layout = layout
 	end
-	local blend = math.floor(fade * 80)
+	local blend = item.exiting and math.floor((item.exit_blend or 0) + (100 - (item.exit_blend or 0)) * ease)
+		or math.floor(fade * 80)
 	if vim.wo[item.win].winblend ~= blend then
 		vim.wo[item.win].winblend = blend
-	end
-
-	if item.exiting and progress == 1 then
-		remove(item)
 	end
 end
 local pumping = false
@@ -261,7 +283,7 @@ local function tick()
 					keep = ok and value
 				end
 				if not keep then
-					item.exiting = stamp
+					exit(item)
 				end
 			end
 			if row + item.height + 2 > bottom then
@@ -410,7 +432,7 @@ end
 function M.close(record)
 	local item = items[type(record) == "table" and record.id or record]
 	if item then
-		remove(item)
+		exit(item)
 		start()
 	end
 end
@@ -424,16 +446,20 @@ function M.dismiss(opts)
 		end
 	end
 	for _, item in ipairs(vim.list_slice(M.active_wins)) do
-		remove(item)
+		if opts.immediate then
+			remove(item)
+		else
+			exit(item)
+		end
 	end
-	if #queue > 0 then
+	if #queue > 0 or #M.active_wins > 0 then
 		start()
 	else
 		stop_timer()
 	end
 end
 function M.dismiss_all()
-	M.dismiss({ pending = true, silent = true })
+	M.dismiss({ pending = true, silent = true, immediate = true })
 end
 function M.copy(record, close)
 	record = type(record) == "table" and record or records[record]
@@ -569,7 +595,9 @@ function M.setup(opts)
 		end,
 	})
 	for name, callback in pairs({
-		NotifyDismiss = M.dismiss_all,
+		NotifyDismiss = function()
+			M.dismiss({ pending = true })
+		end,
 		ClearToasts = M.dismiss_all,
 		NotifyCopyLast = M.copy_last,
 		Notifications = M.open_history,
@@ -580,7 +608,9 @@ function M.setup(opts)
 	-- Retain existing shortcuts; new actions are exposed through the Command Palette.
 	vim.keymap.set("n", "<leader>nc", M.copy_last, { desc = "Copy last notification full text" })
 	for _, key in ipairs({ "<leader>nd", "<leader>un" }) do
-		vim.keymap.set("n", key, M.dismiss_all, { desc = "Dismiss active notifications" })
+		vim.keymap.set("n", key, function()
+			M.dismiss({ pending = true })
+		end, { desc = "Dismiss active notifications" })
 	end
 	local mouse_keys = {
 		[vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)] = true,

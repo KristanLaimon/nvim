@@ -176,7 +176,9 @@ Distro detection and path translation, used by anything that needs to know wheth
 ## Notifications
 
 FoxVim renders notifications locally through `fox.core.notify`. Desktop toasts fade
-and slide; mobile environments use compact static notifications. Toasts queue when
+and slide. Expiring or individually closing a desktop toast slides it out through
+the right edge over 250 ms; **Dismiss Notifications** uses the same exit.
+Mobile environments use compact static notifications. Toasts queue when
 the screen is full and retain their full messages in session history.
 
 **Left-click a notification to copy its full message to the system clipboard and

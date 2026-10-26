@@ -96,4 +96,62 @@ t.describe("native notification integration", function()
 		vim.fn.jobstop(channel)
 		assert(ok, err)
 	end)
+	t.it("slides the visible toast right and clips it at the screen edge before closing", function()
+		local channel = vim.fn.jobstart({ "nvim", "--embed", "--headless", "-u", "NONE" }, { rpc = true })
+		local function call(method, ...)
+			return vim.rpcrequest(channel, method, ...)
+		end
+		local ok, err = xpcall(function()
+			call("nvim_ui_attach", 100, 35, { rgb = true })
+			local result = call(
+				"nvim_exec_lua",
+				[[
+			local root = ...
+			vim.opt.rtp:prepend(root)
+			local n=require('fox.core.notify')
+			n.setup({stages='fade_in_slide_out',timeout=false,max_width=40})
+			local closed=0
+			local origin=vim.api.nvim_get_current_win()
+			n('Slide out to the right',2,{on_close=function() closed=closed+1 end})
+			n._tick()
+			local item=n.active_wins[1]
+			item.opened=vim.uv.hrtime()/1e6-500
+			n._tick()
+			local positions={vim.api.nvim_win_get_position(item.win)[2]}
+			local function visible_cells()
+				vim.cmd.redraw()
+				local count=0
+				for row=1,10 do
+					for col=positions[1]+1,100 do
+						local ch=vim.fn.screenchar(row,col)
+						if ch>0 and ch~=32 then count=count+1 end
+					end
+				end
+				return count
+			end
+			local visible={visible_cells()}
+			for _,elapsed in ipairs({50,125,200}) do
+				item.exiting=vim.uv.hrtime()/1e6-elapsed
+				n._tick()
+				assert(vim.api.nvim_win_is_valid(item.win),'Toast closed before completing its slide')
+				positions[#positions+1]=vim.api.nvim_win_get_position(item.win)[2]
+				visible[#visible+1]=visible_cells()
+			end
+			item.exiting=vim.uv.hrtime()/1e6-300
+			n._tick()
+			return {positions=positions,visible=visible,closed=closed,valid=vim.api.nvim_win_is_valid(item.win),focus=vim.api.nvim_get_current_win()==origin}
+			]],
+				{ vim.fn.stdpath("config") }
+			)
+			for i = 2, #result.positions do
+				t.expect(result.positions[i] > result.positions[i - 1]).toBe(true)
+			end
+			t.expect(result.visible[#result.visible] < result.visible[1]).toBe(true)
+			t.expect(result.closed).toBe(1)
+			t.expect(result.valid).toBe(false)
+			t.expect(result.focus).toBe(true)
+		end, debug.traceback)
+		vim.fn.jobstop(channel)
+		assert(ok, err)
+	end)
 end)

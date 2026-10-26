@@ -190,6 +190,52 @@ t.describe("native notification queue", function()
 			return #notify.active_wins == 0
 		end, 5)).toBe(true)
 	end)
+	t.it("animates explicit closes, allows replacement during exit and fires on_close once", function()
+		notify.setup({ stages = "fade_in_slide_out", timeout = false, fps = 100, max_height = 3 })
+		local closed = 0
+		local record = notify("Close with motion", 2, {
+			on_close = function()
+				closed = closed + 1
+			end,
+		})
+		open(1)
+		local item = notify.active_wins[1]
+		item.opened = vim.uv.hrtime() / 1e6 - 500
+		notify._tick()
+		local col = vim.api.nvim_win_get_position(item.win)[2]
+		notify.close(record)
+		t.expect(vim.api.nvim_win_is_valid(item.win)).toBe(true)
+		t.expect(closed).toBe(0)
+		item.exiting = vim.uv.hrtime() / 1e6 - 125
+		notify._tick()
+		t.expect(vim.api.nvim_win_get_position(item.win)[2] > col).toBe(true)
+		local updated = notify("Keep visible", 2, { replace = record, timeout = false })
+		notify._tick()
+		t.expect(item.exiting).toBe(nil)
+		t.expect(vim.api.nvim_win_get_position(item.win)[2]).toBe(col)
+		notify.close(updated)
+		item.exiting = vim.uv.hrtime() / 1e6 - 300
+		notify._tick()
+		t.expect(closed).toBe(1)
+		t.expect(vim.api.nvim_win_is_valid(item.win)).toBe(false)
+		notify.dismiss_all()
+		t.expect(closed).toBe(1)
+	end)
+	t.it("slides dismissed toasts but keeps emergency cleanup and static closes immediate", function()
+		notify.setup({ stages = "fade_in_slide_out", timeout = false })
+		notify("Dismiss with motion")
+		open(1)
+		vim.cmd.NotifyDismiss()
+		t.expect(#notify.active_wins).toBe(1)
+		t.expect(notify.active_wins[1].exiting ~= nil).toBe(true)
+		notify.dismiss_all()
+		t.expect(#notify.active_wins).toBe(0)
+		local record = notify("Disable animation", 2, { animate = false })
+		open(1)
+		notify.close(record)
+		t.expect(#notify.active_wins).toBe(0)
+	end)
+
 	t.it("handles Unicode wrapping, blank lines and safe calls from fast events", function()
 		local lines = notify.wrap({ "🦊α🦊", "", "third" }, 4)
 		t.expect(lines[1]).toBe("🦊α")

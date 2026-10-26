@@ -19,6 +19,12 @@
 ---@class TypeScriptLangModule : FoxLangModule
 local M = {}
 
+M.package_info = {
+	package_manager = "bun",
+	hide_up_to_date = true,
+	hide_unstable_versions = true,
+}
+
 M.icons = {
 	extension = {},
 	file = { ["nest-cli.json"] = { glyph = "", hl = "MiniIconsRed" } },

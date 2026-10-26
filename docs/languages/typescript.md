@@ -6,6 +6,42 @@ FoxVim provides a high-performance **TypeScript / JavaScript** environment suppo
 
 ---
 
+## Package versions and dependency actions
+
+Open a saved `package.json`, then search **Packages:** in the Command Palette.
+Opening the file never starts a package manager. These actions are local to FoxVim:
+
+| Command | Action |
+|---|---|
+| `:PackageInfoShow` | Query available versions and display inline annotations |
+| `:PackageInfoShowForce` | Refresh, bypassing the one-hour session cache |
+| `:PackageInfoHide` / `:PackageInfoToggle` | Hide or toggle the annotations |
+| `:PackageInfoUpdate` | Confirm an update of the dependency on the current line |
+| `:PackageInfoDelete` | Confirm removal of that dependency |
+| `:PackageInfoInstall` | Choose production/development and enter one package name |
+| `:PackageInfoChangeVersion` | Choose a published stable version for that dependency |
+
+The nearest `packageManager` field or lockfile chooses npm, pnpm, Yarn or Bun;
+Bun is the fallback. Actions run in the manifest's directory, including monorepo
+packages, and preserve development dependency placement. Registry reads use pnpm
+for pnpm projects and npm otherwise, matching the previous plugin's tooling
+requirements. Project `.npmrc` settings apply. Only four reads run concurrently;
+results are cached per package directory and stale responses are ignored.
+
+Save the manifest before changing dependencies. If it changes while a prompt is
+open, the action stops. If you edit during a running command, FoxVim keeps your
+buffer edits and asks you to review the manifest written by the manager. The
+manager owns installation and lockfile updates. Failures and timeouts are reported;
+changes a failed manager command already wrote are not automatically undone.
+
+Put each dependency on its own line to select it. Production and development
+sections are supported. Local/workspace references are skipped for registry queries;
+aliases and catalog references can display available registry versions, but update
+and version-change actions require editing their source instead of replacing the
+reference. Up-to-date versions and prereleases are hidden by default. Settings
+live in `fox.langs.typescript.package_info`; the implementation is in its
+`packages` submodule. `require("package-info")` remains a compatibility entrypoint.
+
 ## NestJS file icons
 
 NestJS files use distinct role icons in the explorer, tabs, and file pickers:

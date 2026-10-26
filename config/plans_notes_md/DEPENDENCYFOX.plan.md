@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **25 reemplazos completados: 24 externos actuales**, de los cuales **7 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **26 reemplazos completados: 23 externos actuales**, de los cuales **6 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -42,7 +42,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 23 | `rafamadriz/friendly-snippets` | Media-alta | Completado | Snippets locales de los lenguajes usados; conservar cobertura y licencias de datos migrados. |
 | 24 | `rcarriga/nvim-notify` | Media-alta | Completado | Cola de ventanas, expiración, historial y protección del foco. |
 | 25 | `windwp/nvim-autopairs` | Media-alta | Completado | Reglas de inserción/borrado, undo, completion y exclusiones de sintaxis. |
-| 26 | `vuki656/package-info.nvim` | Media-alta | Pendiente | Versiones y acciones por gestor con caché, errores de red y edición segura del manifiesto. |
+| 26 | `vuki656/package-info.nvim` | Media-alta | Completado | Versiones y acciones por gestor con caché, errores de red y edición segura del manifiesto. |
 | 27 | `m00qek/baleia.nvim` | Media-alta | Pendiente | Parser ANSI incremental a highlights; escapes fragmentados y buffers DAP. |
 | 28 | `vyfor/cord.nvim` | Alta | Pendiente | IPC Discord con reconexión y presencia; validar Windows, Linux y entornos remotos. |
 | 29 | `b0o/schemastore.nvim` | Alta | Pendiente | Catálogo local y selección de schemas; definir cómo mantener actualizados sus datos. |
@@ -236,6 +236,15 @@ Blame asíncrono propio en fox.git.inline_blame y parser compartido en fox.git.b
 
 - Validación final: 934 pruebas aprobadas y dos fallos preexistentes (autotag TSX y aislamiento del selector de temas), reproducidos en una copia limpia del commit inicial `20d434f` (924 aprobadas y los mismos dos fallos). 842 archivos Lua sin errores de sintaxis; StyLua/Luacheck sin advertencias en los cinco archivos Lua del cambio. Registro Lazy verificado: 24 externos y 72 specs locales.
 
+## Reemplazo 26: vuki656/package-info.nvim
+
+- Implementación original en `fox.langs.typescript.packages`; configuración del ecosistema en `fox.langs.typescript.package_info`. Conserva ocho comandos PackageInfo y la entrada `require("package-info")`; ocho acciones nuevas de paleta, sin nuevos leader mappings. Las referencias antiguas a leader ns/nc no correspondían a mappings registrados.
+- Consultas manuales asíncronas, cuatro simultáneas, timeout y caché de sesión por proyecto. Versiones ordenadas, filtro de prereleases y etiqueta `latest`; parser JSON con posiciones exactas que excluye scripts y objetos anidados, diagnósticos de duplicados/valores inválidos. No ejecuta gestores al abrir archivos ni necesita yq para mostrar referencias de catálogo.
+- Detecta gestores en manifiestos y lockfiles cercanos/ancestros; npm/pnpm/Yarn/Bun para cambios, npm/pnpm para registro como antes. Argumentos separados, nombres validados y cwd del manifiesto; adaptadores de entrada Node para Windows y rutas WSL. Dependencias dev conservan su sección; referencias locales/workspace/catalog/alias no se convierten inadvertidamente en paquetes de registro.
+- Prompts cancelables con vim.ui; revalida buffer y disco antes de mutar, serializa cambios por workspace y preserva ediciones concurrentes. El gestor mantiene manifiesto/lockfiles; tras éxito o error recarga solo buffers intactos. Se conserva Nui para Neo-tree y se retiran únicamente la dependencia y su lockfile; no se eliminan directorios instalados ni se instala tooling opcional.
+- Trece pruebas enfocadas y cuatro integraciones reales aprobadas. Registro npm HTTP local y tarballs temporales prueban consulta, caché, latest, update, versión estable, delete y lockfile con npm; Bun instala una dependencia dev y escribe bun.lock. Fixtures verifican cancelación, fallos de red/JSON/proceso, respuestas tardías, concurrencia, límites y construcción Windows/WSL. No se ejecutaron gestores nativos de Windows ni Yarn/pnpm reales en esta máquina.
+- Suite completa: 947 aprobadas y los dos fallos preexistentes en autotag TSX y aislamiento del selector de temas (934 aprobadas y los mismos fallos antes del cambio). 846 archivos Lua sin errores de sintaxis; StyLua/Luacheck aprobados en los siete archivos Lua del reemplazo. Inventario verificado: 23 externos y 73 specs locales.
+
 ## Siguiente ítem
 
-`vuki656/package-info.nvim`: continuar con el alcance indicado en la tabla. No iniciado; esta sesión está limitada a nvim-autopairs.
+`m00qek/baleia.nvim`: continuar con el alcance indicado en la tabla. No iniciado.

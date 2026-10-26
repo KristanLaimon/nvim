@@ -62,14 +62,14 @@ The shell-keybinding setup supports **Windows Terminal, Kitty, Foot, WezTerm, Al
 
 ## Plugin inventory
 
-FoxVim has **72 local plugin specs** across [`lua/plugins/`](lua/plugins) and **24 external plugins**, including lazy.nvim, pinned in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
+FoxVim has **73 local plugin specs** across [`lua/plugins/`](lua/plugins) and **23 external plugins**, including lazy.nvim, pinned in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
 
 ### Hand-crafted FoxVim plugins
 
 | Area | Modules |
 |---|---|
 | Developer workflow | Bun DAP, DAP Breakpoints, Dev Server, FoxNvim Completion, Launch Completion, Launch Profiles, Sneak Peek, Tasks, Terminal |
-| Editing | Auto Pairs, Buffer Cleaner, Caps Lock, Folding, Hover Links, Line Endings, Neo-tree Hidden Files, Neo-tree Mover, Smart Check, Tailwind Organizer |
+| Editing | Package Info, Auto Pairs, Buffer Cleaner, Caps Lock, Folding, Hover Links, Line Endings, Neo-tree Hidden Files, Neo-tree Mover, Smart Check, Tailwind Organizer |
 | Git | Conflict Resolver, Diff Mode, Git Accounts, Git Center, Secondary Git |
 | Tools | Command Palette, .NET Creator, Environments, File Explorer, Installer, LSP References, Notes, NuGet Manager, PHP Tools, TODO Sidebar, Type Injector, Lua Type Injector, TypeScript Type Injector, Usages Picker, Workspaces, WSL Bridge |
 | UI | Colorscheme Preview, Font, Help Modal, Input Modal, Omarchy Theme Sync, Pinned Tabs, Statusline Picker, Theme Picker, Wiki Modal |
@@ -79,7 +79,7 @@ FoxVim has **72 local plugin specs** across [`lua/plugins/`](lua/plugins) and **
 | Area | Packages pinned in `lazy-lock.json` |
 |---|---|
 | UI and themes | native FOX tabline, statusline and notifications, `render-markdown.nvim` |
-| Navigation and Git | `diffview.nvim`, `gitsigns.nvim`, `neo-tree.nvim`, `neogit`, `nui.nvim`, `package-info.nvim`, `plenary.nvim`, `snacks.nvim`, `telescope-file-browser.nvim`, `telescope.nvim` |
+| Navigation and Git | `diffview.nvim`, `gitsigns.nvim`, `neo-tree.nvim`, `neogit`, `nui.nvim`, `plenary.nvim`, `snacks.nvim`, `telescope-file-browser.nvim`, `telescope.nvim` |
 | LSP and editing | `blink.cmp`, `conform.nvim`, local snippet catalog, `mason.nvim`, `nvim-lspconfig`, `nvim-treesitter`, `schemastore.nvim` |
 | Debugging | `baleia.nvim`, `nvim-dap`, `nvim-dap-ui`, `nvim-nio` |
 | Language and extras | `cord.nvim`, `lazy.nvim`, `markdown-preview.nvim` |

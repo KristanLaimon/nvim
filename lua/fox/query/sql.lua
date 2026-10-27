@@ -395,8 +395,10 @@ function M.analyze(text, metadata, level)
 			local closing = tokens[finish - 1]
 			local body = text:sub(token.last + 1, closing.first - 1)
 			local child = M.analyze(body, metadata, level + 1)
-			local previous = tokens[i - 1]
-			local derived = previous and previous.kind == "word" and (previous.upper == "FROM" or previous.upper == "JOIN")
+			local preceding = tokens[i - 1]
+			local derived = preceding
+				and preceding.kind == "word"
+				and (preceding.upper == "FROM" or preceding.upper == "JOIN")
 			local key = "__fox_subquery_" .. (#children + 1)
 			local at = finish
 			if tokens[at] and tokens[at].upper == "AS" then
@@ -411,17 +413,42 @@ function M.analyze(text, metadata, level)
 					names[name] = true
 				end
 			end
-			for _, node in ipairs(child.nodes) do
-				if not node.nested then
-					for _, col in ipairs(node.table and node.table.columns or {}) do
-						if (node.roles[col.name] or {}).output or (node.roles["*"] or {}).output then
-							column(col.name, col.type)
+			local body_tokens, body_depth, projection = M.tokens(body, metadata.syntax or metadata.engine), 0, {}
+			local function output()
+				local last, previous = projection[#projection], projection[#projection - 1]
+				if not last then
+					return
+				end
+				if previous and previous.upper == "AS" then
+					column(last.value)
+				elseif last.value == "*" then
+					for _, node in ipairs(child.nodes) do
+						if not node.nested and (not previous or projection[1].value:lower() == node.alias:lower()) then
+							for _, col in ipairs(node.table and node.table.columns or {}) do
+								column(col.name, col.type)
+							end
 						end
 					end
+				elseif
+					identifier(last)
+					and (
+						not previous
+						or previous.value == "."
+						or previous.value == ")"
+						or previous.kind == "word"
+						or previous.kind == "identifier"
+						or previous.kind == "string"
+					)
+				then
+					column(last.value)
+				else
+					column(body:sub(projection[1].first, last.last))
+					child.partial = true
 				end
+				projection = {}
 			end
-			local body_tokens, body_depth = M.tokens(body, metadata.syntax or metadata.engine), 0
-			for index, entry in ipairs(body_tokens) do
+			local selecting = false
+			for _, entry in ipairs(body_tokens) do
 				if entry.kind == "symbol" and entry.value == "(" then
 					body_depth = body_depth + 1
 				end
@@ -429,12 +456,18 @@ function M.analyze(text, metadata, level)
 					body_depth = body_depth - 1
 				end
 				if body_depth == 0 and entry.kind == "word" and entry.upper == "FROM" then
+					output()
 					break
 				end
-				if body_depth == 0 and entry.upper == "AS" and identifier(body_tokens[index + 1]) then
-					column(body_tokens[index + 1].value)
+				if body_depth == 0 and entry.upper == "SELECT" then
+					selecting = true
+				elseif body_depth == 0 and entry.value == "," then
+					output()
+				elseif selecting and not (body_depth == 0 and entry.upper == "DISTINCT") then
+					projection[#projection + 1] = entry
 				end
 			end
+			output()
 			scoped.tables[#scoped.tables + 1] = item
 			children[#children + 1] =
 				{ graph = child, item = item, alias = alias, derived = derived, body = body, first = token.first }
@@ -497,10 +530,16 @@ function M.analyze(text, metadata, level)
 		end
 		for _, node in ipairs(child.graph.nodes) do
 			local old_alias = node.alias
+			if not node.nested then
+				graph.edges[#graph.edges + 1] = {
+					source = prefix .. old_alias,
+					target = wrapper.alias,
+					kind = "SUBQUERY",
+					predicate = "feeds " .. wrapper.alias,
+				}
+			end
 			node.alias, node.nested = prefix .. old_alias, true
 			graph.nodes[#graph.nodes + 1] = node
-			graph.edges[#graph.edges + 1] =
-				{ source = node.alias, target = wrapper.alias, kind = "SUBQUERY", predicate = "feeds " .. wrapper.alias }
 		end
 		for _, edge in ipairs(child.graph.edges) do
 			edge.source = edge.source and prefix .. edge.source

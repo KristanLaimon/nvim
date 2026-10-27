@@ -59,6 +59,13 @@ describe("FoxQuerier SQL structure", function()
 		)
 		expect(graph.edges[1].kind).toBe("CORRELATED")
 		expect(graph.edges[1].source).toBe("c")
+		graph = sql.analyze(
+			"SELECT d.customer FROM (SELECT o.customer_id AS customer, COUNT(*) AS total FROM orders o GROUP BY o.customer_id) d",
+			metadata
+		)
+		expect(vim.tbl_map(function(column)
+			return column.name
+		end, graph.nodes[1].table.columns)).toEqual({ "customer", "total" })
 	end)
 	it("resolves aliases and distinguishes output/join/filter columns", function()
 		local graph = sql.analyze(

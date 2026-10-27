@@ -44,7 +44,7 @@ FOX Neovim includes native floating file explorers for Desktop, WSL, folder pick
 - `<C-A-k>` / `<C-S-/>`: Search all files ignoring `.gitignore`
 - `<C-S-Enter>` (in Neo-tree): Open the selected folder in the system file manager,
   or a file with its default application. Windows paths with spaces and symbols
-  are passed literally to Explorer.
+  are passed literally to a visible Explorer window.
 - `:OpenRootInExplorer` / **Open Project Root in File Explorer** in the Command
   Palette: Open the current project root in the system file manager.
 

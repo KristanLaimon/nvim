@@ -180,8 +180,7 @@ function M.open_with_system_app(filepath)
 
 		local is_directory = path.is_dir(abs_path)
 		local cmd = system_open_command(abs_path)
-		-- Detached Windows GUI launches can exit successfully without opening anything.
-		vim.system(cmd, { detach = vim.fn.has("win32") ~= 1, text = true }, function(result)
+		local function on_exit(result)
 			-- Explorer can return 1 after successfully handing off to an existing
 			-- process (also under WSL).
 			if result.code == 0 or (cmd[1] == "explorer.exe" and result.code == 1) then
@@ -194,7 +193,22 @@ function M.open_with_system_app(filepath)
 					{ title = M.settings.notify_title }
 				)
 			end)
-		end)
+		end
+		if vim.fn.has("win32") == 1 then
+			-- vim.system forces hide=true, which can leave Explorer invisible with focus.
+			local handle, spawn_error
+			handle, spawn_error = vim.uv.spawn(cmd[1], { args = { cmd[2] }, hide = false }, function(code)
+				if handle and not handle:is_closing() then
+					handle:close()
+				end
+				on_exit({ code = code, stderr = "" })
+			end)
+			if not handle then
+				error(spawn_error)
+			end
+		else
+			vim.system(cmd, { detach = true, text = true }, on_exit)
+		end
 
 		local name = vim.fn.fnamemodify(abs_path, ":t")
 		if name == "" then

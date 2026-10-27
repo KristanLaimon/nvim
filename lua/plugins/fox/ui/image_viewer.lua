@@ -180,7 +180,8 @@ function M.open_with_system_app(filepath)
 
 		local is_directory = path.is_dir(abs_path)
 		local cmd = system_open_command(abs_path)
-		vim.system(cmd, { detach = true, text = true }, function(result)
+		-- Detached Windows GUI launches can exit successfully without opening anything.
+		vim.system(cmd, { detach = vim.fn.has("win32") ~= 1, text = true }, function(result)
 			-- Explorer can return 1 after successfully handing off to an existing
 			-- process (also under WSL).
 			if result.code == 0 or (cmd[1] == "explorer.exe" and result.code == 1) then

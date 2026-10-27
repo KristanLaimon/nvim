@@ -31,10 +31,35 @@ t.describe("OS default application opener", function()
 		platform = "win32"
 		viewer.open_with_system_app(filepath)
 		t.expect(calls[1].cmd).toEqual({ "explorer.exe", (filepath:gsub("/", "\\")) })
-		t.expect(calls[1].opts.detach).toBe(true)
+		t.expect(calls[1].opts.detach).toBe(false)
 		calls[1].callback({ code = 1, stderr = "" })
 		vim.wait(10)
 		t.expect(#notifications).toBe(1)
+	end)
+	t.it("uses the same literal folder dispatch for explicit directories and project root", function()
+		platform = "win32"
+		local dir = vim.fn.tempname() .. " folder & quote' %"
+		vim.fn.mkdir(dir, "p")
+		local project = require("fox.core.project")
+		local original_root = project.root
+		local ok, err = pcall(function()
+			viewer.open_with_system_app(dir)
+			t.expect(calls[1].cmd).toEqual({ "explorer.exe", (dir:gsub("/", "\\")) })
+			t.expect(calls[1].opts.detach).toBe(false)
+			project.root = function()
+				return dir
+			end
+			viewer.open_project_root_in_explorer()
+			t.expect(calls[2].cmd).toEqual(calls[1].cmd)
+			calls[2].callback({ code = 2, stderr = "Association failed" })
+			vim.wait(50, function()
+				return #notifications == 3
+			end)
+			t.expect(notifications[3].message).toContain("Association failed")
+		end)
+		project.root = original_root
+		vim.fn.delete(dir, "d")
+		assert(ok, err)
 	end)
 
 	t.it("passes Linux paths literally and reports asynchronous opener failures", function()

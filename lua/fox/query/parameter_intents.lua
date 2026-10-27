@@ -114,7 +114,7 @@ function M.describe(tokens, bindings)
 							clause = grouping and clause or nil,
 						}
 					elseif bindings[item.index] then
-						result[item.index] = { context = vim.json.encode(context) }
+						result[item.index] = { context = vim.json.encode(context), clause = clause }
 					end
 				end
 				segment = {}

@@ -335,19 +335,42 @@ describe("Query parameters", function()
 		end)
 	end)
 
-	it("labels plain placeholders by appearance without suggesting numbered SQL syntax", function()
+	it("labels equality placeholders by their columns without changing binding order", function()
 		project(function(root)
 			local query = "SELECT * FROM alumnos WHERE nombre = ? AND edad = ?"
 			local description = parameters.describe(query, "sqlite")
-			expect(description.groups[1].label).toBe("Parameter 1")
-			expect(description.groups[2].label).toBe("Parameter 2")
+			expect(description.groups[1].label).toBe("nombre")
+			expect(description.groups[2].label).toBe("edad")
 			local _, missing = parameters.bound(root, "queries/a.sql", query, "sqlite")
-			expect(missing).toBe("Set Parameter 1 in Parameters, then run again")
+			expect(missing).toBe("Set nombre in Parameters, then run again")
 			for index, value in ipairs({ "Ana", "20" }) do
 				assert(parameters.set(root, "queries/a.sql", description, description.groups[index].key, value))
 			end
 			expect(parameters.bound(root, "queries/a.sql", query, "sqlite")).toEqual({ "Ana", "20" })
 		end)
+	end)
+
+	it("names quoted and qualified columns and numbers FROM placeholders independently", function()
+		local description = parameters.describe(
+			'SELECT ? FROM ? WHERE apellido_paterno = ? AND "apellido materno" = ? AND a.nombre = ? AND EXISTS (SELECT 1 FROM ? WHERE clave = ?)',
+			"sqlite"
+		)
+		local labels = {}
+		for _, group in ipairs(description.groups) do
+			labels[#labels + 1] = group.label
+		end
+		expect(labels).toEqual({
+			"Parameter 1",
+			"From #1",
+			"apellido_paterno",
+			"apellido materno",
+			"a.nombre",
+			"From #2",
+			"clave",
+		})
+		local repeated = parameters.describe("SELECT * FROM alumnos WHERE nombre = ? OR nombre = ?", "sqlite")
+		expect(#repeated.groups).toBe(2)
+		expect(repeated.groups[1].key == repeated.groups[2].key).toBe(false)
 	end)
 
 	it("shares qualified equality values but keeps ambiguous and nested placeholders separate", function()

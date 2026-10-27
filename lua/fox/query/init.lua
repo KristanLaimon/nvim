@@ -544,7 +544,9 @@ function M.draw_parameters(state, focus)
 	local lines = {}
 	for _, entry in ipairs(description.groups) do
 		local value = values and values[entry.key]
-		lines[#lines + 1] = entry.label .. " = " .. (value == nil and "<unset>" or value == "" and '""' or value)
+		lines[#lines + 1] = entry.label
+			.. (entry.clause == "FROM" and ": " or " = ")
+			.. (value == nil and "<unset>" or value == "" and '""' or value)
 	end
 	set_lines(buf, lines)
 	local function edit(clear)

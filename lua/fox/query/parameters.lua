@@ -39,8 +39,11 @@ function M.describe(query, engine)
 					))
 			)
 		if token.kind == "symbol" and token.value == "?" and not operator then
-			local label, key = "Parameter", "position:"
+			local label, key = nil, "position:"
 			local column, dot, qualifier = tokens[index - 2], tokens[index - 3], tokens[index - 4]
+			if previous and previous.kind == "symbol" and previous.value == "=" and identifier(column) then
+				label = column.value
+			end
 			if
 				previous
 				and previous.value == "="
@@ -66,11 +69,15 @@ function M.describe(query, engine)
 		end
 	end
 	local contexts, source = require("fox.query.parameter_intents").describe(tokens, bindings)
-	local groups, order, seen, counts = {}, {}, {}, {}
+	local groups, order, seen, counts, from_count = {}, {}, {}, {}, 0
 	for index, token in ipairs(tokens) do
 		local binding = bindings[index]
 		if binding then
 			local intent = contexts[index].context
+			local clause = contexts[index].clause
+			if clause == "FROM" then
+				from_count = from_count + 1
+			end
 			counts[intent] = (counts[intent] or 0) + 1
 			local shared = binding.legacy_key ~= "position:"
 			local key = "intent:" .. vim.fn.sha256(intent) .. ":" .. (shared and binding.legacy_key or counts[intent])
@@ -79,7 +86,8 @@ function M.describe(query, engine)
 					key = key,
 					intent = intent,
 					legacy_key = shared and binding.legacy_key or "position:" .. (#order + 1),
-					label = shared and binding.label or "Parameter " .. (#order + 1),
+					label = binding.label or (clause == "FROM" and "From #" .. from_count or "Parameter " .. (#order + 1)),
+					clause = clause,
 					positions = {},
 				}
 				seen[key] = #groups

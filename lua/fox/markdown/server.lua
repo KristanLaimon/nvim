@@ -186,6 +186,13 @@ function M.active(buf)
 	return pages[buf] ~= nil
 end
 
+function M.release(buf)
+	pages[buf] = nil
+	if not next(pages) then
+		M.stop()
+	end
+end
+
 function M.follow(buf, line)
 	if pages[buf] then
 		pages[buf].line = line

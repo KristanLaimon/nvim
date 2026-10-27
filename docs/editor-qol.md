@@ -10,6 +10,10 @@ With a Markdown, `.mermaid`, or `.mmd` file open, select **Toggle Live Markdown 
 `:CommandPalette`, or run `:MarkdownPreviewToggle`. Use `:MarkdownPreviewStop`
 to stop the server. The server and Markdown renderer run in Lua using Neovim's
 built-in networking; Node, npm and `markdown-preview.nvim` are not required.
+Closing or unloading a preview's source buffer releases that preview. When the
+last source closes, the HTTP listener and its connections shut down automatically;
+exiting Neovim also closes them. Merely switching to another buffer keeps the
+preview available. There is no separate server process to leave running.
 Mermaid diagrams in fenced blocks and standalone files use the attributed local
 JavaScript bundle in `config/markdown/`; no CDN or Mermaid CLI is used. Source
 buffers stay untouched. Edits update the same browser tab without saving.

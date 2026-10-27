@@ -191,6 +191,22 @@ try {
     assert.ok(await evaluate('window.originalHeading === document.querySelector("h1")'));
   }
   console.log('PASS: scrolling down/up centers headings, paragraph lines, code and collapsed details without replacing the DOM');
+  lua(`(function() vim.cmd('bdelete!'); return true end)()`);
+  await until(() => evaluate('document.querySelector("#status").textContent.includes("reconnect")'));
+  await assert.rejects(fetch(url));
+  lua(`(function()
+    vim.cmd('enew!')
+    vim.bo.filetype = 'markdown'
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, {'# Exit cleanup'})
+    vim.cmd('MarkdownPreview')
+    return true
+  end)()`);
+  const restartedURL = lua('_G.preview_url');
+  assert.ok((await fetch(restartedURL)).ok);
+  lua(`(function() vim.schedule(function() vim.cmd('qa!') end); return true end)()`);
+  await until(() => editor.exitCode !== null);
+  await assert.rejects(fetch(restartedURL));
+  console.log('PASS: deleting the source and exiting Neovim close the real HTTP listener');
 } finally {
   connection?.close();
   if (editor && editor.exitCode === null) {

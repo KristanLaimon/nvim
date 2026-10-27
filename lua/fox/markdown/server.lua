@@ -70,6 +70,8 @@ local function response(target)
 		["preview.js"] = { "preview.js", "text/javascript" },
 		["mermaid.min.js"] = { "mermaid.min.js", "text/javascript" },
 		["markdown.css"] = { "markdown.css", "text/css" },
+		["mona-sans.woff2"] = { "mona-sans.woff2", "font/woff2" },
+		["mona-sans-italic.woff2"] = { "mona-sans-italic.woff2", "font/woff2" },
 	}
 	if files[resource] then
 		local file = files[resource]
@@ -152,7 +154,7 @@ local function accept(err)
 					.. content_type
 					.. "; charset=utf-8\r\nContent-Length: "
 					.. #body
-					.. "\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'\r\n\r\n"
+					.. "\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; media-src 'self' https: http:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'\r\n\r\n"
 					.. body,
 				finish
 			)

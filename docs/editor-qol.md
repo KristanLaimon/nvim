@@ -20,6 +20,9 @@ buffers stay untouched. Edits update the same browser tab without saving.
 The preview uses the former plugin's attributed GitHub-like stylesheet, including
 headings, tables, code blocks and task lists. It follows the browser's light/dark
 color scheme; the header button switches themes manually.
+GitHub's Mona Sans variable font (normal and italic) is bundled locally with
+its OFL license, ahead of the Primer system-font fallbacks. No font installation
+or network request is needed to load it.
 Restart Neovim after migrating from the old plugin, then run `:MarkdownPreview`.
 
 The browser also renders GitHub Flavored Markdown tables (including alignment
@@ -27,8 +30,12 @@ and escaped pipes), task lists (`- [ ]` / `- [x]`), strikethrough (`~~text~~`),
 automatic URL/email links, fenced code and HTML `<details>` sections. These can
 be mixed with Mermaid blocks in the same document. Quotes, dashes and ellipses
 stay literal. The focused Lua renderer is not a complete CommonMark engine:
-nested lists, reference links, arbitrary HTML, syntax highlighting and math
-extensions are not implemented. Only safe `<details>`/`<summary>` HTML is accepted.
+nested lists, reference links, syntax highlighting and math extensions are not
+implemented. Mixed HTML supports centered paragraphs, images and linked badges,
+line breaks, strong/emphasis, spans, details and videos with controls. Attributes
+are sanitized: handlers/scripts/iframes are blocked; inline styles are limited
+to display, font size and text alignment. Remote videos use the browser's media
+support; their availability and codecs depend on the URL and browser.
 Legacy `g:mkdp_preview_options` settings from the former renderer are not used.
 
 FoxVim opens the system browser through its native handler (Explorer on Windows,

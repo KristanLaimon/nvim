@@ -1,12 +1,8 @@
 local M = {}
+local markup = require("fox.markdown.html")
 
 function M.escape(text)
 	return (text:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"):gsub("'", "&#39;"))
-end
-
-local function safe_url(url)
-	local scheme = url:match("^([%w+.-]+):")
-	return not url:find("[%c]") and (not scheme or vim.tbl_contains({ "http", "https", "mailto" }, scheme:lower()))
 end
 
 local function inline(text)
@@ -22,8 +18,10 @@ local function inline(text)
 	text = text:gsub("\\([%p])", function(char)
 		return hold(M.escape(char))
 	end)
+	text = markup.protect(text, hold)
 	text = text:gsub("(!?)%[([^%]]*)%]%(([^%s%)]+)%)", function(image, label, url)
-		if not safe_url(url) then
+		url = markup.url(url, image == "!")
+		if not url then
 			return hold(M.escape(label))
 		end
 		if image == "!" then
@@ -134,6 +132,15 @@ function M.render(lines)
 			flush()
 			close_list()
 			fence = { char = marker:sub(1, 1), size = #marker, lang = lang, first = i }
+		elseif markup.block(line) then
+			flush()
+			close_list()
+			local name, first, block = markup.block(line), i, { line }
+			while not lines[i]:lower():find("</" .. name .. "%s*>") and i < #lines do
+				i = i + 1
+				block[#block + 1] = lines[i]
+			end
+			emit(markup.render(table.concat(block, "\n"), first))
 		elseif table_separator(lines[i + 1]) and line:find("|", 1, true) then
 			flush()
 			close_list()
@@ -184,12 +191,9 @@ function M.render(lines)
 						and ('<input type="checkbox" disabled' .. (checked ~= " " and " checked" or "") .. "> ")
 					or ""
 				emit((checked and '<li class="task-list-item">' or "<li>") .. checkbox .. inline(label or value) .. "</li>", i)
-			elseif line:match("^%s*<details>%s*$") or line:match("^%s*</details>%s*$") then
+			elseif line:match("^%s*<[/]?[%a][%w]*[%s>/]") then
 				flush()
-				emit(vim.trim(line), line:match("<details>") and i or nil)
-			elseif line:match("^%s*<summary>.*</summary>%s*$") then
-				flush()
-				emit("<summary>" .. inline(line:match("<summary>(.*)</summary>")) .. "</summary>", i)
+				emit(inline(line), i)
 			elseif line:match("^%s*%-%-%-+%s*$") or line:match("^%s*%*%*%*+%s*$") then
 				flush()
 				emit("<hr>", i)

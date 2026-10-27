@@ -191,6 +191,49 @@ try {
     assert.ok(await evaluate('window.originalHeading === document.querySelector("h1")'));
   }
   console.log('PASS: scrolling down/up centers headings, paragraph lines, code and collapsed details without replacing the DOM');
+  lua(`(function()
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.fn.readfile('config/tests/fixtures/markdown/mixed-html.md'))
+    vim.api.nvim_buf_set_name(0, vim.fn.getcwd() .. '/README.md')
+    vim.api.nvim_win_set_cursor(0, { 5, 0 })
+    return true
+  end)()`);
+  await until(() => evaluate('Boolean(document.querySelector(\'img[alt="foxnvim-logo"]\')) && document.fonts.check(\'16px "Mona Sans VF"\')'));
+  const mixed = await evaluate(`(() => {
+    const logo = document.querySelector('img[alt="foxnvim-logo"]');
+    const subtitle = [...document.querySelectorAll('span')].find(element => element.style.fontSize === '1.25rem');
+    const video = document.querySelector('video');
+    return {
+      alignment: getComputedStyle(logo.closest('p')).textAlign,
+      width: logo.width, height: logo.height,
+      subtitleSize: getComputedStyle(subtitle).fontSize,
+      subtitleDisplay: getComputedStyle(subtitle).display,
+      badge: document.querySelector('a img[alt="GitHub Stars"]')?.parentElement.getAttribute('href'),
+      videoSource: video?.getAttribute('src'), videoControls: video?.controls,
+      noEscapedHTML: !document.querySelector('article').textContent.includes('<p align='),
+      markdown: document.querySelector('h1')?.textContent,
+      localImage: document.querySelector('img[src="./.github/kitty_support.png"]')?.src,
+      literal: document.querySelector('pre code')?.textContent,
+    };
+  })()`);
+  assert.match(mixed.alignment, /^(?:-webkit-)?center$/);
+  assert.equal(mixed.width, 300);
+  assert.equal(mixed.height, 300);
+  assert.equal(mixed.subtitleSize, '20px');
+  assert.equal(mixed.subtitleDisplay, 'block');
+  assert.equal(mixed.badge, 'https://github.com/KristanLaimon/nvim/stargazers');
+  assert.equal(mixed.videoSource, 'https://github.com/user-attachments/assets/ace791d2-96a6-4b3f-830b-345afa86391f');
+  assert.equal(mixed.videoControls, true);
+  assert.equal(mixed.noEscapedHTML, true);
+  assert.equal(mixed.markdown, 'Markdown after HTML');
+  assert.ok(mixed.literal.includes('<img src="literal.png"'));
+  assert.ok((await fetch(mixed.localImage)).ok);
+  await cdp('DOM.enable');
+  await cdp('CSS.enable');
+  const { root: documentRoot } = await cdp('DOM.getDocument');
+  const { nodeId: fontNode } = await cdp('DOM.querySelector', { nodeId: documentRoot.nodeId, selector: 'article strong' });
+  const { fonts } = await cdp('CSS.getPlatformFontsForNode', { nodeId: fontNode });
+  assert.ok(fonts.some(font => font.isCustomFont && font.familyName.includes('Mona Sans')), JSON.stringify(fonts));
+  console.log('PASS: mixed README HTML, local image, video controls and the actual bundled Mona Sans font');
   lua(`(function() vim.cmd('bdelete!'); return true end)()`);
   await until(() => evaluate('document.querySelector("#status").textContent.includes("reconnect")'));
   await assert.rejects(fetch(url));

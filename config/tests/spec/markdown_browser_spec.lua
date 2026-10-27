@@ -137,6 +137,52 @@ t.describe("Native Markdown renderer", function()
 		t.expect(html).toContain('class="task-list-item"')
 		t.expect(html).toContain('<span data-source-line="7">print(1)</span>')
 	end)
+	t.it("renders the README's centered HTML header, badge, image and video", function()
+		local html = render.render(vim.fn.readfile("config/tests/fixtures/markdown/mixed-html.md"))
+		for _, expected in ipairs({
+			'align="center"',
+			'width="300"',
+			'height="300"',
+			"font-size:1.25rem",
+			'alt="GitHub Stars"',
+			'src="./.github/kitty_support.png"',
+			"<video",
+			'controls=""',
+			"<strong>inline HTML</strong>",
+			"Markdown after HTML",
+		}) do
+			t.expect(html).toContain(expected)
+		end
+		t.expect(html).not_.toContain("&lt;p align")
+		t.expect(html).not_.toContain("</img>")
+		t.expect(html).toContain("&lt;img src=&quot;literal.png&quot;")
+	end)
+	t.it("sanitizes HTML URLs, attributes, styles and quoted tag boundaries", function()
+		local html = render.render({
+			'<p align="center" onclick="alert(1)">',
+			'<img src="jav&#x61;script:alert(1)" onerror="alert(1)">',
+			'<a href=" javascript:alert(1)">unsafe</a>',
+			'<span style="display:block;background:url(https://evil.example);position:fixed;font-size:1.25rem">safe</span>',
+			'<img src="https://example.com/image?a=1&amp;b=2" alt="one > two"/>',
+			'<iframe src="https://evil.example"></iframe><script>alert(1)</script>',
+			"</p>",
+		})
+		for _, forbidden in ipairs({
+			"onclick=",
+			"onerror=",
+			'href="javascript:',
+			'src="javascript:',
+			"background:",
+			"position:",
+			"<iframe",
+			"<script",
+		}) do
+			t.expect(html).not_.toContain(forbidden)
+		end
+		t.expect(html).toContain('src="https://example.com/image?a=1&amp;b=2"')
+		t.expect(html).toContain('alt="one &gt; two"')
+		t.expect(html).toContain('style="display:block;font-size:1.25rem"')
+	end)
 end)
 
 local function get(url, headers)

@@ -17,3 +17,11 @@ commit (`app/_static/markdown.css`), originally from
 https://github.com/iamcco/markdown.css. Its MIT license is preserved in
 `licenses/markdown-preview-style.txt`. It is a browser asset, not a dependency
 on the former server or plugin.
+
+`mona-sans.woff2` and `mona-sans-italic.woff2` are GitHub's unmodified Mona Sans
+variable fonts (`MonaSansVF[opsz,wght].woff2` and
+`MonaSansVF-Italic[opsz,wght].woff2` under `fonts/webfonts/variable/`), from
+https://github.com/github/mona-sans at commit
+`4bc6ba8b354c36b4fb66d32cd67b4c1f2beb0a06`. Their SIL Open Font License is in
+`licenses/mona-sans.txt`. The UI uses Primer's font stack with this local font
+first: https://primer.style/product/primitives/typography/.

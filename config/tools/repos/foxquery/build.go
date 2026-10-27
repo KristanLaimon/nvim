@@ -70,6 +70,10 @@ func main() {
 		panic(err)
 	}
 	license, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "LICENSE"))
+	// Arch Linux packages install the license outside GOROOT.
+	if os.IsNotExist(err) && runtime.GOOS == "linux" {
+		license, err = os.ReadFile("/usr/share/licenses/go/LICENSE")
+	}
 	if err != nil {
 		panic(err)
 	}

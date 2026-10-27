@@ -32,6 +32,14 @@ Accessible via **Command Palette** (`<C-S-p>` / `:CommandPalette`):
 
 ---
 
+## C# projects inside a larger workspace
+
+OmniSharp uses the classic `.sln` root when present, otherwise the nearest
+`.csproj` directory (including projects under a `.slnx` workspace). The launcher
+passes this root through `--source` and uses it as its working directory, so opening
+Neovim at the repository root does not make it scan unrelated sibling folders.
+Restart Neovim after changing the C# launcher configuration.
+
 ## New C# files
 
 Creating a `.cs` file through Neo-tree, the desktop file explorer, or `:edit NewType.cs`

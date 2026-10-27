@@ -634,6 +634,118 @@ function M.completion_graph(text, offset, metadata, level)
 	return graph
 end
 
+function M.symbol(text, offset, metadata)
+	if #text > 128 * 1024 then
+		return nil
+	end
+	local engine = metadata.syntax or metadata.engine
+	local statement
+	for _, scope in ipairs(M.statements(text, engine) or {}) do
+		if offset >= scope.first and offset <= scope.last then
+			statement, offset = scope.sql, offset - scope.first + 1
+			break
+		end
+	end
+	if not statement then
+		return nil
+	end
+	local tokens = M.tokens(statement, engine)
+	local index
+	for at, token in ipairs(tokens) do
+		if token.first <= offset and offset <= token.last then
+			index = at
+			break
+		end
+	end
+	if not index then
+		return nil
+	end
+	if tokens[index].kind == "symbol" and tokens[index].value == "." then
+		index = index - 1
+	end
+	if not identifier(tokens[index]) then
+		return nil
+	end
+	local first, last = index, index
+	while tokens[first - 1] and tokens[first - 1].value == "." and identifier(tokens[first - 2]) do
+		first = first - 2
+	end
+	while tokens[last + 1] and tokens[last + 1].value == "." and identifier(tokens[last + 2]) do
+		last = last + 2
+	end
+	local names = {}
+	for at = first, last, 2 do
+		names[#names + 1] = tokens[at].value
+	end
+	local preceding, following = tokens[first - 1], tokens[last + 1]
+	if preceding and preceding.kind == "word" and (preceding.upper == "FROM" or preceding.upper == "JOIN") then
+		local item = M.table(metadata, table.concat(names, "."))
+		return item and { table = item } or nil
+	end
+	if #names == 1 then
+		local at = first - (preceding and preceding.upper == "AS" and 2 or 1)
+		local finish = at
+		while tokens[at - 1] and tokens[at - 1].value == "." and identifier(tokens[at - 2]) do
+			at = at - 2
+		end
+		local keyword = tokens[at - 1]
+		if
+			identifier(tokens[at])
+			and keyword
+			and keyword.kind == "word"
+			and (keyword.upper == "FROM" or keyword.upper == "JOIN")
+		then
+			local path = {}
+			for part = at, finish, 2 do
+				path[#path + 1] = tokens[part].value
+			end
+			local item = M.table(metadata, table.concat(path, "."))
+			return item and { table = item } or nil
+		end
+		if preceding and preceding.kind == "word" and preceding.upper == "AS" then
+			return nil
+		end
+	end
+	if following and following.kind == "symbol" and following.value == "(" then
+		return nil
+	end
+	local graph = M.completion_graph(statement, offset, metadata)
+	local column_name = names[#names]
+	local qualifier = #names > 1 and table.concat(names, ".", 1, #names - 1):lower()
+	local result, count, depth = nil, 0, math.huge
+	for _, node in ipairs(graph.nodes) do
+		local item = node.table
+		if
+			item
+			and not item.subquery
+			and not node.nested
+			and (not qualifier or node.alias:lower() == qualifier or item.key:lower() == qualifier)
+		then
+			for _, column in ipairs(item.columns or {}) do
+				if column.name:lower() == column_name:lower() then
+					local level = node.completion_depth or 0
+					if level < depth then
+						result, count, depth = { table = item, column = column }, 1, level
+					elseif level == depth then
+						count = count + 1
+					end
+				end
+			end
+		end
+	end
+	if count > 1 then
+		return nil, "Ambiguous column " .. table.concat(names, ".") .. "; qualify it with a table alias"
+	end
+	if result or qualifier then
+		return result
+	end
+	for _, node in ipairs(graph.nodes) do
+		if node.table and not node.table.subquery and not node.nested and node.alias:lower() == column_name:lower() then
+			return { table = node.table }
+		end
+	end
+end
+
 function M.join_candidates(metadata, graph)
 	local result = {}
 	for _, node in ipairs(graph.nodes) do

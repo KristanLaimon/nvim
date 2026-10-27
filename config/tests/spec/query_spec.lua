@@ -44,6 +44,118 @@ describe("FoxQuerier SQL structure", function()
 		expect(names).toEqual({ "año", "año_ingreso", "学生" })
 	end)
 
+	it("resolves SQL hover symbols through aliases and the nearest subquery scope", function()
+		local cases = {
+			{
+				"SELECT c.name, o.total FROM orders o JOIN customers c ON c.id = o.customer_id",
+				"c.name",
+				"customers",
+				"name",
+			},
+			{ "SELECT c.name FROM customers c WHERE EXISTS (SELECT c.id FROM orders c)", "c.id", "orders", "id" },
+			{
+				"SELECT c.name FROM customers c WHERE EXISTS (SELECT o.id FROM orders o WHERE o.customer_id = c.id)",
+				"c.id",
+				"customers",
+				"id",
+			},
+			{ "SELECT c.name FROM customers c WHERE EXISTS (SELECT id FROM orders o)", "id FROM", "orders", "id" },
+			{ "SELECT c.name FROM customers c; SELECT c.total FROM orders c", "c.total", "orders", "total" },
+			{ "SELECT total FROM orders", "total", "orders", "total" },
+			{ "SELECT total FROM orders", "orders", "orders" },
+			{ "SELECT total FROM orders AS source_alias", "source_alias", "orders" },
+			{ "SELECT o.total FROM orders o", "o.total", "orders", "total" },
+		}
+		for _, case in ipairs(cases) do
+			local position = assert(case[1]:find(case[2], 1, true))
+			local symbol, err = sql.symbol(case[1], position, metadata)
+			assert(symbol, case[1] .. ": " .. tostring(err))
+			expect(symbol.table.key).toBe(case[3])
+			expect(symbol.column and symbol.column.name).toBe(case[4])
+		end
+		local text = "SELECT c.name FROM customers c"
+		for delta = 0, 5 do
+			local symbol = sql.symbol(text, text:find("c.name", 1, true) + delta, metadata)
+			expect(symbol.column.name).toBe("name")
+		end
+		local symbol, err = sql.symbol("SELECT id FROM orders o JOIN customers c ON c.id = o.customer_id", 8, metadata)
+		expect(symbol).toBeNil()
+		expect(err).toContain("Ambiguous column id")
+		for _, case in ipairs({
+			{ "SELECT 'o.total' FROM orders o", "o.total" },
+			{ "SELECT 1 FROM orders o -- o.total", "o.total" },
+			{ "SELECT x.total FROM orders o", "x.total" },
+			{ "SELECT COUNT(*) FROM orders o", "COUNT" },
+			{ "SELECT COUNT(*) AS total FROM orders o", "total" },
+		}) do
+			expect(sql.symbol(case[1], case[1]:find(case[2], 1, true), metadata)).toBeNil()
+		end
+	end)
+
+	it("resolves the Spanish reporting query's columns, Unicode names, joins and nested tables", function()
+		local schema = {
+			tables = {
+				{
+					key = "alumnos",
+					name = "alumnos",
+					columns = {
+						{ name = "id", type = "INT" },
+						{ name = "año_ingreso", type = "SMALLINT" },
+						{ name = "periodo_ingreso", type = "TINYINT" },
+						{ name = "genero", type = "VARCHAR(20)" },
+					},
+				},
+				{
+					key = "carreras",
+					name = "carreras",
+					columns = { { name = "id", type = "INT" }, { name = "nombre", type = "VARCHAR(100)" } },
+				},
+				{
+					key = "cursos",
+					name = "cursos",
+					columns = {
+						{ name = "alumno_id", type = "INT" },
+						{ name = "año", type = "SMALLINT" },
+						{ name = "periodo", type = "TINYINT" },
+					},
+				},
+			},
+		}
+		local text = [[SELECT
+    ca.nombre AS carrera,
+    (? - a.año_ingreso) * 2 + ? - a.periodo_ingreso + 1 AS semestre,
+    SUM(IF(a.genero = 'MASCULINO', 1, 0)) AS hombres,
+    SUM(IF(a.genero = 'FEMENINO', 1, 0)) AS mujeres,
+    COUNT(*) AS total
+FROM alumnos a
+JOIN carreras ca ON ca.id = a.carrera_id
+WHERE ca.nivel IN ('LICENCIATURA','MAESTRIA')
+    AND ca.vigente = 'SI'
+    AND a.id IN (
+        SELECT alumno_id FROM cursos
+        WHERE año = ? AND periodo = ? AND tipo_curso IN ('1','2')
+    )
+GROUP BY ca.id, ca.nombre, semestre
+ORDER BY carrera, semestre;]]
+		for _, case in ipairs({
+			{ "ca.nombre", "carreras", "nombre", "VARCHAR(100)" },
+			{ "a.año_ingreso", "alumnos", "año_ingreso", "SMALLINT" },
+			{ "a.periodo_ingreso", "alumnos", "periodo_ingreso", "TINYINT" },
+			{ "alumno_id FROM", "cursos", "alumno_id", "INT" },
+			{ "año =", "cursos", "año", "SMALLINT" },
+			{ "periodo =", "cursos", "periodo", "TINYINT" },
+			{ "alumnos a", "alumnos" },
+			{ "carreras ca", "carreras" },
+			{ "cursos\n", "cursos" },
+		}) do
+			local symbol, err = sql.symbol(text, assert(text:find(case[1], 1, true)), schema)
+			assert(symbol, case[1] .. ": " .. tostring(err))
+			expect(symbol.table.key).toBe(case[2])
+			expect(symbol.column and symbol.column.name).toBe(case[3])
+			expect(symbol.column and symbol.column.type).toBe(case[4])
+		end
+	end)
+
 	it("includes derived, scalar, predicate and nested subqueries with scoped aliases", function()
 		for _, text in ipairs({
 			"SELECT d.id FROM (SELECT o.id FROM orders o) AS d",

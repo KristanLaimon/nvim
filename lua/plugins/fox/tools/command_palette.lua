@@ -124,6 +124,7 @@ M.commands = {
 	{ name = "Query: Statement Parameters", cmd = "FoxQueryParameters", category = "Query" },
 	{ name = "Query: Database Explorer", cmd = "FoxQueryExplorer", category = "Query" },
 	{ name = "Query: Inspect Table", cmd = "FoxQueryInspect", category = "Query" },
+	{ name = "Query: Inspect SQL Symbol at Cursor", cmd = "FoxQueryHover", category = "Query" },
 	{ name = "Query: Browse Table in Popup", cmd = "FoxQueryBrowsePopup", category = "Query" },
 	{ name = "Query: Database Relationship Map", cmd = "FoxQueryGraph all", category = "Query" },
 	{ name = "Query: Table Neighborhood", cmd = "FoxQueryGraph neighborhood", category = "Query" },

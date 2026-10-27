@@ -21,6 +21,8 @@ The status bar shows **[Editor | Query]** in every theme: the current workflow u
 
 The statement at the SQL cursor has accent-colored lines above and below it that follow typing and cursor movement without executing SQL. Table details opened with Enter fit their contents within the available editor area, overriding older saved inspector sizes.
 
+In SQL, **Shift+K** (`K`) on a column such as `ca.nombre` shows its source table and cached type in a compact popup. Aliases, bare columns, UTF-8 names such as `año`, and correlated references resolve in the nearest query scope. Ambiguous bare names ask for an alias. On a table name or table alias, Shift+K opens the same table inspector as Enter in the explorer. Functions retain their dialect documentation. Schema lookup uses cached metadata and does not execute SQL; computed output aliases and unresolved names fall back to normal hover handling. The palette action **Query: Inspect SQL Symbol at Cursor** and `:FoxQueryHover` provide the same action.
+
 Query panes display connection/view/help hints. **Shift+F3** toggles the diagram in Normal/Insert/Visual mode; **gV** does the same in Normal mode. **gN** creates a query, **gE** focuses the explorer/diagram, **gR** opens results, and **F1** opens help. **Ctrl+h/j/k/l** navigate panes in Normal, Insert, and Visual modes; Ctrl+k does not invoke the file finder in Query panes. Completion uses the current statement's cached tables: unique columns are offered bare as well as qualified; ambiguous column names are offered qualified. Inside a subquery, completion prioritizes its own bare columns, then its qualified columns, then columns from outer queries. Bare names resolve in the nearest scope; outer aliases remain available for correlated references. Native and common CSI terminal sequences are mapped; F5 and Ctrl+X Ctrl+O avoid relying on modified Enter/Space delivery.
 
 Automatic execution is disabled by default. If explicitly enabled with `:FoxQueryAutoRun`, it considers only the statement at the cursor. It never submits UPDATE/DELETE/INSERT, WITH, or EXPLAIN automatically. The worker independently validates SQL and enforces read-only access; SELECT INTO is rejected. Unchanged SQL is not repeatedly submitted, requests are serialized, hidden projects do not auto-run, and bound parameters require a manual run. `:FoxQueryAutoRun` toggles automatic execution for the project in RAM. SELECT can still do expensive work or invoke server functions; use restricted credentials and disable auto-run when appropriate.
@@ -82,6 +84,7 @@ Text values appear in double quotes, while numbers and NULL remain unquoted. Ent
 | `:FoxQueryClearParameters` | Clear all saved parameter values for this project. |
 | `:FoxQueryCancel` | Request cancellation; an uncertain session must reconnect. |
 | `:FoxQueryExplorer`, `:FoxQueryInspect` | Search metadata or inspect the selected table. |
+| `:FoxQueryHover` | Inspect the SQL column, table, or function at the cursor (Shift+K). |
 | `:FoxQueryGraph all`, `:FoxQueryGraph neighborhood` | Whole-database overview or selected table neighborhood, initially depth 3. |
 | `:FoxQueryNotes` | Open local table Markdown notes; new notes start empty. |
 | `:FoxQueryDeleteNote` | Delete the open note or selected table's note after typing the prompted random word. Save pending edits first. |

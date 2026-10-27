@@ -442,6 +442,9 @@ function M.items(engine)
 end
 
 function M.hover(buf)
+	if vim.b[buf].fox_query_root and require("fox.query").hover(buf) then
+		return
+	end
 	local engine = require("fox.langs.sql.dialect").read(buf) or vim.b[buf].fox_sql_dialect
 	local word = vim.fn.expand("<cword>"):upper()
 	for _, item in ipairs(M.items(engine or "sqlite")) do

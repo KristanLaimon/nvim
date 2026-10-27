@@ -16,6 +16,7 @@ local commands = {
 	"FoxQueryCancel",
 	"FoxQueryExplorer",
 	"FoxQueryInspect",
+	"FoxQueryHover",
 	"FoxQueryGraph",
 	"FoxQueryNotes",
 	"FoxQueryDeleteNote",
@@ -169,6 +170,9 @@ return {
 		command("FoxQueryResults", query.results)
 		command("FoxQueryActivity", function()
 			query.focus_panel("activity")
+		end)
+		command("FoxQueryHover", function()
+			require("fox.langs.sql.functions").hover(vim.api.nvim_get_current_buf())
 		end)
 		command("FoxQueryHelp", query.help)
 		command("FoxQueryErrorDetails", query.error_details)

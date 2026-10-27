@@ -39,6 +39,54 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("uses Shift+K for compact column types, the existing table inspector and function documentation", function()
+		project(function()
+			query.show("standard")
+			local state, original_preview = query.state(), vim.lsp.util.open_floating_preview
+			local schema = {
+				tables = {
+					{
+						key = "alumnos",
+						name = "alumnos",
+						columns = { { name = "nombre", type = "VARCHAR(100)" }, { name = "año_ingreso", type = "SMALLINT" } },
+					},
+					{ key = "carreras", name = "carreras", columns = { { name = "nombre", type = "VARCHAR(50)" } } },
+				},
+				relations = {},
+			}
+			state.consoles[state.active].metadata = schema
+			local received, options
+			local ok, err = pcall(function()
+				vim.lsp.util.open_floating_preview = function(lines, _, opts)
+					received, options = lines, opts
+				end
+				local text = "SELECT ca.nombre, a.año_ingreso, COUNT(*) FROM alumnos a JOIN carreras ca ON 1 = 1"
+				vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { text })
+				vim.api.nvim_set_current_win(state.sql_win)
+				local function hover(fragment)
+					vim.api.nvim_win_set_cursor(0, { 1, assert(text:find(fragment, 1, true)) - 1 })
+					vim.fn.maparg("K", "n", false, true).callback()
+				end
+				hover("ca.nombre")
+				expect(received).toEqual({ "carreras.nombre : VARCHAR(50)" })
+				expect(options.max_height).toBe(4)
+				hover("a.año_ingreso")
+				expect(received).toEqual({ "alumnos.año_ingreso : SMALLINT" })
+				hover("COUNT")
+				expect(table.concat(received, "\n")).toContain("COUNT(")
+				expect(table.concat(received, "\n")).toContain("Example:")
+				hover("carreras ca")
+				expect(state.inspectors[vim.api.nvim_get_current_win()]).toBeTruthy()
+				expect(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")).toContain("carreras")
+				expect(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")).toContain("VARCHAR(50)")
+				vim.fn.maparg("q", "n", false, true).callback()
+				expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+			end)
+			vim.lsp.util.open_floating_preview = original_preview
+			assert(ok, err)
+		end)
+	end)
+
 	it("keeps Query pins separate, restores them and cycles in displayed order", function()
 		project(function(root)
 			local tabs = require("fox.ui.tabline")

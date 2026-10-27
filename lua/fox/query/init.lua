@@ -838,6 +838,42 @@ local function show_document(state, relative, filetype)
 	return buf
 end
 
+function M.hover(buf)
+	buf = buf or vim.api.nvim_get_current_buf()
+	local state = M.states[vim.b[buf].fox_query_root or ""]
+	if not state or not state.consoles[buf] or vim.api.nvim_get_current_buf() ~= buf then
+		return false
+	end
+	state.active = buf
+	local metadata = current_metadata(state)
+	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+	local position = vim.api.nvim_win_get_cursor(0)
+	local text, offset = table.concat(lines, "\n"), position[2] + 1
+	for line = 1, position[1] - 1 do
+		offset = offset + #lines[line] + 1
+	end
+	local symbol, err = sql.symbol(text, offset, metadata)
+	if err then
+		notify(err, vim.log.levels.WARN)
+		return true
+	end
+	if not symbol then
+		return false
+	end
+	if symbol.column then
+		local line = symbol.table.key .. "." .. symbol.column.name .. " : " .. tostring(symbol.column.type or "unknown")
+		vim.lsp.util.open_floating_preview({ (line:gsub("[%c]", " ")) }, "sql", {
+			border = "rounded",
+			focus_id = "fox_query_schema_hover",
+			max_width = 70,
+			max_height = 4,
+		})
+	else
+		M.inspect(symbol.table, state)
+	end
+	return true
+end
+
 function M.inspect(item, state)
 	state = state or M.state()
 	item = item or selected_object(state)
@@ -2432,6 +2468,7 @@ function M.help()
 		lines = {
 			"F3: Editor / Query | Shift+F3 or gV: toggle diagram | gC: connections sidebar",
 			"Ctrl+Enter or F5: run (Normal / Insert); Ctrl+Space or Ctrl+X Ctrl+O: complete (Insert)",
+			"SQL Shift+K: column source/type, table inspector, or dialect function documentation",
 			"Ctrl+Shift+Enter: run in a 90% results popup; B: browse table in popup; q / Esc: close popup",
 			"Ctrl+h/j/k/l: focus pane | gN: new query | gE: explorer/diagram",
 			"Connections pane: a add, e edit, d delete profile, Enter connect, D disconnect",

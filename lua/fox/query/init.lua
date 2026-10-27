@@ -637,6 +637,10 @@ end
 local function selected_object(state)
 	local buf = vim.api.nvim_get_current_buf()
 	local line = vim.api.nvim_win_get_cursor(0)[1]
+	local inspector = state.inspectors and state.inspectors[vim.api.nvim_get_current_win()]
+	if inspector then
+		return render.object_at(inspector, line, vim.fn.virtcol(".") - 1)
+	end
 	if buf == state.side_buf and state.objects then
 		return render.object_at(state.objects, line, vim.fn.virtcol(".") - 1)
 	end
@@ -666,43 +670,82 @@ function M.inspect(item, state)
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.b[buf].fox_query_root = state.root
 	query_keys(buf)
-	local lines, highlights = render.inspect(item, state.metadata)
+	local lines, highlights, objects = render.inspect(item, state.metadata)
 	local width = math.min(vim.o.columns - 4, vim.fn.strdisplaywidth(lines[1]))
 	local height = math.min(vim.o.lines - 6, #lines)
 	set_lines(buf, lines)
 	set_highlights(buf, highlights)
-	local _, win = require("fox.core.ui").float(
-		buf,
-		{ width = width, height = height, title = " Table: " .. item.name:gsub("[%c]", " ") .. " " }
-	)
+	local previous = vim.api.nvim_get_current_win()
+	local _, win = require("fox.core.ui").float(buf, {
+		width = width,
+		height = height,
+		title = " Table: " .. item.name:gsub("[%c]", " ") .. " ",
+		parent = previous,
+	})
+	vim.bo[buf].bufhidden = "wipe"
+	state.inspectors = state.inspectors or {}
+	state.inspectors[win] = objects
+	vim.api.nvim_create_autocmd("WinClosed", {
+		pattern = tostring(win),
+		once = true,
+		callback = function()
+			state.inspectors[win] = nil
+		end,
+	})
+	vim.api.nvim_create_autocmd("WinLeave", {
+		buffer = buf,
+		callback = function()
+			vim.schedule(function()
+				if state.inspectors[vim.api.nvim_get_current_win()] then
+					return
+				end
+				for _, inspector in ipairs(vim.tbl_keys(state.inspectors)) do
+					if valid(inspector, "win") then
+						vim.api.nvim_win_close(inspector, true)
+					end
+				end
+			end)
+		end,
+	})
+	local function close()
+		if valid(win, "win") then
+			vim.api.nvim_win_close(win, true)
+		end
+		if valid(previous, "win") then
+			vim.api.nvim_set_current_win(previous)
+		end
+	end
 	vim.wo[win].wrap = false
-	vim.wo[win].winbar = "J Insert JOIN | b Browse | B Browse popup | n Notes | g Relations | q Close"
-	map(buf, "q", function()
-		vim.api.nvim_win_close(win, true)
+	vim.wo[win].winbar = "Enter Inspect | J Insert JOIN | b Browse | B Browse popup | n Notes | g Relations | q Close"
+	map(buf, "q", close)
+	map(buf, "<Esc>", close)
+	map(buf, "<CR>", function()
+		local selected = selected_object(state)
+		if selected then
+			M.inspect(selected, state)
+		end
 	end)
-	map(buf, "<Esc>", function()
-		vim.api.nvim_win_close(win, true)
-	end)
-	map(buf, "J", function()
-		vim.api.nvim_win_close(win, true)
-		M.insert_join(item)
-	end)
-	map(buf, "n", function()
-		vim.api.nvim_win_close(win, true)
-		M.notes(item)
-	end)
-	map(buf, "g", function()
-		vim.api.nvim_win_close(win, true)
-		M.graph(false)
-	end)
-	map(buf, "b", function()
-		vim.api.nvim_win_close(win, true)
-		M.browse(item)
-	end)
-	map(buf, "B", function()
-		vim.api.nvim_win_close(win, true)
-		M.browse(item, true)
-	end)
+	local actions = {
+		J = M.insert_join,
+		n = M.notes,
+		g = function(selected)
+			state.selected = selected.key
+			M.graph(false)
+		end,
+		b = M.browse,
+		B = function(selected)
+			M.browse(selected, true)
+		end,
+	}
+	for key, action in pairs(actions) do
+		map(buf, key, function()
+			local selected = selected_object(state)
+			if selected then
+				close()
+				action(selected)
+			end
+		end)
+	end
 end
 
 function M.hide(state)

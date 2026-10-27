@@ -97,13 +97,35 @@ describe("FoxQuerier SQL structure", function()
 		)
 	end)
 
+	it("generates PostgreSQL JOINs with quotes only when required", function()
+		local candidate = {
+			node = { alias = "quote", table = { key = "public.quote" } },
+			target_table = { schema = "public", name = "rental_document" },
+			relation = { source = "public.quote", columns = { { source = "rental_document_id", target = "id" } } },
+		}
+		expect(sql.join_sql(candidate, "rd", "INNER", "postgres")).toBe(
+			"INNER JOIN public.rental_document AS rd ON quote.rental_document_id = rd.id"
+		)
+		for _, name in ipairs({ "user", "authorization", "RentalDocument", "rental document", 'odd"name' }) do
+			candidate.target_table.name = name
+			expect(sql.join_sql(candidate, "rd", "LEFT", "postgres")).toContain(sql.quote(name, "postgres"))
+		end
+		candidate.target_table.name = "rental_document"
+		candidate.target_table.schema = "CustomSchema"
+		candidate.node.alias = "Quote"
+		candidate.relation.columns[1].target = "ID"
+		expect(sql.join_sql(candidate, "User", "INNER", "postgres")).toBe(
+			'INNER JOIN "CustomSchema".rental_document AS "User" ON "Quote".rental_document_id = "User"."ID"'
+		)
+	end)
+
 	it("preserves every composite-key predicate in either direction", function()
 		local composite = vim.deepcopy(metadata)
 		composite.relations[1].columns[2] = { source = "tenant_id", target = "tenant_id" }
 		local forward = sql.join_candidates(composite, sql.analyze("SELECT * FROM orders o", composite))[1]
 		local reverse = sql.join_candidates(composite, sql.analyze("SELECT * FROM customers c", composite))[1]
-		expect(sql.join_sql(forward, "c", "INNER", "postgres")).toContain('AND "o"."tenant_id" = "c"."tenant_id"')
-		expect(sql.join_sql(reverse, "o", "LEFT", "postgres")).toContain('"c"."id" = "o"."customer_id"')
+		expect(sql.join_sql(forward, "c", "INNER", "postgres")).toContain("AND o.tenant_id = c.tenant_id")
+		expect(sql.join_sql(reverse, "o", "LEFT", "postgres")).toContain("c.id = o.customer_id")
 	end)
 
 	it("identifies actual JOIN endpoints and marks ambiguous columns partial", function()

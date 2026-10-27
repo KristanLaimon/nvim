@@ -210,3 +210,39 @@ func TestExportLuaFixture(t *testing.T) {
 		}
 	}
 }
+
+// FOXQUERY_TEST_POSTGRES_PROFILE supplies a local PostgreSQL profile with seeded tables and foreign keys.
+func TestPostgresMetadata(t *testing.T) {
+	raw := os.Getenv("FOXQUERY_TEST_POSTGRES_PROFILE")
+	if raw == "" {
+		t.Skip("local PostgreSQL profile not configured")
+	}
+	var p profile
+	if err := json.Unmarshal([]byte(raw), &p); err != nil {
+		t.Fatal("invalid PostgreSQL test profile")
+	}
+	if p.Engine != "postgres" {
+		t.Fatal("PostgreSQL test profile required")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	d := &driver{}
+	defer d.close()
+	if _, err := d.connect(ctx, p, ""); err != nil {
+		t.Fatal(err)
+	}
+	result, err := d.metadata(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := result.(object)
+	tables := m["tables"].([]object)
+	if len(tables) == 0 || len(m["relations"].([]object)) == 0 {
+		t.Fatal("expected seeded tables and foreign keys")
+	}
+	for _, table := range tables {
+		if len(table["columns"].([]object)) == 0 {
+			t.Fatalf("missing columns for %s", table["key"])
+		}
+	}
+}

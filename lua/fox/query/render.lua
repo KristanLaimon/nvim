@@ -131,7 +131,7 @@ function M.inspect(item, metadata, width)
 	rows[#rows + 1] = false
 	rows[#rows + 1] = "RELATIONSHIPS (visible metadata only)"
 	rows[#rows + 1] = M.classification(item, metadata)
-	local diagram, _, diagram_highlights = M.map(metadata, item.key, 1, width or vim.o.columns - 8, 200)
+	local diagram, diagram_objects, diagram_highlights = M.map(metadata, item.key, 1, width or vim.o.columns - 8, 200)
 	table.remove(diagram)
 	local diagram_start = #rows
 	vim.list_extend(rows, diagram)
@@ -174,7 +174,18 @@ function M.inspect(item, metadata, width)
 			span[4] and span[4] + #"│ " or nil,
 		}
 	end
-	return lines, highlights
+	local objects = {}
+	for row = 1, #lines do
+		objects[row] = item
+	end
+	for row = 1, #diagram do
+		local object = { regions = {} }
+		for _, region in ipairs(diagram_objects[row] and diagram_objects[row].regions or {}) do
+			object.regions[#object.regions + 1] = { first = region.first + 2, last = region.last + 2, item = region.item }
+		end
+		objects[diagram_start + row + 1] = object
+	end
+	return lines, highlights, objects
 end
 
 function M.neighborhood(metadata, key, depth)

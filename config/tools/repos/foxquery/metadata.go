@@ -164,7 +164,20 @@ func (d *driver) metadata(ctx context.Context) (any, error) {
 			if d.profile.Engine == "mysql" {
 				rs, e = query("SELECT TABLE_NAME,CONSTRAINT_NAME,COLUMN_NAME,REFERENCED_TABLE_SCHEMA,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=? AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY TABLE_NAME,CONSTRAINT_NAME,ORDINAL_POSITION", schema)
 			} else {
-				rs, e = query(`SELECT tc.table_name,tc.constraint_name,kcu.column_name,ccu.table_schema,ccu.table_name,ccu.column_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_catalog=kcu.constraint_catalog AND tc.constraint_schema=kcu.constraint_schema AND tc.constraint_name=kcu.constraint_name AND tc.table_name=kcu.table_name JOIN information_schema.referential_constraints rc ON tc.constraint_catalog=rc.constraint_catalog AND tc.constraint_schema=rc.constraint_schema AND tc.constraint_name=rc.constraint_name JOIN information_schema.key_column_usage ccu ON rc.unique_constraint_catalog=ccu.constraint_catalog AND rc.unique_constraint_schema=ccu.constraint_schema AND rc.unique_constraint_name=ccu.constraint_name AND ccu.ordinal_position=kcu.position_in_unique_constraint WHERE tc.table_schema=? AND tc.constraint_type='FOREIGN KEY' ORDER BY tc.table_name,tc.constraint_name,kcu.ordinal_position`, schema)
+				// Joining information_schema key views can exceed the metadata timeout on PostgreSQL.
+				rs, e = query(`SELECT src.relname, con.conname, sa.attname, tn.nspname, tgt.relname, ta.attname
+FROM pg_catalog.pg_constraint con
+JOIN pg_catalog.pg_class src ON src.oid=con.conrelid
+JOIN pg_catalog.pg_namespace sn ON sn.oid=src.relnamespace
+JOIN pg_catalog.pg_class tgt ON tgt.oid=con.confrelid
+JOIN pg_catalog.pg_namespace tn ON tn.oid=tgt.relnamespace
+CROSS JOIN LATERAL unnest(con.conkey,con.confkey) WITH ORDINALITY AS keys(source_att,target_att,position)
+JOIN pg_catalog.pg_attribute sa ON sa.attrelid=src.oid AND sa.attnum=keys.source_att
+JOIN pg_catalog.pg_attribute ta ON ta.attrelid=tgt.oid AND ta.attnum=keys.target_att
+WHERE sn.nspname=? AND con.contype='f'
+AND (has_table_privilege(src.oid,'SELECT') OR has_any_column_privilege(src.oid,'SELECT'))
+AND (has_table_privilege(tgt.oid,'SELECT') OR has_any_column_privilege(tgt.oid,'SELECT'))
+ORDER BY src.relname,con.conname,keys.position`, schema)
 			}
 			if e != nil {
 				return nil, e

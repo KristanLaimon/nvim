@@ -58,6 +58,7 @@ describe("FoxQuerier usability", function()
 			end
 			expect(text:find("+---", 1, true)).toBeNil()
 			expect(text).toContain("> Main")
+			expect(text:find("PK FK Column", 1, true)).toBeNil()
 			expect(positions.Neighbor1.x < positions.Main.x).toBeTruthy()
 			expect(positions.Neighbor2.x > positions.Main.x).toBeTruthy()
 			for index = 1, 6 do

@@ -129,7 +129,7 @@ function M.render(graph, metadata, width, column_limit)
 				end
 			end
 			heights[index] = math.max(1, math.min(count, math.max(column_limit, keys)))
-				+ 4
+				+ 3
 				+ (count > math.max(column_limit, keys) and 1 or 0)
 			if node.focus then
 				focus = index
@@ -204,7 +204,8 @@ function M.render(graph, metadata, width, column_limit)
 			}
 		end
 		local visible = math.min(#rows, math.max(column_limit, selected))
-		local height = visible + 4 + (#rows > visible and 1 or 0)
+		local heading_rows = graph.kind == "schema" and 2 or 3
+		local height = visible + heading_rows + 1 + (#rows > visible and 1 or 0)
 		for row = y, y + height - 1 do
 			put(row, x, "│" .. string.rep(" ", card_width - 2) .. "│")
 			objects[row] = objects[row] or { regions = {} }
@@ -214,11 +215,13 @@ function M.render(graph, metadata, width, column_limit)
 		put(y + height - 1, x, "└" .. string.rep("─", card_width - 2) .. "┘")
 		put(y + 1, x + 2, (node.focus and "> " or "") .. node.alias, card_width - 4)
 		style(y + 1, x + 1, card_width - 2, node.focus and "Search" or item and "Title" or "DiagnosticWarn")
-		put(y + 2, x + 2, graph.kind == "schema" and "PK FK Column" or node.name, card_width - 4)
-		style(y + 2, x + 1, card_width - 2, "Comment")
+		if graph.kind ~= "schema" then
+			put(y + 2, x + 2, node.name, card_width - 4)
+			style(y + 2, x + 1, card_width - 2, "Comment")
+		end
 		for row = 1, visible do
-			put(y + 2 + row, x + 2, rows[row].text, card_width - 4)
-			style(y + 2 + row, x + 1, card_width - 2, rows[row].group)
+			put(y + heading_rows - 1 + row, x + 2, rows[row].text, card_width - 4)
+			style(y + heading_rows - 1 + row, x + 1, card_width - 2, rows[row].group)
 		end
 		if #rows > visible then
 			put(y + height - 2, x + 2, "... " .. (#rows - visible) .. " more; Enter inspect", card_width - 4)

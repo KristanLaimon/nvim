@@ -49,3 +49,9 @@ previous table, like a stack!
 
 It could happen that, if my caret goes focusingg another part of my nvim editor, it won't close the table details popup,
 and somtimes the "q" doesn´t work and doesnt close it. happens too much and i have to use the mouse to focus again there and close it....
+
+## Implemented
+
+- [x] Remove the repeated `PK FK Column` heading from relationship cards.
+- [x] Make inspector actions use the table under the caret; Enter stacks another inspector and closing it returns to the previous view.
+- [x] Dismiss the inspector stack when focus moves elsewhere; keep q/Esc closing reliable.

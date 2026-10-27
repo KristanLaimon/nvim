@@ -834,6 +834,116 @@ describe("FoxQuerier live workflow", function()
 		end)
 	end)
 
+	it("stacks caret-aware table inspectors and dismisses them when focus leaves", function()
+		project(function()
+			query.show("standard")
+			local state = query.state()
+			local main = { key = "Main", name = "Main", columns = { { name = "id", pk = true } } }
+			local related = { key = "右表", name = "右表", columns = { { name = "main_id" } } }
+			state.metadata = {
+				tables = { main, related },
+				relations = { { source = related.key, target = main.key, columns = { { source = "main_id", target = "id" } } } },
+			}
+			state.consoles[state.active].metadata = state.metadata
+			query.inspect(main, state)
+			local parent = vim.api.nvim_get_current_win()
+			local _, _, objects = require("fox.query.render").inspect(main, state.metadata)
+			local found = false
+			for row, object in pairs(objects) do
+				for _, region in ipairs(object.regions or {}) do
+					if region.item == related then
+						vim.api.nvim_win_set_cursor(parent, { row, 0 })
+						vim.cmd("normal! " .. (region.first + 3) .. "|")
+						found = true
+						break
+					end
+				end
+				if found then
+					break
+				end
+			end
+			expect(found).toBeTruthy()
+			local cursor, view = vim.api.nvim_win_get_cursor(parent), vim.fn.winsaveview()
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			local child = vim.api.nvim_get_current_win()
+			expect(child == parent).toBeFalsy()
+			expect(vim.api.nvim_win_get_config(child).title[1][1]).toContain(related.name)
+			vim.wait(30, function()
+				return false
+			end)
+			expect(vim.api.nvim_win_is_valid(parent)).toBeTruthy()
+			vim.fn.maparg("q", "n", false, true).callback()
+			expect(vim.api.nvim_get_current_win()).toBe(parent)
+			expect(vim.api.nvim_win_get_cursor(parent)).toEqual(cursor)
+			expect(vim.fn.winsaveview().topline).toBe(view.topline)
+			query.inspect(nil, state)
+			child = vim.api.nvim_get_current_win()
+			vim.api.nvim_set_current_win(state.sql_win)
+			expect(vim.wait(500, function()
+				return not vim.api.nvim_win_is_valid(child) and not vim.api.nvim_win_is_valid(parent)
+			end, 10)).toBeTruthy()
+			expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+		end)
+	end)
+
+	it("uses the relationship card under the caret for inspector actions", function()
+		project(function()
+			query.show("standard")
+			local state = query.state()
+			local main = { key = "Main", name = "Main", columns = {} }
+			local related = { key = "Related", name = "Related", columns = {} }
+			state.metadata = {
+				tables = { main, related },
+				relations = { { source = related.key, target = main.key, columns = {} } },
+			}
+			state.consoles[state.active].metadata = state.metadata
+			local saved = { browse = query.browse, notes = query.notes, insert_join = query.insert_join, graph = query.graph }
+			local ok, err = pcall(function()
+				for _, action in ipairs({
+					{ "b", "browse" },
+					{ "B", "browse" },
+					{ "n", "notes" },
+					{ "J", "insert_join" },
+					{ "g", "graph" },
+				}) do
+					local received, popup
+					query[action[2]] = function(value, use_popup)
+						received, popup = value, use_popup
+					end
+					query.inspect(main, state)
+					local win = vim.api.nvim_get_current_win()
+					local _, _, objects = require("fox.query.render").inspect(main, state.metadata)
+					for row, object in pairs(objects) do
+						for _, region in ipairs(object.regions or {}) do
+							if region.item == related then
+								vim.api.nvim_win_set_cursor(win, { row, 0 })
+								vim.cmd("normal! " .. (region.first + 3) .. "|")
+							end
+						end
+					end
+					vim.fn.maparg(action[1], "n", false, true).callback()
+					if action[1] == "g" then
+						expect(state.selected).toBe(related.key)
+						expect(received).toBe(false)
+					else
+						expect(received).toBe(related)
+					end
+					if action[1] == "B" then
+						expect(popup).toBe(true)
+					end
+					expect(vim.api.nvim_win_is_valid(win)).toBeFalsy()
+					query[action[2]] = saved[action[2]]
+				end
+			end)
+			for name, action in pairs(saved) do
+				query[name] = action
+			end
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
+
 	it("keeps table details in the inspector and relationship maps independent of pane geometry", function()
 		project(function()
 			query.show("standard")

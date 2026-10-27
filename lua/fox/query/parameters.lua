@@ -177,7 +177,7 @@ local function score(before, after)
 	for _, group in ipairs(before.groups) do
 		intents[group.intent] = true
 		for _, position in ipairs(group.surviving or group.positions) do
-			positions[position] = group.intent
+			positions[position] = true
 		end
 	end
 	for _, group in ipairs(after.groups) do
@@ -185,7 +185,7 @@ local function score(before, after)
 			common = common + 1
 		end
 		for _, position in ipairs(group.surviving or group.positions) do
-			if positions[position] == group.intent then
+			if positions[position] then
 				surviving = surviving + 1
 			end
 		end
@@ -221,7 +221,8 @@ local function carry(before, after, saved)
 	for _, group in ipairs(after.groups) do
 		for _, position in ipairs(group.positions) do
 			local original = positions[position]
-			if original and original.intent == group.intent and not original.dropped then
+			-- A surviving token keeps its value while the surrounding SQL is still being typed.
+			if original and not original.dropped then
 				values[group.key], used[original.key] = saved_value(saved, original), true
 			end
 		end

@@ -17,6 +17,32 @@ local function project(check)
 end
 
 describe("Query parameters", function()
+	it("keeps nombre while an appended AND predicate is typed character by character", function()
+		project(function(root)
+			local document = "queries/typing.sql"
+			local initial = "select * from alumnos\nwhere nombre = ?;"
+			assert(storage.write(root, document, initial))
+			local buf = storage.document_buffer(root, document, "sql")
+			local sql = require("fox.query.sql")
+			local statement = sql.statements(initial, "sqlite")[1].sql
+			local description = parameters.describe(statement, "sqlite")
+			assert(parameters.set(root, document, description, description.groups[1].key, "Ana"))
+			local column = #"where nombre = ?"
+			for char in (" and apellido_materno = ?"):gmatch(".") do
+				vim.api.nvim_buf_set_text(buf, 1, column, 1, column, { char })
+				column = column + 1
+				assert(parameters.sync(root, document))
+				local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+				statement = sql.statements(text, "sqlite")[1].sql
+				description = parameters.describe(statement, "sqlite")
+				local values = parameters.values(root, document, description)
+				assert(values[description.groups[1].key] == "Ana", "nombre lost after typing " .. text)
+			end
+			local values = parameters.values(root, document, description)
+			expect(values[description.groups[2].key]).toBeNil()
+		end)
+	end)
+
 	it("retains intentions through predicate reordering, insertion, deletion and restoration", function()
 		project(function(root)
 			local document = "queries/intentions.sql"

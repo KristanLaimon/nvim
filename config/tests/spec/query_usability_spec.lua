@@ -194,9 +194,17 @@ describe("FoxQuerier usability", function()
 		local previous = vim.api.nvim_get_current_buf()
 		local key = "query-completion-test"
 		local metadata = {
+			engine = "mysql",
 			tables = {
 				{ key = "Match", name = "Match", columns = { { name = "id" }, { name = "date_played_id" } } },
 				{ key = "other", name = "other", columns = { { name = "id" } } },
+				{ key = "alumnos", name = "alumnos", columns = { { name = "id" }, { name = "carrera_id" } } },
+				{ key = "escolar.carreras", name = "carreras", columns = { { name = "id" }, { name = "nivel" } } },
+				{
+					key = "cursos",
+					name = "cursos",
+					columns = { { name = "id" }, { name = "alumno_id" }, { name = "periodo" } },
+				},
 			},
 			relations = {},
 		}
@@ -212,11 +220,17 @@ describe("FoxQuerier usability", function()
 					.new()
 					:get_completions({ bufnr = buf, cursor = { 1, column } }, function(response)
 						for _, item in ipairs(response.items) do
-							result[item.label] = true
+							result[item.label] = item
 						end
 					end)
 				return result
 			end
+			local tables = labels("SELECT * FROM ", 14)
+			expect(tables.carreras.kind).toBe(7)
+			expect(tables["escolar.carreras"]).toBeNil()
+			metadata.engine = "postgres"
+			expect(labels("SELECT * FROM ", 14)["escolar.carreras"].kind).toBe(7)
+			metadata.engine = "mysql"
 			expect(labels("SELECT date FROM Match;", 11).date_played_id).toBeTruthy()
 			expect(labels("SELECT M.da FROM Match m;", 11).date_played_id).toBeTruthy()
 			local ambiguous = labels("SELECT id FROM Match m JOIN other o ON m.id = o.id;", 9)
@@ -227,6 +241,27 @@ describe("FoxQuerier usability", function()
 			expect(labels("SELECT * FROM (SELECT m.da FROM Match m) d", 25).date_played_id).toBeTruthy()
 			local scoped = labels("SELECT m.id FROM other m WHERE EXISTS (SELECT m.da FROM Match m)", 48)
 			expect(scoped.date_played_id).toBeTruthy()
+			local completion = require("fox.query.completion")
+			expect(completion.compare({ data = 42 }, { data = "opaque LSP data" })).toBeNil()
+			local prefix = "SELECT * FROM alumnos INNER JOIN escolar.carreras AS c ON alumnos.carrera_id = c.id "
+				.. "WHERE c.nivel = 'BACHILLERATO' AND alumnos.id IN (SELECT "
+			for _, suffix in ipairs({ " FROM cursos WHERE periodo = 1)", " FROM cursos WHERE periodo = 1" }) do
+				local inner = labels(prefix .. suffix, #prefix)
+				expect(inner.id.detail).toContain("cursos |")
+				expect(completion.compare(inner.id, { data = 42 })).toBe(true)
+				expect(completion.compare(inner.alumno_id, inner["cursos.alumno_id"])).toBe(true)
+				expect(completion.compare(inner["cursos.id"], inner.carrera_id)).toBe(true)
+				expect(completion.compare(inner["cursos.id"], inner["c.nivel"])).toBe(true)
+				expect(inner["alumnos.id"]).toBeTruthy()
+			end
+			local nested_prefix = prefix .. "* FROM cursos WHERE EXISTS (SELECT "
+			local nested = labels(nested_prefix .. " FROM other)", #nested_prefix)
+			expect(nested.id.detail).toContain("other |")
+			expect(completion.compare(nested["other.id"], nested.alumno_id)).toBe(true)
+			expect(completion.compare(nested["cursos.id"], nested.carrera_id)).toBe(true)
+			local qualified = labels(prefix .. "alumnos. FROM cursos)", #prefix + #"alumnos.")
+			expect(qualified.carrera_id).toBeTruthy()
+			expect(qualified.alumno_id).toBeNil()
 		end)
 		query.states[key] = nil
 		vim.api.nvim_set_current_buf(previous)

@@ -544,6 +544,7 @@ return {
 								return a_prio
 							end
 						end,
+						require("fox.query.completion").compare,
 						"score",
 						"sort_text",
 					},

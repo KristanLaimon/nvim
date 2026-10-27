@@ -1944,13 +1944,7 @@ function M.notes(item)
 	state.note_keys[item.key] = true
 	local buf = show_document(state, "notes/" .. key, "markdown")
 	if vim.api.nvim_buf_line_count(buf) == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == "" then
-		vim.api.nvim_buf_set_lines(
-			buf,
-			0,
-			-1,
-			false,
-			{ "# " .. item.key, "", "## Business rules", "", "## Example queries", "" }
-		)
+		vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "# Notes: " .. item.key, "", "", "", "", "" })
 	end
 end
 

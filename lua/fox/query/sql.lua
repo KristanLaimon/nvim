@@ -555,6 +555,7 @@ end
 function M.completion_graph(text, offset, metadata, level)
 	level = level or 0
 	local graph = M.analyze(text, metadata)
+	graph.completion_level = level
 	if level >= 24 or #text > 128 * 1024 then
 		return graph
 	end
@@ -596,7 +597,8 @@ function M.completion_graph(text, offset, metadata, level)
 				end
 				for _, node in ipairs(graph.nodes) do
 					if not node.nested and node.table and not node.table.subquery and not aliases[node.alias:lower()] then
-						child.nodes[#child.nodes + 1] = node
+						child.nodes[#child.nodes + 1] =
+							vim.tbl_extend("force", node, { completion_depth = child.completion_level - level })
 					end
 				end
 				return child

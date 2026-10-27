@@ -1,14 +1,15 @@
 # FoxQuerier / FOXQUERYGRIP — resume notes
 
-Portability revision: Python/pip and the project driver installer have been removed. FoxQuery now uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under config/tools/repos/foxquery (vendor is generated locally when missing, reused, and Git-ignored); final executables live under config/tools/foxquery. Existing profiles, SQL, caches, and passwords retain their formats. See config/tools/repos/foxquery/README.md. Earlier production validation applies to the previous backend; live server and Linux checks must be repeated.
+Current backend: FoxQuery uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under config/tools/repos/foxquery (vendor is generated locally when missing, reused, and Git-ignored); final executables live under config/tools/foxquery. SQLite, MySQL/MariaDB, and PostgreSQL drivers are compiled into those binaries. MariaDB uses the mysql connection engine and SQL dialect. Existing profiles, SQL, caches, and passwords retain their formats. See config/tools/repos/foxquery/README.md.
 
-Updated: 2026-10-22. Repository: `C:/Users/USER/AppData/Local/nvim`.
+Updated: 2026-10-27. Repository: the Neovim configuration root.
 
-Latest fix: Windows `'charmap' codec can't encode ... '\u7363'` during query results came from locale-dependent Python JSONL streams. `config/scripts/query_bridge.py` explicitly reconfigures stdin/stdout as UTF-8 before starting the worker. Disconnect/reconnect to replace an already running worker. Regression forces `PYTHONIOENCODING=cp1252` / `PYTHONUTF8=0` and verifies ASCII SQL returning stored `獣`, plus raw Unicode SQL/column names/bound values. All 9 Python driver tests and 4 Query UI/integration tests passed; no production queries were used. The full 785-test suite was not rerun for this transport-only fix.
+Current Linux validation: Go backend tests and **81 Query Mode tests passed**. The bundled Go worker connected to local MariaDB 10.11.19 using the application account, verified engine-enforced read-only setup and bound constants, and loaded metadata for 132 tables / 200 foreign keys with primary-key detection. No production records were read or exported. MariaDB profiles use `engine: "mysql"`. The primary-key catalog join omits `table_catalog`, which MariaDB does not expose in `TABLE_CONSTRAINTS`; a fixture regression covers that catalog shape. Arch Linux builds also resolve the Go license from its packaged location outside GOROOT.
+
 
 ## Resume here
 
-Read this file, `AGENTS.md`, `docs/query-mode.md`, then `IMPLEMENTATION-FOXQUERYGRIP.findings.md`. Check current code and `git status` before editing; existing staged work belongs to the user. Do not reset, unstage, or overwrite it. No commits were requested.
+Read this file, `AGENTS.md`, `docs/query-mode.md`, then `IMPLEMENTATION-FOXQUERYGRIP.findings.md`. Check current code and `git status` before editing; existing staged work belongs to the user. Do not reset, unstage, or overwrite it. Follow the current user instructions for commits and pushes.
 
 `PLAN-FOXQUERYGRIP.md` is the broader design, including ASCII layouts and unfinished proposals. **It is not a completed-feature checklist.** The usage guide and code describe actual behavior. Latest full validation: **785 repository tests**.
 
@@ -37,7 +38,7 @@ Read this file, `AGENTS.md`, `docs/query-mode.md`, then `IMPLEMENTATION-FOXQUERY
 - Connection sidebar: a add, e edit, d delete profile, Enter connect/retry, D disconnect. Delete keeps databases/notes/SQL. The last successful profile ID/fingerprint is project-local `private/session.json`; normal entry/new consoles reconnect without storing credentials. Failure shows a popup and Can't connect badge. Explicit workspace restoration stays disconnected until an explicit connection choice. Worker shutdown is idempotent; Query autocmd setup is idempotent.
 - SQLite profile creation opens the existing explorer at the project root; Enter enters folders/selects a file. Cancel leaves the profile unsaved. Selection does not change the project root or open DB bytes in an editor buffer.
 - SQL supports statement/selection/section/file execution, bound RAM parameters, cancellation, result provenance, explicit JSON export, table browsing, verified FK row navigation, notes, and schema maps.
-- Persistent Python JSONL worker; SQL/passwords travel through stdin, not shell arguments. SQLite standard library; optional PyMySQL/psycopg installed explicitly into project-private drivers. Nothing heavy auto-installs.
+- Persistent Go JSONL worker; SQL/passwords travel through stdin, not shell arguments. SQLite, MySQL/MariaDB, and PostgreSQL drivers are compiled into the bundled executables.
 - Engine-enforced read-only sessions plus SQL guard; use restricted credentials. SELECT functions/server side effects are not comprehensively sandboxed.
 - Query buffers use local storage hooks and avoid swap/undo/backup leaks. Generic editor sessions exclude Query content; explicit query workspace restore starts disconnected and never replays SQL/parameters/results. Query mode suppresses global history persistence and restores editor privacy state on exit.
 
@@ -52,8 +53,8 @@ Core:
 - `lua/fox/query/render.lua` — explorer, UML inspector, schema maps, result formatting.
 - `lua/fox/query/storage.lua` — project paths, atomic writes, profiles/cache validation, document buffers, fingerprints.
 - `lua/fox/query/layout.lua` — global geometry persistence via the house store; validated/clamped pane ratios and popup sizes, geometry only; tests use isolated temporary paths.
-- `lua/fox/query/client.lua` — async Neovim/Python JSONL transport, worker lifecycle/cancellation, local driver lookup.
-- `config/scripts/query_bridge.py` — driver adapters, read-only enforcement, binding, bounded fetches, metadata, cancellation.
+- `lua/fox/query/client.lua` — async Neovim/Go JSONL transport, worker lifecycle/cancellation, local driver lookup.
+- `config/tools/repos/foxquery/` — Go driver adapters, read-only enforcement, binding, bounded fetches, metadata, cancellation, and JSONL protocol.
 
 Integration:
 
@@ -77,8 +78,7 @@ Tests:
 - `config/tests/spec/query_usability_spec.lua` — completion/ambiguity/current statement, UML alignment, SQLite profile picker, shared explorer navigation/callback.
 - `config/tests/spec/query_live_spec.lua` — SELECT debounce/guard/parameters, real SQLite execution/restore/failure badges, connection CRUD, key delivery aliases, both layouts, dim columns/FK candidates.
 - `config/tests/spec/statusline_spec.lua` — workflow label/highlights/current-tab handling and presence in all statusline themes.
-- `config/tests/query/test_bridge.py` — disposable SQLite/binding/read-only/caps/cancellation/transport tests.
-- `config/tests/query/remote_check.py` — explicitly authorized minimal remote smoke check; privately prompts for password.
+- `config/tools/repos/foxquery/driver_test.go` — disposable SQLite/binding/read-only/caps/cancellation/transport tests.
 
 Docs/design:
 
@@ -93,7 +93,7 @@ Docs/design:
 
 ## Validation and production boundary
 
-Latest changes: **785 repository tests passed**, including 27 Query tests; changed Lua files pass StyLua/Luacheck. Earlier driver validation passed **9 Python tests** and parsed **780 Lua files**. Temporary Windows Terminal fixtures verified exact escape sequences, idempotent setup, existing shortcut override, uninstall, and unrelated shortcut preservation. Physical keyboard behavior remains unverified; F5 and Ctrl+X Ctrl+O provide alternatives independent of modified Enter/Space.
+Latest changes: **785 repository tests passed**, including 27 Query tests; changed Lua files pass StyLua/Luacheck. Temporary Windows Terminal fixtures verified exact escape sequences, idempotent setup, existing shortcut override, uninstall, and unrelated shortcut preservation. Physical keyboard behavior remains unverified; F5 and Ctrl+X Ctrl+O provide alternatives independent of modified Enter/Space.
 
 Earlier authorized production check used the application account, not root: verified **MySQL 5.7.44** (supersedes the initial “5.3” report), read-only setup, bound constants, and a zero-row catalog query. **No business rows read, no production dumps/results saved, no Docker changes.** Credentials were provided in chat; do not copy them into code, notes, profiles, commands, or logs. The latest usability fixes used fixtures only. Do not broaden production checks beyond the user's minimal-information restriction.
 
@@ -102,10 +102,10 @@ Useful commands from repository root:
 ```text
 nvim --headless -u NONE -i NONE -l config/tests/run.lua query
 nvim --headless -u NONE -i NONE -l config/tests/run.lua
-python -B -m unittest discover -s config/tests/query -v
+cd config/tools/repos/foxquery && go test -mod=vendor ./...
 ```
 
-Windows sandbox can block Python subprocess/temp-file access; the successful fixture runs needed reviewed escalation. This is not evidence of a product failure. Never run terminal setup against actual user settings just to test it; use temporary LOCALAPPDATA fixtures.
+Never run terminal setup against actual user settings just to test it; use temporary LOCALAPPDATA fixtures.
 
 For the user to activate mappings: restart Neovim; run `./scripts/setup-powershell.ps1` in PowerShell and reopen Windows Terminal for Ctrl+Enter/Ctrl+Space forwarding. F3 needs no custom forwarding.
 

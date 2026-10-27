@@ -64,6 +64,10 @@ FoxVim follows a modular four-layer design:
 
 ---
 
+### Query Mode backend
+
+FoxQuery uses the bundled Go JSONL worker in `config/tools/foxquery/`. Its source and backend tests live in `config/tools/repos/foxquery/`; the Neovim transport is `lua/fox/query/client.lua`. SQLite, MySQL/MariaDB, and PostgreSQL drivers are compiled in. MariaDB connections select `engine: "mysql"`; no separate driver installation is needed. Read `docs/query-mode.md` for current runtime behavior and connection storage.
+
 ## 📚 3. Wiki Sitemap & Comprehensive Use-Case Index
 
 Refer to the specific wiki documentation page for each feature or development use case:

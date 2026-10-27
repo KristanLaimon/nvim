@@ -1,6 +1,6 @@
 # FoxQuerier: a database workspace inside FoxVim
 
-Portability revision: Python/pip and the project driver installer have been removed. FoxQuery now uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under config/tools/repos/foxquery (vendor is generated locally when missing, reused, and Git-ignored); final executables live under config/tools/foxquery. Existing profiles, SQL, caches, and passwords retain their formats. See config/tools/repos/foxquery/README.md. Earlier production validation applies to the previous backend; live server and Linux checks must be repeated.
+Current backend: FoxQuery uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under config/tools/repos/foxquery (vendor is generated locally when missing, reused, and Git-ignored); final executables live under config/tools/foxquery. SQLite, MySQL/MariaDB, and PostgreSQL drivers are compiled into those binaries. MariaDB uses the mysql connection engine and SQL dialect. Existing profiles, SQL, caches, and passwords retain their formats. See config/tools/repos/foxquery/README.md.
 
 Status: **initial read-only implementation available**. See [the usage and validation guide](../../docs/query-mode.md) for commands, implemented behavior, and current limitations. This document retains the intended product design; unchecked acceptance items and suggested follow-ups are not claims of completed validation.
 
@@ -295,7 +295,7 @@ Proposed session model:
 
 ### Driver feasibility check before UI implementation
 
-Selected implementation: a small structured Python driver process, using standard-library SQLite and explicit project-local PyMySQL/psycopg installations for the other engines. The following requirements remain the verification criteria; this is not a universal database framework.
+Selected implementation: a self-contained Go JSONL worker with modernc.org/sqlite, go-sql-driver/mysql for MySQL/MariaDB, and pgx for PostgreSQL. Drivers are bundled; there is no project-local driver installer. The following requirements remain the verification criteria; this is not a universal database framework.
 
 The approach must demonstrate on all three engines:
 

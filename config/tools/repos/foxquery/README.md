@@ -1,14 +1,15 @@
 # FoxQuery worker
 
 The Lua editor uses this Go worker over UTF-8 JSON lines on stdin/stdout. SQL,
-parameters, passwords, and full execution errors stay in memory. No Python,
-pip, Node.js, Go installation, database CLI, SQLite library, or downloaded
-driver is required to run the bundled executables.
+parameters, passwords, and full execution errors stay in memory. The bundled
+executables include their runtime and drivers; no external database CLI,
+SQLite library, or driver installation is required.
 
 `go.mod`/`go.sum` pin source dependency versions. The build scripts generate
 `vendor/` locally when missing, including dependency licenses, then reuse it.
 Vendor source is Git-ignored to keep clones small. SQLite is embedded using
-modernc.org/sqlite. MySQL uses go-sql-driver/mysql and PostgreSQL uses pgx.
+modernc.org/sqlite. MySQL/MariaDB use go-sql-driver/mysql and PostgreSQL uses pgx. MariaDB profiles
+select `engine: "mysql"` and use the MySQL SQL dialect.
 Go's runtime is compiled into each
 executable with CGO disabled, including Linux builds without a libc dependency.
 
@@ -55,9 +56,7 @@ sessions. A capped MySQL stream is canceled and disconnected to avoid draining
 unbounded results. Use restricted server credentials as before.
 
 Profiles, saved queries, metadata caches, and local passwords keep their existing
-formats. `FoxQueryInstallDrivers` was removed because drivers are bundled.
-Old `.foxnvim/query/private/drivers/` folders are unused and may be removed
-manually. No user databases or project-private files are migrated or deleted.
+formats. No user databases or project-private files are migrated or deleted.
 
 Server connections still require network access and valid credentials; custom
 CA files must exist on the destination PC. The portability guarantee here is

@@ -8,8 +8,8 @@ FoxQuerier adds a read-only database workspace to the current project. The defau
 
 1. Open the project directory in FoxVim.
 2. Press **F3** to cycle directly between Editor and Query, or run `:FoxMode query`. `:FoxMode` still offers a picker. First entry reopens the last used saved SQL file (or the first saved SQL file if it is unavailable); a new query is created only when none exist.
-3. Press **gC** in Normal mode or run `:FoxQueryConnections` to focus the connection sidebar. **a** adds, **e** edits, **d** deletes a profile, **Enter** opens all connection details; **Enter** again connects. **D** disconnects. SQLite opens the existing file explorer at your project root: Enter opens folders or selects a database file; Esc cancels. MySQL/PostgreSQL need host, port, database, and user. Passwords are prompted privately and saved locally under `.foxnvim/query/private/passwords/`, or resolved from `password_env`. Editing a connection lets you replace its saved password; blank keeps the existing one.
-4. Database drivers are bundled in `config/tools/foxquery/` for Windows/Linux (amd64). No Python, pip, Node.js, Go, database CLI, or separate SQLite library is needed at runtime. Clone the configuration with these executables included; no driver installation is required. See [build instructions](../config/tools/repos/foxquery/README.md).
+3. Press **gC** in Normal mode or run `:FoxQueryConnections` to focus the connection sidebar. **a** adds, **e** edits, **d** deletes a profile, **Enter** opens all connection details; **Enter** again connects. **D** disconnects. SQLite opens the existing file explorer at your project root: Enter opens folders or selects a database file; Esc cancels. MySQL/MariaDB and PostgreSQL need host, port, database, and user. MariaDB uses the MySQL connection type (`engine: "mysql"`); no separate driver installation is needed. Passwords are prompted privately and saved locally under `.foxnvim/query/private/passwords/`, or resolved from `password_env`. Editing a connection lets you replace its saved password; blank keeps the existing one.
+4. Database drivers are bundled in `config/tools/foxquery/` for Windows/Linux (amd64). The executables include their runtime and drivers; no external database CLI or separate SQLite library is needed. Clone the configuration with these executables included; no driver installation is required. See [build instructions](../config/tools/repos/foxquery/README.md).
 5. Search/inspect the explorer, create SQL with **gN** or `:FoxQueryNew`, and save with `:write`. The **SQL FILES** pane above connections lists saved project SQL and open tabs; Enter opens a file or expands/collapses a folder, **a** creates SQL, **A** creates a folder, **r** renames, and **d** deletes after confirmation. **Alt+h/l** switches SQL tabs. Closing every tab leaves a prompt to open or create one.
 6. Queries run manually with **Ctrl+Enter** or **F5** in Normal/Insert mode. **Ctrl+Shift+Enter** runs the same statement in a centered results popup using 90% of the screen width and height; **q** or **Esc** closes it. Typing SQL or moving the cursor does not execute it. **Ctrl+Space** or **Ctrl+X Ctrl+O** opens completion in Insert mode. **F3** restores the editor without closing SQL sessions.
 
@@ -142,13 +142,15 @@ Read-only behavior is enforced with SQLite read-only URI/query-only mode, MySQL 
 
 ## Validation and remaining platform checks
 
+Latest focused Linux validation: Go backend tests passed, including the MariaDB primary-key regression, and **81 Query Mode tests passed**.
+
 Automated tests use disposable SQLite fixtures for binding, batches, metadata, read-only enforcement, row limits, cancellation, and actual Neovim-to-Go transport. Lua tests cover scopes, aliases, composite JOINs, diagram roles, project storage, view switching, and session exclusion.
 
-The Python bridge and its pip installer have been replaced by the bundled Go worker. Backend tests use real disposable SQLite files and cover binding, Unicode, numeric precision, binary cells, SQL guards, metadata, engine-enforced read-only access, attachment rejection, missing-file handling, row/byte caps, cancellation, protocol recovery, and full error diagnostics. Lua tests exercise the bundled executable using a committed SQLite fixture.
+Database execution uses the bundled Go worker. Backend tests use real disposable SQLite files and cover binding, Unicode, numeric precision, binary cells, SQL guards, metadata, engine-enforced read-only access, attachment rejection, missing-file handling, row/byte caps, cancellation, protocol recovery, and full error diagnostics. Lua tests exercise the bundled executable using a committed SQLite fixture.
 
 Validation of the UI and environment update on Windows: **823 repository tests passed**, including **62 Query tests**. Changed Lua files pass StyLua/Luacheck, and all 787 Lua files parse. The backend and bundled executables are unchanged by this update.
 
-The earlier MySQL 5.7.44 production check used the previous backend. Live MySQL/PostgreSQL validation of this replacement, Linux execution, and physical terminal key behavior remain outstanding. Cross-compilation alone does not validate live server behavior.
+Linux validation against local MariaDB 10.11.19 passed through Neovim and the bundled Go worker: engine-enforced read-only setup, bound constants, and metadata for 132 tables and 200 foreign keys, including primary-key detection. No production records were read or exported. MariaDB uses the `mysql` profile engine. Live MySQL/PostgreSQL checks, Windows execution, and physical terminal key behavior remain unverified for this revision; cross-compilation alone does not validate runtime behavior.
 
 Run from the configuration root:
 

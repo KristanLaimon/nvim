@@ -32,6 +32,34 @@ local metadata = {
 }
 
 describe("FoxQuerier SQL structure", function()
+	it("includes derived, scalar, predicate and nested subqueries with scoped aliases", function()
+		for _, text in ipairs({
+			"SELECT d.id FROM (SELECT o.id FROM orders o) AS d",
+			"SELECT (SELECT MAX(o.total) FROM orders o) FROM customers c",
+			"SELECT c.id FROM customers c WHERE c.id IN (SELECT o.customer_id FROM orders o)",
+			"SELECT d.id FROM (SELECT x.id FROM (SELECT o.id FROM orders o) x) d",
+		}) do
+			local graph = sql.analyze(text, metadata)
+			local nodes = vim.tbl_filter(function(node)
+				return node.table and node.table.key == "orders"
+			end, graph.nodes)
+			expect(#nodes).toBe(1)
+			expect(nodes[1].nested).toBeTruthy()
+			local lines = table.concat(render.graph(graph, metadata, 90), "\n")
+			expect(lines).toContain("SUBQUERY")
+			expect(lines).toContain("orders")
+		end
+		local graph =
+			sql.analyze("SELECT o.id FROM orders o WHERE EXISTS (SELECT o.id FROM customers o WHERE o.id = 1)", metadata)
+		expect(graph.nodes[1].roles.id.filter).toBeNil()
+		expect(graph.nodes[3].roles.id.filter).toBeTruthy()
+		graph = sql.analyze(
+			"SELECT c.id FROM customers c WHERE EXISTS (SELECT o.id FROM orders o WHERE o.customer_id = c.id)",
+			metadata
+		)
+		expect(graph.edges[1].kind).toBe("CORRELATED")
+		expect(graph.edges[1].source).toBe("c")
+	end)
 	it("resolves aliases and distinguishes output/join/filter columns", function()
 		local graph = sql.analyze(
 			"SELECT o.id, c.name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id WHERE o.id = ?",

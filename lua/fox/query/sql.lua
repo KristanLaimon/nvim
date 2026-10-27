@@ -174,7 +174,7 @@ function M.table(metadata, name)
 end
 
 -- A deliberately scoped analyzer; execution is validated independently by the driver.
-function M.analyze(text, metadata)
+local function analyze_flat(text, metadata)
 	metadata = metadata or { tables = {}, relations = {} }
 	if #text > 128 * 1024 then
 		return {
@@ -358,10 +358,165 @@ function M.analyze(text, metadata)
 	return graph
 end
 
+-- Analyze each SELECT scope separately so reused aliases do not overwrite one another.
+function M.analyze(text, metadata, level)
+	metadata = metadata or { tables = {}, relations = {} }
+	level = level or 0
+	if #text > 128 * 1024 or level >= 24 then
+		local graph = analyze_flat("", metadata)
+		graph.partial = true
+		graph.unresolved = { "Statement exceeds live-analysis budget; use a smaller statement" }
+		return graph
+	end
+	local tokens = M.tokens(text, metadata.syntax or metadata.engine)
+	local children, parts, first, i = {}, {}, 1, 1
+	local scoped = vim.tbl_extend("force", metadata, { tables = vim.list_extend({}, metadata.tables or {}) })
+	while i <= #tokens do
+		local token, next_token = tokens[i], tokens[i + 1]
+		if
+			token.value == "("
+			and next_token
+			and next_token.kind == "word"
+			and (next_token.upper == "SELECT" or next_token.upper == "WITH")
+		then
+			local finish, depth = i + 1, 1
+			while finish <= #tokens and depth > 0 do
+				if tokens[finish].value == "(" and tokens[finish].kind == "symbol" then
+					depth = depth + 1
+				end
+				if tokens[finish].value == ")" and tokens[finish].kind == "symbol" then
+					depth = depth - 1
+				end
+				finish = finish + 1
+			end
+			if depth ~= 0 then
+				break
+			end
+			local closing = tokens[finish - 1]
+			local body = text:sub(token.last + 1, closing.first - 1)
+			local child = M.analyze(body, metadata, level + 1)
+			local previous = tokens[i - 1]
+			local derived = previous and previous.kind == "word" and (previous.upper == "FROM" or previous.upper == "JOIN")
+			local key = "__fox_subquery_" .. (#children + 1)
+			local at = finish
+			if tokens[at] and tokens[at].upper == "AS" then
+				at = at + 1
+			end
+			local alias = derived and identifier(tokens[at]) and tokens[at].value or ("subquery " .. (#children + 1))
+			local item = { key = key, name = key, columns = {}, subquery = true }
+			local names = {}
+			local function column(name, type_name)
+				if not names[name] then
+					item.columns[#item.columns + 1] = { name = name, type = type_name }
+					names[name] = true
+				end
+			end
+			for _, node in ipairs(child.nodes) do
+				if not node.nested then
+					for _, col in ipairs(node.table and node.table.columns or {}) do
+						if (node.roles[col.name] or {}).output or (node.roles["*"] or {}).output then
+							column(col.name, col.type)
+						end
+					end
+				end
+			end
+			local body_tokens, body_depth = M.tokens(body, metadata.syntax or metadata.engine), 0
+			for index, entry in ipairs(body_tokens) do
+				if entry.kind == "symbol" and entry.value == "(" then
+					body_depth = body_depth + 1
+				end
+				if entry.kind == "symbol" and entry.value == ")" then
+					body_depth = body_depth - 1
+				end
+				if body_depth == 0 and entry.kind == "word" and entry.upper == "FROM" then
+					break
+				end
+				if body_depth == 0 and entry.upper == "AS" and identifier(body_tokens[index + 1]) then
+					column(body_tokens[index + 1].value)
+				end
+			end
+			scoped.tables[#scoped.tables + 1] = item
+			children[#children + 1] =
+				{ graph = child, item = item, alias = alias, derived = derived, body = body, first = token.first }
+			parts[#parts + 1] = text:sub(first, token.first - 1)
+			parts[#parts + 1] = derived and key or "NULL"
+			first, i = closing.last + 1, finish
+		else
+			i = i + 1
+		end
+	end
+	if #children == 0 then
+		return analyze_flat(text, metadata)
+	end
+	parts[#parts + 1] = text:sub(first)
+	local graph = analyze_flat(table.concat(parts), scoped)
+	graph.text = text
+	for _, child in ipairs(children) do
+		local wrapper
+		for _, node in ipairs(graph.nodes) do
+			if node.table == child.item then
+				wrapper = node
+			end
+		end
+		if not wrapper then
+			wrapper = {
+				alias = child.alias,
+				name = "scalar / predicate subquery",
+				table = child.item,
+				roles = {},
+				first = child.first,
+			}
+			graph.nodes[#graph.nodes + 1] = wrapper
+		else
+			wrapper.name = "derived subquery"
+		end
+		local prefix = wrapper.alias .. " / "
+		local child_aliases = {}
+		for _, node in ipairs(child.graph.nodes) do
+			child_aliases[node.alias:lower()] = true
+		end
+		local child_tokens = M.tokens(child.body, metadata.syntax or metadata.engine)
+		for index, token in ipairs(child_tokens) do
+			if
+				token.kind ~= "string"
+				and child_tokens[index + 1]
+				and child_tokens[index + 1].value == "."
+				and not child_aliases[token.value:lower()]
+			then
+				for _, outer in ipairs(graph.nodes) do
+					if not outer.nested and outer ~= wrapper and outer.alias:lower() == token.value:lower() then
+						graph.edges[#graph.edges + 1] = {
+							source = outer.alias,
+							target = wrapper.alias,
+							kind = "CORRELATED",
+							predicate = "outer reference: " .. token.value .. "." .. (child_tokens[index + 2] or {}).value,
+						}
+					end
+				end
+			end
+		end
+		for _, node in ipairs(child.graph.nodes) do
+			local old_alias = node.alias
+			node.alias, node.nested = prefix .. old_alias, true
+			graph.nodes[#graph.nodes + 1] = node
+			graph.edges[#graph.edges + 1] =
+				{ source = node.alias, target = wrapper.alias, kind = "SUBQUERY", predicate = "feeds " .. wrapper.alias }
+		end
+		for _, edge in ipairs(child.graph.edges) do
+			edge.source = edge.source and prefix .. edge.source
+			edge.target = prefix .. edge.target
+			graph.edges[#graph.edges + 1] = edge
+		end
+		graph.partial = graph.partial or child.graph.partial
+		vim.list_extend(graph.unresolved, child.graph.unresolved)
+	end
+	return graph
+end
+
 function M.join_candidates(metadata, graph)
 	local result = {}
 	for _, node in ipairs(graph.nodes) do
-		if node.table then
+		if node.table and not node.nested and not node.table.subquery then
 			for _, relation in ipairs(metadata.relations or {}) do
 				if relation.source == node.table.key or relation.target == node.table.key then
 					local target = relation.source == node.table.key and relation.target or relation.source

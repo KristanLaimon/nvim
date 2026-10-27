@@ -1395,7 +1395,12 @@ function M.add_profile(existing)
 			end
 		end
 	end
-	M.select({ "sqlite", "mysql", "postgres" }, { prompt = "Database engine" }, function(engine)
+	M.select({ "sqlite", "mysql", "postgres" }, {
+		prompt = "Database engine",
+		format_item = function(engine)
+			return engine == "mysql" and "MySQL / MariaDB" or engine
+		end,
+	}, function(engine)
 		if not engine then
 			return
 		end

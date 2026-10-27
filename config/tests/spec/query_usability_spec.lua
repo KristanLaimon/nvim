@@ -328,6 +328,57 @@ describe("FoxQuerier usability", function()
 		expect(found_unique).toBeTruthy()
 	end)
 
+	it("creates a MariaDB profile from the default view connection sidebar", function()
+		local storage = require("fox.query.storage")
+		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
+		local old_input, old_connect = vim.ui.input, query.connect
+		vim.fn.mkdir(root, "p")
+		vim.api.nvim_set_current_dir(root)
+		local connected
+		local ok, err = pcall(function()
+			query.show("standard")
+			query.profile()
+			vim.fn.maparg("a", "n", false, true).callback()
+			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+			expect(lines[4]).toBe("MySQL / MariaDB")
+			local values = { "local-mariadb", "127.0.0.1", "3306", "app", "reader", "FOXQUERY_TEST_PASSWORD" }
+			local index = 0
+			vim.ui.input = function(opts, callback)
+				index = index + 1
+				if index == 3 then
+					expect(opts.default).toBe("3306")
+				end
+				callback(values[index])
+			end
+			query.connect = function(profile)
+				connected = profile
+			end
+			vim.fn.maparg("j", "n", false, true).callback()
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			expect(index).toBe(6)
+			expect(connected.engine).toBe("mysql")
+			expect(connected.port).toBe(3306)
+			local profiles = assert(storage.profiles(root))
+			expect(#profiles).toBe(1)
+			expect(profiles[1].id).toBe("local-mariadb")
+			expect(profiles[1].engine).toBe("mysql")
+			expect(profiles[1].password_env).toBe("FOXQUERY_TEST_PASSWORD")
+			query.hide()
+		end)
+		vim.ui.input, query.connect = old_input, old_connect
+		query.close_root(root)
+		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+			if vim.b[buf].fox_query_root == storage.root(root) then
+				pcall(vim.api.nvim_buf_delete, buf, { force = true })
+			end
+		end
+		vim.api.nvim_set_current_dir(cwd)
+		vim.fn.delete(root, "rf")
+		if not ok then
+			error(err)
+		end
+	end)
+
 	it("uses the existing explorer for SQLite paths and leaves cancellation unsaved", function()
 		local old_select, old_input, old_connect = query.select, vim.ui.input, query.connect
 		local old_lazy, old_explorer = package.loaded.lazy, package.loaded["plugins.fox.tools.file_explorer"]

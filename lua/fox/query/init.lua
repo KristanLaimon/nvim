@@ -7,6 +7,7 @@ local layout = require("fox.query.layout")
 local parameters = require("fox.query.parameters")
 local ns = vim.api.nvim_create_namespace("fox_query")
 local statement_ns = vim.api.nvim_create_namespace("fox_query_statement")
+local parameter_ns = vim.api.nvim_create_namespace("fox_query_parameters")
 local group = vim.api.nvim_create_augroup("FoxQuery", { clear = true })
 
 local function notify(message, level)
@@ -484,9 +485,42 @@ local function text_at_cursor(state)
 	return table.concat(lines, "\n"), offset
 end
 
+local function parameter_hints(state, text, engine)
+	local buf = state.active
+	if not valid(buf, "buf") then
+		return
+	end
+	vim.api.nvim_buf_clear_namespace(buf, parameter_ns, 0, -1)
+	for _, statement in ipairs(sql.statements(text, engine) or {}) do
+		local description = parameters.describe(statement.sql, engine)
+		if #description.groups > 0 then
+			local values = parameters.values(state.root, vim.b[buf].fox_query_document, description)
+			for _, entry in ipairs(description.groups) do
+				local value = values and values[entry.key]
+				if value ~= nil then
+					local hint = value == "" and '""' or vim.fn.strtrans(value)
+					if vim.fn.strchars(hint) > 40 then
+						hint = vim.fn.strcharpart(hint, 0, 40) .. "…"
+					end
+					for _, position in ipairs(entry.positions) do
+						local prefix = text:sub(1, statement.first + position - 1)
+						local row = select(2, prefix:gsub("\n", ""))
+						vim.api.nvim_buf_set_extmark(buf, parameter_ns, row, #prefix:match("[^\n]*$"), {
+							virt_text = { { " ⟨" .. hint .. "⟩", "Comment" } },
+							virt_text_pos = "inline",
+							right_gravity = false,
+						})
+					end
+				end
+			end
+		end
+	end
+end
+
 function M.draw_parameters(state, focus)
 	local text, offset = text_at_cursor(state)
 	local engine = state.metadata.syntax or state.metadata.engine
+	parameter_hints(state, text, engine)
 	local statement = sql.scope(text, offset, "statement", nil, engine)
 	local description = statement and parameters.describe(statement, engine)
 	local visible = description

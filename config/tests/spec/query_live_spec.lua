@@ -1974,6 +1974,54 @@ describe("FoxQuerier live workflow", function()
 		end)
 	end)
 
+	it("shows dim inline parameter values across statements without changing the SQL", function()
+		project(function(root)
+			query.show("standard")
+			local state = query.state()
+			local lines = {
+				"SELECT '?' AS literal, 'á' AS unicode FROM alumnos WHERE nombre = ? AND edad > ?;",
+				"SELECT * FROM cursos c WHERE c.id = ? OR c.id = ?;",
+			}
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, lines)
+			vim.api.nvim_buf_call(state.active, function()
+				vim.cmd("write")
+			end)
+			local tick = vim.api.nvim_buf_get_changedtick(state.active)
+			local parameters = require("fox.query.parameters")
+			local document = vim.b[state.active].fox_query_document
+			local first = parameters.describe(lines[1]:sub(1, -2), "sqlite")
+			local second = parameters.describe(lines[2]:sub(1, -2), "sqlite")
+			assert(parameters.set(root, document, first, first.groups[1].key, "Ana"))
+			assert(parameters.set(root, document, first, first.groups[2].key, ""))
+			assert(parameters.set(root, document, second, second.groups[1].key, "NULL"))
+			query.refresh_view(state)
+			local namespace = vim.api.nvim_get_namespaces().fox_query_parameters
+			local marks = vim.api.nvim_buf_get_extmarks(state.active, namespace, 0, -1, { details = true })
+			expect(#marks).toBe(4)
+			for index, hint in ipairs({ " ⟨Ana⟩", ' ⟨""⟩', " ⟨NULL⟩", " ⟨NULL⟩" }) do
+				local mark = marks[index]
+				expect(mark[4].virt_text).toEqual({ { hint, "Comment" } })
+				expect(mark[4].virt_text_pos).toBe("inline")
+				expect(lines[mark[2] + 1]:sub(mark[3], mark[3])).toBe("?")
+			end
+			expect(marks[1][3]).toBe(lines[1]:find("? AND", 1, true))
+			expect(vim.api.nvim_buf_get_lines(state.active, 0, -1, false)).toEqual(lines)
+			expect(vim.api.nvim_buf_get_changedtick(state.active)).toBe(tick)
+			expect(vim.bo[state.active].modified).toBe(false)
+			assert(parameters.set(root, document, first, first.groups[1].key, nil))
+			query.refresh_view(state)
+			expect(#vim.api.nvim_buf_get_extmarks(state.active, namespace, 0, -1, {})).toBe(3)
+			assert(parameters.set(root, document, first, first.groups[1].key, "Bea\n" .. string.rep("x", 80)))
+			query.refresh_view(state)
+			marks = vim.api.nvim_buf_get_extmarks(state.active, namespace, 0, -1, { details = true })
+			local hint = marks[1][4].virt_text[1][1]
+			expect(hint:find("\n", 1, true)).toBeNil()
+			expect(hint).toContain("…")
+			query.clear_parameters()
+			expect(#vim.api.nvim_buf_get_extmarks(state.active, namespace, 0, -1, {})).toBe(0)
+		end)
+	end)
+
 	it("removes only the deleted intention from Parameters and leaves a restored slot unset", function()
 		project(function(root)
 			query.show("standard")

@@ -12,6 +12,21 @@ local function project(check)
 end
 
 describe("Query parameters", function()
+	it("labels plain placeholders by appearance without suggesting numbered SQL syntax", function()
+		project(function(root)
+			local query = "SELECT * FROM alumnos WHERE nombre = ? AND edad = ?"
+			local description = parameters.describe(query, "sqlite")
+			expect(description.groups[1].label).toBe("Parameter 1")
+			expect(description.groups[2].label).toBe("Parameter 2")
+			local _, missing = parameters.bound(root, "queries/a.sql", query, "sqlite")
+			expect(missing).toBe("Set Parameter 1 in Parameters, then run again")
+			for index, value in ipairs({ "Ana", "20" }) do
+				assert(parameters.set(root, "queries/a.sql", description, description.groups[index].key, value))
+			end
+			expect(parameters.bound(root, "queries/a.sql", query, "sqlite")).toEqual({ "Ana", "20" })
+		end)
+	end)
+
 	it("shares qualified equality values but keeps ambiguous and nested placeholders separate", function()
 		local description = parameters.describe(
 			"SELECT * FROM users u WHERE u.id = ? OR u.id = ? AND id = ? AND EXISTS (SELECT 1 FROM users u WHERE u.id = ?)",

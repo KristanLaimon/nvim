@@ -39,7 +39,7 @@ function M.describe(query, engine)
 					))
 			)
 		if token.kind == "symbol" and token.value == "?" and not operator then
-			local label, key = "?" .. (#order + 1), "position:" .. (#order + 1)
+			local label, key = "Parameter " .. (#order + 1), "position:" .. (#order + 1)
 			local column, dot, qualifier = tokens[index - 2], tokens[index - 3], tokens[index - 4]
 			if
 				previous

@@ -41,22 +41,27 @@ local function response(target)
 	if not id or not pages[id] or not vim.api.nvim_buf_is_valid(id) then
 		return 410, "Preview stopped or buffer closed", "text/plain"
 	end
-	if resource == "content" then
+	local requested_revision = resource:match("^content%?revision=(%w*)$")
+	if resource == "content" or requested_revision then
 		local tick = vim.api.nvim_buf_get_changedtick(id)
 		local page = pages[id]
 		if page.tick ~= tick or page.filetype ~= vim.bo[id].filetype then
 			local lines = vim.api.nvim_buf_get_lines(id, 0, -1, false)
 			page.html = vim.bo[id].filetype == "mermaid"
-					and ('<pre class="mermaid">' .. render.escape(table.concat(lines, "\n")) .. "</pre>")
+					and ('<pre class="mermaid" data-source-line="1" data-source-end="' .. #lines .. '">' .. render.escape(
+						table.concat(lines, "\n")
+					) .. "</pre>")
 				or render.render(lines)
 			page.tick = tick
 			page.filetype = vim.bo[id].filetype
 		end
+		local revision = tostring(tick) .. vim.bo[id].filetype
 		return 200,
 			vim.json.encode({
-				html = page.html,
+				html = requested_revision ~= revision and page.html or nil,
 				title = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(id), ":t"),
-				revision = tostring(tick) .. vim.bo[id].filetype,
+				revision = revision,
+				line = page.line,
 			}),
 			"application/json"
 	end
@@ -64,6 +69,7 @@ local function response(target)
 		[""] = { "page.html", "text/html" },
 		["preview.js"] = { "preview.js", "text/javascript" },
 		["mermaid.min.js"] = { "mermaid.min.js", "text/javascript" },
+		["markdown.css"] = { "markdown.css", "text/css" },
 	}
 	if files[resource] then
 		local file = files[resource]
@@ -146,7 +152,7 @@ local function accept(err)
 					.. content_type
 					.. "; charset=utf-8\r\nContent-Length: "
 					.. #body
-					.. "\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' https: http:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'\r\n\r\n"
+					.. "\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'\r\n\r\n"
 					.. body,
 				finish
 			)
@@ -171,12 +177,19 @@ function M.start(buf)
 			error(err)
 		end
 	end
-	pages[buf] = {}
+	local win = vim.fn.bufwinid(buf)
+	pages[buf] = { line = win ~= -1 and vim.api.nvim_win_get_cursor(win)[1] or 1 }
 	return "http://" .. origin .. prefix .. buf .. "/"
 end
 
 function M.active(buf)
 	return pages[buf] ~= nil
+end
+
+function M.follow(buf, line)
+	if pages[buf] then
+		pages[buf].line = line
+	end
 end
 
 return M

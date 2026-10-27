@@ -88,9 +88,9 @@ t.describe("Native Markdown renderer", function()
 			'<a href="https://github.com">',
 			'href="mailto:test@example.com"',
 			"<code>~~inline literal~~</code>",
-			"<details>",
-			"<summary>More information</summary>",
-			'<pre class="mermaid">',
+			"<details ",
+			">More information</summary>",
+			'class="mermaid"',
 			"three dots... and (c).",
 		}) do
 			t.expect(html).toContain(expected)
@@ -112,6 +112,30 @@ t.describe("Native Markdown renderer", function()
 		local html = render.render({ "```lua", 'print("á ~~ok~~")' })
 		t.expect(html).toContain("á ~~ok~~")
 		t.expect(html).not_.toContain("<s>")
+	end)
+	t.it("maps source lines for headings, paragraphs, code, tasks and table rows", function()
+		local html = render.render({
+			"# Heading",
+			"",
+			"First line",
+			"Second line",
+			"",
+			"```lua",
+			"print(1)",
+			"```",
+			"",
+			"- [x] Done",
+			"",
+			"| Header |",
+			"| --- |",
+			"| Cell |",
+		})
+		for _, line in ipairs({ 1, 3, 4, 6, 7, 10, 12, 14 }) do
+			t.expect(html).toContain('data-source-line="' .. line .. '"')
+		end
+		t.expect(html).toContain('data-source-end="8"')
+		t.expect(html).toContain('class="task-list-item"')
+		t.expect(html).toContain('<span data-source-line="7">print(1)</span>')
 	end)
 end)
 
@@ -162,9 +186,29 @@ t.describe("Native Markdown HTTP preview", function()
 		t.expect(get(url)).toContain("FoxVim Markdown Preview")
 		t.expect(get(url .. "preview.js")).toContain("mermaid.initialize")
 		t.expect(get(url .. "mermaid.min.js")).toContain("HTTP/1.1 200")
+		t.expect(get(url .. "markdown.css")).toContain(".markdown-body")
 		t.expect(get(url .. "content")).toContain("Windows preview")
 		vim.api.nvim_buf_set_lines(source, 0, -1, false, { "# Unsaved á" })
 		t.expect(get(url .. "content")).toContain("Unsaved á")
+	end)
+	t.it("sends cursor-only updates without retransmitting unchanged HTML", function()
+		vim.api.nvim_buf_set_lines(source, 0, -1, false, { "# Title", "", "Body" })
+		local function content(suffix)
+			return vim.json.decode(get(url .. suffix):match("\r?\n\r?\n(.*)$"))
+		end
+		local initial = content("content")
+		t.expect(initial.line).toBe(1)
+		t.expect(initial.html).toContain("Title")
+		vim.api.nvim_win_set_cursor(0, { 3, 0 })
+		vim.api.nvim_exec_autocmds("CursorMoved", { buffer = source })
+		local moved = content("content?revision=" .. initial.revision)
+		t.expect(moved.line).toBe(3)
+		t.expect(moved.revision).toBe(initial.revision)
+		t.expect(moved.html).toBe(nil)
+		vim.api.nvim_buf_set_lines(source, 2, -1, false, { "Edited body" })
+		local edited = content("content?revision=" .. initial.revision)
+		t.expect(edited.html).toContain("Edited body")
+		t.expect(edited.revision).not_.toBe(initial.revision)
 	end)
 	t.it("rejects missing tokens, foreign Host headers and path traversal", function()
 		local root = url:match("^(http://[^/]+)")

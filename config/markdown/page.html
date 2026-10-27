@@ -1,15 +1,21 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>FoxVim Markdown Preview</title>
+<link rel="stylesheet" href="markdown.css">
 <style>
-:root { color-scheme: light dark; font: 16px/1.6 system-ui,sans-serif; }
-body { max-width: 980px; margin: 32px auto; padding: 0 24px; overflow-wrap: anywhere; }
-pre, code { background: light-dark(#f2f3f5,#242830); border-radius: 5px; }
-code { padding: 2px 4px; } pre { padding: 16px; overflow: auto; } pre code { padding: 0; }
-table { border-collapse: collapse; } th,td { border: 1px solid #8888; padding: 6px 14px; }
-blockquote { border-left: 4px solid #8888; margin-left: 0; padding-left: 16px; }
-img,svg { max-width: 100%; } a { color: light-dark(#0969da,#7db7ff); }
-#status { font-size: 13px; opacity: .7; } .mermaid { background: white; color: black; }
+:root { color-scheme: light; font: 16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+:root[data-theme="dark"] { color-scheme: dark; }
+body { margin: 0; padding: 50vh 16px; background: var(--color-bg-secondary); color: var(--color-text-primary); }
+main { max-width: 980px; margin: 0 auto; }
+header { display: flex; align-items: center; gap: 16px; padding: 8px 16px; border: 1px solid var(--color-border-primary); border-bottom: 0; border-radius: 6px 6px 0 0; }
+#status { flex: 1; font-size: 13px; overflow-wrap: anywhere; }
+.markdown-body { border-radius: 0 0 6px 6px; }
+.markdown-body a:hover { text-decoration: underline; }
+.markdown-body .mermaid { text-align: center; }
+.markdown-body .mermaid svg { max-width: 100%; height: auto; }
+.markdown-body span[data-source-line]:empty::after { content: "\200b"; }
+button { color: inherit; background: transparent; border: 1px solid var(--color-border-primary); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+@media (max-width: 600px) { body { padding-inline: 8px; } .markdown-body { padding: 24px 16px; } }
 </style>
 <script src="mermaid.min.js" defer></script><script src="preview.js" defer></script>
-</head><body><div id="status" role="status">Connecting to FoxVim…</div><article class="markdown-body"></article></body></html>
+</head><body><main><header><div id="status" role="status">Connecting to FoxVim…</div><button id="theme" type="button" aria-label="Toggle light and dark theme">Theme</button></header><article class="markdown-body"></article></main></body></html>

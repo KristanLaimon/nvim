@@ -81,6 +81,15 @@ end
 function M.setup()
 	vim.filetype.add({ extension = { mermaid = "mermaid", mmd = "mermaid" } })
 	local group = vim.api.nvim_create_augroup("FoxMarkdownPreview", { clear = true })
+	vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "BufEnter", "WinScrolled" }, {
+		group = group,
+		callback = function()
+			local server = package.loaded["fox.markdown.server"]
+			if server then
+				server.follow(vim.api.nvim_get_current_buf(), vim.api.nvim_win_get_cursor(0)[1])
+			end
+		end,
+	})
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		group = group,
 		callback = function()

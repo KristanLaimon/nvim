@@ -83,12 +83,17 @@ end
 function M.render(lines)
 	-- shortcut: focused Markdown subset, extend with fixtures when documents need more CommonMark constructs.
 	local output, paragraph, list, fence, code = {}, {}, nil, nil, {}
-	local function emit(html)
+	local paragraph_start
+	local function emit(html, first, last)
+		if first then
+			html =
+				html:gsub("^(<[%w]+)", '%1 data-source-line="' .. first .. '" data-source-end="' .. (last or first) .. '"', 1)
+		end
 		output[#output + 1] = html
 	end
 	local function flush()
 		if #paragraph > 0 then
-			emit("<p>" .. inline(table.concat(paragraph, "\n")) .. "</p>")
+			emit("<p>" .. table.concat(paragraph, "\n") .. "</p>", paragraph_start, paragraph_start + #paragraph - 1)
 			paragraph = {}
 		end
 	end
@@ -98,11 +103,20 @@ function M.render(lines)
 			list = nil
 		end
 	end
-	local function close_code()
+	local function close_code(last)
 		local content = M.escape(table.concat(code, "\n"))
+		if fence.lang ~= "mermaid" then
+			local spans = {}
+			for number, line in ipairs(code) do
+				spans[#spans + 1] = '<span data-source-line="' .. (fence.first + number) .. '">' .. M.escape(line) .. "</span>"
+			end
+			content = table.concat(spans, "\n")
+		end
 		emit(
 			fence.lang == "mermaid" and ('<pre class="mermaid">' .. content .. "</pre>")
-				or ("<pre><code>" .. content .. "</code></pre>")
+				or ("<pre><code>" .. content .. "</code></pre>"),
+			fence.first,
+			last
 		)
 		fence, code = nil, {}
 	end
@@ -112,20 +126,20 @@ function M.render(lines)
 		local marker, lang = line:match("^%s*([`~]+)%s*([%w_-]*)%s*$")
 		if fence then
 			if marker and marker:sub(1, 1) == fence.char and #marker >= fence.size and lang == "" then
-				close_code()
+				close_code(i)
 			else
 				code[#code + 1] = line
 			end
 		elseif marker and #marker >= 3 then
 			flush()
 			close_list()
-			fence = { char = marker:sub(1, 1), size = #marker, lang = lang }
+			fence = { char = marker:sub(1, 1), size = #marker, lang = lang, first = i }
 		elseif table_separator(lines[i + 1]) and line:find("|", 1, true) then
 			flush()
 			close_list()
 			local alignment = cells(lines[i + 1])
-			local function row(value, tag)
-				local html = { "<tr>" }
+			local function row(value, tag, number)
+				local html = { '<tr data-source-line="' .. number .. '">' }
 				for column, cell in ipairs(cells(value)) do
 					local align = alignment[column] or ""
 					local style = align:match("^:.*:$") and "center" or (align:match(":$") and "right" or "left")
@@ -133,10 +147,10 @@ function M.render(lines)
 				end
 				return table.concat(html) .. "</tr>"
 			end
-			emit("<table><thead>" .. row(line, "th") .. "</thead><tbody>")
+			emit("<table><thead>" .. row(line, "th", i) .. "</thead><tbody>")
 			i = i + 2
 			while lines[i] and lines[i]:find("|", 1, true) and vim.trim(lines[i]) ~= "" do
-				emit(row(lines[i], "td"))
+				emit(row(lines[i], "td", i))
 				i = i + 1
 			end
 			emit("</tbody></table>")
@@ -150,12 +164,12 @@ function M.render(lines)
 			end
 			if heading and #heading <= 6 then
 				flush()
-				emit("<h" .. #heading .. ">" .. inline(title:gsub("%s+#+%s*$", "")) .. "</h" .. #heading .. ">")
+				emit("<h" .. #heading .. ">" .. inline(title:gsub("%s+#+%s*$", "")) .. "</h" .. #heading .. ">", i)
 			elseif vim.trim(line) == "" then
 				flush()
 			elseif line:match("^%s*>%s?") then
 				flush()
-				emit("<blockquote>" .. inline((line:gsub("^%s*>%s?", ""))) .. "</blockquote>")
+				emit("<blockquote>" .. inline((line:gsub("^%s*>%s?", ""))) .. "</blockquote>", i)
 			elseif item or numbered then
 				flush()
 				local kind = numbered and "ol" or "ul"
@@ -169,18 +183,21 @@ function M.render(lines)
 				local checkbox = checked
 						and ('<input type="checkbox" disabled' .. (checked ~= " " and " checked" or "") .. "> ")
 					or ""
-				emit("<li>" .. checkbox .. inline(label or value) .. "</li>")
+				emit((checked and '<li class="task-list-item">' or "<li>") .. checkbox .. inline(label or value) .. "</li>", i)
 			elseif line:match("^%s*<details>%s*$") or line:match("^%s*</details>%s*$") then
 				flush()
-				emit(vim.trim(line))
+				emit(vim.trim(line), line:match("<details>") and i or nil)
 			elseif line:match("^%s*<summary>.*</summary>%s*$") then
 				flush()
-				emit("<summary>" .. inline(line:match("<summary>(.*)</summary>")) .. "</summary>")
+				emit("<summary>" .. inline(line:match("<summary>(.*)</summary>")) .. "</summary>", i)
 			elseif line:match("^%s*%-%-%-+%s*$") or line:match("^%s*%*%*%*+%s*$") then
 				flush()
-				emit("<hr>")
+				emit("<hr>", i)
 			else
-				paragraph[#paragraph + 1] = line
+				if #paragraph == 0 then
+					paragraph_start = i
+				end
+				paragraph[#paragraph + 1] = '<span data-source-line="' .. i .. '">' .. inline(line) .. "</span>"
 			end
 		end
 		i = i + 1
@@ -188,7 +205,7 @@ function M.render(lines)
 	flush()
 	close_list()
 	if fence then
-		close_code()
+		close_code(#lines)
 	end
 	return table.concat(output, "\n")
 end

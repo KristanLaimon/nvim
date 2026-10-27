@@ -104,7 +104,7 @@ try {
       links: [...body.querySelectorAll('a[href]')].map(link => link.getAttribute('href')),
       text: body.textContent,
       code: body.querySelector('pre code')?.textContent,
-      inline: body.querySelector('p > code')?.textContent,
+      inline: body.querySelector('p code')?.textContent,
       summary: body.querySelector('details summary')?.textContent,
       diagram: body.querySelector('.mermaid svg')?.textContent,
     };
@@ -126,6 +126,29 @@ try {
   assert.equal(rendered.summary, 'More information');
   assert.ok(rendered.diagram.includes('GFM document'));
   console.log('PASS: GFM tables, tasks, strikethrough, autolinks, literal text, code, details and Mermaid');
+  const styles = await evaluate(`(() => {
+    const heading = getComputedStyle(document.querySelector('h1'));
+    const table = getComputedStyle(document.querySelector('td'));
+    const task = getComputedStyle(document.querySelector('.task-list-item'));
+    return { headingBorder: heading.borderBottomWidth, tablePadding: table.paddingLeft, taskStyle: task.listStyleType };
+  })()`);
+  assert.equal(styles.headingBorder, '1px');
+  assert.equal(styles.tablePadding, '13px');
+  assert.equal(styles.taskStyle, 'none');
+  await evaluate(`window.previewDiagram = document.querySelector('.mermaid svg')`);
+  lua(`(function()
+    vim.api.nvim_win_set_cursor(0, { 16, 0 })
+    vim.api.nvim_exec_autocmds('CursorMoved', { buffer = 0 })
+    return true
+  end)()`);
+  await until(() => evaluate('document.querySelector(\'[aria-current="location"]\')?.dataset.sourceLine === "16"'));
+  assert.ok(await evaluate("window.previewDiagram === document.querySelector('.mermaid svg')"));
+  console.log('PASS: original GitHub-like stylesheet and cursor updates preserve rendered Mermaid');
+  const wasDark = await evaluate('document.documentElement.dataset.theme === "dark"');
+  await evaluate('document.querySelector("#theme").click()');
+  await until(() => evaluate(`document.documentElement.dataset.theme === '${wasDark ? 'light' : 'dark'}' && Boolean(document.querySelector('.mermaid svg')) && window.previewDiagram !== document.querySelector('.mermaid svg')`));
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("article")).backgroundColor'), wasDark ? 'rgb(255, 255, 255)' : 'rgb(13, 17, 23)');
+  console.log('PASS: light/dark switch updates GitHub styling and Mermaid');
 
   lua(`(function()
     vim.api.nvim_buf_set_lines(0, 0, 1, false, {'# Updated without saving'})
@@ -142,6 +165,32 @@ try {
   end)()`);
   await until(() => evaluate('document.querySelector(".mermaid svg")?.textContent.includes("Standalone Lua server")'));
   console.log('PASS: standalone Mermaid renders through the same Lua server');
+  lua(`(function()
+    local lines = {}
+    for section = 1, 60 do
+      vim.list_extend(lines, {'# Section ' .. section, '', 'Paragraph for section ' .. section, '',
+        '\u0060\u0060\u0060lua', 'print(' .. section .. ')', '\u0060\u0060\u0060', ''})
+    end
+    vim.list_extend(lines, {'<details>', '<summary>Collapsed section</summary>', '', 'Hidden paragraph', '</details>'})
+    vim.bo.filetype = 'markdown'
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    vim.api.nvim_exec_autocmds('CursorMoved', { buffer = 0 })
+    return true
+  end)()`);
+  await until(() => evaluate('document.querySelector("h1")?.textContent === "Section 1"'));
+  await evaluate('window.originalHeading = document.querySelector("h1")');
+  for (const line of [1, 273, 81, 275, 278, 484, 473]) {
+    lua(`vim.api.nvim_input('${line}G')`);
+    await until(() => evaluate(`(() => {
+      const current = document.querySelector('[aria-current="location"]');
+      if (current?.dataset.sourceLine !== '${line}') return false;
+      const bounds = current.getBoundingClientRect();
+      return Math.abs(bounds.top + bounds.height / 2 - innerHeight / 2) < 3;
+    })()`));
+    assert.ok(await evaluate('window.originalHeading === document.querySelector("h1")'));
+  }
+  console.log('PASS: scrolling down/up centers headings, paragraph lines, code and collapsed details without replacing the DOM');
 } finally {
   connection?.close();
   if (editor && editor.exitCode === null) {

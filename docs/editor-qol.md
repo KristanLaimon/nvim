@@ -13,6 +13,9 @@ built-in networking; Node, npm and `markdown-preview.nvim` are not required.
 Mermaid diagrams in fenced blocks and standalone files use the attributed local
 JavaScript bundle in `config/markdown/`; no CDN or Mermaid CLI is used. Source
 buffers stay untouched. Edits update the same browser tab without saving.
+The preview uses the former plugin's attributed GitHub-like stylesheet, including
+headings, tables, code blocks and task lists. It follows the browser's light/dark
+color scheme; the header button switches themes manually.
 Restart Neovim after migrating from the old plugin, then run `:MarkdownPreview`.
 
 The browser also renders GitHub Flavored Markdown tables (including alignment
@@ -31,8 +34,13 @@ reports the error with that URL so you can open it manually. Explicit
 `g:mkdp_browser` and `g:mkdp_browserfunc` overrides are respected.
 The server binds only to `127.0.0.1` on a random port with a random URL token.
 Relative raster images inside the document directory are served (up to 10 MiB);
-parent directories and SVG/HTML files are not exposed. Browser scroll position
-is preserved across updates; editor-to-browser cursor synchronization is not provided.
+parent directories and SVG/HTML files are not exposed. Moving the editor cursor
+centers the corresponding source line in the browser, without taking keyboard
+focus from Neovim. Closed details open when the cursor enters their content.
+Source mappings cover paragraph/code lines, headings, list items and table rows;
+blank lines follow the nearest rendered block. The first and last blocks can
+also be centered. Cursor position is polled every 150 ms; unchanged HTML and
+Mermaid are retained instead of being sent or rendered again.
 
 ---
 

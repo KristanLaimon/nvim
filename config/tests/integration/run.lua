@@ -19,10 +19,14 @@
 local root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h:h:h")
 local arguments = {}
 local found_script = false
+local function script_path(value)
+	local path = vim.fs.normalize(vim.fn.fnamemodify(value, ":p"))
+	return vim.fn.has("win32") == 1 and path:lower() or path
+end
 for _, argument in ipairs(vim.v.argv or {}) do
 	if found_script then
 		arguments[#arguments + 1] = argument
-	elseif vim.fn.fnamemodify(argument, ":p") == vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p") then
+	elseif script_path(argument) == script_path(debug.getinfo(1, "S").source:sub(2)) then
 		found_script = true
 	end
 end

@@ -1010,8 +1010,16 @@ function M.show(view)
 	map(state.side_buf, "J", function()
 		M.insert_join(selected_object(state))
 	end)
-	map(state.side_buf, "gn", function()
-		M.notes(selected_object(state))
+	for _, key in ipairs({ "gn", "gN" }) do
+		map(state.side_buf, key, function()
+			M.notes(selected_object(state))
+		end)
+	end
+	map(state.side_buf, "gD", function()
+		local item = selected_object(state)
+		if item then
+			M.notes(item, "delete")
+		end
 	end)
 	map(state.side_buf, "b", function()
 		M.browse(selected_object(state))
@@ -2087,24 +2095,29 @@ function M.notes(item, action)
 		if not unchanged() then
 			return
 		end
-		M.select({ "Delete note", "Cancel" }, { prompt = "Delete note for " .. item.key .. "?" }, function(choice)
-			if choice ~= "Delete note" or not unchanged() then
-				return
-			end
-			local ok, err, code = (vim.uv or vim.loop).fs_unlink(path)
-			if not ok and code ~= "ENOENT" then
-				notify(err, vim.log.levels.ERROR)
-				return
-			end
-			if valid(buf, "buf") then
-				if valid(state.sql_win, "win") and valid(state.active, "buf") then
-					vim.api.nvim_win_set_buf(state.sql_win, state.active)
+		local words = { "maple", "river", "cloud", "stone", "ocean", "forest", "sunset", "meadow" }
+		local word = words[math.random(#words)]
+		vim.ui.input(
+			{ prompt = "Delete note for " .. item.key .. ': write the following word to confirm "' .. word .. '": ' },
+			function(answer)
+				if answer ~= word or not unchanged() then
+					return
 				end
-				vim.api.nvim_buf_delete(buf, { force = false })
+				local ok, err, code = (vim.uv or vim.loop).fs_unlink(path)
+				if not ok and code ~= "ENOENT" then
+					notify(err, vim.log.levels.ERROR)
+					return
+				end
+				if valid(buf, "buf") then
+					if valid(state.sql_win, "win") and valid(state.active, "buf") then
+						vim.api.nvim_win_set_buf(state.sql_win, state.active)
+					end
+					vim.api.nvim_buf_delete(buf, { force = false })
+				end
+				M.note_badges(state, active.profile)
+				M.refresh_view(state)
 			end
-			M.note_badges(state, active.profile)
-			M.refresh_view(state)
-		end)
+		)
 		return
 	end
 	state.note_keys = state.note_keys or {}
@@ -2382,7 +2395,7 @@ function M.help()
 			"FoxQueryRun statement / selection / section / file",
 			"FoxQueryCancel: cancel; reconnect if session is uncertain",
 			"FoxQueryResults / FoxQueryActivity: results / submitted SQL",
-			"Explorer/diagram: Enter inspect, J Insert JOIN, C column limit, b browse; / ? n N search; gn notes",
+			"Explorer/diagram: Enter inspect, J Insert JOIN, C column limit, b browse; / ? n N search; gn/gN notes, gD delete note",
 			"SQL files: Enter opens/toggles folders; a SQL, A folder, r rename, d delete; Alt+h/l tabs",
 			"Status: click/y copies; Enter error details",
 			"Results: H/L columns, J/K rows, Enter expand row, y copy, e export, gR follow FK",

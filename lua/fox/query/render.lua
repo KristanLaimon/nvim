@@ -54,7 +54,7 @@ function M.explorer(metadata, selected, notes, height)
 	vim.list_extend(lines, {
 		"──────",
 		"DATABASE EXPLORER",
-		"/ ? n N: search  Enter: inspect  b: browse  gn: notes",
+		"/ ? n N: search  Enter: inspect  b: browse  gn/gN: notes  gD: delete note",
 	})
 	return lines, objects
 end

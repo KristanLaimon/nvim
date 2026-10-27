@@ -5,6 +5,7 @@ dofile(vim.fn.stdpath("config") .. "/config/tests/query/neotree.lua")
 
 local function project(check)
 	local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
+	local old_input = vim.ui.input
 	local layout = require("fox.query.layout")
 	local old_layout_path = layout.path
 	layout.path = root .. "/global-layout.json"
@@ -12,6 +13,7 @@ local function project(check)
 	vim.api.nvim_set_current_dir(root)
 	query.setup()
 	local ok, err = pcall(check, root)
+	vim.ui.input = old_input
 	local state = query.state()
 	for buf, item in pairs(state.consoles) do
 		if item.client then
@@ -102,6 +104,12 @@ describe("FoxQuerier live workflow", function()
 
 	it("opens blank table notes and deletes them after confirmation", function()
 		project(function(root)
+			local pending, word
+			vim.ui.input = function(opts, callback)
+				word = opts.prompt:match('confirm "(%a+)"')
+				assert(word and opts.default == nil)
+				pending = callback
+			end
 			query.show("standard")
 			local state = query.state()
 			local item = { key = "school.students", name = "students", columns = {} }
@@ -116,10 +124,13 @@ describe("FoxQuerier live workflow", function()
 			vim.cmd("write")
 			expect(storage.read(root, relative)).toBe("Business note")
 			query.notes(nil, "delete")
-			vim.fn.maparg("<Esc>", "n", false, true).callback()
+			pending(nil)
 			expect(storage.read(root, relative)).toBe("Business note")
 			query.notes(nil, "delete")
-			vim.fn.maparg("<CR>", "n", false, true).callback()
+			pending("wrong")
+			expect(storage.read(root, relative)).toBe("Business note")
+			query.notes(nil, "delete")
+			pending(word)
 			expect(storage.read(root, relative)).toBeNil()
 			expect(vim.api.nvim_buf_is_valid(buf)).toBe(false)
 			expect(state.note_keys[item.key]).toBeNil()
@@ -127,14 +138,16 @@ describe("FoxQuerier live workflow", function()
 			query.notes(item)
 			expect(vim.api.nvim_buf_get_lines(0, 0, -1, false)).toEqual({ "" })
 			query.notes(nil, "delete")
-			vim.fn.maparg("<CR>", "n", false, true).callback()
+			pending(word)
 			expect(state.note_keys[item.key]).toBeNil()
 			query.notes(item)
 			vim.cmd("write")
 			vim.api.nvim_win_set_buf(state.sql_win, state.active)
-			state.selected = item.key
-			query.notes(nil, "delete")
-			vim.fn.maparg("<CR>", "n", false, true).callback()
+			query.refresh_view(state)
+			vim.api.nvim_set_current_win(state.side_win)
+			vim.api.nvim_win_set_cursor(state.side_win, { 1, 0 })
+			vim.fn.maparg("gD", "n", false, true).callback()
+			pending(word)
 			expect(storage.read(root, relative)).toBeNil()
 			expect(state.note_keys[item.key]).toBeNil()
 		end)

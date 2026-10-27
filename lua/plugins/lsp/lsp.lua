@@ -252,6 +252,7 @@ return {
 						cfg.capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = false
 					end
 
+					cfg.cmd = require("fox.lsp.tooling").resolve_command(cfg.cmd or (vim.lsp.config[server_name] or {}).cmd)
 					vim.lsp.config(server_name, cfg)
 					vim.lsp.enable(server_name)
 				end

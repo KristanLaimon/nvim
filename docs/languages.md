@@ -9,6 +9,8 @@ Nothing below installs automatically on first start: FOX maps packages from lang
 
 **Where a language's actual settings live**: `lua/fox/langs/<language>/init.lua` — LSP server settings, Mason package names, formatter assignment, debugger config and launch-profile runtimes are all defined there, one file per language. `lua/plugins/lsp/lsp.lua` (servers + completion), `lua/plugins/lsp/formatting.lua` (Conform), `lua/plugins/lsp/treesitter.lua` (parsers), `lua/plugins/editor/dap.lua` (debug adapters), and `lua/fox/core/installer.lua` (Mason install list) only *aggregate* what every language module exports — swapping a tool means editing the one language file, not four.
 
+LSP executable lookup first uses the configured spelling. If it is missing, FOX tries a case-insensitive filename match in `PATH` order (or the specified directory for explicit paths). Exact matches always win; ambiguous and non-executable matches are left unresolved. Arguments and custom launcher functions are unchanged. Restart Neovim after installing a missing server.
+
 ---
 
 ## 📋 Matrix

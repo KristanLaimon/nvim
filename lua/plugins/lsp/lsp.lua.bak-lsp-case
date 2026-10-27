@@ -1,0 +1,565 @@
+-- ============================================================================
+-- PLUGINS: LSP -- mason, nvim-lspconfig and blink.cmp.
+-- ============================================================================
+-- HOW A SERVER GETS ENABLED
+--   Every server's settings live in its owning language module, NOT here -- see
+--   lua/fox/langs/<lang>/init.lua's `M.lsp_config`, keyed by server name (e.g.
+--   lua/fox/langs/typescript/init.lua for vtsls/jsonls/biome/eslint). This file only:
+--   1. Merges every language's `lsp_config` into one `opts.servers` table.
+--   2. Adds settings that need a plugin only available at runtime (SchemaStore).
+--   3. Merges blink.cmp capabilities into each entry and enables it.
+--   A handful of generic, language-agnostic servers (taplo/yamlls/lemminx --
+--   TOML/YAML/XML have no per-language buffer-default module) are defined directly
+--   below instead of in a language module.
+--
+-- JSON / TOML SCHEMAS
+--   Bundled schemas in `schemas/` are preferred over the online SchemaStore
+--   copies, so validation works offline and cannot change under you.
+--
+-- COMPLETION
+--   blink.cmp config lives at the bottom of this file. Extra sources are declared
+--   in blink_sources.lua and editorconfig.lua.
+-- ============================================================================
+
+local function get_schema_uri(category, filename)
+	local path = vim.fs.normalize(vim.fn.stdpath("config") .. "/config/schemas/" .. category .. "/" .. filename)
+	return vim.uri_from_fname(path)
+end
+
+--- Generic, language-agnostic servers with no owning lua/fox/langs/<lang> module.
+local function generic_servers()
+	return {
+		taplo = {
+			settings = {
+				even_better_toml = {
+					schema = {
+						enabled = true,
+						repository = false,
+						associations = {
+							["^bunfig\\.toml$"] = get_schema_uri("toml", "bunfig.json"),
+							["^revive\\.toml$"] = get_schema_uri("toml", "revive.json"),
+							["revive\\.toml$"] = get_schema_uri("toml", "revive.json"),
+						},
+					},
+				},
+			},
+		},
+		yamlls = {
+			settings = {
+				yaml = {
+					schemaStore = {
+						enable = false,
+						url = "",
+					},
+					schemas = {
+						[get_schema_uri("yaml", "golangci.json")] = { ".golangci.yml", ".golangci.yaml", ".golangci.example.yml" },
+					},
+				},
+			},
+		},
+		lemminx = {
+			settings = {
+				xml = {
+					validation = {
+						enabled = true,
+						noGrammar = "hint",
+					},
+					completion = {
+						autoCloseTags = true,
+					},
+					fileAssociations = {
+						{
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
+							pattern = "*.csproj",
+						},
+						{
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
+							pattern = "*.props",
+						},
+						{
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
+							pattern = "*.targets",
+						},
+						{
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
+							pattern = "*.fsproj",
+						},
+						{
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
+							pattern = "*.vbproj",
+						},
+						{
+							systemId = vim.fn.stdpath("config") .. "/config/schemas/xml/msbuild.xsd",
+							pattern = "*.slnx",
+						},
+					},
+				},
+			},
+		},
+	}
+end
+
+--- Merges every language module's `lsp_config` into one servers table.
+local function build_servers()
+	local langs = require("fox.langs").langs
+	local servers = generic_servers()
+	for _, lang in pairs(langs) do
+		if lang.lsp_config then
+			for name, cfg in pairs(lang.lsp_config) do
+				servers[name] = cfg
+			end
+		end
+	end
+	return servers
+end
+
+vim.filetype.add({
+	extension = {
+		csproj = "xml",
+		fsproj = "xml",
+		vbproj = "xml",
+		props = "xml",
+		targets = "xml",
+		slnx = "xml",
+		sln = "sln",
+	},
+	filename = {
+		[".npmrc"] = "dosini",
+		["npmrc"] = "dosini",
+	},
+	pattern = {
+		[".*%.npmrc.*"] = "dosini",
+		[".*%.sln"] = "sln",
+	},
+})
+
+return {
+	{
+		-- Its own spec so `:Mason` exists on an empty nvim too. Without this, mason
+		-- is only ever pulled in as an nvim-lspconfig dependency, and setup() (which
+		-- registers the command) runs on BufReadPre — no file open, no :Mason.
+		"williamboman/mason.nvim",
+		cmd = "Mason",
+		opts = {},
+	},
+	{
+		"neovim/nvim-lspconfig",
+		event = { "BufReadPre", "BufReadPost", "BufNewFile", "FileType" },
+		cmd = { "LspInfo", "LspInstall", "LspStart" },
+		dependencies = {
+			"williamboman/mason.nvim",
+			"b0o/schemastore.nvim",
+		},
+		opts = function()
+			return {
+				servers = build_servers(),
+			}
+		end,
+		config = function(_, opts)
+			local has_blink, blink = pcall(require, "blink.cmp")
+
+			-- 0. Enrich jsonls / yamlls with SchemaStore and local schemas
+			local ok_schemastore, schemastore = pcall(require, "schemastore")
+			if ok_schemastore then
+				local yaml_schemas = schemastore.yaml.schemas()
+				yaml_schemas[get_schema_uri("yaml", "golangci.json")] =
+					{ ".golangci.yml", ".golangci.yaml", ".golangci.example.yml" }
+
+				opts.servers.yamlls = opts.servers.yamlls or {}
+				opts.servers.yamlls.settings = {
+					yaml = {
+						schemaStore = {
+							enable = false,
+							url = "",
+						},
+						schemas = yaml_schemas,
+					},
+				}
+
+				opts.servers.jsonls = opts.servers.jsonls or {}
+				opts.servers.jsonls.settings = {
+					json = {
+						schemas = schemastore.json.schemas({
+							select = {
+								"tsconfig.json",
+								"package.json",
+								"prettierrc.json",
+								".eslintrc",
+								"jsconfig.json",
+								"babelrc.json",
+								"Turborepo",
+								"biome.json",
+								"FoxVim Snippets Schema",
+							},
+							replace = {
+								["tsconfig.json"] = get_schema_uri("json", "tsconfig.json"),
+								["package.json"] = get_schema_uri("json", "package.json"),
+								-- ["prettierrc.json"] = get_schema_uri("json", "prettierrc.json"),
+								[".eslintrc"] = get_schema_uri("json", "eslintrc.json"),
+								["jsconfig.json"] = get_schema_uri("json", "jsconfig.json"),
+								["babelrc.json"] = get_schema_uri("json", "babelrc.json"),
+								["Turborepo"] = get_schema_uri("json", "turbo.json"),
+							},
+							extra = {
+								{
+									name = "prettierrc.json",
+									description = "Prettier configuration schema",
+									fileMatch = { "prettierrc.json", "prettier.config.json", ".prettierrc.astro.json" },
+									url = get_schema_uri("json", "prettierrc.json"),
+								},
+								{
+									name = "biome.json",
+									description = "Biome configuration schema",
+									fileMatch = { "biome.json", "biome.jsonc" },
+									url = get_schema_uri("json", "biome.json"),
+								},
+								{
+									name = "FoxVim Snippets Schema",
+									description = "VSCode-compatible snippet file schema",
+									fileMatch = { "config/snippets/*.json", "config/snippets/**/*.json" },
+									url = vim.uri_from_fname(vim.fn.stdpath("config") .. "/config/snippets/snippets.schema.json"),
+								},
+							},
+						}),
+						validate = { enable = true },
+					},
+				}
+			end
+
+			-- 1. Initialize Mason
+			require("mason").setup()
+			require("fox.lsp.tooling").setup(opts.servers)
+
+			-- 2. Setup configured servers in opts.servers
+			for server_name, config in pairs(opts.servers) do
+				if config.enabled ~= false then
+					local cfg = vim.deepcopy(config)
+					if has_blink then
+						cfg.capabilities = blink.get_lsp_capabilities(cfg.capabilities)
+					end
+
+					cfg.capabilities = vim.tbl_deep_extend(
+						"force",
+						vim.lsp.protocol.make_client_capabilities(),
+						cfg.capabilities or {},
+						require("fox.lsp.file_operations").capabilities()
+					)
+
+					if vim.fn.has("win32") == 1 then
+						cfg.capabilities = cfg.capabilities or vim.lsp.protocol.make_client_capabilities()
+						cfg.capabilities.workspace = cfg.capabilities.workspace or {}
+						cfg.capabilities.workspace.didChangeWatchedFiles = cfg.capabilities.workspace.didChangeWatchedFiles or {}
+						cfg.capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = false
+					end
+
+					vim.lsp.config(server_name, cfg)
+					vim.lsp.enable(server_name)
+				end
+			end
+
+			-- Re-trigger FileType autocmd for loaded buffers so newly enabled LSP servers attach
+			-- immediately to the buffer whose opening triggered lazy-loading of nvim-lspconfig.
+			vim.schedule(function()
+				local ignored_ui = {
+					["alpha"] = true,
+					["dashboard"] = true,
+					["neo-tree"] = true,
+					["help"] = true,
+					["lazy"] = true,
+					["mason"] = true,
+					["notify"] = true,
+					["qf"] = true,
+				}
+				for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+					if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf) then
+						local ft = vim.bo[buf].filetype
+						local bt = vim.bo[buf].buftype
+						if ft ~= "" and bt == "" and not ignored_ui[ft] then
+							pcall(vim.api.nvim_exec_autocmds, "FileType", { buffer = buf })
+						end
+					end
+				end
+			end)
+
+			vim.diagnostic.config({
+				virtual_text = {
+					source = "if_many",
+					prefix = "●",
+				},
+				underline = true,
+				signs = true,
+				severity_sort = true,
+			})
+
+			vim.api.nvim_create_autocmd("LspAttach", {
+				callback = function(args)
+					local client = vim.lsp.get_client_by_id(args.data.client_id)
+					if client and (client.name == "omnisharp" or client.name == "omnisharp_mono") then
+						-- Disable semantic tokens to prevent OmniSharp crash / editor freeze:
+						-- "System.ArgumentOutOfRangeException: Range must not span multiple lines"
+						client.server_capabilities.semanticTokensProvider = nil
+					end
+
+					-- Inlay hints are kept disabled on attach by default to prevent Neovim 0.10's upstream
+					-- runtime decoration provider bug (/usr/share/nvim/runtime/lua/vim/lsp/inlay_hint.lua:362)
+					-- from throwing "Invalid 'col': out of range" during active edits/imports.
+					-- Toggle on-demand via :ToggleInlayHints.
+					if vim.lsp.inlay_hint then
+						pcall(vim.lsp.inlay_hint.enable, false, { bufnr = args.buf })
+					end
+				end,
+			})
+
+			-- :LspInfo -- show active LSP clients for the current buffer in a float
+			vim.api.nvim_create_user_command("LspInfo", function()
+				local buf = vim.api.nvim_get_current_buf()
+				local clients = vim.lsp.get_clients({ bufnr = buf })
+				local lines = { "LSP clients attached to buffer " .. buf .. ":", "" }
+				if #clients == 0 then
+					table.insert(lines, "  (none)")
+				else
+					for _, client in ipairs(clients) do
+						table.insert(lines, "  ● " .. client.name .. "  (id=" .. client.id .. ")")
+						local python_path = vim.tbl_get(client, "config", "settings", "python", "pythonPath")
+							or vim.tbl_get(client, "config", "settings", "basedpyright", "pythonPath")
+							or (client.config.cmd and client.config.cmd[1])
+						if python_path then
+							table.insert(lines, "    interpreter: " .. python_path)
+						end
+						local root = client.config.root_dir or client.root_dir
+						if root then
+							table.insert(lines, "    root:        " .. root)
+						end
+						table.insert(lines, "")
+					end
+				end
+				-- Open in a scratch float
+				local float_buf = vim.api.nvim_create_buf(false, true)
+				vim.api.nvim_buf_set_lines(float_buf, 0, -1, false, lines)
+				vim.bo[float_buf].modifiable = false
+				vim.bo[float_buf].filetype = "markdown"
+				local width = math.max(50, math.min(80, vim.o.columns - 4))
+				local height = math.min(#lines + 2, vim.o.lines - 4)
+				local win = vim.api.nvim_open_win(float_buf, true, {
+					relative = "editor",
+					row = math.floor((vim.o.lines - height) / 2),
+					col = math.floor((vim.o.columns - width) / 2),
+					width = width,
+					height = height,
+					style = "minimal",
+					border = "rounded",
+					title = " LSP Info ",
+					title_pos = "center",
+				})
+				vim.wo[win].wrap = false
+				-- close on q / Esc
+				for _, key in ipairs({ "q", "<Esc>" }) do
+					vim.keymap.set("n", key, "<cmd>close<CR>", { buffer = float_buf, silent = true })
+				end
+			end, { desc = "Show active LSP clients for the current buffer" })
+
+			local function toggle_inlay_hints()
+				if vim.lsp.inlay_hint then
+					local current = vim.lsp.inlay_hint.is_enabled({ bufnr = 0 })
+					vim.lsp.inlay_hint.enable(not current, { bufnr = 0 })
+					local status_msg = not current and "enabled 💡" or "disabled 🙈"
+					require("fox.core.notify").notify("Inlay hints " .. status_msg, vim.log.levels.INFO, "LSP")
+				end
+			end
+
+			pcall(
+				vim.api.nvim_create_user_command,
+				"ToggleInlayHints",
+				toggle_inlay_hints,
+				{ desc = "Toggle LSP Inlay Hints" }
+			)
+			pcall(
+				vim.api.nvim_create_user_command,
+				"FoxToggleInlayHints",
+				toggle_inlay_hints,
+				{ desc = "Toggle LSP Inlay Hints" }
+			)
+
+			-- The TS server advertises `diagnosticProvider`, so nvim pulls and refreshes
+
+			-- Stop active LSP clients whenever the working directory/project changes in single-project mode.
+			-- In multi-environment mode, each environment preserves its scoped LSPs until explicitly closed.
+			vim.api.nvim_create_autocmd("DirChanged", {
+				group = vim.api.nvim_create_augroup("LspProjectAutoStop", { clear = true }),
+				callback = function()
+					if vim.g._fox_environment_switching then
+						return
+					end
+					if
+						_G.Environments
+						and _G.Environments.has_multiple_environments
+						and _G.Environments.has_multiple_environments()
+					then
+						return
+					end
+					for _, client in ipairs(vim.lsp.get_clients()) do
+						client:stop()
+					end
+				end,
+			})
+		end,
+	},
+	{
+		"saghen/blink.cmp",
+		event = { "InsertEnter", "CmdlineEnter" },
+		-- Prebuilt fuzzy-match libraries are published for release tags. Tracking
+		-- main leaves Blink unable to determine which binary to download.
+		version = "1.*",
+		opts = function(_, opts)
+			local is_native_termux
+			local is_mobile
+			local env_ok, env_mod = pcall(require, "fox.core.environment")
+			if env_ok then
+				local env = env_mod.detect()
+				is_native_termux = env.is_termux and not env.is_proot
+				is_mobile = env.is_mobile or env.is_termux or env.is_proot
+			else
+				is_native_termux = vim.env.TERMUX_VERSION ~= nil or vim.fn.isdirectory("/data/data/com.termux") == 1
+				is_mobile = is_native_termux
+			end
+
+			local merged = vim.tbl_deep_extend("force", opts or {}, {
+				enabled = function()
+					return vim.bo.filetype ~= "foxinputmodal" and vim.b.completion ~= false
+				end,
+				snippets = {
+					preset = "default",
+				},
+				keymap = {
+					preset = "default",
+					["<CR>"] = { "accept", "fallback" },
+					["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
+					["<C-@>"] = { "show", "show_documentation", "hide_documentation" },
+					["<C-l>"] = { "show", "show_documentation", "hide_documentation" },
+					["<Up>"] = { "select_prev", "fallback" },
+					["<Down>"] = { "select_next", "fallback" },
+				},
+				appearance = { nerd_font_variant = "mono" },
+				completion = {
+					list = {
+						selection = {
+							preselect = false,
+							auto_insert = false,
+						},
+					},
+					menu = {
+						border = "rounded",
+						max_height = is_mobile and 8 or 15,
+						draw = {
+							components = {
+								kind_icon = {
+									ellipsis = false,
+									text = function(ctx)
+										local colorify = require("fox.lsp.colorify")
+										local hex = colorify.extract_color_from_ctx(ctx)
+										if hex then
+											return " ██ "
+										end
+										return colorify.get_kind_icon(ctx.kind)
+									end,
+									highlight = function(ctx)
+										local colorify = require("fox.lsp.colorify")
+										local hex = colorify.extract_color_from_ctx(ctx)
+										if hex then
+											return colorify.get_or_create_color_hl(hex)
+										end
+										return colorify.get_kind_hl(ctx.kind)
+									end,
+								},
+								kind = {
+									text = function(ctx)
+										return require("fox.lsp.colorify").format_kind_label(ctx.kind)
+									end,
+								},
+							},
+							columns = {
+								{ "kind_icon" },
+								{ "label", "label_description", gap = 1 },
+								{ "kind" },
+							},
+						},
+						-- Don't auto-pop inside a freshly inserted empty pair ("{}" from autopairs).
+						-- Only auto-show is suppressed: <C-space> still opens the menu there,
+						-- which is what `import { | }` needs.
+						auto_show = function()
+							local line = vim.api.nvim_get_current_line()
+							local col = vim.api.nvim_win_get_cursor(0)[2]
+							local before, after = line:sub(col, col), line:sub(col + 1, col + 1)
+							local pairs_map = { ["{"] = "}", ["["] = "]", ["("] = ")" }
+							return pairs_map[before] ~= after
+						end,
+					},
+					documentation = { auto_show = false },
+					trigger = {
+						-- "{" and "[" open bracket-pair snippets on every keystroke otherwise
+						show_on_blocked_trigger_characters = { " ", "\n", "\t", "{", "[", "(" },
+					},
+				},
+				signature = {
+					enabled = not is_mobile,
+					window = { border = "rounded" },
+				},
+				sources = {
+					-- Debug repl completes from the stopped frame only, never lsp/buffer words.
+					per_filetype = { ["dap-repl"] = { "dap" } },
+					providers = {
+						dap = { name = "DAP", module = "fox.lsp.dap_repl_source", async = true },
+						snippets = {
+							module = "fox.lsp.snippets",
+							opts = {
+								search_paths = { vim.fn.stdpath("config") .. "/config/snippets" },
+								friendly_snippets = false,
+								catalog_path = vim.fn.stdpath("config") .. "/config/snippet_catalog",
+								filter_snippets = function(_, file)
+									return not file:match("schema%.json$")
+								end,
+							},
+						},
+					},
+				},
+				fuzzy = {
+					implementation = is_native_termux and "lua" or "prefer_rust_with_warning",
+					prebuilt_binaries = {
+						download = not is_native_termux,
+					},
+					sorts = {
+						-- always rank snippets (LSP kind 15) below real completions, regardless of fuzzy score
+						function(a, b)
+							local a_snip, b_snip = a.kind == 15, b.kind == 15
+							if a_snip ~= b_snip then
+								return b_snip
+							end
+						end,
+						-- always rank struct fields, properties, enums, enum members & constants (LSP kinds 5, 10, 13, 20, 21) at top
+						function(a, b)
+							local priority_kinds = { [5] = true, [10] = true, [13] = true, [20] = true, [21] = true }
+							local a_prio = priority_kinds[a.kind] == true
+							local b_prio = priority_kinds[b.kind] == true
+							if a_prio ~= b_prio then
+								return a_prio
+							end
+						end,
+						require("fox.query.completion").compare,
+						"score",
+						"sort_text",
+					},
+				},
+			})
+
+			merged.sources = merged.sources or {}
+			merged.sources.default = merged.sources.default or {}
+			for _, v in ipairs({ "lsp", "path", "snippets", "buffer" }) do
+				if not vim.tbl_contains(merged.sources.default, v) then
+					table.insert(merged.sources.default, v)
+				end
+			end
+			return merged
+		end,
+		opts_extend = { "sources.default" },
+	},
+}

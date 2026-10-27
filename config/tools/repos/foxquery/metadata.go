@@ -148,7 +148,7 @@ func (d *driver) metadata(ctx context.Context) (any, error) {
 					t["columns"] = append(t["columns"].([]object), object{"name": r[1], "type": r[2], "nullable": text(r[3]) == "YES", "default": r[4]})
 				}
 			}
-			rs, e = query("SELECT tc.table_name,kcu.column_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu USING(constraint_catalog,constraint_schema,constraint_name,table_catalog,table_schema,table_name) WHERE tc.table_schema=? AND tc.constraint_type='PRIMARY KEY'", schema)
+			rs, e = query("SELECT tc.table_name,kcu.column_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu USING(constraint_catalog,constraint_schema,constraint_name,table_schema,table_name) WHERE tc.table_schema=? AND tc.constraint_type='PRIMARY KEY'", schema)
 			if e != nil {
 				return nil, e
 			}

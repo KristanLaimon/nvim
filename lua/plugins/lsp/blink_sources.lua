@@ -24,7 +24,7 @@ local sources = {
 		module = "fox.query.completion",
 		score_offset = 100,
 		enabled = function()
-			return vim.bo.filetype == "sql" and vim.b.fox_query_root ~= nil
+			return vim.bo.filetype == "sql" and (vim.b.fox_sql_dialect ~= nil or vim.b.fox_query_root ~= nil)
 		end,
 	},
 	launch_json = {

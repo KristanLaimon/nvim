@@ -37,6 +37,42 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("asks for a new SQL dialect, remembers it, and leaves no file on cancellation", function()
+		project(function(root)
+			query.show()
+			local state = query.state()
+			local old_select, selected = query.select, "mysql"
+			local ok, err = pcall(function()
+				query.select = function(options, opts, callback)
+					expect(opts.prompt).toBe("SQL dialect")
+					if selected == "postgres" then
+						expect(options[1]).toBe("mysql")
+					end
+					callback(selected)
+				end
+				query.create("mysql.sql")
+				expect(require("fox.langs.sql.dialect").read(state.active)).toBe("mysql")
+				selected = "postgres"
+				query.create("postgres.sql")
+				expect(require("fox.langs.sql.dialect").read(state.active)).toBe("postgres")
+				expect(storage.load(root, "settings.json").sql_dialect).toBe("postgres")
+				local active, count = state.active, vim.tbl_count(state.consoles)
+				selected = nil
+				query.create("cancelled.sql")
+				expect(state.active).toBe(active)
+				expect(vim.tbl_count(state.consoles)).toBe(count)
+				expect(storage.read(root, "queries/cancelled.sql")).toBeNil()
+				query.syntax_check()
+				expect(storage.load(root, "settings.json").sql_syntax_check).toBe(true)
+				query.syntax_check()
+				expect(storage.load(root, "settings.json").sql_syntax_check).toBe(false)
+			end)
+			query.select = old_select
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
 	it("shows full prepare and execution errors as toasts and keeps them in the activity bar", function()
 		project(function()
 			query.show()
@@ -690,12 +726,15 @@ describe("FoxQuerier live workflow", function()
 			expect(storage.write(root, "queries/a.sql", "SELECT 1;")).toBeTruthy()
 			expect(storage.write(root, "queries/nested/z.sql", "SELECT 2;")).toBeTruthy()
 			query.new("nested/z.sql")
+			vim.api.nvim_buf_call(state.active, function()
+				vim.cmd("write")
+			end)
 			expect(query.close_root(root)).toBeTruthy()
 			query.show()
 			state = query.state()
 			expect(vim.b[state.active].fox_query_document).toBe("queries/nested/z.sql")
 			expect(vim.tbl_count(state.consoles)).toBe(1)
-			expect(vim.api.nvim_buf_get_lines(state.active, 0, -1, false)[1]).toBe("SELECT 2;")
+			expect(vim.api.nvim_buf_get_lines(state.active, 0, -1, false)[2]).toBe("SELECT 2;")
 			expect(query.close_root(root)).toBeTruthy()
 			vim.fn.delete(storage.path(root, "queries/nested/z.sql"))
 			query.show()
@@ -760,14 +799,17 @@ describe("FoxQuerier live workflow", function()
 		project(function(root)
 			query.show("standard")
 			local state, files = query.state(), require("fox.query.files")
+			vim.api.nvim_buf_call(state.active, function()
+				vim.cmd("write")
+			end)
 			local old_input, old_select = vim.ui.input, query.select
 			local value, choice = nil, "Delete"
 			local ok, err = pcall(function()
 				vim.ui.input = function(_, callback)
 					callback(value)
 				end
-				query.select = function(_, _, callback)
-					callback(choice)
+				query.select = function(items, opts, callback)
+					callback(opts.prompt == "SQL dialect" and items[1] or choice)
 				end
 				local function select(relative)
 					query.refresh_view(state)
@@ -814,6 +856,7 @@ describe("FoxQuerier live workflow", function()
 				for console in pairs(state.consoles) do
 					if vim.b[console].fox_query_document == "queries/archive/renamed.sql" then
 						restored = console
+						vim.bo[console].modified = false
 					end
 				end
 				expect(restored ~= nil).toBeTruthy()
@@ -1134,7 +1177,7 @@ describe("FoxQuerier live workflow", function()
 			vim.api.nvim_win_set_cursor(0, { selected, 0 })
 			vim.fn.maparg("<CR>", "n", false, true).callback()
 			local saved = state.active
-			expect(vim.api.nvim_buf_get_lines(saved, 0, -1, false)[1]).toBe("SELECT 42;")
+			expect(vim.api.nvim_buf_get_lines(saved, 0, -1, false)[2]).toBe("SELECT 42;")
 			query.new("second.sql")
 			vim.fn.maparg("<A-h>", "n", false, true).callback()
 			expect(state.active).toBe(saved)

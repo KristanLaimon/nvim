@@ -98,7 +98,7 @@ local function query_keys(buf)
 		},
 		gN = {
 			function()
-				M.new()
+				M.create()
 			end,
 			"New query",
 		},
@@ -409,21 +409,31 @@ function M.file_action(action)
 		if action == "create" and not value:match("%.sql$") then
 			value = value .. ".sql"
 		end
-		local ok, err = files.create(state, value, action == "folder")
-		if ok then
-			local folder = vim.fs.dirname(value)
-			while folder ~= "." do
-				state.query_expanded[folder] = true
-				folder = vim.fs.dirname(folder)
+		local function create(name)
+			if action == "create" and not name then
+				return
 			end
+			local ok, err = files.create(state, value, action == "folder")
+			if ok then
+				local folder = vim.fs.dirname(value)
+				while folder ~= "." do
+					state.query_expanded[folder] = true
+					folder = vim.fs.dirname(folder)
+				end
+			end
+			if ok and action == "folder" then
+				state.query_expanded[value] = true
+			end
+			if ok and action == "create" then
+				M.new(value, name)
+			end
+			finish(ok, err)
 		end
-		if ok and action == "folder" then
-			state.query_expanded[value] = true
+		if action == "create" then
+			M.choose_dialect(state, create)
+		else
+			create()
 		end
-		if ok and action == "create" then
-			M.new(value)
-		end
-		finish(ok, err)
 	end)
 end
 
@@ -433,6 +443,12 @@ local function current_metadata(state)
 		state.metadata = item.metadata
 	elseif item then
 		state.metadata, state.note_keys = { tables = {}, relations = {} }, {}
+	end
+	if valid(state.active, "buf") then
+		local dialect = require("fox.langs.sql.dialect").read(state.active)
+		if dialect then
+			state.metadata = vim.tbl_extend("force", state.metadata, { syntax = dialect })
+		end
 	end
 	return state.metadata
 end
@@ -467,7 +483,10 @@ local function mark_statement(state)
 	if #text > 128 * 1024 then
 		return
 	end
-	local engine = active.syntax or active.profile and active.profile.engine
+	local engine = require("fox.langs.sql.dialect").read(buf)
+		or vim.b[buf].fox_sql_dialect
+		or active.syntax
+		or active.profile and active.profile.engine
 	for _, statement in ipairs(sql.statements(text, engine) or {}) do
 		if offset >= statement.first and offset <= statement.last then
 			local first = statement.first + (statement.sql:find("%S") or 1) - 1
@@ -548,6 +567,8 @@ function M.refresh_view(state)
 		.. state.view:upper()
 		.. "] "
 		.. label
+		.. " | "
+		.. (require("fox.langs.sql.dialect").read(state.active or 0) or "SQL")
 		.. " | "
 		.. (connected and "READ ONLY" or "disconnected")
 		.. " | "
@@ -1015,7 +1036,95 @@ function M.close_buffer(buf, force)
 	M.refresh_view(state)
 end
 
-function M.new(relative)
+function M.choose_dialect(state, callback)
+	local dialect = require("fox.langs.sql.dialect")
+	local options, err = dialect.options(state.root)
+	if not options then
+		notify(err, vim.log.levels.ERROR)
+		return
+	end
+	M.select(options, {
+		prompt = "SQL dialect",
+		format_item = function(name)
+			return dialect.names[name]
+		end,
+	}, function(name)
+		if M.states[state.root] == state and storage.root() == state.root then
+			callback(name)
+		end
+	end)
+end
+
+function M.create(relative)
+	local state = M.state()
+	M.choose_dialect(state, function(name)
+		if name then
+			M.new(relative, name)
+		end
+	end)
+end
+
+function M.dialect(name)
+	local state = M.state(vim.b.fox_sql_root or vim.b.fox_query_root)
+	local buf = vim.api.nvim_get_current_buf()
+	if vim.bo[buf].filetype ~= "sql" then
+		local _
+		_, buf = console(state)
+	end
+	if not buf then
+		return
+	end
+	local function apply(choice)
+		if not choice or not valid(buf, "buf") then
+			return
+		end
+		local ok, err = require("fox.langs.sql.dialect").set(buf, choice, state.root)
+		if not ok then
+			notify(err, vim.log.levels.ERROR)
+			return
+		end
+		require("fox.langs.sql.diagnostics").check(buf)
+		M.refresh_view(state)
+	end
+	if name and name ~= "" then
+		apply(name)
+	else
+		M.choose_dialect(state, apply)
+	end
+end
+
+function M.syntax_check()
+	local state = M.state(vim.b.fox_sql_root or vim.b.fox_query_root)
+	local settings, err = storage.load(state.root, "settings.json", {})
+	if not settings then
+		notify(err, vim.log.levels.ERROR)
+		return
+	end
+	settings.sql_syntax_check = settings.sql_syntax_check ~= true
+	local saved, save_err = storage.save(state.root, "settings.json", settings)
+	if not saved then
+		notify(save_err, vim.log.levels.ERROR)
+		return
+	end
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.b[buf].fox_sql_root == state.root then
+			require("fox.langs.sql.diagnostics").check(buf)
+		end
+	end
+	notify(
+		"General SQL syntax checking "
+			.. (settings.sql_syntax_check and "on" or "off")
+			.. "; dialect checks always on"
+			.. (
+				settings.sql_syntax_check
+					and vim.fn.executable("sqlfluff") ~= 1
+					and ". Install SQLFluff using :LanguageManager"
+				or ""
+			)
+	)
+end
+
+function M.new(relative, dialect)
 	local state = M.state()
 	if relative and (not relative:match("%.sql$") or not require("fox.query.files").path(state.root, relative)) then
 		notify("Use a relative .sql path inside the queries folder", vim.log.levels.ERROR)
@@ -1024,6 +1133,13 @@ function M.new(relative)
 	state.next_query = (state.next_query or 0) + 1
 	relative = "queries/" .. (relative or ("query-" .. os.date("%Y%m%d-%H%M%S") .. "-" .. state.next_query .. ".sql"))
 	local buf = storage.document_buffer(state.root, relative, "sql")
+	if dialect then
+		local ok, err = require("fox.langs.sql.dialect").set(buf, dialect, state.root)
+		if not ok then
+			notify(err, vim.log.levels.ERROR)
+		end
+	end
+	require("fox.langs.sql").attach(buf, state.root)
 	state.consoles[buf] = state.consoles[buf] or { status = "idle", params = {} }
 	state.active = buf
 	if state.consoles[buf].metadata then
@@ -1577,11 +1693,15 @@ function M.autorun(state)
 	if #text > 128 * 1024 then
 		return
 	end
-	local statement = sql.scope(text, offset, "statement", nil, item.syntax or item.profile.engine)
+	local engine = require("fox.langs.sql.dialect").read(state.active)
+		or vim.b[state.active].fox_sql_dialect
+		or item.syntax
+		or item.profile.engine
+	local statement = sql.scope(text, offset, "statement", nil, engine)
 	if not statement then
 		return
 	end
-	local tokens, incomplete = sql.tokens(statement, item.syntax or item.profile.engine)
+	local tokens, incomplete = sql.tokens(statement, engine)
 	if incomplete or not tokens[1] or tokens[1].kind ~= "word" or tokens[1].upper ~= "SELECT" then
 		return
 	end
@@ -1645,7 +1765,11 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 	if supplied_sql then
 		query = supplied_sql
 	else
-		query, scope_err = sql.scope(text, offset, kind or "statement", selection, item.syntax or profile.engine)
+		local engine = require("fox.langs.sql.dialect").read(buf)
+			or vim.b[buf].fox_sql_dialect
+			or item.syntax
+			or profile.engine
+		query, scope_err = sql.scope(text, offset, kind or "statement", selection, engine)
 	end
 	if not query then
 		notify(scope_err, vim.log.levels.WARN)
@@ -1675,11 +1799,11 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 	end
 	local connection = item.client
 	connection.busy, item.status = true, "validating " .. (kind or "statement")
-	connection:request("prepare", { sql = query }, function(prepared, prepare_err, detail)
+	connection:request("prepare", { sql = query }, function(prepared, prepare_err, prepare_detail)
 		if prepare_err then
 			connection.busy = false
 			item.status = prepare_err
-			item.error_detail = detail and detail ~= vim.NIL and detail or prepare_err
+			item.error_detail = prepare_detail and prepare_detail ~= vim.NIL and prepare_detail or prepare_err
 			notify(item.error_detail, vim.log.levels.ERROR)
 			M.refresh_view(state)
 			if item.auto_pending then

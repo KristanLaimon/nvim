@@ -115,6 +115,8 @@ M.commands = {
 	{ name = "Query: Run Current Statement in Popup", cmd = "FoxQueryRunPopup statement", category = "Query" },
 	{ name = "Query: Toggle Automatic SELECT Execution", cmd = "FoxQueryAutoRun", category = "Query" },
 	{ name = "Query: Database Completion", cmd = "FoxQueryComplete", category = "Query" },
+	{ name = "Query: SQL Dialect", cmd = "FoxQueryDialect", category = "Query" },
+	{ name = "Query: Toggle General SQL Syntax Checking", cmd = "FoxQuerySyntaxCheck", category = "Query" },
 	{ name = "Query: Run Selected SQL", cmd = "FoxQueryRun selection", category = "Query" },
 	{ name = "Query: Run Section", cmd = "FoxQueryRun section", category = "Query" },
 	{ name = "Query: Run File", cmd = "FoxQueryRun file", category = "Query" },

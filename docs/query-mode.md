@@ -15,7 +15,7 @@ FoxQuerier adds a read-only database workspace to the current project. The defau
 
 For PowerShell in Windows Terminal, run `./config/scripts/setup-powershell.ps1` and restart Windows Terminal to forward Ctrl+Enter, Ctrl+Shift+Enter, and Ctrl+Space to Neovim. `./config/scripts/unsetup-powershell.ps1` removes that forwarding. Ctrl+Alt+O remains an alternative direct mode switch. Other terminals/operating systems may intercept keys; Ex commands and the palette remain available. No new leader shortcuts are added.
 
-The status bar shows **[Editor | Query]** in every theme: the current workflow uses normal text color and the other is dimmed. F2 retains rename; F3 switches workflows and Shift+F3 toggles the diagram. Query also has a dedicated bottom activity bar: SQL status/timing/submitted SQL on the left and **[Default | Visually]** on the right (the active view has an asterisk). Failed executions show the full server diagnostic in RAM. Click the bar from any Query pane, or focus it and press `y`, to copy the full diagnostic to the system clipboard; Enter opens the multiline error popup. Long lines can be scrolled horizontally. Diagnostics may contain query values and are never saved automatically.
+The status bar shows **[Editor | Query]** in every theme: the current workflow uses normal text color and the other is dimmed. F2 retains rename; F3 switches workflows and Shift+F3 toggles the diagram. Query also has a dedicated bottom activity bar: SQL status/timing/submitted SQL on the left and **[Default | Visually]** on the right (the active view has an asterisk). Failed preparation and execution requests show the full diagnostic in an error toast and retain it in the activity bar in RAM. Click the bar from any Query pane, or focus it and press `y`, to copy the full diagnostic to the system clipboard; Enter opens the multiline error popup. Long lines can be scrolled horizontally. Diagnostics may contain query values and are never saved automatically.
 
 The statement at the SQL cursor has accent-colored lines above and below it that follow typing and cursor movement without executing SQL. Table details opened with Enter fit their contents within the available editor area, overriding older saved inspector sizes.
 
@@ -71,6 +71,8 @@ Text values appear in double quotes, while numbers and NULL remain unquoted. Ent
 | `:FoxQueryRunPopup [statement/selection/section/file]` | Execute SQL and open its results in a 90% popup. |
 | `:FoxQueryBrowsePopup` | Browse the selected table in a 90% results popup. |
 | `:FoxQueryAutoRun` | Opt in/out of automatic SELECT execution (disabled by default). |
+| `:FoxQueryDialect [mysql/postgres/sqlite]` | Choose the file dialect (persisted as a SQL metadata comment). |
+| `:FoxQuerySyntaxCheck` | Toggle general syntax diagnostics for the project (off by default); dialect warnings stay on. |
 | `:FoxQueryComplete` | Open cached database completion in Insert mode. |
 | `:FoxQueryRun selection` | Execute the last character/line selection; block selections are rejected. |
 | `:FoxQueryRun section`, `:FoxQueryRun file` | Execute an explicit section or file, in order, stopping on error. |
@@ -151,7 +153,7 @@ The earlier MySQL 5.7.44 production check used the previous backend. Live MySQL/
 Run from the configuration root:
 
 ```text
-nvim --headless -u NONE -i NONE -l config/tests/run.lua query
+nvim --headless -u NONE -i NONE -l config/tests/run.lua query --only-failure
 ```
 
 Run from `config/tools/repos/foxquery/`:

@@ -552,6 +552,60 @@ function M.analyze(text, metadata, level)
 	return graph
 end
 
+function M.completion_graph(text, offset, metadata, level)
+	level = level or 0
+	local graph = M.analyze(text, metadata)
+	if level >= 24 or #text > 128 * 1024 then
+		return graph
+	end
+	local tokens = M.tokens(text, metadata.syntax or metadata.engine)
+	for index, token in ipairs(tokens) do
+		local next_token = tokens[index + 1]
+		if
+			token.kind == "symbol"
+			and token.value == "("
+			and next_token
+			and (next_token.upper == "SELECT" or next_token.upper == "WITH")
+			and token.last < offset
+		then
+			local depth, closing = 1, nil
+			for at = index + 1, #tokens do
+				if tokens[at].kind == "symbol" and tokens[at].value == "(" then
+					depth = depth + 1
+				end
+				if tokens[at].kind == "symbol" and tokens[at].value == ")" then
+					depth = depth - 1
+				end
+				if depth == 0 then
+					closing = tokens[at]
+					break
+				end
+			end
+			if not closing or offset <= closing.first then
+				local child = M.completion_graph(
+					text:sub(token.last + 1, closing and closing.first - 1 or #text),
+					offset - token.last,
+					metadata,
+					level + 1
+				)
+				local aliases = {}
+				for _, node in ipairs(child.nodes) do
+					if not node.nested then
+						aliases[node.alias:lower()] = true
+					end
+				end
+				for _, node in ipairs(graph.nodes) do
+					if not node.nested and node.table and not node.table.subquery and not aliases[node.alias:lower()] then
+						child.nodes[#child.nodes + 1] = node
+					end
+				end
+				return child
+			end
+		end
+	end
+	return graph
+end
+
 function M.join_candidates(metadata, graph)
 	local result = {}
 	for _, node in ipairs(graph.nodes) do

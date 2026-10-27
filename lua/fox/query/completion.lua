@@ -12,6 +12,38 @@ function M.get_completions(_, context, callback)
 	local query = package.loaded["fox.query"]
 	local state = query and query.states[vim.b[context.bufnr].fox_query_root or ""]
 	local items, seen = {}, {}
+	local engine = require("fox.langs.sql.dialect").read(context.bufnr) or vim.b[context.bufnr].fox_sql_dialect
+	if engine then
+		for _, item in ipairs(require("fox.langs.sql.functions").items(engine)) do
+			items[#items + 1], seen[item.label] = item, true
+		end
+	end
+	for _, keyword in ipairs({
+		"SELECT",
+		"FROM",
+		"WHERE",
+		"JOIN",
+		"LEFT JOIN",
+		"INNER JOIN",
+		"ON",
+		"GROUP BY",
+		"ORDER BY",
+		"LIMIT",
+		"AS",
+		"IS NULL",
+		"WITH",
+		"EXISTS",
+		"IN",
+		"HAVING",
+		"DISTINCT",
+		"UNION",
+		"CURRENT_DATE",
+		"CURRENT_TIME",
+		"CURRENT_TIMESTAMP",
+	}) do
+		items[#items + 1] = { label = keyword, kind = 14, detail = engine or "SQL" }
+		seen[keyword] = true
+	end
 	if state then
 		local text = table.concat(vim.api.nvim_buf_get_lines(context.bufnr, 0, -1, false), "\n")
 		if #text > 128 * 1024 then
@@ -24,9 +56,17 @@ function M.get_completions(_, context, callback)
 		for _, line in ipairs(vim.api.nvim_buf_get_lines(context.bufnr, 0, cursor[1] - 1, false)) do
 			offset = offset + #line + 1
 		end
-		local statement = sql.scope(text, offset, "statement", nil, state.metadata.syntax or state.metadata.engine)
-		local graph = sql.analyze(statement or text, state.metadata)
-		local line = vim.api.nvim_get_current_line():sub(1, vim.api.nvim_win_get_cursor(0)[2])
+		local metadata = vim.tbl_extend("force", state.metadata, { syntax = engine or state.metadata.syntax })
+		local statement = sql.scope(text, offset, "statement", nil, metadata.syntax or metadata.engine)
+		local statement_offset = offset
+		for _, scope in ipairs(sql.statements(text, metadata.syntax or metadata.engine) or {}) do
+			if offset >= scope.first and offset <= scope.last then
+				statement_offset = offset - scope.first + 1
+				break
+			end
+		end
+		local graph = sql.completion_graph(statement or text, statement_offset, metadata)
+		local line = (vim.api.nvim_buf_get_lines(context.bufnr, cursor[1] - 1, cursor[1], false)[1] or ""):sub(1, cursor[2])
 		local alias = line:match("([%w_]+)%.[%w_]*$")
 		local function add(label, kind, detail)
 			if not seen[label] then
@@ -41,36 +81,19 @@ function M.get_completions(_, context, callback)
 				end
 			end
 			for _, node in ipairs(graph.nodes) do
-				if node.alias:lower() == alias:lower() and node.table then
+				if not node.nested and node.alias:lower() == alias:lower() and node.table then
 					for _, column in ipairs(node.table.columns) do
 						add(column.name, 5, node.table.key .. " | " .. tostring(column.type))
 					end
 				end
 			end
 		else
-			for _, keyword in ipairs({
-				"SELECT",
-				"FROM",
-				"WHERE",
-				"JOIN",
-				"LEFT JOIN",
-				"INNER JOIN",
-				"ON",
-				"GROUP BY",
-				"ORDER BY",
-				"LIMIT",
-				"AS",
-				"IS NULL",
-				"WITH",
-			}) do
-				add(keyword, 14, "SQL")
-			end
 			for _, table in ipairs(state.metadata.tables or {}) do
 				add(table.key, 7, "table/view")
 			end
 			local columns = {}
 			for _, node in ipairs(graph.nodes) do
-				if node.table then
+				if node.table and not node.nested then
 					for _, column in ipairs(node.table.columns) do
 						add(node.alias .. "." .. column.name, 5, tostring(column.type))
 						local key = column.name:lower()

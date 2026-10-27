@@ -11,6 +11,8 @@ local commands = {
 	"FoxQueryBrowsePopup",
 	"FoxQueryAutoRun",
 	"FoxQueryComplete",
+	"FoxQueryDialect",
+	"FoxQuerySyntaxCheck",
 	"FoxQueryCancel",
 	"FoxQueryExplorer",
 	"FoxQueryInspect",
@@ -83,7 +85,7 @@ return {
 		end)
 		command("FoxQueryNew", function(args)
 			query.show()
-			query.new(args.args ~= "" and args.args or nil)
+			query.create(args.args ~= "" and args.args or nil)
 		end, { nargs = "?" })
 		command("FoxQueryOpen", function()
 			query.show()
@@ -124,6 +126,15 @@ return {
 			query.browse(nil, true)
 		end)
 		command("FoxQueryComplete", query.complete)
+		command("FoxQueryDialect", function(args)
+			query.dialect(args.args)
+		end, {
+			nargs = "?",
+			complete = function()
+				return { "mysql", "postgres", "sqlite" }
+			end,
+		})
+		command("FoxQuerySyntaxCheck", query.syntax_check)
 		command("FoxQueryAutoRun", function()
 			local state = query.state()
 			state.autorun = not state.autorun

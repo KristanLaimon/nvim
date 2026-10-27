@@ -1,5 +1,5 @@
 // Run from the config root: node config/tests/integration/markdown_browser.mjs
-// Requires Node 22+, Neovim, Chromium and the installed markdown-preview plugin.
+// Test driver requires Node 22+, Neovim and Chromium/Edge. The preview uses Lua only.
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -8,7 +8,9 @@ import { join } from 'node:path';
 
 const root = process.cwd();
 const temporary = mkdtempSync(join(tmpdir(), 'fox-markdown-'));
-const socket = join(temporary, 'nvim.sock');
+const socket = process.platform === 'win32' ? `\\\\.\\pipe\\fox-markdown-${process.pid}` : join(temporary, 'nvim.sock');
+const browser = process.env.FOX_TEST_BROWSER || (process.platform === 'win32'
+  ? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' : 'chromium');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function until(check) {
@@ -22,7 +24,7 @@ async function until(check) {
 
 function lua(code) {
   return execFileSync('nvim', [
-    '--server', socket, '--remote-expr', `luaeval('${code.replaceAll("'", "''")}')`,
+    '--headless', '--server', socket, '--remote-expr', `luaeval('${code.replaceAll("'", "''")}')`,
   ], { encoding: 'utf8' }).trim();
 }
 
@@ -32,14 +34,14 @@ try {
     '--headless', '-u', 'NONE', '-i', 'NONE', '-n', '--listen', socket,
     '-c', `lua
       vim.opt.rtp:prepend(${JSON.stringify(root)})
-      vim.opt.rtp:append(vim.fn.stdpath('data') .. '/lazy/markdown-preview.nvim')
       require('fox.markdown.browser').setup()
-      vim.cmd('runtime plugin/mkdp.vim')
       require('fox.markdown.browser').setup_commands()
-      vim.system = function(args) _G.preview_url = args[#args] end
+      require('fox.markdown.browser').open = function(url) _G.preview_url = url end
     `,
   ], { stdio: ['ignore', 'ignore', 'inherit'] });
-  await until(() => existsSync(socket));
+  await until(() => {
+    try { return lua('true'); } catch { return false; }
+  });
   lua(`(function()
     vim.cmd.edit('config/tests/fixtures/markdown/gfm.md')
     vim.bo.filetype = 'markdown'
@@ -47,8 +49,9 @@ try {
     return true
   end)()`);
   const url = await until(() => lua('_G.preview_url or ""'));
+  assert.match(url, /^http:\/\/127\.0\.0\.1:\d+\/[a-f0-9]+\/\d+\/$/, JSON.stringify(url));
 
-  chromium = spawn('chromium', [
+  chromium = spawn(browser, [
     '--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
     '--disable-extensions', '--no-proxy-server', '--remote-debugging-port=0',
     `--user-data-dir=${temporary}/chrome`, 'about:blank',
@@ -132,9 +135,16 @@ try {
   await until(() => evaluate('document.querySelector(".markdown-body h1")?.textContent.includes("Updated without saving")'));
   assert.equal(await evaluate('document.querySelectorAll("input[type=checkbox]").length'), 3);
   console.log('PASS: GFM preview updates without saving or reloading');
+  lua(`(function()
+    vim.bo.filetype = 'mermaid'
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, {'graph TD', 'A[Standalone Lua server] --> B[No Node runtime]'})
+    return true
+  end)()`);
+  await until(() => evaluate('document.querySelector(".mermaid svg")?.textContent.includes("Standalone Lua server")'));
+  console.log('PASS: standalone Mermaid renders through the same Lua server');
 } finally {
   connection?.close();
-  if (editor && existsSync(socket)) {
+  if (editor && editor.exitCode === null) {
     try {
       lua(`(function()
         vim.cmd('MarkdownPreviewStop')

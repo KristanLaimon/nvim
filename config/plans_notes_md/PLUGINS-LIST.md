@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **22 externos** y **73 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **21 externos** y **74 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -18,7 +18,6 @@ Total actual: **22 externos** y **73 specs locales activas**. El plan de sustitu
 **Editor**
 
 - `folke/snacks.nvim` — [`editor/neo-tree.lua`](../../lua/plugins/editor/neo-tree.lua)
-- `iamcco/markdown-preview.nvim` — [`editor/markdown.lua`](../../lua/plugins/editor/markdown.lua)
 - `lewis6991/gitsigns.nvim` — [`editor/gitsigns.lua`](../../lua/plugins/editor/gitsigns.lua)
 - `MeanderingProgrammer/render-markdown.nvim` — [`editor/markdown.lua`](../../lua/plugins/editor/markdown.lua)
 - `mfussenegger/nvim-dap` — [`editor/dap.lua`](../../lua/plugins/editor/dap.lua)
@@ -63,6 +62,7 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 **Editor**
 
 - `fox_packages` — [`editor/package-info.lua`](../../lua/plugins/editor/package-info.lua)
+- `fox_markdown_preview` — [`editor/markdown.lua`](../../lua/plugins/editor/markdown.lua); servidor/renderizador Lua y Mermaid JavaScript local atribuido, sin Node/npm.
 - `fox_buffer_cleaner` — [`fox/editor/buffer_cleaner.lua`](../../lua/plugins/fox/editor/buffer_cleaner.lua)
 - `fox_recent_projects` — [`editor/project.lua`](../../lua/plugins/editor/project.lua)
 - `fox_caps_lock` — [`fox/editor/caps_lock.lua`](../../lua/plugins/fox/editor/caps_lock.lua)

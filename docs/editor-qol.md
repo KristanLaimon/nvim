@@ -8,24 +8,31 @@ The small modules — each one file in `lua/plugins/fox/`, each fixing one speci
 
 With a Markdown, `.mermaid`, or `.mmd` file open, select **Toggle Live Markdown / Mermaid Browser Preview** in
 `:CommandPalette`, or run `:MarkdownPreviewToggle`. Use `:MarkdownPreviewStop`
-to stop the server. Mermaid diagrams inside fenced `mermaid` code blocks in
-Markdown are rendered by the existing plugin. Standalone Mermaid files use the
-same renderer through an in-memory Markdown copy; the source stays untouched.
-Edits update the preview without saving. Mermaid assets are served locally by
-the plugin, with no CDN or Mermaid CLI installation required.
+to stop the server. The server and Markdown renderer run in Lua using Neovim's
+built-in networking; Node, npm and `markdown-preview.nvim` are not required.
+Mermaid diagrams in fenced blocks and standalone files use the attributed local
+JavaScript bundle in `config/markdown/`; no CDN or Mermaid CLI is used. Source
+buffers stay untouched. Edits update the same browser tab without saving.
+Restart Neovim after migrating from the old plugin, then run `:MarkdownPreview`.
 
 The browser also renders GitHub Flavored Markdown tables (including alignment
 and escaped pipes), task lists (`- [ ]` / `- [x]`), strikethrough (`~~text~~`),
 automatic URL/email links, fenced code and HTML `<details>` sections. These can
 be mixed with Mermaid blocks in the same document. Quotes, dashes and ellipses
-stay literal by default, matching GitHub's punctuation behavior. Explicit
-`g:mkdp_preview_options` overrides are preserved.
+stay literal. The focused Lua renderer is not a complete CommonMark engine:
+nested lists, reference links, arbitrary HTML, syntax highlighting and math
+extensions are not implemented. Only safe `<details>`/`<summary>` HTML is accepted.
+Legacy `g:mkdp_preview_options` settings from the former renderer are not used.
 
 FoxVim opens the system browser through its native handler (Explorer on Windows,
 `open` on macOS, `xdg-open` on Linux, or `wslview` when available under WSL).
 The preview URL is also printed in `:messages`. If the handler fails, FoxVim
 reports the error with that URL so you can open it manually. Explicit
 `g:mkdp_browser` and `g:mkdp_browserfunc` overrides are respected.
+The server binds only to `127.0.0.1` on a random port with a random URL token.
+Relative raster images inside the document directory are served (up to 10 MiB);
+parent directories and SVG/HTML files are not exposed. Browser scroll position
+is preserved across updates; editor-to-browser cursor synchronization is not provided.
 
 ---
 

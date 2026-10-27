@@ -62,7 +62,7 @@ The shell-keybinding setup supports **Windows Terminal, Kitty, Foot, WezTerm, Al
 
 ## Plugin inventory
 
-FoxVim has **73 local plugin specs** across [`lua/plugins/`](lua/plugins) and **23 external plugins**, including lazy.nvim, pinned in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
+FoxVim has **74 local plugin specs** across [`lua/plugins/`](lua/plugins) and **21 external plugins**, including lazy.nvim, pinned in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
 
 ### Hand-crafted FoxVim plugins
 
@@ -82,7 +82,7 @@ FoxVim has **73 local plugin specs** across [`lua/plugins/`](lua/plugins) and **
 | Navigation and Git | `diffview.nvim`, `gitsigns.nvim`, `neo-tree.nvim`, `neogit`, `nui.nvim`, `plenary.nvim`, `snacks.nvim`, `telescope-file-browser.nvim`, `telescope.nvim` |
 | LSP and editing | `blink.cmp`, `conform.nvim`, local snippet catalog, `mason.nvim`, `nvim-lspconfig`, `nvim-treesitter`, `schemastore.nvim` |
 | Debugging | `baleia.nvim`, `nvim-dap`, `nvim-dap-ui`, `nvim-nio` |
-| Language and extras | `cord.nvim`, `lazy.nvim`, `markdown-preview.nvim` |
+| Language and extras | `cord.nvim`, `lazy.nvim` |
 
 See [PLUGIN-LIST.md](PLUGIN-LIST.md) for external dependencies and local `fox-<name>` implementations. For loading modes and dependency relationships, see the [detailed inventory](config/plans_notes_md/PLUGINS-LIST.md).
 

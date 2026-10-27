@@ -111,10 +111,10 @@ return {
 		end,
 	},
 	{
-		"iamcco/markdown-preview.nvim",
+		name = "fox_markdown_preview",
+		dir = vim.fn.stdpath("config"),
 		cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
 		ft = { "markdown", "mermaid" },
-		build = "cd app && npm install",
 		init = function()
 			require("fox.markdown.browser").setup()
 		end,

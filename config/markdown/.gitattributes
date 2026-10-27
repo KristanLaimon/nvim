@@ -1,0 +1,2 @@
+# Preserve the upstream bundle byte-for-byte, including embedded license notices.
+mermaid.min.js -text -diff

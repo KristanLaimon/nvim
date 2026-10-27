@@ -32,6 +32,7 @@ See [Module Architecture](module-architecture.md) for how the custom ones are wi
 | **Context Help** | `context_help.lua` | Context-aware cheatsheet — different content in Neo-tree, Git, Telescope, editor. | `?`, `<F1>` |
 | **Documentation Wiki** | `wiki_modal.lua` | This dual-pane wiki modal — categorized index on the left, live markdown preview with link-following on the right, native `/`/`<C-f>` search in either pane. | `<C-S-d>`, `<leader>?`, `:FoxWiki` |
 | **Live Colorscheme Preview** | `colorscheme_preview.lua` | Previews themes live while tabbing through `:colorscheme`, reverts on cancel. | `:colorscheme <Tab>` |
+| **Markdown Browser Preview** | `lua/fox/markdown/` | Local Lua HTTP server and Markdown renderer, with attributed local Mermaid JavaScript. No Node/npm. | `:MarkdownPreview`, `:MarkdownPreviewToggle`, `:MarkdownPreviewStop` |
 | **Pixel-Art Image Viewer** | `image_viewer.lua` | Renders images as terminal pixel art via `chafa`, or hands off to the OS default app. | `<leader>i`, `<C-S-Enter>` |
 | **Input Modal** | `input_modal.lua` | The shared floating input dialog; overrides `vim.ui.input` globally. | used everywhere |
 | **Font Manager** | `font.lua` | Live GUI font sizing, persisted to `font_config.json` in `nvim-data`. | `<C-+>`, `<C-->`, `<C-0>` |

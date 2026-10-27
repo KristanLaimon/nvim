@@ -87,7 +87,7 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 | `nvim-neotest/nvim-nio` | Async library required by dap-ui |
 | `fox.dap.virtual_text` (local) | Inline variable values while stopped; no external plugin |
 | `fox.langs.go` (local) | Delve adapter and seven Go configurations; no external setup plugin |
-| `m00qek/baleia.nvim` | Turns ANSI escapes in adapter output back into highlights |
+| `fox.dap.ansi` (local) | Turns ANSI escapes in adapter output back into highlights |
 
 ### Editor & navigation
 | Plugin | Purpose |

@@ -50,7 +50,6 @@ return {
 			"rcarriga/nvim-dap-ui",
 			"nvim-neotest/nvim-nio",
 			"williamboman/mason.nvim",
-			"m00qek/baleia.nvim",
 		},
 		config = function()
 			local dap = require("dap")
@@ -149,21 +148,8 @@ return {
 				},
 			})
 
-			-- nvim-dap writes adapter `output` events into the repl as plain text, so
-			-- runtimes that colorize (Bun, anything with FORCE_COLOR) show literal
-			-- `[0m[33m1[0m`. baleia turns those escapes back into highlights.
-			-- Global: every adapter's output goes through the same two buffers.
-			local baleia_ok, baleia = pcall(require, "baleia")
-			if baleia_ok then
-				local colorize = baleia.setup({ line_starts_at = 1 })
-				vim.api.nvim_create_autocmd("FileType", {
-					group = vim.api.nvim_create_augroup("FoxDapAnsi", { clear = true }),
-					pattern = { "dap-repl", "dapui_console" },
-					callback = function(args)
-						colorize.automatically(args.buf)
-					end,
-				})
-			end
+			-- All adapters share ANSI highlighting in the REPL and UI console.
+			require("fox.dap.ansi").setup()
 
 			require("fox.dap.virtual_text").setup(dap)
 

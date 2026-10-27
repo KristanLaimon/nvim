@@ -2,7 +2,7 @@
 
 Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **26 reemplazos completados: 23 externos actuales**, de los cuales **6 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **27 reemplazos completados: 22 externos actuales**, de los cuales **5 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
 
 ## Criterio de ejecución
 
@@ -43,7 +43,7 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 24 | `rcarriga/nvim-notify` | Media-alta | Completado | Cola de ventanas, expiración, historial y protección del foco. |
 | 25 | `windwp/nvim-autopairs` | Media-alta | Completado | Reglas de inserción/borrado, undo, completion y exclusiones de sintaxis. |
 | 26 | `vuki656/package-info.nvim` | Media-alta | Completado | Versiones y acciones por gestor con caché, errores de red y edición segura del manifiesto. |
-| 27 | `m00qek/baleia.nvim` | Media-alta | Pendiente | Parser ANSI incremental a highlights; escapes fragmentados y buffers DAP. |
+| 27 | `m00qek/baleia.nvim` | Media-alta | Completado | Parser ANSI incremental a highlights; escapes fragmentados y buffers DAP. |
 | 28 | `vyfor/cord.nvim` | Alta | Pendiente | IPC Discord con reconexión y presencia; validar Windows, Linux y entornos remotos. |
 | 29 | `b0o/schemastore.nvim` | Alta | Pendiente | Catálogo local y selección de schemas; definir cómo mantener actualizados sus datos. |
 | 30 | `nvim-telescope/telescope-file-browser.nvim` | Alta | Pendiente | Migrar consumidores al explorador propio conservando navegación y operaciones. |
@@ -245,6 +245,14 @@ Blame asíncrono propio en fox.git.inline_blame y parser compartido en fox.git.b
 - Trece pruebas enfocadas y cuatro integraciones reales aprobadas. Registro npm HTTP local y tarballs temporales prueban consulta, caché, latest, update, versión estable, delete y lockfile con npm; Bun instala una dependencia dev y escribe bun.lock. Fixtures verifican cancelación, fallos de red/JSON/proceso, respuestas tardías, concurrencia, límites y construcción Windows/WSL. No se ejecutaron gestores nativos de Windows ni Yarn/pnpm reales en esta máquina.
 - Suite completa: 947 aprobadas y los dos fallos preexistentes en autotag TSX y aislamiento del selector de temas (934 aprobadas y los mismos fallos antes del cambio). 846 archivos Lua sin errores de sintaxis; StyLua/Luacheck aprobados en los siete archivos Lua del reemplazo. Inventario verificado: 23 externos y 73 specs locales.
 
+## Reemplazo 27: m00qek/baleia.nvim
+
+- Implementación original en `fox.dap.ansi`, integrada en la configuración DAP existente, sin nueva spec. Parser incremental por líneas con estado de estilos y escapes incompletos; colores 16/256/RGB, atributos y resets, eliminación de CSI/OSC y enlaces OSC. No emula movimientos de terminal.
+- Conserva códigos y checkpoints al anexar salida sobre líneas ya limpiadas, recalcula desde la región modificada y agrupa escrituras rápidas. Extmarks con columnas de bytes Unicode; respeta buffers no modificables, cambios de tema, borrado/reload y cancelación de trabajo pendiente al eliminar un buffer. Usa set_text por fila para conservar la marca de prompt de nvim-dap.
+- Se retiran solo la declaración y el lockfile de Baleia; no se eliminan plugins instalados ni se añaden instalaciones opcionales. Inventario: 22 externos y las mismas 73 specs locales.
+- Siete pruebas enfocadas y dos integraciones reales aprobadas en Windows con nvim-dap y buffers dapui_console: escapes fragmentados, appends, Unicode, estilos, clear, readonly, temas y eliminación. Sin adaptador remoto ni sesión interactiva de depuración.
+- Suite completa: 964 aprobadas y nueve fallos preexistentes de rutas Windows y sysfs Linux; copia del commit 606135a: 958 aprobadas y los mismos nueve fallos. Sintaxis: 854 archivos sin errores. StyLua/Luacheck aprobados para los cuatro archivos Lua del reemplazo.
+
 ## Siguiente ítem
 
-`m00qek/baleia.nvim`: continuar con el alcance indicado en la tabla. No iniciado.
+`vyfor/cord.nvim`: pendiente. No iniciado; el usuario pidió únicamente Baleia en esta sesión.

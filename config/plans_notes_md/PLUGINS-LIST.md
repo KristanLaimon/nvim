@@ -5,7 +5,7 @@ Inventario de las specs importadas por `lua/lazy_init.lua`, sus dependencias tra
 Core = carga explícita al iniciar (`lazy = false`), más el gestor de plugins.
 Non-core = carga por evento, comando, tecla, filetype, dependencia o `require`. `VimEnter` y `VeryLazy` siguen siendo eventos: no equivalen a `lazy = false`. El valor global es `defaults.lazy = true`.
 
-Total actual: **23 externos** y **73 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
+Total actual: **22 externos** y **73 specs locales activas**. El plan de sustitución está en [DEPENDENCYFOX.plan.md](DEPENDENCYFOX.plan.md).
 
 ## (External)
 
@@ -20,7 +20,6 @@ Total actual: **23 externos** y **73 specs locales activas**. El plan de sustitu
 - `folke/snacks.nvim` — [`editor/neo-tree.lua`](../../lua/plugins/editor/neo-tree.lua)
 - `iamcco/markdown-preview.nvim` — [`editor/markdown.lua`](../../lua/plugins/editor/markdown.lua)
 - `lewis6991/gitsigns.nvim` — [`editor/gitsigns.lua`](../../lua/plugins/editor/gitsigns.lua)
-- `m00qek/baleia.nvim` — [`editor/dap.lua`](../../lua/plugins/editor/dap.lua)
 - `MeanderingProgrammer/render-markdown.nvim` — [`editor/markdown.lua`](../../lua/plugins/editor/markdown.lua)
 - `mfussenegger/nvim-dap` — [`editor/dap.lua`](../../lua/plugins/editor/dap.lua)
 - `MunifTanjim/nui.nvim` — [`editor/neo-tree.lua`](../../lua/plugins/editor/neo-tree.lua)
@@ -167,6 +166,7 @@ No son plugins externos ni specs independientes adicionales:
 - `lua/fox/langs/csharp/navigation.lua`: navegación OmniSharp y fuentes de metadata/generadas asíncronas.
 
 - `lua/fox/projects/history.lua` y `lua/telescope/_extensions/projects.lua`: historial local persistente y compatibilidad de `:Telescope projects`.
+- `lua/fox/dap/ansi.lua`: parser ANSI incremental y highlights nativos para REPL/console DAP; sustituye a Baleia sin spec adicional.
 - `lua/fox/dap/virtual_text.lua`: variables DAP con extmarks, controles y seguimiento del ciclo de sesión; sustituye a `nvim-dap-virtual-text`.
 - `lua/fox/core/window_picker.lua` y `lua/window-picker.lua`: selector local de ventanas y punto de compatibilidad con los comandos de Neo-tree; sustituye a `nvim-window-picker`.
 - `lua/plugins/fox/debuggers/{_shared,browsers,bun,node}.lua`: soporte DAP compartido; los depuradores específicos de lenguaje viven en `lua/fox/langs/<lenguaje>/init.lua`.

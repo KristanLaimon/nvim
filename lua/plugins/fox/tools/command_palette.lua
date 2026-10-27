@@ -402,7 +402,7 @@ M.commands = {
 	},
 	{ name = "🎨 Toggle UI Icons Mode (Nerd Font Symbols vs Emojis)", cmd = "ToggleIconsMode", category = "UI" },
 	{
-		name = "📌 Toggle Pin Current Tab (Code Buffer)",
+		name = "📌 Toggle Pin Current Tab (Editor / Query)",
 		fn = function()
 			require("plugins.fox.ui.pinned_tabs").toggle_pin()
 		end,

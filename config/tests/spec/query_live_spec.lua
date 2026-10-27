@@ -37,6 +37,69 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("keeps Query pins separate, restores them and cycles in displayed order", function()
+		project(function(root)
+			local tabs = require("fox.ui.tabline")
+			local pins = require("plugins.fox.ui.pinned_tabs")
+			query.show("standard")
+			local first = query.state().active
+			vim.cmd("write")
+			local second = query.new("second.sql", "mysql")
+			vim.cmd("write")
+			local third = query.new("third.sql", "mysql")
+			vim.cmd("write")
+			pins.toggle_pin()
+			expect(tabs.is_pinned(third)).toBe(true)
+			expect(storage.load(root, "private/tab-pins.json")).toEqual({ "queries/third.sql" })
+			expect(vim.fn.filereadable(root .. "/.foxnvim/pins.json")).toBe(0)
+			expect(tabs.buffers()).toEqual({ third, first, second })
+			query.cycle(1)
+			expect(query.state().active).toBe(first)
+			query.cycle(-1)
+			expect(query.state().active).toBe(third)
+			local renamed, rename_err = require("fox.query.files").rename(query.state(), "third.sql", "pinned.sql")
+			expect(renamed or rename_err).toBe(true)
+			expect(storage.load(root, "private/tab-pins.json")).toEqual({ "queries/pinned.sql" })
+			query.new("second.sql")
+			expect(query.close_root(root)).toBe(true)
+			for _, buf in ipairs({ first, second, third }) do
+				vim.api.nvim_buf_delete(buf, { force = false })
+			end
+			query.show("standard")
+			expect(vim.b[query.state().active].fox_query_document).toBe("queries/second.sql")
+			local restored = vim.fn.bufnr(storage.path(root, "queries/pinned.sql"))
+			expect(query.state().consoles[restored]).toBeTruthy()
+			expect(tabs.is_pinned(restored)).toBe(true)
+			query.new("pinned.sql")
+			pins.toggle_pin()
+			expect(tabs.is_pinned(restored)).toBe(false)
+			expect(storage.load(root, "private/tab-pins.json")).toEqual({})
+		end)
+	end)
+
+	it("moves focus left with Ctrl+h and right with Ctrl+l in both Query views", function()
+		project(function()
+			for _, view in ipairs({ "standard", "visual" }) do
+				query.show(view)
+				local state = query.state()
+				for _, mode in ipairs({ "n", "i", "x" }) do
+					vim.api.nvim_set_current_win(state.sql_win)
+					local origin = vim.api.nvim_win_get_position(state.sql_win)[2]
+					vim.fn.maparg("<C-l>", mode, false, true).callback()
+					expect(vim.api.nvim_win_get_position(0)[2] > origin).toBe(true)
+					vim.fn.maparg("<C-h>", mode, false, true).callback()
+					expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+					if view == "standard" then
+						vim.fn.maparg("<C-h>", mode, false, true).callback()
+						expect(vim.api.nvim_win_get_position(0)[2] < origin).toBe(true)
+						vim.fn.maparg("<C-l>", mode, false, true).callback()
+						expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+					end
+				end
+			end
+		end)
+	end)
+
 	it("opens blank table notes and deletes them after confirmation", function()
 		project(function(root)
 			query.show("standard")

@@ -184,6 +184,20 @@ function M.rename(state, relative, destination)
 		vim.api.nvim_buf_set_name(item.buf, storage.path(state.root, "queries/" .. name))
 		vim.b[item.buf].fox_query_document = "queries/" .. name
 	end
+	local changed = false
+	local prefix = "queries/" .. relative
+	for index, document in ipairs(state.tab_pins or {}) do
+		if document == prefix or type(document) == "string" and document:sub(1, #prefix + 1) == prefix .. "/" then
+			state.tab_pins[index] = "queries/" .. destination .. document:sub(#prefix + 1)
+			changed = true
+		end
+	end
+	if changed then
+		local saved, save_err = storage.save(state.root, "private/tab-pins.json", state.tab_pins)
+		if not saved then
+			vim.notify("SQL renamed, but Query tab pins could not be saved: " .. tostring(save_err), vim.log.levels.ERROR)
+		end
+	end
 	return true
 end
 

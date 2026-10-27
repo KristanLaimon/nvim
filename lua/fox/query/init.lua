@@ -20,6 +20,11 @@ function M.state(root)
 			notify(err, vim.log.levels.WARN)
 		end
 		local limit = settings and settings.diagram_columns
+		local tab_pins, pin_err = storage.load(root, "private/tab-pins.json", {})
+		if pin_err or type(tab_pins) ~= "table" or not vim.islist(tab_pins) then
+			notify(pin_err or "Invalid Query tab pins", vim.log.levels.WARN)
+			tab_pins = {}
+		end
 		M.states[root] = {
 			root = root,
 			view = "standard",
@@ -29,6 +34,7 @@ function M.state(root)
 			autorun = false,
 			diagram_columns = type(limit) == "number" and limit >= 1 and limit <= 200 and limit % 1 == 0 and limit or 15,
 			connection_status = {},
+			tab_pins = tab_pins,
 		}
 	end
 	return M.states[root]
@@ -249,7 +255,7 @@ end
 
 function M.cycle(direction)
 	local state, buffers = M.state(), {}
-	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+	for _, buf in ipairs(require("fox.ui.tabline").buffers()) do
 		if state.consoles[buf] and vim.bo[buf].buflisted then
 			buffers[#buffers + 1] = buf
 		end
@@ -820,6 +826,12 @@ function M.show(view)
 		if not state.opened then
 			M.draw_queries(state)
 			local saved = storage.load(state.root, "private/last-query.json", {})
+			for _, document in ipairs(state.tab_pins) do
+				local file = type(document) == "string" and document:match("^queries/(.+)$")
+				if file and vim.tbl_contains(state.query_files, file) then
+					M.new(file)
+				end
+			end
 			local file = saved and saved.file
 			M.new(vim.tbl_contains(state.query_files, file) and file or state.query_files[1])
 			_, buf = console(state)
@@ -960,6 +972,28 @@ function M.buffer_label(buf)
 			.. "/"
 			.. vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t")
 	end
+end
+
+function M.toggle_tab_pin(buf)
+	local state = M.states[vim.b[buf].fox_query_root or ""]
+	if not state or not state.consoles[buf] then
+		return
+	end
+	local document = vim.b[buf].fox_query_document
+	local pins = vim.deepcopy(state.tab_pins)
+	local index = vim.fn.index(pins, document)
+	if index >= 0 then
+		table.remove(pins, index + 1)
+	else
+		pins[#pins + 1] = document
+	end
+	local ok, err = storage.save(state.root, "private/tab-pins.json", pins)
+	if not ok then
+		notify("Cannot save Query tab pins: " .. tostring(err), vim.log.levels.ERROR)
+		return
+	end
+	state.tab_pins = pins
+	require("fox.ui.tabline").set_pin(buf, index < 0)
 end
 
 function M.pin()
@@ -1141,6 +1175,7 @@ function M.new(relative, dialect)
 	end
 	require("fox.langs.sql").attach(buf, state.root)
 	state.consoles[buf] = state.consoles[buf] or { status = "idle", params = {} }
+	require("fox.ui.tabline").set_pin(buf, vim.tbl_contains(state.tab_pins, relative))
 	state.active = buf
 	if state.consoles[buf].metadata then
 		state.metadata = state.consoles[buf].metadata

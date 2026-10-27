@@ -18,6 +18,7 @@ local commands = {
 	"FoxQueryInspect",
 	"FoxQueryGraph",
 	"FoxQueryNotes",
+	"FoxQueryDeleteNote",
 	"FoxQueryRefresh",
 	"FoxQueryResults",
 	"FoxQueryClearParameters",
@@ -157,6 +158,9 @@ return {
 		})
 		command("FoxQueryNotes", function()
 			query.notes()
+		end)
+		command("FoxQueryDeleteNote", function()
+			query.notes(nil, "delete")
 		end)
 		command("FoxQueryRefresh", function()
 			query.refresh_metadata()

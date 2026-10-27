@@ -127,6 +127,7 @@ M.commands = {
 	{ name = "Query: Database Relationship Map", cmd = "FoxQueryGraph all", category = "Query" },
 	{ name = "Query: Table Neighborhood", cmd = "FoxQueryGraph neighborhood", category = "Query" },
 	{ name = "Query: Table Notes", cmd = "FoxQueryNotes", category = "Query" },
+	{ name = "Query: Delete Table Note", cmd = "FoxQueryDeleteNote", category = "Query" },
 	{ name = "Query: Preview / Insert JOIN", cmd = "FoxQueryInsertJoin", category = "Query" },
 	{ name = "Query: Refresh Schema Metadata", cmd = "FoxQueryRefresh", category = "Query" },
 	{ name = "Query: Results", cmd = "FoxQueryResults", category = "Query" },

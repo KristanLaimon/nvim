@@ -37,6 +37,68 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("opens blank table notes and deletes them after confirmation", function()
+		project(function(root)
+			query.show("standard")
+			local state = query.state()
+			local item = { key = "school.students", name = "students", columns = {} }
+			state.metadata = { tables = { item }, relations = {} }
+			state.consoles[state.active].metadata = state.metadata
+			state.consoles[state.active].profile = { id = "notes", engine = "sqlite", path = "unused.db" }
+			query.notes(item)
+			local buf, relative = vim.api.nvim_get_current_buf(), vim.b.fox_query_document
+			expect(vim.api.nvim_buf_get_lines(buf, 0, -1, false)).toEqual({ "" })
+			expect(vim.bo[buf].modified).toBe(false)
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "Business note" })
+			vim.cmd("write")
+			expect(storage.read(root, relative)).toBe("Business note")
+			query.notes(nil, "delete")
+			vim.fn.maparg("<Esc>", "n", false, true).callback()
+			expect(storage.read(root, relative)).toBe("Business note")
+			query.notes(nil, "delete")
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			expect(storage.read(root, relative)).toBeNil()
+			expect(vim.api.nvim_buf_is_valid(buf)).toBe(false)
+			expect(state.note_keys[item.key]).toBeNil()
+			expect(vim.api.nvim_win_get_buf(state.sql_win)).toBe(state.active)
+			query.notes(item)
+			expect(vim.api.nvim_buf_get_lines(0, 0, -1, false)).toEqual({ "" })
+			query.notes(nil, "delete")
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			expect(state.note_keys[item.key]).toBeNil()
+			query.notes(item)
+			vim.cmd("write")
+			vim.api.nvim_win_set_buf(state.sql_win, state.active)
+			state.selected = item.key
+			query.notes(nil, "delete")
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			expect(storage.read(root, relative)).toBeNil()
+			expect(state.note_keys[item.key]).toBeNil()
+		end)
+	end)
+
+	it("preserves modified and externally changed table notes on deletion", function()
+		project(function(root)
+			query.show("visual")
+			local state = query.state()
+			local item = { key = "students", name = "students", columns = {} }
+			state.metadata = { tables = { item }, relations = {} }
+			state.consoles[state.active].metadata = state.metadata
+			state.consoles[state.active].profile = { id = "notes", engine = "sqlite", path = "unused.db" }
+			query.notes(item)
+			local buf, relative = vim.api.nvim_get_current_buf(), vim.b.fox_query_document
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "Unsaved note" })
+			query.notes(nil, "delete")
+			expect(vim.api.nvim_get_current_buf()).toBe(buf)
+			expect(vim.api.nvim_buf_get_lines(buf, 0, -1, false)).toEqual({ "Unsaved note" })
+			vim.cmd("write")
+			storage.write(root, relative, "External edit")
+			query.notes(nil, "delete")
+			expect(vim.api.nvim_get_current_buf()).toBe(buf)
+			expect(storage.read(root, relative)).toBe("External edit")
+		end)
+	end)
+
 	it("refreshes safely after the last SQL buffer is wiped", function()
 		project(function()
 			query.show()

@@ -1931,21 +1931,64 @@ function M.cancel()
 	end
 end
 
-function M.notes(item)
+function M.notes(item, action)
 	local state = M.state()
+	local document = vim.b.fox_query_document
+	local opened = action == "delete" and type(document) == "string" and document:match("^notes/")
+	if opened then
+		item = { key = vim.b.fox_query_note_key }
+	end
 	item = item or selected_object(state)
 	local active = console(state)
-	if not item or not active or not active.profile then
+	if not item or not item.key or not active or not active.profile then
 		notify("Select a table with a connection first", vim.log.levels.WARN)
 		return
 	end
 	local key = storage.fingerprint(active.profile) .. "/" .. vim.fn.sha256(item.key):sub(1, 24) .. ".md"
+	local relative = opened and document or "notes/" .. key
+	if action == "delete" then
+		local path = storage.path(state.root, relative)
+		local buf = vim.fn.bufnr(path)
+		local function unchanged()
+			if valid(buf, "buf") then
+				if vim.bo[buf].modified then
+					notify("Save the note before deleting it", vim.log.levels.WARN)
+					return false
+				end
+				if (storage.read(state.root, relative) or "") ~= vim.b[buf].fox_query_disk then
+					notify("Note changed externally; reload it before deleting", vim.log.levels.WARN)
+					return false
+				end
+			end
+			return true
+		end
+		if not unchanged() then
+			return
+		end
+		M.select({ "Delete note", "Cancel" }, { prompt = "Delete note for " .. item.key .. "?" }, function(choice)
+			if choice ~= "Delete note" or not unchanged() then
+				return
+			end
+			local ok, err, code = (vim.uv or vim.loop).fs_unlink(path)
+			if not ok and code ~= "ENOENT" then
+				notify(err, vim.log.levels.ERROR)
+				return
+			end
+			if valid(buf, "buf") then
+				if valid(state.sql_win, "win") and valid(state.active, "buf") then
+					vim.api.nvim_win_set_buf(state.sql_win, state.active)
+				end
+				vim.api.nvim_buf_delete(buf, { force = false })
+			end
+			M.note_badges(state, active.profile)
+			M.refresh_view(state)
+		end)
+		return
+	end
 	state.note_keys = state.note_keys or {}
 	state.note_keys[item.key] = true
-	local buf = show_document(state, "notes/" .. key, "markdown")
-	if vim.api.nvim_buf_line_count(buf) == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == "" then
-		vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "# Notes: " .. item.key, "", "", "", "", "" })
-	end
+	local buf = show_document(state, relative, "markdown")
+	vim.b[buf].fox_query_note_key = item.key
 end
 
 function M.note_badges(state, profile)

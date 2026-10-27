@@ -79,7 +79,8 @@ Text values appear in double quotes, while numbers and NULL remain unquoted. Ent
 | `:FoxQueryCancel` | Request cancellation; an uncertain session must reconnect. |
 | `:FoxQueryExplorer`, `:FoxQueryInspect` | Search metadata or inspect the selected table. |
 | `:FoxQueryGraph all`, `:FoxQueryGraph neighborhood` | Whole-database overview or selected table neighborhood, initially depth 3. |
-| `:FoxQueryNotes` | Open local table Markdown notes. |
+| `:FoxQueryNotes` | Open local table Markdown notes; new notes start empty. |
+| `:FoxQueryDeleteNote` | Delete the open note or selected table's note after confirmation. Save pending edits first. |
 | `:FoxQueryInsertJoin` | Review a foreign-key mapping and insert an undoable JOIN edit. |
 | `:FoxQueryColumns` | Set the project diagram column limit (also `C` in the diagram). |
 | `:FoxQueryPin` | Pin/unpin the current statement's location for the live diagram. |

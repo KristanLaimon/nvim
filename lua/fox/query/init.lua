@@ -568,7 +568,7 @@ function M.refresh_view(state)
 		.. "] "
 		.. label
 		.. " | "
-		.. (require("fox.langs.sql.dialect").read(state.active or 0) or "SQL")
+		.. (active and require("fox.langs.sql.dialect").read(state.active) or "SQL")
 		.. " | "
 		.. (connected and "READ ONLY" or "disconnected")
 		.. " | "
@@ -585,7 +585,7 @@ function M.refresh_view(state)
 	end
 	if state.view == "visual" then
 		local text, offset = text_at_cursor(state)
-		if state.pinned and state.pinned.buf == state.active then
+		if active and state.pinned and state.pinned.buf == state.active then
 			local mark = vim.api.nvim_buf_get_extmark_by_id(state.active, ns, state.pinned.id, {})
 			if #mark == 2 then
 				local lines = vim.api.nvim_buf_get_lines(state.active, 0, mark[1], false)

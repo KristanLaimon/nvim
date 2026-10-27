@@ -37,6 +37,23 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("refreshes safely after the last SQL buffer is wiped", function()
+		project(function()
+			query.show()
+			local state = query.state()
+			local buf = state.active
+			state.pinned = { buf = buf, id = 1 }
+			vim.api.nvim_buf_delete(buf, { force = true })
+			expect(vim.api.nvim_buf_is_valid(buf)).toBe(false)
+			expect(next(state.consoles)).toBeNil()
+			expect(vim.api.nvim_get_current_tabpage()).toBe(state.tab)
+			for _, view in ipairs({ "standard", "visual" }) do
+				state.view = view
+				query.refresh_view(state)
+			end
+		end)
+	end)
+
 	it("asks for a new SQL dialect, remembers it, and leaves no file on cancellation", function()
 		project(function(root)
 			query.show()

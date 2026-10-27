@@ -75,7 +75,7 @@ return {
 				return {
 					[[        F O X N V I M        ]],
 					[[ "Foxes can be coders too!"]],
-					"      [ " .. env.label .. " ]",
+					"[ " .. env.label .. " ]",
 				}
 			elseif width < 100 then
 				return {
@@ -86,7 +86,7 @@ return {
 					[[ |_|   \___//_/\_\|_| \_|   \_/  |___|_|  |_| ]],
 					[[]],
 					[[        "Foxes can be coders too!"    ]],
-					"     📱 Environment: " .. env.label,
+					"📱 Environment: " .. env.label,
 				}
 			else
 				return {
@@ -105,7 +105,7 @@ return {
 					[[]],
 					[[]],
 					[[                       "Foxes can be coders too!" - A random fox                                 ]],
-					"                              💻 Environment: " .. env.label,
+					"💻 Environment: " .. env.label,
 				}
 			end
 		end

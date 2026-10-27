@@ -1883,22 +1883,30 @@ function M.start_same_branch(opts)
 
 	M.state.files = M.get_changed_files(M.state.base_ref, M.state.target_ref, cwd)
 
-	-- Live diff highlights refresh on file save
+	-- External file openers (including Neo-tree) must keep the active diff in sync.
 	if M._augroup then
 		pcall(vim.api.nvim_del_augroup_by_id, M._augroup)
 	end
 	M._augroup = vim.api.nvim_create_augroup("fox_git_diff_mode_active", { clear = true })
-	vim.api.nvim_create_autocmd("BufWritePost", {
+	vim.api.nvim_create_autocmd({ "BufWritePost", "BufEnter", "BufWinEnter" }, {
 		group = M._augroup,
 		callback = function(args)
+			local win = vim.api.nvim_get_current_win()
+			if not is_valid_editor_win(win) or vim.bo[args.buf].buftype ~= "" then
+				return
+			end
 			if M.is_open() and M.state.mode == "same_branch" and M.state.cwd then
 				local b = args.buf
 				if b and vim.api.nvim_buf_is_valid(b) then
 					local bname = vim.api.nvim_buf_get_name(b)
 					local rel = path_util.relative_to(bname, M.state.cwd)
 					if rel and rel ~= "" and M.state.files then
-						for _, item in ipairs(M.state.files) do
+						for idx, item in ipairs(M.state.files) do
 							if item.file == rel then
+								M.state.editor_win = win
+								M.state.active_file = rel
+								M.state.current_mod_idx = 0
+								M.state.selected_file_idx = idx
 								M.apply_same_branch_highlights(b, rel, M.state.base_ref, M.state.target_ref, M.state.cwd)
 								if M.state.show_blame then
 									local w = vim.fn.win_findbuf(b)[1]
@@ -2570,11 +2578,9 @@ function M.open_config_dialog()
 	end)
 end
 
---- Opens a picker of branches that are ancestors of the current branch and
+--- Opens a picker of branches sharing an ancestor with the current branch and
 --- starts a same-branch diff covering the working tree plus every commit made
---- since the chosen branch (i.e. `git diff <branch>` against the working tree).
---- Only branches merged into HEAD are offered, so an unrelated branch can never
---- be selected.
+--- since its merge base with the chosen branch. The base commit is excluded.
 --- @param cwd string|nil
 function M.pick_ancestor_branch_and_start(cwd)
 	cwd = cwd or M.state.cwd or vim.fn.getcwd()
@@ -2584,31 +2590,36 @@ function M.pick_ancestor_branch_and_start(cwd)
 	end
 
 	local current = vim.trim(git.lines({ "branch", "--show-current" }, cwd)[1] or "")
-	local raw = git.lines({ "branch", "--merged", "HEAD", "--format=%(refname:short)" }, cwd)
+	local raw = git.lines({ "branch", "--format=%(refname:short)" }, cwd)
 	local branches = {}
 	for _, name in ipairs(raw) do
 		name = vim.trim(name)
-		if name ~= "" and name ~= current then
+		if name ~= "" and name ~= current and #git.lines({ "merge-base", "HEAD", name }, cwd) > 0 then
 			table.insert(branches, name)
 		end
 	end
 
 	if #branches == 0 then
-		notify("No ancestor branch found: the current branch has no other branch in its history", vim.log.levels.WARN)
+		notify("No branch with a common ancestor found", vim.log.levels.WARN)
 		return
 	end
 
 	vim.ui.select(branches, {
-		prompt = "🌳 Select ancestor branch (working tree + all commits until it):",
+		prompt = "🌳 Select base branch (working tree + commits since the common ancestor, excluded):",
 	}, function(choice)
 		if not choice then
+			return
+		end
+		local base = git.lines({ "merge-base", "HEAD", choice }, cwd)[1]
+		if not base or not base:match("^%x+$") then
+			notify("Could not resolve the common ancestor with " .. choice, vim.log.levels.WARN)
 			return
 		end
 		M.state.commits_behind = 0
 		M.state.include_worktree = true
 		M.state.custom_commits = false
 		notify(string.format("Diff scope: Working Tree + commits until branch '%s'", choice))
-		M.start_same_branch({ base_ref = choice, target_ref = "WORKTREE", cwd = cwd })
+		M.start_same_branch({ base_ref = base, target_ref = "WORKTREE", cwd = cwd })
 	end)
 end
 

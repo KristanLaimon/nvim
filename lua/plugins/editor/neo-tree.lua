@@ -579,6 +579,15 @@ return {
 				-- be the last window, close itself, and take the whole session with
 				-- it. Smart quit (<C-q>) still handles quitting explicitly.
 				close_if_last_window = false,
+				-- A file opened after focusing the diff list must use a code window.
+				open_files_do_not_replace_types = {
+					"terminal",
+					"Trouble",
+					"qf",
+					"edgy",
+					"fox_diff_sidebar",
+					"fox_todo_sidebar",
+				},
 				window = {
 					width = get_saved_width(),
 					mappings = settings.mappings,

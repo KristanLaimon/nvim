@@ -1,19 +1,21 @@
 # PLAN — Reducir dependencias externas de FoxVim
 
-Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. Orden de menor a mayor dificultad estimada para el uso actual de FoxVim, no para copiar todas las funciones de cada proyecto. Es una estimación basada en las specs y consumidores locales; cada sustitución requiere revisar su implementación.
+Objetivo: clonar e instalar menos plugins y mantener aquí las funciones que usamos. La tabla `Pendientes` ordena el trabajo de menor a mayor dificultad y riesgo para el uso actual de FoxVim, hasta los reemplazos súper difíciles. No busca copiar todas las funciones de cada proyecto. La viabilidad depende también de los consumidores transitivos y del mantenimiento que asumiría FOX.
 
-Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **27 reemplazos completados: 22 externos actuales**, de los cuales **5 siguen pendientes de reemplazo y 17 son Vital-Exceptions**. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las dependencias transitivas. **27 reemplazos completados y 22 externos pendientes de evaluación/implementación**. Por petición explícita del usuario, las 17 antiguas excepciones vuelven a la misma cola que los 5 pendientes anteriores; ya no existe una tabla de exclusiones. Inventario vigente: [PLUGINS-LIST.md](PLUGINS-LIST.md).
+
+Reevaluación: **2026-10-26**, sobre las specs y consumidores actuales, las implementaciones instaladas relevantes y el historial hasta `d9c13c9` (Baleia completado en `2720075`). Esta revisión solo cambia el plan: no inicia reemplazos, no modifica la skill, no retira dependencias ni altera `lazy-lock.json`, que ya tenía cambios ajenos.
 
 ## Criterio de ejecución
 
 - Un reemplazo por cambio: revisar consumidores y comandos, implementar o reutilizar módulos locales, probar, retirar specs/lockfile y actualizar ambos documentos.
 - Mantener APIs utilizadas y datos existentes. Usar Neovim y lua/fox/ antes de añadir código. Las posiciones cercanas pueden ajustarse al revisar cada implementación.
 - Mantener Lua como instalación mínima; lenguajes opcionales solo por selección explícita en LanguageManager.
-- Los plugins de la tabla Vital-Exceptions se conservan como dependencias externas; no forman parte de los reemplazos pendientes.
+- `Pendientes` es la única cola de implementación. La autorización de esta revisión es únicamente documental; las futuras sustituciones se ejecutarán cuando el usuario las solicite. Los requisitos previos de cada fila prevalecen sobre su posición.
 - Menos clones no significa cero herramientas: LSPs, formateadores, adaptadores, Git, runtimes y gramáticas siguen siendo necesarios.
 - Una copia vendorizada sigue siendo código externo. Preferir implementación propia; conservar licencias y atribuciones al reutilizar código o recursos.
 
-## Plan de implementación, de más fácil a más difícil
+## Reemplazos completados
 
 | Orden | Plugin externo | Dificultad | Estado | Sustitución del uso actual |
 |---|---|---|---|---|
@@ -44,35 +46,53 @@ Inventario de partida: **49 plugins externos**, incluido lazy.nvim y las depende
 | 25 | `windwp/nvim-autopairs` | Media-alta | Completado | Reglas de inserción/borrado, undo, completion y exclusiones de sintaxis. |
 | 26 | `vuki656/package-info.nvim` | Media-alta | Completado | Versiones y acciones por gestor con caché, errores de red y edición segura del manifiesto. |
 | 27 | `m00qek/baleia.nvim` | Media-alta | Completado | Parser ANSI incremental a highlights; escapes fragmentados y buffers DAP. |
-| 28 | `vyfor/cord.nvim` | Alta | Pendiente | IPC Discord con reconexión y presencia; validar Windows, Linux y entornos remotos. |
-| 29 | `b0o/schemastore.nvim` | Alta | Pendiente | Catálogo local y selección de schemas; definir cómo mantener actualizados sus datos. |
-| 30 | `nvim-telescope/telescope-file-browser.nvim` | Alta | Pendiente | Migrar consumidores al explorador propio conservando navegación y operaciones. |
-| 31 | `sindrets/diffview.nvim` | Alta | Pendiente | Diff e historial con fox.git; conservar integración de Neogit. |
-| 34 | `MeanderingProgrammer/render-markdown.nvim` | Alta | Pendiente | Renderizado incremental con Treesitter y extmarks; tablas, bloques y modos de edición. |
 
-## Vital-Exceptions
+## Pendientes
 
-Dependencias que el usuario decidió conservar. Quedan fuera del plan de implementación y no se reescriben al invocar `$dependency-rewriter`. Se mantienen sus números originales para referencia.
+Los números siguientes son una nueva secuencia de trabajo, independiente de los 27 reemplazos históricos. **Todas las filas están pendientes y ninguna implementación está iniciada por esta revisión.** La dificultad mide el trabajo de conservar lo utilizado, no la popularidad o tamaño del plugin. Susceptibilidad alta = alcance delimitable y reutilización local clara; media = viable con integración considerable; baja = gran superficie o mantenimiento continuo. No equivale a una garantía de paridad.
 
-| Orden original | Plugin externo | Dificultad estimada original |
-|---|---|---|
-| 32 | `folke/snacks.nvim` | Alta |
-| 33 | `iamcco/markdown-preview.nvim` | Alta |
-| 35 | `stevearc/conform.nvim` | Alta |
-| 36 | `neovim/nvim-lspconfig` | Alta |
-| 37 | `lewis6991/gitsigns.nvim` | Muy alta |
-| 38 | `NeogitOrg/neogit` | Muy alta |
-| 39 | `rcarriga/nvim-dap-ui` | Muy alta |
-| 40 | `nvim-neo-tree/neo-tree.nvim` | Muy alta |
-| 41 | `MunifTanjim/nui.nvim` | Muy alta |
-| 42 | `nvim-neotest/nvim-nio` | Muy alta |
-| 43 | `nvim-lua/plenary.nvim` | Muy alta |
-| 44 | `nvim-telescope/telescope.nvim` | Muy alta |
-| 45 | `williamboman/mason.nvim` | Muy alta |
-| 46 | `folke/lazy.nvim` | Muy alta |
-| 47 | `saghen/blink.cmp` | Extrema |
-| 48 | `mfussenegger/nvim-dap` | Extrema |
-| 49 | `nvim-treesitter/nvim-treesitter` | Extrema |
+| Orden | Plugin externo | Dificultad reevaluada | Susceptibilidad | Alcance, motivo y condición para retirarlo |
+|---|---|---|---|---|
+| 1 | `nvim-telescope/telescope-file-browser.nvim` | Media | Alta | La spec carga `file_browser`, pero no se encontraron llamadas locales a esa extensión; los exploradores Desktop/WSL y el selector de carpetas ya son FOX sobre Telescope. Verificar la entrada pública `:Telescope file_browser` y sus operaciones antes de migrarla al explorador local. Mantener Telescope y Plenary. Puede requerir principalmente consolidación, no otro explorador. |
+| 2 | `b0o/schemastore.nvim` | Media-alta | Alta | Se usan `json.schemas(select/replace/extra)` y `yaml.schemas()`: JSON está seleccionado, YAML usa el catálogo completo. Implementar selección propia y datos atribuidos con actualización manual verificable; conservar asociaciones YAML y prioridad de schemas locales. Menos complejidad de ejecución que la estimación anterior, pero responsabilidad permanente sobre datos. |
+| 3 | `folke/snacks.nvim` | Media-alta | Media | Solo declarado desde Neo-tree en el código FOX; el Neo-tree instalado sí consume `snacks.image` en previews. Reutilizar `fox.media.kitty`/ImageViewer donde haya paridad, revisar opciones heredadas y probar preview/cierre/terminales sin Kitty. No basta con borrar la declaración por no encontrar `require` directo. |
+| 4 | `neovim/nvim-lspconfig` | Difícil | Alta | Ya se usa `vim.lsp.config/enable`; falta suplir defaults de cada servidor usado (cmd, filetypes, raíces, settings), `lspconfig.util` en C# y accesos heredados en TypeScript/web. Ponerlos en sus módulos de lenguaje y conservar genéricos en el agregador. No reescribir el cliente LSP nativo. |
+| 5 | `stevearc/conform.nvim` | Difícil | Alta | Reutilizar `formatters_by_ft` y `conform_formatters` por lenguaje. Aún faltan los defaults que Conform aporta: argumentos, stdin/archivos temporales, cwd, disponibilidad y errores. Preservar cadenas, `stop_after_first`, condiciones por proyecto, timeout al guardar, formato async, fallback LSP, cursor y undo; la ejecución puede modificar código del usuario. |
+| 6 | `vyfor/cord.nvim` | Difícil | Media | Presencia/idle, tema Minecraft, repositorio, tiempo, terminal y comandos de toggle/reload. Cord usa además un servidor ejecutable: reemplazar solo su cliente Lua conservaría la dependencia real. Probar framing IPC, named pipes Windows/sockets Unix, reconexión, varias instancias y Discord ausente; WSL/remoto requiere verificar dónde vive Discord. |
+| 7 | `MeanderingProgrammer/render-markdown.nvim` | Difícil | Media | Solo Markdown, pero con headings, bloques, listas, checkboxes, citas, callouts y tablas redondeadas. Usar Treesitter/extmarks y conservar conceal, toggle, wiki, posición del cursor, Unicode, tablas alineadas y rendimiento incremental. Mantener parsers y queries mientras se sustituye el renderizador. |
+| 8 | `lewis6991/gitsigns.nvim` | Difícil | Media | Configuración directa acotada a signos, archivos untracked, seguimiento y navegación de hunks; revisar también comandos de usuario y paleta. Reutilizar Git FOX y diff nativo, distinguir índice/disco/buffer, ediciones sin guardar y respuestas tardías. Comprobar hunks al inicio/fin, renombres, repositorios anidados y watchers deshabilitados en móvil. |
+| 9 | `sindrets/diffview.nvim` | Difícil | Media | FOX ya dispone de diff e historial, pero Neogit declara integración activa. Cubrir revisiones, índice, archivos borrados/binarios, navegación, cierre y restauración de ventanas; migrar la integración de Neogit en este reemplazo o mantener la dependencia hasta resolverla. No confundir abrir dos buffers en diff con paridad de historial. |
+| 10 | `iamcco/markdown-preview.nvim` | Difícil | Media | `fox.markdown.browser` ya maneja apertura multiplataforma, comandos globales y buffers Mermaid, pero sigue llamando RPC/Vimscript upstream. Falta servidor local, actualización en vivo y renderizado web. Conservar Markdown/Mermaid, recursos relativos, scroll y ciclo start/stop; validar escape de contenido, acceso local y rutas. Las bibliotecas web reutilizadas necesitan licencias y siguen siendo dependencias externas aunque no sean plugins. |
+| 11 | `rcarriga/nvim-dap-ui` | Muy difícil | Media | Paneles scopes/stacks/breakpoints/watches, REPL/consola, evaluación, layouts y listeners usados por DAP/keymaps FOX. Reutilizar floats/docks y ANSI propios; mantener expansión/edición de variables, foco, tamaños y rechazo de respuestas de sesiones antiguas. Conservar el motor nvim-dap. |
+| 12 | `nvim-neotest/nvim-nio` | Muy difícil aislado; baja tras 11 | Alta tras 11 | El DAP UI instalado lo requiere en su cliente, variables, ventanas y consola; no se encontró consumo FOX directo. Después de sustituir DAP UI, auditar consumidores restantes y retirar la dependencia si desaparecen. No construir un framework de coroutines solo para eliminar un clon. |
+| 13 | `NeogitOrg/neogit` | Muy difícil | Baja | Git Center cubre el flujo diario, pero Neogit añade rebase, stash, cherry-pick e historial. Inventariar popups/acciones usados y extender las pantallas FOX existentes sin perder conflictos, abort/continue, credenciales ni protección de cambios. No retirarlo solo porque Git Center permite stage/commit/push. Resolver sus integraciones con Diffview/Telescope. |
+| 14 | `nvim-neo-tree/neo-tree.nvim` | Muy difícil | Media | Gran integración FOX: ancho persistente, movers, ocultos, wrap, Git, eventos LSP, buffers, selector de ventanas, búsquedas y apertura del sistema. Árbol incremental con cancelación, watchers y operaciones seguras en Windows/WSL/móvil. Migrar consumidores de módulos internos y eventos antes de retirar Neo-tree. |
+| 15 | `MunifTanjim/nui.nvim` | Muy difícil aislado; baja tras 14 | Alta tras 14 | Neo-tree usa tree/line/text/split/popup/input y utilidades; una fachada pequeña no lo sustituye mientras el árbol siga externo. Tras 14, comprobar que no quedan consumidores y retirar Nui aprovechando las bibliotecas UI FOX, sin recrear toda su API. |
+| 16 | `nvim-telescope/telescope.nvim` | Muy difícil | Media | Es infraestructura de la paleta, tareas, launch profiles, workspaces, environments, búsqueda, NuGet, snippets, docs, temas, navegación C# y Query. Crear solo las primitivas compartidas que esos consumidores necesitan: filtrado, acciones, previews, selección y cancelación. Migrar cada consumidor y extensión, incluidas integraciones Git; mantener responsive la búsqueda asíncrona y los contextos WSL/proyecto. |
+| 17 | `nvim-lua/plenary.nvim` | Muy difícil aislado; baja tras consumidores | Alta al final de 13–16 | Telescope y Neo-tree instalados consumen módulos Plenary; hay además declaraciones en Neogit/Git Center/workspaces/environments y fallback `plenary.scandir` en Telescope FOX. Auditar también Diffview y herramientas/tests. Sustituir usos FOX por helpers existentes/`vim.uv`/`vim.system`; retirar solo cuando ningún consumidor activo lo requiera. No reimplementar Plenary entero. |
+| 18 | `nvim-treesitter/nvim-treesitter` | Súper difícil | Baja | Neovim ya aporta el motor, pero este plugin suministra parsers, instalación/compilación, queries e indentación. Installer consume sus APIs/config; autotag, folding, variables DAP y Markdown dependen de la cobertura resultante. Mantener ABI, queries/injections e indentación por lenguaje, actualizaciones y plataformas; no declarar sustitución completa por usar `vim.treesitter.start`. Gramáticas y sus licencias siguen siendo externas. |
+| 19 | `williamboman/mason.nvim` | Súper difícil | Baja | LanguageManager ya tiene UI/metadatos, pero usa registro, paquetes, instalación y rutas Mason; formateo y DAP dependen de sus ejecutables/PATH. Falta resolver descargas, versiones, dependencias, wrappers Windows, fallos parciales, actualización/desinstalación y estado persistente. Mantener herramientas instaladas y mínimo Lua; no delegar todo a instalaciones manuales como supuesto reemplazo equivalente. |
+| 20 | `saghen/blink.cmp` | Súper difícil | Baja | Integrar LSP, buffer/path, command line, snippets nativos y proveedores FOX (EditorConfig, Laravel, launch). Conservar capabilities, resolución/documentación, ranking, cancelación, snippets/tabstops, aceptación/undo y comportamiento móvil. Eliminar el binario fuzzy no elimina el resto del motor; requiere pruebas de inserción reales y de rendimiento. |
+| 21 | `mfussenegger/nvim-dap` | Súper difícil | Baja | Implementar transporte/protocolo, sesiones, breakpoints persistentes, threads/frames, variables, evaluación, REPL y fuentes generadas. Migrar todos los adaptadores, launch/VSCode, virtual text y listeners FOX, incluidas correcciones js-debug. Verificar adaptadores reales por transporte y plataforma, respuestas fuera de orden, attach/desconexión y limpieza de procesos. |
+| 22 | `folke/lazy.nvim` | Súper difícil | Baja | Es el bootstrap y el contrato de todas las specs, incluidas 73 locales: imports, mezcla, dependencias, eventos/comandos/teclas/filetypes, opts/config e introspección/cargas explícitas. Posponer hasta estabilizar los demás reemplazos; aprovechar paquetes nativos donde sirvan. Conservar lock/pins, instalación/actualización y recuperación de errores para los externos que aún existan; probar arranque limpio y migración sin red. |
+
+### Orden de ejecución propuesto
+
+1. **Primero, los más susceptibles (1–5).** Consolidar file-browser, resolver el catálogo de schemas, conectar previews sin Snacks, completar defaults LSP y sustituir formato. Los tres primeros tienen alcance menor que su clasificación antigua. LSP y Conform aprovechan los módulos por lenguaje, pero necesitan pruebas reales antes de quitar defaults externos.
+2. **Después, funciones difíciles y delimitadas (6–10).** Cord, render Markdown, signos Git, Diffview y preview web. Mantener cada cambio independiente. No cambiar render en editor y preview en navegador a la vez; son dos comportamientos distintos. Si falta Discord o una plataforma necesaria, registrar el bloqueo de esa fila y continuar con otra elegible, sin declarar paridad no probada.
+3. **Luego, interfaces e integraciones grandes (11–17).** DAP UI permite retirar Nio; Neo-tree permite retirar Nui; migrar Neogit y Telescope reduce los consumidores de Plenary. Priorizar retirar una biblioteca ya huérfana sobre reescribir su API. Diffview debe tener resuelta su integración antes de eliminarlo; Telescope conserva prioridad sobre Plenary mientras este siga siendo necesario.
+4. **Al final, infraestructura súper difícil (18–22).** Gestor/recursos Treesitter, distribución de herramientas Mason, completion, motor DAP y gestor Lazy. Antes de cada uno, acotar la matriz real de funciones y plataformas y estimar su mantenimiento. Un módulo nativo disponible reduce trabajo, pero no acredita por sí solo un reemplazo completo. Lazy queda último porque gobierna la carga del resto.
+
+### Comprobaciones para dar por terminado cada pendiente
+
+- Revisar spec, lockfile, comandos/paleta, consumidores locales y transitivos, datos persistidos, tests/fixtures y documentación afectada. No borrar directorios instalados ni atribuciones.
+- Añadir cobertura enfocada del comportamiento observable y fallos relevantes. Para UI, edición, LSP, DAP, IPC o parsers, completar las integraciones reales que correspondan; fixtures de plataforma no equivalen a ejecutarla físicamente.
+- Ejecutar tests con `--only-failure`, sintaxis y lint/formato aplicables al código cambiado. Documentar fallos previos y comprobaciones pendientes; no marcar completo con un consumidor aún externo o una integración imprescindible sin verificar.
+- Actualizar esta tabla, notas históricas e inventario solo después de retirar de verdad la dependencia. Una retirada transitiva cuenta como dependencia eliminada, pero no como una implementación nueva de su biblioteca.
+
+### Límites de esta reevaluación
+
+Es análisis estático del checkout e instalaciones locales, no una auditoría exhaustiva de las 22 implementaciones ni de sus últimas versiones remotas. No se ejecutaron sesiones interactivas, pruebas de rendimiento, instalaciones, Discord, navegadores ni adaptadores en esta revisión. Las dificultades son relativas y se deben confirmar al iniciar cada reemplazo; no son estimaciones de tiempo. Se mantienen intactos los resultados históricos de validación que siguen debajo.
 
 ## Primer ítem completado: mason-conform.nvim
 
@@ -255,4 +275,4 @@ Blame asíncrono propio en fox.git.inline_blame y parser compartido en fox.git.b
 
 ## Siguiente ítem
 
-`vyfor/cord.nvim`: pendiente. No iniciado; el usuario pidió únicamente Baleia en esta sesión.
+`nvim-telescope/telescope-file-browser.nvim`: primer candidato de la nueva tabla `Pendientes`. Comenzar por comprobar la entrada pública de la extensión y consolidarla con el explorador FOX. Cord pasa a la posición 6. Ningún reemplazo iniciado: la petición actual autoriza mejorar el plan solamente.

@@ -61,7 +61,16 @@ M.settings = {
 
 	keys = {
 		--- Open with the OS default application, from any mode.
-		open_external = { "<C-S-CR>", "<C-S-Enter>", "<C-S-Return>", "<C-CR>" },
+		open_external = {
+			"<C-S-CR>",
+			"<C-S-Enter>",
+			"<C-S-Return>",
+			"<C-CR>",
+			"\27[13;6u",
+			"\27[27;6;13~",
+			"\27[13;5u",
+			"\27[27;5;13~",
+		},
 		--- Render the image inside the editor.
 		preview = "<leader>i",
 		--- Dismiss the preview float.

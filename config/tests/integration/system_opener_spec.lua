@@ -63,7 +63,8 @@ foreach ($window in @($shell.Windows())) { try {
 			require("neo-tree.ui.renderer").focus_node(state, node_path)
 			t.expect(state.tree:get_node().type).toBe("directory")
 			local cursor = vim.api.nvim_win_get_cursor(state.winid)
-			for idx, key in ipairs({ "<C-S-CR>" }) do
+			local keys = { "<C-S-CR>", "<C-CR>", "\27[13;6u", "\27[27;6;13~", "\27[13;5u", "\27[27;5;13~" }
+			for idx, key in ipairs(keys) do
 				vim.api.nvim_set_current_win(state.winid)
 				vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(key, true, false, true), "xt", false)
 				verify_open(idx)
@@ -74,7 +75,7 @@ foreach ($window in @($shell.Windows())) { try {
 				return dir
 			end
 			vim.cmd("OpenRootInExplorer")
-			verify_open(2)
+			verify_open(#keys + 1)
 		end, debug.traceback)
 		project.root, vim.uv.spawn = original_root, original_spawn
 		vim.cmd("Neotree close")

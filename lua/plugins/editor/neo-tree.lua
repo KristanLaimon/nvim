@@ -71,6 +71,10 @@ local settings = {
 		-- Many terminals cannot tell Ctrl+Shift+Enter apart from Ctrl+Enter,
 		-- so both notations open with the OS default application.
 		["<C-CR>"] = "open_with_system_app",
+		["\27[13;6u"] = "open_with_system_app",
+		["\27[27;6;13~"] = "open_with_system_app",
+		["\27[13;5u"] = "open_with_system_app",
+		["\27[27;5;13~"] = "open_with_system_app",
 		-- Neo-tree defaults this key to `clear_selection`, which shadows the
 		-- editor-wide terminal binding while focus is in the sidebar.
 		["<C-;>"] = "toggle_selected_terminal",

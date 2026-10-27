@@ -37,6 +37,42 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("shows full prepare and execution errors as toasts and keeps them in the activity bar", function()
+		project(function()
+			query.show()
+			local state = query.state()
+			local item = state.consoles[state.active]
+			local old_notify, messages = vim.notify, {}
+			vim.notify = function(message, level)
+				messages[#messages + 1] = { message, level }
+			end
+			local ok, err = pcall(function()
+				item.profile = { id = "test", engine = "sqlite", path = "db" }
+				for _, phase in ipairs({ "prepare", "execute" }) do
+					local full = phase .. " failed\nserver detail: invalid SQL near 100%"
+					item.client = {
+						connected = true,
+						close = function() end,
+						request = function(_, op, _, callback)
+							if op == phase then
+								callback(nil, "SQL error", full)
+							else
+								callback({ parameters = 0, statements = 1 })
+							end
+						end,
+					}
+					query.run("statement", "SELECT broken", {})
+					expect(item.error_detail).toBe(full)
+					expect(messages[#messages]).toEqual({ full, vim.log.levels.ERROR })
+					expect(vim.api.nvim_buf_get_lines(state.activity_buf, 0, 1, false)[1]).toContain("server detail")
+				end
+			end)
+			vim.notify = old_notify
+			if not ok then
+				error(err)
+			end
+		end)
+	end)
 	it("restores Query after the last dock closes even when a floating panel remains", function()
 		project(function()
 			query.show("standard")

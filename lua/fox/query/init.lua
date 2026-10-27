@@ -1675,10 +1675,12 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 	end
 	local connection = item.client
 	connection.busy, item.status = true, "validating " .. (kind or "statement")
-	connection:request("prepare", { sql = query }, function(prepared, prepare_err)
+	connection:request("prepare", { sql = query }, function(prepared, prepare_err, detail)
 		if prepare_err then
 			connection.busy = false
 			item.status = prepare_err
+			item.error_detail = detail and detail ~= vim.NIL and detail or prepare_err
+			notify(item.error_detail, vim.log.levels.ERROR)
 			M.refresh_view(state)
 			if item.auto_pending then
 				item.auto_pending = nil
@@ -1713,7 +1715,10 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 				.. vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t")
 			connection:request("execute", { sql = query, params = params }, function(result, err, detail)
 				connection.busy = false
-				item.error_detail = detail ~= vim.NIL and detail or nil
+				item.error_detail = err and (detail and detail ~= vim.NIL and detail or err) or nil
+				if err then
+					notify(item.error_detail, vim.log.levels.ERROR)
+				end
 				local seconds = ((vim.uv or vim.loop).hrtime() - item.started) / 1e9
 				item.status = (err or "completed") .. string.format(" | %.2fs", seconds)
 				if result then

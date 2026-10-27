@@ -102,6 +102,40 @@ describe("FoxQuerier live workflow", function()
 		end)
 	end)
 
+	it("registers gN once per pane and opens notes only from Tables", function()
+		project(function()
+			local set, notes, create = vim.keymap.set, query.notes, query.create
+			local registrations, opened, created = {}, 0, 0
+			local ok, err = pcall(function()
+				vim.keymap.set = function(mode, key, callback, opts)
+					if key == "gN" and opts and opts.buffer then
+						registrations[opts.buffer] = (registrations[opts.buffer] or 0) + 1
+					end
+					return set(mode, key, callback, opts)
+				end
+				query.show("standard")
+				local state = query.state()
+				query.notes = function()
+					opened = opened + 1
+				end
+				query.create = function()
+					created = created + 1
+				end
+				expect(registrations[state.side_buf]).toBe(1)
+				vim.api.nvim_set_current_win(state.side_win)
+				vim.fn.maparg("gN", "n", false, true).callback()
+				expect(opened).toBe(1)
+				expect(created).toBe(0)
+				vim.api.nvim_set_current_win(state.sql_win)
+				vim.fn.maparg("gN", "n", false, true).callback()
+				expect(created).toBe(1)
+				expect(opened).toBe(1)
+			end)
+			vim.keymap.set, query.notes, query.create = set, notes, create
+			assert(ok, err)
+		end)
+	end)
+
 	it("opens blank table notes and deletes them after confirmation", function()
 		project(function(root)
 			local pending, word

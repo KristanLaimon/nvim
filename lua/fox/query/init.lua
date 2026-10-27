@@ -105,9 +105,14 @@ local function query_keys(buf)
 		},
 		gN = {
 			function()
-				M.create()
+				local state = M.states[vim.b[buf].fox_query_root]
+				if state and state.side_buf == buf then
+					M.notes()
+				else
+					M.create()
+				end
 			end,
-			"New query",
+			"Open table note / new query",
 		},
 		["<F1>"] = {
 			function()
@@ -1010,11 +1015,9 @@ function M.show(view)
 	map(state.side_buf, "J", function()
 		M.insert_join(selected_object(state))
 	end)
-	for _, key in ipairs({ "gn", "gN" }) do
-		map(state.side_buf, key, function()
-			M.notes(selected_object(state))
-		end)
-	end
+	map(state.side_buf, "gn", function()
+		M.notes(selected_object(state))
+	end)
 	map(state.side_buf, "gD", function()
 		local item = selected_object(state)
 		if item then

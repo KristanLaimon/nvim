@@ -1884,4 +1884,57 @@ describe("FoxQuerier live workflow", function()
 		expect(hint).toBeTruthy()
 		expect(text:find("Possible M:N bridge", 1, true)).toBeNil()
 	end)
+	it("shows only the active statement's parameters and executes persisted values without prompts", function()
+		project(function(root)
+			query.show("standard")
+			local state = query.state()
+			local buf = state.active
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+				"SELECT * FROM t WHERE t.id = ? OR t.id = ?;",
+				"SELECT 1;",
+			})
+			vim.api.nvim_win_set_cursor(state.sql_win, { 1, 0 })
+			query.refresh_view(state)
+			expect(vim.api.nvim_win_is_valid(state.parameters_win)).toBeTruthy()
+			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({ "t.id = <unset>" })
+			local parameters = require("fox.query.parameters")
+			local description = parameters.describe("SELECT * FROM t WHERE t.id = ? OR t.id = ?", "sqlite")
+			query.parameters()
+			local old_input = vim.ui.input
+			local edited, edit_err = pcall(function()
+				vim.ui.input = function(opts, callback)
+					expect(opts.default).toBe("")
+					callback("42")
+				end
+				vim.fn.maparg("<CR>", "n", false, true).callback()
+			end)
+			vim.ui.input = old_input
+			assert(edited, edit_err)
+			expect(parameters.values(root, vim.b[buf].fox_query_document, description)[description.groups[1].key]).toBe("42")
+			local item, executed = state.consoles[buf], nil
+			item.profile = { id = "test", engine = "sqlite", path = "test.db" }
+			item.client = {
+				connected = true,
+				close = function() end,
+				request = function(_, operation, data, callback)
+					if operation == "prepare" then
+						callback({ parameters = 2, statements = 1 })
+					elseif operation == "execute" then
+						executed = data.params
+						callback({ sets = {} })
+					end
+				end,
+			}
+			query.run("statement")
+			expect(executed).toEqual({ "42", "42" })
+			vim.api.nvim_win_set_cursor(state.sql_win, { 2, 0 })
+			query.refresh_view(state)
+			expect(state.parameters_win).toBeNil()
+			vim.api.nvim_win_set_cursor(state.sql_win, { 1, 0 })
+			query.refresh_view(state)
+			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({ "t.id = 42" })
+			query.show("visual")
+			expect(state.parameters_win).toBeNil()
+		end)
+	end)
 end)

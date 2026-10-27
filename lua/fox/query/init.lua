@@ -4,6 +4,7 @@ local sql = require("fox.query.sql")
 local render = require("fox.query.render")
 local client = require("fox.query.client")
 local layout = require("fox.query.layout")
+local parameters = require("fox.query.parameters")
 local ns = vim.api.nvim_create_namespace("fox_query")
 local statement_ns = vim.api.nvim_create_namespace("fox_query_statement")
 local group = vim.api.nvim_create_augroup("FoxQuery", { clear = true })
@@ -478,6 +479,110 @@ local function text_at_cursor(state)
 	return table.concat(lines, "\n"), offset
 end
 
+function M.draw_parameters(state, focus)
+	local text, offset = text_at_cursor(state)
+	local engine = state.metadata.syntax or state.metadata.engine
+	local statement = sql.scope(text, offset, "statement", nil, engine)
+	local description = statement and parameters.describe(statement, engine)
+	local visible = description
+		and #description.groups > 0
+		and (state.view == "standard" or focus or state.parameters_statement == description.id)
+		and valid(state.sql_win, "win")
+	if not visible then
+		if valid(state.parameters_win, "win") then
+			vim.api.nvim_win_close(state.parameters_win, true)
+		end
+		state.parameters_win, state.parameters_statement = nil, nil
+		return
+	end
+	local owner = state.active
+	local document = vim.b[owner].fox_query_document
+	local values, err = parameters.values(state.root, document, description)
+	local buf = panel(state, "parameters_buf")
+	local lines = {}
+	for _, entry in ipairs(description.groups) do
+		local value = values and values[entry.key]
+		lines[#lines + 1] = entry.label .. " = " .. (value == nil and "<unset>" or value == "" and '""' or value)
+	end
+	set_lines(buf, lines)
+	local function edit(clear)
+		local entry = description.groups[vim.api.nvim_win_get_cursor(0)[1]]
+		if not entry then
+			return
+		end
+		local function save(value)
+			if not clear and value == nil then
+				return
+			end
+			local ok, save_err = parameters.set(state.root, document, description, entry.key, value)
+			if not ok then
+				notify(save_err, vim.log.levels.ERROR)
+			end
+			M.refresh_view(state)
+		end
+		if clear then
+			save(nil)
+		else
+			vim.ui.input({
+				prompt = entry.label .. " (NULL = null; blank = empty; text:NULL = text): ",
+				default = values and values[entry.key] or "",
+			}, save)
+		end
+	end
+	vim.keymap.set("n", "<CR>", function()
+		edit(false)
+	end, { buffer = buf, silent = true })
+	vim.keymap.set("n", "dd", function()
+		edit(true)
+	end, { buffer = buf, silent = true })
+	vim.keymap.set("n", "q", function()
+		vim.api.nvim_set_current_win(state.sql_win)
+	end, { buffer = buf, silent = true })
+	for _, key in ipairs({ "<F5>", "<C-CR>" }) do
+		vim.keymap.set("n", key, function()
+			M.run("statement")
+		end, { buffer = buf, silent = true })
+	end
+	if not valid(state.parameters_win, "win") then
+		local anchor = valid(state.side_win, "win") and state.side_win or state.sql_win
+		state.parameters_win = vim.api.nvim_open_win(buf, false, { split = "below", win = anchor })
+		vim.api.nvim_win_set_height(
+			state.parameters_win,
+			math.max(3, math.floor(vim.api.nvim_win_get_height(anchor) * 0.5))
+		)
+	end
+	vim.wo[state.parameters_win].winbar = "Parameters | Enter Edit | dd Clear | F5 Run"
+	vim.wo[state.parameters_win].wrap = false
+	vim.wo[state.parameters_win].number = false
+	vim.wo[state.parameters_win].relativenumber = false
+	vim.wo[state.parameters_win].cursorline = true
+	if focus then
+		state.parameters_statement = description.id
+		vim.api.nvim_set_current_win(state.parameters_win)
+	end
+	if err then
+		notify(err, vim.log.levels.ERROR)
+	end
+end
+
+function M.parameters()
+	local state = M.state()
+	current_metadata(state)
+	M.draw_parameters(state, true)
+end
+
+function M.clear_parameters()
+	local state = M.state()
+	local ok, err = storage.save(state.root, "private/parameters.json", {})
+	if not ok then
+		notify(err, vim.log.levels.ERROR)
+	end
+	for _, item in pairs(state.consoles) do
+		item.params = {}
+	end
+	M.refresh_view(state)
+end
+
 local function mark_statement(state)
 	local active, buf = console(state)
 	if not active then
@@ -564,6 +669,7 @@ function M.refresh_view(state)
 		end
 	end
 	current_metadata(state)
+	M.draw_parameters(state)
 	if valid(state.sql_win, "win") then
 		mark_statement(state)
 	end
@@ -793,6 +899,7 @@ function M.hide(state)
 		vim.cmd("tabclose")
 		state.tab, state.sql_win, state.side_win, state.result_win, state.activity_win = nil, nil, nil, nil, nil
 		state.connections_win, state.queries_win = nil, nil
+		state.parameters_win, state.parameters_statement = nil, nil
 		if current ~= state.tab and valid(state.editor_tab, "tab") then
 			vim.api.nvim_set_current_tabpage(state.editor_tab)
 		end
@@ -1915,42 +2022,22 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 			vim.defer_fn(elapsed, 500)
 			M.refresh_view(state)
 		end
-		if supplied_params then
+		if supplied_params or prepared.parameters == 0 then
 			execute()
 			return
 		end
-		for index = 1, prepared.parameters do
-			local previous = item.executed_sql == query and item.params[index] or nil
-			local default = previous == vim.NIL and "NULL" or previous and tostring(previous) or ""
-			local ok, value =
-				pcall(vim.fn.inputsecret, "Parameter " .. index .. " (NULL/null; blank/empty; Ctrl-C cancels): ", default)
-			if not ok then
-				connection.busy = false
-				item.status = "input canceled"
-				M.refresh_view(state)
-				return
-			end
-			params[index] = value == "NULL" and vim.NIL or value:gsub("^text:", "")
+		local engine = require("fox.langs.sql.dialect").read(buf) or item.syntax or profile.engine
+		local bound, binding_err = parameters.bound(state.root, vim.b[buf].fox_query_document, query, engine)
+		if not bound or #bound ~= prepared.parameters then
+			connection.busy = false
+			item.status = binding_err or "Placeholder detection differs from the database; SQL was not executed"
+			notify(item.status, vim.log.levels.WARN)
+			M.refresh_view(state)
+			M.draw_parameters(state, true)
+			return
 		end
-		if prepared.parameters > 0 then
-			M.select({ "Run with these RAM parameters", "Cancel" }, {
-				prompt = "Execute "
-					.. prepared.statements
-					.. " statement(s) with "
-					.. prepared.parameters
-					.. " bound value(s)?",
-			}, function(choice)
-				if choice == "Run with these RAM parameters" then
-					execute()
-				else
-					connection.busy = false
-					item.status = "input canceled"
-					M.refresh_view(state)
-				end
-			end)
-		else
-			execute()
-		end
+		params = bound
+		execute()
 	end)
 	M.refresh_view(state)
 end
@@ -2301,7 +2388,7 @@ function M.help()
 			"Results: H/L columns, J/K rows, Enter expand row, y copy, e export, gR follow FK",
 			"Map: / native search, Enter recenter, +/- depth, zh/zl pan, q back",
 			"Diagram markers: * selected, k JOIN, f filter, ? candidate FK; dim unused",
-			"Parameters: Ctrl-C cancels; NULL is null; text:NULL is literal text",
+			"Parameters pane: j/k rows, Enter edit, dd unset; NULL is null, text:NULL is literal text",
 			"Workspaces: save SQL first; explicit saves restore disconnected",
 			"Manual execution by default; FoxQueryAutoRun explicitly enables automatic SELECT.",
 		},

@@ -78,6 +78,8 @@ Text values appear in double quotes, while numbers and NULL remain unquoted. Ent
 | `:FoxQueryComplete` | Open cached database completion in Insert mode. |
 | `:FoxQueryRun selection` | Execute the last character/line selection; block selections are rejected. |
 | `:FoxQueryRun section`, `:FoxQueryRun file` | Execute an explicit section or file, in order, stopping on error. |
+| `:FoxQueryParameters` | Focus the current statement’s visible, persistent values. |
+| `:FoxQueryClearParameters` | Clear all saved parameter values for this project. |
 | `:FoxQueryCancel` | Request cancellation; an uncertain session must reconnect. |
 | `:FoxQueryExplorer`, `:FoxQueryInspect` | Search metadata or inspect the selected table. |
 | `:FoxQueryGraph all`, `:FoxQueryGraph neighborhood` | Whole-database overview or selected table neighborhood, initially depth 3. |
@@ -89,7 +91,7 @@ Text values appear in double quotes, while numbers and NULL remain unquoted. Ent
 | `:FoxQueryResults`, `:FoxQueryActivity` | Show results or submitted SQL/activity. |
 | `:FoxQueryExport` | Explicit JSON export of loaded rows only. |
 | `:FoxQueryRefresh` | Refresh current connection metadata. |
-| `:FoxQueryClearParameters`, `:FoxQueryClearCache` | Clear RAM values or disposable metadata files; preserve user documents. |
+| `:FoxQueryClearCache` | Clear disposable metadata files; preserve user documents. |
 | `:FoxQueryHelp` | Context help, also available with F1 in SQL buffers and `?` in panels. |
 | `:FoxQueryErrorDetails` | Expand the last server diagnostic in a temporary buffer; values may appear, and details are never saved automatically. |
 
@@ -107,7 +109,11 @@ SELECT c.id, c.name FROM customers c;
 SELECT o.id, o.total FROM orders o WHERE o.customer_id = ?;
 ```
 
-Each `?` input is bound through the driver. Inputs stay in RAM; the same unchanged SQL may reuse values as masked prompt defaults, which must be reviewed/confirmed before execution. `NULL` means SQL null, blank means empty text, and `text:NULL` means the literal text `NULL`. Ctrl-C cancels input; the final parameter confirmation can also cancel. PostgreSQL JSON `?`, `?|`, and `?&` operators are distinguished from ordinary placeholders in the supported syntax. List expansion and native/named placeholders are not implemented.
+In the default layout, the **Parameters** pane appears beneath Tables while the SQL cursor is in a statement containing `?` bindings. Move between value rows with **j/k**, press **Enter** to edit a visible value, **dd** to unset it, and **q** to return to SQL. **F5** or **Ctrl+Enter** runs with those values directly, without masked prompts or an extra confirmation. Missing values stop execution and focus Parameters. `:FoxQueryParameters` (also in the palette) focuses the pane, including in compact/diagram views.
+
+Values are bound through the driver, never interpolated into SQL. `NULL` means SQL null, blank means empty text, and `text:NULL` means the literal text `NULL`. Repeated qualified equality predicates such as `u.id = ? OR u.id = ?` share one row within the same scope; ambiguous expressions and nested scopes keep separate rows. PostgreSQL JSON `?`, `?|`, and `?&` operators follow the worker's detection rules. A mismatch with the worker's binding count prevents execution.
+
+Values persist as visible plaintext in **`.foxnvim/query/private/parameters.json`**, protected by the existing local ignore rules and owner-only file creation on Unix. They belong to a saved SQL file and its statement contents, ignoring whitespace and comments. Moving a whole statement within the file retains its values across sessions; changing its SQL creates a fresh value set. Identical statements in one file share values. Saving removes entries for deleted statements; deleting or renaming files/folders removes or moves their entries. Unsaved SQL still requires `:write` to survive a restart. `:FoxQueryClearParameters` clears the project's saved values and RAM execution values. List expansion and native/named placeholders are not implemented.
 
 ## Visual diagram and navigation
 
@@ -131,7 +137,7 @@ Results: **Shift+h/l** moves between columns and **Shift+j/k** moves between dat
 
 ## Sessions, workspaces, and limits
 
-Each SQL console has its own session and explicit profile; the project permits up to four open sessions. Switching a profile clears old results and RAM parameters. Switching layouts/projects keeps sessions with their original owner. A busy console cannot reconnect or be closed until its query finishes or is canceled. Closing modified documents offers save/discard/cancel.
+Each SQL console has its own session and explicit profile; the project permits up to four open sessions. Switching a profile clears old results and RAM execution parameters; the SQL file’s saved parameter values remain available. Switching layouts/projects keeps sessions with their original owner. A busy console cannot reconnect or be closed until its query finishes or is canceled. Closing modified documents offers save/discard/cancel.
 
 `:write` saves queries and notes locally with atomic replacement and external-change detection. WorkspaceSave requires saved query documents. Query workspace state is stored under the project's private directory, and generic/global session files exclude query buffers. Explicit workspace load reopens saved SQL and layout while disconnected, without parameter/result replay or automatic execution. Normal startup does not open query tabs.
 

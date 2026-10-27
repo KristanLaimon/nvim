@@ -276,6 +276,13 @@ function M.document_buffer(root, relative, filetype)
 					error(err)
 				end
 				vim.b[buf].fox_query_disk, vim.bo[buf].modified = text, false
+				if document:match("^queries/") then
+					local pruned, prune_err =
+						require("fox.query.parameters").prune(root, document, text, require("fox.langs.sql.dialect").read(buf))
+					if not pruned then
+						vim.notify(prune_err, vim.log.levels.ERROR)
+					end
+				end
 			end,
 		})
 	end

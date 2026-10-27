@@ -22,6 +22,7 @@ local commands = {
 	"FoxQueryRefresh",
 	"FoxQueryResults",
 	"FoxQueryClearParameters",
+	"FoxQueryParameters",
 	"FoxQueryClearCache",
 	"FoxQueryInsertJoin",
 	"FoxQueryExport",
@@ -177,11 +178,8 @@ return {
 		command("FoxQueryExport", query.export)
 		command("FoxQueryPin", query.pin)
 		command("FoxQueryColumns", query.column_limit)
-		command("FoxQueryClearParameters", function()
-			for _, item in pairs(query.state().consoles) do
-				item.params = {}
-			end
-		end)
+		command("FoxQueryParameters", query.parameters)
+		command("FoxQueryClearParameters", query.clear_parameters)
 		command("FoxQueryClearCache", function()
 			local storage = require("fox.query.storage")
 			local root = storage.root()

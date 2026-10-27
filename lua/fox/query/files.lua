@@ -184,6 +184,11 @@ function M.rename(state, relative, destination)
 		vim.api.nvim_buf_set_name(item.buf, storage.path(state.root, "queries/" .. name))
 		vim.b[item.buf].fox_query_document = "queries/" .. name
 	end
+	local moved, move_err =
+		require("fox.query.parameters").relocate(state.root, "queries/" .. relative, "queries/" .. destination)
+	if not moved then
+		vim.notify("SQL renamed, but parameters could not be moved: " .. tostring(move_err), vim.log.levels.ERROR)
+	end
 	local changed = false
 	local prefix = "queries/" .. relative
 	for index, document in ipairs(state.tab_pins or {}) do
@@ -253,6 +258,10 @@ function M.delete(state, relative)
 		if not removed then
 			return nil, remove_err
 		end
+	end
+	local cleared, clear_err = require("fox.query.parameters").relocate(state.root, "queries/" .. relative)
+	if not cleared then
+		vim.notify("SQL deleted, but parameters could not be removed: " .. tostring(clear_err), vim.log.levels.ERROR)
 	end
 	for _, item in ipairs(buffers) do
 		require("fox.query").close_buffer(item.buf, true)

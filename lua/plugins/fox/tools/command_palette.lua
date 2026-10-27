@@ -121,6 +121,7 @@ M.commands = {
 	{ name = "Query: Run Section", cmd = "FoxQueryRun section", category = "Query" },
 	{ name = "Query: Run File", cmd = "FoxQueryRun file", category = "Query" },
 	{ name = "Query: Cancel Execution", cmd = "FoxQueryCancel", category = "Query" },
+	{ name = "Query: Statement Parameters", cmd = "FoxQueryParameters", category = "Query" },
 	{ name = "Query: Database Explorer", cmd = "FoxQueryExplorer", category = "Query" },
 	{ name = "Query: Inspect Table", cmd = "FoxQueryInspect", category = "Query" },
 	{ name = "Query: Browse Table in Popup", cmd = "FoxQueryBrowsePopup", category = "Query" },

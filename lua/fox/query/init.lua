@@ -495,7 +495,10 @@ function M.draw_parameters(state, focus)
 		and valid(state.sql_win, "win")
 	if not visible then
 		if valid(state.parameters_win, "win") then
-			vim.api.nvim_win_close(state.parameters_win, true)
+			-- Keep equalalways from redistributing heights outside the Parameters column.
+			vim._with({ o = { eadirection = "hor" } }, function()
+				vim.api.nvim_win_close(state.parameters_win, true)
+			end)
 		end
 		state.parameters_win, state.parameters_statement = nil, nil
 		return
@@ -550,11 +553,13 @@ function M.draw_parameters(state, focus)
 	end
 	if not valid(state.parameters_win, "win") then
 		local anchor = valid(state.side_win, "win") and state.side_win or state.sql_win
-		state.parameters_win = vim.api.nvim_open_win(buf, false, { split = "below", win = anchor })
-		vim.api.nvim_win_set_height(
-			state.parameters_win,
-			math.max(3, math.floor(vim.api.nvim_win_get_height(anchor) * 0.5))
-		)
+		vim._with({ o = { eadirection = "hor" } }, function()
+			state.parameters_win = vim.api.nvim_open_win(buf, false, {
+				split = "below",
+				win = anchor,
+				height = math.max(3, math.floor(vim.api.nvim_win_get_height(anchor) * 0.5)),
+			})
+		end)
 	end
 	vim.wo[state.parameters_win].winbar = "Parameters | Enter Edit | dd Clear | F5 Run"
 	vim.wo[state.parameters_win].wrap = false

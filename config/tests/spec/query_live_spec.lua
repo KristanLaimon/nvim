@@ -1931,6 +1931,49 @@ describe("FoxQuerier live workflow", function()
 		expect(hint).toBeTruthy()
 		expect(text:find("Possible M:N bridge", 1, true)).toBeNil()
 	end)
+	it("keeps other panes in place when Parameters opens and closes", function()
+		project(function()
+			query.show("standard")
+			local state = query.state()
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "SELECT ?;", "SELECT 1;" })
+			vim.api.nvim_win_set_cursor(state.sql_win, { 2, 0 })
+			query.refresh_view(state)
+			local sizes = {}
+			for _, win in ipairs({
+				state.sql_win,
+				state.result_win,
+				state.queries_win,
+				state.connections_win,
+				state.activity_win,
+			}) do
+				sizes[win] =
+					{ vim.api.nvim_win_get_position(win), vim.api.nvim_win_get_width(win), vim.api.nvim_win_get_height(win) }
+			end
+			for _ = 1, 3 do
+				vim.api.nvim_win_set_cursor(state.sql_win, { 1, 0 })
+				query.refresh_view(state)
+				expect(vim.api.nvim_win_is_valid(state.parameters_win)).toBeTruthy()
+				for win, size in pairs(sizes) do
+					expect({
+						vim.api.nvim_win_get_position(win),
+						vim.api.nvim_win_get_width(win),
+						vim.api.nvim_win_get_height(win),
+					}).toEqual(size)
+				end
+				vim.api.nvim_win_set_cursor(state.sql_win, { 2, 0 })
+				query.refresh_view(state)
+				expect(state.parameters_win).toBeNil()
+				for win, size in pairs(sizes) do
+					expect({
+						vim.api.nvim_win_get_position(win),
+						vim.api.nvim_win_get_width(win),
+						vim.api.nvim_win_get_height(win),
+					}).toEqual(size)
+				end
+			end
+		end)
+	end)
+
 	it("shows only the active statement's parameters and executes persisted values without prompts", function()
 		project(function(root)
 			query.show("standard")

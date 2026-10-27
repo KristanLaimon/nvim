@@ -123,6 +123,10 @@ map ctrl+shift+t send_text all \x1b[84;6u
 map ctrl+shift+q send_text all \x1b[81;6u
 map ctrl+shift+s send_text all \x1b[83;6u
 
+# Let Neovim receive these through Kitty's negotiated keyboard protocol.
+map ctrl+shift+h no_op
+map ctrl+shift+l no_op
+
 # Terminal drawer toggle & special keys
 map ctrl+; send_text all \x1b[59;5u
 map ctrl+, send_text all \x1b[44;5u

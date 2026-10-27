@@ -10,7 +10,7 @@ Choose one setup/undo pair for terminal shortcuts:
 
 From the Neovim config directory, run `bash config/scripts/setup-kitty.sh` for Kitty, or `bash config/scripts/unsetup-kitty.sh` to undo it. The Kitty pair requires Python 3. The Bash pair accepts a terminal name such as `foot` or `alacritty`; use `bash config/scripts/setup-bash.sh --check` to detect the current terminal without changing config.
 
-These scripts configure terminal shortcuts, not Bash or Fish profiles. Kitty setup enables Ctrl+Shift+Enter, Ctrl+Shift+P and Ctrl+Shift+1..9 passthrough; the Bash and PowerShell pairs configure a broader set of FoxVim shortcuts.
+These scripts configure terminal shortcuts, not Bash or Fish profiles. Kitty setup enables Ctrl+Shift+Enter, Ctrl+Shift+P/A/Q/H/L and Ctrl+Shift+1..9 passthrough; rerun it to upgrade an existing setup. Ctrl+Shift+H/L then reach Neovim instead of opening Kitty scrollback or changing its layout. The Bash and PowerShell pairs configure a broader set of FoxVim shortcuts.
 
 Other tools live separately:
 

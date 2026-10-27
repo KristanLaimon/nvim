@@ -74,7 +74,7 @@ keymap = config.keyboard_modes[''].keymap
 selected = mappings.matching_key_actions(keymap[parse_shortcut('ctrl+shift+p')])
 assert selected, 'Missing Ctrl+Shift+P mapping'
 assert all(not item.is_sequence and not item.definition for item in selected) == %s, selected
-for key in ('a', 'q'):
+for key in ('a', 'q', 'h', 'l'):
     actions = mappings.matching_key_actions(keymap.get(parse_shortcut('ctrl+shift+' + key), []))
     if %s:
         assert actions and all(not item.is_sequence and not item.definition for item in actions), (key, actions)
@@ -91,6 +91,10 @@ assert unrelated[-1].definition == 'copy_to_clipboard', unrelated
 	for name, block in pairs({
 		shortcuts = previous,
 		prefix = previous:gsub("map ctrl%+shift%+p\n", "map ctrl+shift+p no_op\n"),
+		letters = previous:gsub(
+			"map ctrl%+shift%+p\n",
+			"map ctrl+shift+p no_op\nmap ctrl+shift+a no_op\nmap ctrl+shift+q no_op\n"
+		),
 		environments = "# >>> FOXVIM KITTY ENVIRONMENTS >>>\n" .. maps .. "# <<< FOXVIM KITTY ENVIRONMENTS <<<\n",
 		legacy = "# Pass environment shortcuts through to Neovim instead of focusing Kitty windows.\n" .. maps,
 	}) do

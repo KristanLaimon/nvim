@@ -18,6 +18,9 @@ describe("LSP project auto-stop", function()
 
 	afterEach(function()
 		vim.lsp.get_clients = original_get_clients
+		for _, group in ipairs({ "LspProjectAutoStopTest", "LspProjectAutoStopTestEmpty" }) do
+			pcall(vim.api.nvim_del_augroup_by_name, group)
+		end
 	end)
 
 	it("stops all active LSP clients when DirChanged fires", function()

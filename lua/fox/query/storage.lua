@@ -262,6 +262,10 @@ function M.document_buffer(root, relative, filetype)
 		vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(content, "\n", { plain = true }))
 		vim.bo[buf].modified, vim.b[buf].fox_query_loaded = false, true
 		vim.b[buf].fox_query_disk = content
+		vim.b[buf].fox_query_parameter_text = content
+		if relative:match("^queries/") then
+			require("fox.query.parameters").attach(buf)
+		end
 		vim.api.nvim_create_autocmd("BufWriteCmd", {
 			buffer = buf,
 			callback = function()

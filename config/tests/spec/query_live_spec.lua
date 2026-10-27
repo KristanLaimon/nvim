@@ -1974,6 +1974,30 @@ describe("FoxQuerier live workflow", function()
 		end)
 	end)
 
+	it("removes only the deleted intention from Parameters and leaves a restored slot unset", function()
+		project(function(root)
+			query.show("standard")
+			local state = query.state()
+			local text = "SELECT * FROM alumnos WHERE nombre = ? AND edad > ?"
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { text })
+			query.refresh_view(state)
+			local parameters = require("fox.query.parameters")
+			local description = parameters.describe(text, "sqlite")
+			local document = vim.b[state.active].fox_query_document
+			assert(parameters.set(root, document, description, description.groups[1].key, "Ana"))
+			assert(parameters.set(root, document, description, description.groups[2].key, "18"))
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "SELECT * FROM alumnos WHERE edad > ?" })
+			query.refresh_view(state)
+			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({ "Parameter 1 = 18" })
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { text })
+			query.refresh_view(state)
+			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({
+				"Parameter 1 = <unset>",
+				"Parameter 2 = 18",
+			})
+		end)
+	end)
+
 	it("shows only the active statement's parameters and executes persisted values without prompts", function()
 		project(function(root)
 			query.show("standard")

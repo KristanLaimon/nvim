@@ -2,7 +2,7 @@ local M = {}
 
 -- Positions are byte offsets, matching Neovim edits and selections.
 function M.tokens(text, engine)
-	local tokens, i, incomplete = {}, 1, false
+	local tokens, i, incomplete, unicode_identifiers = {}, 1, false, false
 	local function add(value, kind, first, last)
 		tokens[#tokens + 1] = { value = value, upper = value:upper(), kind = kind, first = first, last = last }
 	end
@@ -55,8 +55,9 @@ function M.tokens(text, engine)
 			incomplete = incomplete or not finish
 			i = finish and finish + #tag or #text + 1
 			add(text:sub(first, i - 1), "string", first, i - 1)
-		elseif char:match("[%a_$]") then
-			local value = text:sub(i):match("^[%w_$]+")
+		elseif char:match("[%a_$]") or char:byte() >= 128 then
+			local value = text:sub(i):match("^[%w_$\128-\255]+")
+			unicode_identifiers = unicode_identifiers or value:find("[\128-\255]") ~= nil
 			i = i + #value
 			add(value, "word", first, i - 1)
 		else
@@ -64,7 +65,32 @@ function M.tokens(text, engine)
 			i = i + 1
 		end
 	end
-	return tokens, incomplete
+	local legacy
+	if unicode_identifiers then
+		-- Preserve the old token identities so saved parameter values can migrate without resetting.
+		legacy = {}
+		for _, token in ipairs(tokens) do
+			if token.kind == "word" and token.value:find("[\128-\255]") then
+				local at = token.first
+				while at <= token.last do
+					local char = text:sub(at, at)
+					local word = char:match("[%a_$]") and text:sub(at):match("^[%w_$]+")
+					local value = word or char
+					legacy[#legacy + 1] = {
+						kind = word and "word" or "symbol",
+						value = value,
+						upper = value:upper(),
+						first = at,
+						last = at + #value - 1,
+					}
+					at = at + #value
+				end
+			else
+				legacy[#legacy + 1] = token
+			end
+		end
+	end
+	return tokens, incomplete, legacy
 end
 
 function M.statements(text, engine)

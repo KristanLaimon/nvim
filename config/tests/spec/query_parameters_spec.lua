@@ -17,6 +17,31 @@ local function project(check)
 end
 
 describe("Query parameters", function()
+	it("keeps UTF-8 column names intact and migrates existing values without resetting them", function()
+		project(function(root)
+			local query, document = "SELECT * FROM alumnos WHERE año = ?", "queries/unicode.sql"
+			assert(storage.write(root, document, query))
+			local buf = storage.document_buffer(root, document, "sql")
+			local description = parameters.describe(query, "sqlite")
+			expect(description.groups[1].label).toBe("año")
+			local old_id = "46bc97fc8d81fb70ac216fb8319fcf53fff4be52d25bafabe4c19992cfe511ca"
+			local old_key = "intent:323d3b9a46f9b0f87ba51a3c1002fbcb862394505d1c595aa708da2be5c3e7c1:1"
+			expect(description.id).toBe(old_id)
+			assert(storage.save(root, "private/parameters.json", { [document] = { [old_id] = { [old_key] = "2025" } } }))
+			expect(parameters.bound(root, document, query, "sqlite")).toEqual({ "2025" })
+			query = query .. " AND periodo = ?"
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { query })
+			description = parameters.describe(query, "sqlite")
+			local values = parameters.values(root, document, description)
+			expect(values[description.groups[1].key]).toBe("2025")
+			expect(values[description.groups[2].key]).toBeNil()
+			local column = query:find("?", 1, true) - 1
+			vim.api.nvim_buf_set_text(buf, 0, column, 0, column + 1, { "" })
+			vim.api.nvim_buf_set_text(buf, 0, column, 0, column, { "?" })
+			expect(parameters.values(root, document, description)[description.groups[1].key]).toBeNil()
+		end)
+	end)
+
 	it("keeps nombre while an appended AND predicate is typed character by character", function()
 		project(function(root)
 			local document = "queries/typing.sql"

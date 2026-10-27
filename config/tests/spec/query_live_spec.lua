@@ -2027,12 +2027,13 @@ describe("FoxQuerier live workflow", function()
 			query.show("standard")
 			local state = query.state()
 			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, {
-				"SELECT * FROM ? WHERE apellido_paterno = ? UNION SELECT * FROM ? WHERE nombre = ?",
+				"SELECT * FROM ? WHERE apellido_paterno = ? AND año = ? UNION SELECT * FROM ? WHERE nombre = ?",
 			})
 			query.refresh_view(state)
 			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({
 				"From #1: <unset>",
 				"apellido_paterno = <unset>",
+				"año = <unset>",
 				"From #2: <unset>",
 				"nombre = <unset>",
 			})

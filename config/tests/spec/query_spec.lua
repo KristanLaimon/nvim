@@ -32,6 +32,18 @@ local metadata = {
 }
 
 describe("FoxQuerier SQL structure", function()
+	it("tokenizes UTF-8 identifiers as full words with byte-accurate positions", function()
+		local text = "SELECT año, a.año_ingreso, 学生 FROM alumnos a"
+		local names = {}
+		for _, token in ipairs(sql.tokens(text)) do
+			expect(text:sub(token.first, token.last)).toBe(token.value)
+			if token.kind == "word" and token.value:find("[\128-\255]") then
+				names[#names + 1] = token.value
+			end
+		end
+		expect(names).toEqual({ "año", "año_ingreso", "学生" })
+	end)
+
 	it("includes derived, scalar, predicate and nested subqueries with scoped aliases", function()
 		for _, text in ipairs({
 			"SELECT d.id FROM (SELECT o.id FROM orders o) AS d",

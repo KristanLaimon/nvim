@@ -10,11 +10,7 @@ local sql = require("fox.query.sql")
 local storage = require("fox.query.storage")
 
 -- Match the worker's PostgreSQL JSON-operator rules before assigning binding positions.
-function M.describe(query, engine)
-	local tokens, incomplete = sql.tokens(query, engine)
-	if incomplete then
-		return nil
-	end
+local function describe_tokens(tokens, engine, identity_tokens)
 	local identity, bindings, scopes, serial = {}, {}, { 0 }, 0
 	for index, token in ipairs(tokens) do
 		identity[#identity + 1] = { token.kind, token.value }
@@ -97,7 +93,37 @@ function M.describe(query, engine)
 			order[#order + 1] = seen[key]
 		end
 	end
+	if identity_tokens then
+		identity = {}
+		for _, token in ipairs(identity_tokens) do
+			identity[#identity + 1] = { token.kind, token.value }
+		end
+	end
 	return { id = vim.fn.sha256(vim.json.encode(identity)), source = source, groups = groups, order = order }
+end
+
+function M.describe(query, engine)
+	local tokens, incomplete, legacy = sql.tokens(query, engine)
+	if incomplete then
+		return nil
+	end
+	local description = describe_tokens(tokens, engine, legacy)
+	if legacy then
+		local previous = describe_tokens(legacy, engine)
+		local positions = {}
+		for _, group in ipairs(previous.groups) do
+			for _, position in ipairs(group.positions) do
+				positions[position] = group
+			end
+		end
+		for _, group in ipairs(description.groups) do
+			local old = positions[group.positions[1]]
+			if old then
+				group.previous_key, group.previous_legacy_key = old.key, old.legacy_key
+			end
+		end
+	end
+	return description
 end
 
 function M.load(root)
@@ -176,7 +202,10 @@ end
 
 local function saved_value(values, group)
 	if not group.dropped then
-		return values[group.key] or values[group.legacy_key]
+		return values[group.key]
+			or values[group.previous_key]
+			or values[group.legacy_key]
+			or values[group.previous_legacy_key]
 	end
 end
 
@@ -302,7 +331,9 @@ function M.sync(root, document)
 			end
 			group.dropped = dropped == #group.positions
 			if group.dropped and saved[id] then
-				saved[id][group.key], saved[id][group.legacy_key] = nil, nil
+				for _, key in ipairs({ group.key, group.legacy_key, group.previous_key, group.previous_legacy_key }) do
+					saved[id][key] = nil
+				end
 			end
 		end
 	end

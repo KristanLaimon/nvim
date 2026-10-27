@@ -122,8 +122,8 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `<C-k>` / `<C-K>` / `<C-/>` / `<C-_>` | n, i | Find files, respecting `.gitignore` |
 | `<C-A-k>` / `<C-S-/>` / `<C-?>` | n, i, v | Find files, ignoring `.gitignore` |
 | `<C-f>` | n, i | Live grep across the project |
-| `<C-S-y>` | n, i, v, t | Sneak-Peek project modal (90% width & height on-top window) |
 | `<C-S-f>` | n, i, v | Floating Desktop file explorer |
+| `<C-S-y>` | n, i | Browse folders and open one as the active project |
 | `<C-r>` | n | Recent projects modal |
 | `<C-S-p>` | n, i, v, t | Command palette |
 
@@ -176,4 +176,3 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `:NugetManager` | Nuget package manager for `.csproj` |
 | `:TailwindOrganize` / `:TailwindOrganizerToggle` | Organize Tailwind CSS classes |
 | `:FoxTypes` / `:TypeInjector` | Type injector menu |
-| `:PHPCheckTools` | PHP / Composer / Intelephense / Pint / Xdebug diagnostic modal |

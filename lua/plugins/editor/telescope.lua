@@ -42,7 +42,6 @@ local settings = {
 	},
 	live_grep_key = "<C-f>",
 	help_tags_key = nil,
-	open_folder_key = "<C-S-y>",
 	desktop_explorer_key = "<C-/>",
 	wsl_explorer_key = nil,
 
@@ -491,11 +490,6 @@ return {
 		vim.api.nvim_create_user_command("TelescopeOpenFolder", function()
 			open_folder_picker()
 		end, { desc = "Browse folders and open one as the active project" })
-		if settings.open_folder_key then
-			vim.keymap.set({ "n", "i" }, settings.open_folder_key, function()
-				require("plugins.fox.dev.sneak_peek").toggle_or_pick()
-			end, { desc = "Sneak-Peek Project Modal (Ctrl+Shift+O)" })
-		end
 
 		vim.api.nvim_create_user_command("TelescopeFileBrowserDesktop", function()
 			require("plugins.fox.tools.file_explorer").open_desktop_explorer()

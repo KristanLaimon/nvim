@@ -25,7 +25,6 @@ The local Laravel index supplies routes, views, components, Livewire, config, en
 
 All commands below are registered in the **Command Palette** (`<C-S-p>` or `:CommandPalette`):
 
-* `:PHPCheckTools` – Runs an environment check modal reporting PHP CLI, Composer, and WSL availability.
 * `:BladeNavClearCache` – Clears cached Laravel routes, views, config, env, and translation entries.
 * `:BladeNavToggleShowValues` – Toggles inline config/env/translation virtual text annotations.
 * `:BladeNavInstallArtisanCommand` – Installs the local component-alias helper command without overwriting existing files; copies it to `app/Console/Commands/BladeNav.php`.

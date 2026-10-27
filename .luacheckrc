@@ -45,7 +45,6 @@ globals = {
 	"LaunchCmp",
 	"LaunchProfiles",
 	"NugetManager",
-	"PhpToolsModal",
 	"ProjectTasks",
 	"SmartCheck",
 	"TailwindOrganizer",

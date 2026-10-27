@@ -183,14 +183,6 @@ Every operation shells out to `dotnet add/remove package` rather than editing th
 
 ---
 
-## 🐘 PHP Tools Check (`php_tools_modal.lua`)
-
-`:PHPCheckTools` probes for PHP, Composer, Intelephense, Pint and the debug adapter — **on the Windows host and inside WSL** — and shows a floating modal with install steps for whatever is missing.
-
-The dual probe is the point: on Windows it's completely normal to have PHP in WSL and nothing on the host, and "command not found" doesn't tell you which side is empty.
-
----
-
 ## 🐧 WSL Helpers (`wsl.lua`)
 
 Distro detection and path translation, used by anything that needs to know whether a path lives inside `\\wsl.localhost\<Distro>\`:

@@ -47,7 +47,7 @@ Nothing below installs automatically on first start: FOX maps packages from lang
 
 **Diagnostics are native.** The configured TypeScript server advertises `diagnosticProvider`, so Neovim pulls and refreshes diagnostics itself.
 
-**PHP** — `intelephense` with a large stub set and `maxSize = 5000000`, allowing Laravel's larger Composer class-map files to be indexed. `pint` and `php_cs_fixer` are conditional formatters: they only run when the binary is on `PATH` **or** `vendor/bin/pint(.bat)` / `vendor/bin/php-cs-fixer(.bat)` exists upward from the file. `.blade.php` is remapped to the `blade` filetype. `:PHPCheckTools` reports which PHP tools are missing on the host and inside WSL, with install steps.
+**PHP** — `intelephense` with a large stub set and `maxSize = 5000000`, allowing Laravel's larger Composer class-map files to be indexed. `pint` and `php_cs_fixer` are conditional formatters: they only run when the binary is on `PATH` **or** `vendor/bin/pint(.bat)` / `vendor/bin/php-cs-fixer(.bat)` exists upward from the file. `.blade.php` is remapped to the `blade` filetype.
 
 **Astro and biome** — biome cannot format `.astro` templates at all, so those files are pinned to `prettier` (the project needs `prettier-plugin-astro` installed). Everywhere else the chain is `prettierd` → `prettier` → `biome`, `stop_after_first`.
 

@@ -81,7 +81,6 @@ FoxVim provides several built-in commands to inspect runtime dependencies from w
 - `:FoxHealthCheck` — FoxVim's complete CLI report, including Tree-sitter, StyLua, and Luacheck.
 - `:Mason` — Opens the Mason UI to view installed LSP servers, formatters, and debug adapters.
 - `:Lazy` — Opens the Lazy plugin manager to verify plugin status and updates.
-- `:PHPCheckTools` — Diagnostic modal probing host and WSL PHP, Composer, Intelephense, Pint, and Xdebug.
 - `:NvimWiki` — Opens this interactive Wiki inside the editor.
 
 ---

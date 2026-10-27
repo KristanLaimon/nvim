@@ -297,7 +297,7 @@ function M.open_desktop_explorer(opts, on_select_cb)
 	local prompt_title = opts.prompt_title
 	if not prompt_title then
 		if on_select then
-			prompt_title = " 🔍 Sneak Peek: Select Folder (Root: " .. vim.fn.fnamemodify(curr_dir, ":t") .. ") "
+			prompt_title = " 🔍 Select Folder (Root: " .. vim.fn.fnamemodify(curr_dir, ":t") .. ") "
 		else
 			prompt_title = " 📁 Explorer: " .. curr_dir .. " "
 		end

@@ -10,8 +10,7 @@ FOX Neovim includes native floating file explorers for Desktop, WSL, folder pick
 
 1. **Desktop Explorer (`<C-S-f>`)**: Pure Lua floating file explorer starting at user Desktop or home directory.
 2. **WSL Explorer (`:TelescopeFileBrowserWSL`)**: Native WSL distribution filesystem explorer.
-3. **Sneak-Peek Project Modal (`<C-S-y>`)**: Open any folder in an on-top modal window (90% width x 90% height) with fresh LSP initialization and full process tree cleanup on close.
-4. **Neo-tree Move ("En la mano" Workflow) (`m`)**:
+3. **Neo-tree Move ("En la mano" Workflow) (`m`)**:
    - Press `m` on any file or folder to pick it up ("En la mano"). A persistent toast notification appears showing the held item.
    - Navigate to the destination directory (or any file inside it) in Neo-tree and press `m` again to move it.
    - If `m` is pressed in the same directory or on the same item, the move is cancelled and a warning notifies you that it was already in the same place.
@@ -33,7 +32,7 @@ FOX Neovim includes native floating file explorers for Desktop, WSL, folder pick
 
 - `<C-S-f>`: Open Desktop File Explorer
 - `<leader>fw`: Open WSL File Explorer
-- `<C-S-y>`: Open Sneak-Peek Project Modal (90% width & height)
+- `<C-S-y>`: Browse folders and open one as the active project
 - `m` (in Neo-tree): Pick up file/folder ("En la mano") / Move into target directory (or cancel if same place)
 - `<Esc>` (in Neo-tree): Cancel pending move operation if an item is held
 - `r` (in Neo-tree): Rename file/folder via `input_modal`

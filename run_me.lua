@@ -26,25 +26,6 @@ local schema = {
 	},
 }
 
---- Run a dofile'd script that may call os.exit() without killing nvim.
---- Temporarily replaces os.exit with a throwing proxy, then restores it.
-local function safe_dofile(path)
-	local real_exit = os.exit
-	local exit_code = 0
-	local intercepted = false
-	os.exit = function(code)
-		exit_code = code or 0
-		intercepted = true
-		error("__EXIT__", 2)
-	end
-	local ok, err = pcall(dofile, path)
-	os.exit = real_exit
-	if not ok and not intercepted then
-		error(err, 0)
-	end
-	return exit_code
-end
-
 local test_options = {}
 
 local function run_tests()
@@ -59,7 +40,9 @@ end
 
 local function run_syntax()
 	console.log("[run_me] Running Syntax Check...")
-	local code = safe_dofile(root .. "/config/tests/syntax_check.lua")
+	local result = vim.system({ vim.v.progpath, "-l", root .. "/config/tests/syntax_check.lua" }, { text = true }):wait()
+	print((result.stdout or "") .. (result.stderr or ""))
+	local code = result.code
 	if code ~= 0 then
 		print(cli.colorize("[run_me] Syntax check found errors.", cli.colors.red))
 	end
@@ -160,7 +143,7 @@ local function show_menu()
 		"Exit",
 	}
 
-	cli.menu({ title = "FOXNVIM", subtitle = "Master CLI Script Runner", items = options }, function(choice, idx)
+	cli.menu({ title = "FOXNVIM", subtitle = "Master CLI Script Runner", items = options }, function(_, idx)
 		if idx == 1 then
 			run_tests()
 		elseif idx == 2 then

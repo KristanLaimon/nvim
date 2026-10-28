@@ -18,7 +18,7 @@ typo in a plugin file is invisible until then.
 | `nvim --headless -S config/tests/integration/run.lua -- --only-failure` | Specs that need the real editor | a few seconds |
 | `node config/tests/integration/markdown_browser.mjs` | GFM and Mermaid rendering and live updates in Chromium | a few seconds |
 | `nvim --headless -S config/tests/integration/run.lua -- kitty_shortcuts --only-failure` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
-| `:FoxTest --only-failure` | The unit specs, from inside the editor | ~1s |
+| `:FoxTest --only-failure` | Full Lua suite in a separate headless process | about 1–2 minutes |
 | `:FoxTest git --only-failure` | Filtered, from inside the editor | ~1s |
 
 AI assistants use `--only-failure` by default, for full and filtered Lua test
@@ -27,6 +27,9 @@ runs. It hides passing cases, passing suite headings, and their `print`,
 errors, and the final totals and exit
 status remain unchanged. Omit the flag when verbose output is useful. The flag
 also works with `run_me.lua --tests` or `--all`.
+
+`:FoxTest` and `run_me.lua` launch the unit suite in a clean Neovim process so
+test mocks cannot interfere with the editor's plugins or active language servers.
 
 The full Lua suite also exercises installed plugin integrations, the bundled Query
 worker, and Markdown HTTP serving over loopback using `curl`. A restricted sandbox

@@ -8,14 +8,27 @@ local describe, it, expect = t.describe, t.it, t.expect
 -- Ensure keymaps are loaded
 require("keymaps")
 
---- Helper to check if a keymap exists in normal mode
---- @param lhs string
---- @return boolean
-local function has_normal_keymap(lhs)
-	return vim.fn.maparg(lhs, "n") ~= ""
-end
-
 describe("Mobile & Phone Termux keymap aliases", function()
+	it("registers launch shortcuts according to the detected environment", function()
+		local environment = require("fox.core.environment")
+		local detect, launch = environment.detect, _G.LaunchProfiles
+		local ok, err = pcall(function()
+			for _, mobile in ipairs({ false, true }) do
+				environment.detect = function()
+					return { is_mobile = mobile }
+				end
+				local spec = dofile(vim.fn.stdpath("config") .. "/lua/plugins/fox/dev/launch_profiles.lua")
+				expect(vim.tbl_contains(spec.settings.keys.smart_launch, "<C-s>")).toBe(mobile)
+				local keys = vim.tbl_map(function(binding)
+					return binding[1]
+				end, spec.keys)
+				expect(vim.tbl_contains(keys, "<C-S>")).toBe(mobile)
+			end
+		end)
+		environment.detect, _G.LaunchProfiles = detect, launch
+		assert(ok, err)
+	end)
+
 	it("binds Command Palette shortcuts for Ctrl+Shift+P and leader aliases", function()
 		local palette = require("plugins.fox.tools.command_palette")
 		palette.setup()

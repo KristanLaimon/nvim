@@ -699,7 +699,7 @@ end
 
 function M.refresh_view(state)
 	state = state or M.state()
-	if not valid(state.tab, "tab") or vim.api.nvim_get_current_tabpage() ~= state.tab then
+	if state.building_layout or not valid(state.tab, "tab") or vim.api.nvim_get_current_tabpage() ~= state.tab then
 		return
 	end
 	local active = console(state)
@@ -1004,6 +1004,7 @@ function M.show(view)
 		M.hide(state)
 	end
 	state.view, state.mode = view or state.view, "query"
+	state.building_layout = true
 	require("fox.query.tree").setup()
 	M.privacy_enter(state)
 	state.editor_tab = vim.api.nvim_get_current_tabpage()
@@ -1143,6 +1144,7 @@ function M.show(view)
 	if active and active.cursor then
 		pcall(vim.api.nvim_win_set_cursor, state.sql_win, active.cursor)
 	end
+	state.building_layout = nil
 	M.refresh_view(state)
 	M.restore_connection(state)
 end

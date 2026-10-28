@@ -2112,6 +2112,28 @@ describe("FoxQuerier live workflow", function()
 		end)
 	end)
 
+	it("keeps Parameters in the right sidebar when opening SQL and returning from live mode", function()
+		project(function(root)
+			assert(storage.write(root, "queries/params.sql", "SELECT * FROM t WHERE id = ?"))
+			local function check_layout()
+				local state = query.state()
+				local side = vim.api.nvim_win_get_position(state.side_win)
+				local params = vim.api.nvim_win_get_position(state.parameters_win)
+				expect(params[2]).toBe(side[2])
+				expect(params[1] > side[1]).toBe(true)
+				expect(vim.api.nvim_win_get_width(state.parameters_win)).toBe(vim.api.nvim_win_get_width(state.side_win))
+				expect(
+					math.abs(vim.api.nvim_win_get_height(state.parameters_win) - vim.api.nvim_win_get_height(state.side_win)) <= 2
+				).toBe(true)
+			end
+			query.show("standard")
+			check_layout()
+			query.show("visual")
+			query.show("standard")
+			check_layout()
+		end)
+	end)
+
 	it("shows only the active statement's parameters and executes persisted values without prompts", function()
 		project(function(root)
 			query.show("standard")

@@ -40,7 +40,7 @@ M.settings = {
 			"<C-`>",
 			"<C-~>",
 			"<C-^>",
-			"<C-acute>",
+			"<C-´>",
 			"\27[39;5u",
 			"\27[27;5;39~",
 		},
@@ -133,9 +133,11 @@ if M.settings.keys.netrw then
 	vim.keymap.set("n", M.settings.keys.netrw, vim.cmd.Ex, opts("Open netrw directory listing"))
 end
 
--- Comments: `gcc` for a line, `gc` for a selection, from any mode.
+-- Use the native line operator directly so buffer-local gcc mappings cannot intercept it.
 for _, key in ipairs(M.settings.keys.comment) do
-	vim.keymap.set("n", key, feed_from_any_mode("gcc"), opts("Comment line"))
+	vim.keymap.set("n", key, function()
+		return require("vim._comment").operator() .. "_"
+	end, { expr = true, silent = true, desc = "Comment line" })
 	vim.keymap.set("v", key, feed_from_any_mode("gc"), opts("Comment selection"))
 	vim.keymap.set("i", key, function()
 		vim.cmd("stopinsert")

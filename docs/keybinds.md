@@ -18,7 +18,7 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `<C-z>` | n, i, v | Undo |
 | `<C-y>` / `<C-S-z>` | n, i | Redo |
 | `<C-w>` | n | Close current buffer (smart tab-close style) |
-| `<C-'>` / `<C-S-'>` / `<C-">` / `` <C-`> `` / `<C-~>` / `<C-^>` / `<C-acute>` | n, i, v, t | Toggle comment — line, or selection in visual mode; CSI-u and modifyOtherKeys terminal sequences supported |
+| `<C-'>` / `<C-S-'>` / `<C-">` / `` <C-`> `` / `<C-~>` / `<C-^>` / `<C-´>` | n, i, v, t | Toggle comment — line, or selection in visual mode; CSI-u and modifyOtherKeys terminal sequences supported |
 | `<F1>` / `:FoxHelp` / `:Cheatsheet` | n, i, v, t | Open Help Menu & Runtime Cheatsheet Manager |
 | `<F2>` | n | Rename symbol, file on disk, or Neo-tree item |
 | `<F3>` | n, i, v, t | Cycle Editor / Query directly |
@@ -35,6 +35,27 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `<S-LeftMouse>` | n, i, v | Shift + Click symbol: Move cursor and jump to definition |
 | `:q` / `:q!` / `<C-q>` | n, Cmd | Smart quit — split → tab → dashboard → quit |
 | `:ReloadConfig` | Cmd | Reload the Neovim configuration |
+
+If Ctrl+' arrives as a plain apostrophe (check with
+`:lua print(vim.fn.keytrans(vim.fn.getcharstr()))`), the terminal must send a
+distinct sequence. For US-International layouts, include the `dead_acute` key.
+Ordinary apostrophes remain unchanged.
+
+In `~/.config/kitty/kitty.conf` ([Kitty mapping reference](https://sw.kovidgoyal.net/kitty/mapping/)):
+
+```conf
+map ctrl+apostrophe send_text all \x1b[39;5u
+map ctrl+dead_acute send_text all \x1b[39;5u
+```
+
+In the existing `[text-bindings]` section of `~/.config/foot/foot.ini`:
+
+```ini
+\x1b[39;5u=Control+apostrophe Control+dead_acute
+```
+
+Reload Kitty or open a new Foot window. When running PowerShell, configure its
+host terminal rather than the shell profile.
 
 ---
 

@@ -399,7 +399,7 @@ function M.open(target_cwd, initial_mode)
 	local current_limit = 50
 	local batch_size = 50
 	local is_fetching = false
-	local all_fetched = false
+	local all_fetched
 	local refs_filter = nil -- nil = every branch (--all); otherwise a list of refs
 	local order = "topo" -- "topo" | "date"
 	local connector_mode = "dim" -- "dim" | "hidden"
@@ -706,7 +706,7 @@ function M.open(target_cwd, initial_mode)
 			current_target_file = target_filepath
 		end
 
-		local raw_diff = {}
+		local raw_diff
 		if current_target_file then
 			raw_diff = queries.git_lines(
 				{ "show", "--format=", "--color=never", commit.full_hash, "--", current_target_file },
@@ -1097,10 +1097,10 @@ function M.open(target_cwd, initial_mode)
 			-- Resize left pane to full width
 			if left_win and vim.api.nvim_win_is_valid(left_win) then
 				local total_w = math.floor(vim.o.columns * config.settings.width_ratio)
-				local s_col = math.floor((vim.o.columns - total_w) / 2)
+				local canvas_col = math.floor((vim.o.columns - total_w) / 2)
 				vim.api.nvim_win_set_config(left_win, {
 					width = total_w - 2,
-					col = s_col,
+					col = canvas_col,
 				})
 				-- Update title
 				vim.api.nvim_win_set_config(left_win, {
@@ -1207,28 +1207,6 @@ function M.open(target_cwd, initial_mode)
 			local modals = require("plugins.fox.git.git_center.modals")
 			modals.open_diff_modal(current_target_file, "commit", active_cwd, commit.full_hash)
 		end
-	end
-
-	local function handle_right_enter()
-		if
-			not (right_win and vim.api.nvim_win_is_valid(right_win) and right_buf and vim.api.nvim_buf_is_valid(right_buf))
-		then
-			return
-		end
-		local cursor_line = vim.api.nvim_win_get_cursor(right_win)[1]
-		local line_text = vim.api.nvim_buf_get_lines(right_buf, cursor_line - 1, cursor_line, false)[1] or ""
-
-		local filepath = line_text:match("•%s*%[[A-Z%d]+%]%s+(.+)$") or line_text:match("•%s*(.+)$")
-		if filepath then
-			filepath = filepath:gsub("^%s*", ""):gsub("%s*$", "")
-			local row = vim.api.nvim_win_get_cursor(left_win)[1]
-			local commit = get_commit_at_row(row)
-			local modals = require("plugins.fox.git.git_center.modals")
-			modals.open_diff_modal(filepath, "commit", active_cwd, commit and commit.full_hash)
-			return
-		end
-
-		open_full_diff()
 	end
 
 	local function on_right_cursor_moved()

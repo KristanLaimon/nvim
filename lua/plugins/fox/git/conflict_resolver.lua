@@ -218,9 +218,9 @@ end
 --- Retrieves the actual Neo-tree width (from disk or open window) to keep sidebar aligned.
 --- @return integer
 function M.get_sidebar_width()
-	local ok, store = pcall(require, "fox.core.store")
-	if ok and store and store.read_file then
-		local raw = store.read_file(vim.fn.stdpath("state") .. "/neotree_width")
+	local ok, state_store = pcall(require, "fox.core.store")
+	if ok and state_store and state_store.read_file then
+		local raw = state_store.read_file(vim.fn.stdpath("state") .. "/neotree_width")
 		local w = tonumber(raw or "")
 		if w and w >= 18 and w <= 60 then
 			return w
@@ -1543,9 +1543,7 @@ function M.abort_merge()
 
 	if not success then
 		local out = vim.fn.system("git -C " .. vim.fn.shellescape(cwd) .. " merge --abort")
-		if vim.v.shell_error == 0 then
-			success = true
-		else
+		if vim.v.shell_error ~= 0 then
 			notify("Failed to abort merge: " .. tostring(out), vim.log.levels.ERROR)
 			return
 		end

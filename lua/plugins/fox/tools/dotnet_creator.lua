@@ -10,8 +10,6 @@
 --   :DotnetNew / :CsharpNewProject / :DotnetCreateProject
 -- ============================================================================
 
-local lazy_req = require("fox.core.lazy_require")
-
 local M = {}
 
 --- Curated list of popular .NET templates for `dotnet new`.
@@ -103,7 +101,7 @@ function M.open_picker()
 			return
 		end
 
-		local short_name = ""
+		local short_name
 		if choice:find("Custom Template") then
 			short_name = vim.fn.input("Enter dotnet new template short name: ", "console")
 			if short_name == "" then

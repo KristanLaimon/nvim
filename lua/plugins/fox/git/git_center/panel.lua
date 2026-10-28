@@ -4,7 +4,6 @@
 
 local lazy_req = require("fox.core.lazy_require")
 local git = lazy_req("fox.git.cmd")
-local status = lazy_req("fox.git.status")
 local diff = lazy_req("fox.git.diff")
 local submodules = lazy_req("fox.git.submodules")
 local ui = lazy_req("fox.core.ui")
@@ -522,7 +521,6 @@ function M.open_git_center()
 		end
 	end
 
-	local active_target = get_active_target()
 	-- Do not wait for Git here.  On a large repository over a mounted
 	-- filesystem, status and numstat can take several seconds.  The windows are
 	-- useful immediately and `refresh` below replaces this placeholder when its
@@ -1077,7 +1075,7 @@ function M.open_git_center()
 						if ok2 then
 							notify("🌿 Created and switched to branch: " .. new_name)
 						else
-							git_run({ "switch", "-c", new_name }, function(ok3, output2)
+							git_run({ "switch", "-c", new_name }, function(ok3)
 								if ok3 then
 									notify("🌿 Created and switched to branch: " .. new_name)
 								else
@@ -1274,7 +1272,7 @@ function M.open_git_center()
 				if ok then
 					notify("✅ Checked out branch: " .. item.branch)
 				else
-					git_run({ "switch", item.branch }, function(ok2, output2)
+					git_run({ "switch", item.branch }, function(ok2)
 						if ok2 then
 							notify("✅ Switched to branch: " .. item.branch)
 						else

@@ -62,7 +62,7 @@ function M.run()
 			end).toThrow("custom error")
 
 			expect(function()
-				local x = 1 + 1
+				assert(1 + 1 == 2)
 			end).isNot.toThrow()
 		end)
 

@@ -33,20 +33,20 @@ end
 
 --- blink.cmp only queries this source while a session is live.
 --- @return boolean
-function M:enabled()
+function M.enabled(_self)
 	return session() ~= nil
 end
 
 --- Characters that open the menu without typing a word first.
 --- @return string[]
-function M:get_trigger_characters()
+function M.get_trigger_characters(_self)
 	return { ".", "[", '"', "'" }
 end
 
 --- Asks the adapter what is in scope at the cursor.
 --- @param ctx table blink.cmp context.
 --- @param callback fun(result: table|nil)
-function M:get_completions(ctx, callback)
+function M.get_completions(_self, ctx, callback)
 	callback = vim.schedule_wrap(callback)
 	local s = session()
 	local frame = s and s.current_frame

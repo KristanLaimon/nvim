@@ -3,7 +3,7 @@
 -- ============================================================================
 
 local env_ok, env_mod = pcall(require, "fox.core.environment")
-local is_mobile_or_proot = false
+local is_mobile_or_proot
 if env_ok then
 	local env = env_mod.detect()
 	is_mobile_or_proot = env.is_termux or env.is_proot or env.is_mobile

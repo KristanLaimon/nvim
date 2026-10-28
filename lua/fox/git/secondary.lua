@@ -567,50 +567,6 @@ function M.generate_scripts(cwd)
 	store.write_file(project_dir .. "/secondary_aliases.ps1", table.concat(ps1_lines, "\n") .. "\n")
 end
 
---- Detects whether a terminal buffer is running PowerShell ("ps1") or POSIX shell ("sh").
---- @param buf integer Buffer handle
---- @return string shell_type "ps1" or "sh"
-local function detect_shell_type(buf)
-	if vim.b[buf] and vim.b[buf].fox_is_wsl then
-		return "sh"
-	end
-
-	local bufname = (vim.api.nvim_buf_get_name(buf) or ""):lower()
-	if
-		bufname:find("bash")
-		or bufname:find("zsh")
-		or bufname:find("msys")
-		or bufname:find("mingw")
-		or bufname:find("git")
-	then
-		return "sh"
-	end
-	if bufname:find("powershell") or bufname:find("pwsh") or bufname:find("cmd.exe") then
-		return "ps1"
-	end
-
-	local shell = (vim.o.shell or ""):lower()
-	if
-		shell:find("bash")
-		or shell:find("zsh")
-		or shell:find("sh")
-		or shell:find("msys")
-		or shell:find("mingw")
-		or shell:find("git")
-	then
-		return "sh"
-	end
-	if shell:find("powershell") or shell:find("pwsh") or shell:find("cmd") then
-		return "ps1"
-	end
-
-	if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
-		return "ps1"
-	end
-
-	return "sh"
-end
-
 --- Ensures main repo .gitignore contains .git-*/ rules and unstages secondary git bare files if staged in main repo.
 --- @param cwd string|nil
 function M.ignore_in_main_repo(cwd)
@@ -685,7 +641,7 @@ end
 --- Injects alias definitions into Neovim terminal buffer(s).
 --- @param bufnr integer|nil Specific terminal buffer, or nil for all active terminals.
 --- @param cwd string|nil
-function M.inject_terminal_aliases(bufnr, cwd)
+function M.inject_terminal_aliases(_bufnr, cwd)
 	M.setup_environment(cwd)
 end
 

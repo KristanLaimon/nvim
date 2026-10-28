@@ -163,7 +163,7 @@ function M.open_branch_modal(target_cwd)
 			if ok then
 				notify("✅ Checked out branch: " .. target_b.name)
 			else
-				git_run({ "switch", target_b.name }, function(ok2, output2)
+				git_run({ "switch", target_b.name }, function(ok2)
 					if ok2 then
 						notify("✅ Switched to branch: " .. target_b.name)
 					else
@@ -594,7 +594,7 @@ function M.open_commit_log_modal(target_cwd, initial_row)
 			current_target_file = target_filepath
 		end
 
-		local raw_diff = {}
+		local raw_diff
 		if current_target_file then
 			raw_diff = git_lines({ "show", "--format=", "--color=never", commit.hash, "--", current_target_file }, active_cwd)
 		else
@@ -774,33 +774,6 @@ function M.open_commit_log_modal(target_cwd, initial_row)
 		local target = vim.api.nvim_get_current_win() == left_win and right_win or left_win
 		if target and vim.api.nvim_win_is_valid(target) then
 			vim.api.nvim_set_current_win(target)
-		end
-	end
-
-	local function handle_right_enter()
-		if
-			not (right_win and vim.api.nvim_win_is_valid(right_win) and right_buf and vim.api.nvim_buf_is_valid(right_buf))
-		then
-			return
-		end
-		local cursor_line = vim.api.nvim_win_get_cursor(right_win)[1]
-		local line_text = vim.api.nvim_buf_get_lines(right_buf, cursor_line - 1, cursor_line, false)[1] or ""
-
-		local filepath = line_text:match("•%s*%[[A-Z%d]+%]%s+(.+)$")
-		if filepath then
-			filepath = filepath:gsub("^%s*", ""):gsub("%s*$", "")
-			M.open_diff_modal(filepath, nil, active_cwd)
-			return
-		end
-
-		toggle_log_focus()
-	end
-
-	local function open_left_commit_diff()
-		local row = vim.api.nvim_win_get_cursor(left_win)[1]
-		local commit = get_commit_at_row(row)
-		if commit then
-			M.open_diff_modal(nil, "commit", active_cwd, commit.hash)
 		end
 	end
 
@@ -1193,8 +1166,8 @@ function M.open_diff_modal(target_file, target_type, target_cwd, commit_hash, in
 
 		local total_w = math.floor(vim.o.columns * config.settings.modal_width_ratio)
 		local total_h = math.floor(vim.o.lines * config.settings.modal_height_ratio)
-		local start_r = math.floor((vim.o.lines - total_h) / 2)
-		local start_c = math.floor((vim.o.columns - total_w) / 2)
+		local resized_row = math.floor((vim.o.lines - total_h) / 2)
+		local resized_col = math.floor((vim.o.columns - total_w) / 2)
 
 		left_width = math.floor(total_w * config.current_left_ratio)
 		right_width = total_w - left_width - 2
@@ -1203,15 +1176,15 @@ function M.open_diff_modal(target_file, target_type, target_cwd, commit_hash, in
 			relative = "editor",
 			width = left_width,
 			height = total_h,
-			row = start_r,
-			col = start_c,
+			row = resized_row,
+			col = resized_col,
 		})
 		pcall(vim.api.nvim_win_set_config, right_win, {
 			relative = "editor",
 			width = right_width,
 			height = total_h,
-			row = start_r,
-			col = start_c + left_width + 2,
+			row = resized_row,
+			col = resized_col + left_width + 2,
 		})
 
 		render(index)

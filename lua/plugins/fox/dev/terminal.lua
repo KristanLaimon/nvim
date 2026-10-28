@@ -347,9 +347,7 @@ local function sync_terminals()
 			if vim.api.nvim_buf_is_valid(bufnr) then
 				-- Skip terminals belonging to other environments
 				local buf_env_slot = vim.b[bufnr].fox_env_slot
-				if buf_env_slot ~= nil and buf_env_slot ~= active_env_slot then
-					-- Do not adopt or sync this buffer
-				else
+				if buf_env_slot == nil or buf_env_slot == active_env_slot then
 					local term_num = vim.b[bufnr].fox_term_num
 					if term_num and term_num >= 1 and term_num <= M.settings.count then
 						local t = get_term(term_num)
@@ -367,9 +365,7 @@ local function sync_terminals()
 		if vim.api.nvim_buf_is_valid(bufnr) then
 			-- Skip terminals belonging to other environments
 			local buf_env_slot = vim.b[bufnr].fox_env_slot
-			if buf_env_slot ~= nil and buf_env_slot ~= active_env_slot then
-				-- Do not adopt or sync this buffer
-			else
+			if buf_env_slot == nil or buf_env_slot == active_env_slot then
 				local term_num = vim.b[bufnr].fox_term_num
 				if term_num and term_num >= 1 and term_num <= M.settings.count then
 					local t = get_term(term_num)

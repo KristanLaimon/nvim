@@ -5,7 +5,6 @@
 local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, t.beforeEach, t.afterEach
 local neotree_hidden = require("plugins.fox.editor.neotree_hidden")
-local project = require("fox.core.project")
 
 describe("plugins.fox.editor.neotree_hidden state management", function()
 	local test_root = nil

@@ -69,7 +69,6 @@ function M.decode(str)
 
 	local function parse_lines(index, current_indent)
 		local result = {}
-		local is_array = false
 
 		while index <= #lines do
 			local line = lines[index]
@@ -80,7 +79,6 @@ function M.decode(str)
 
 			local trimmed = line:match("^%s*(.-)%s*$")
 			if trimmed:sub(1, 2) == "- " or trimmed == "-" then
-				is_array = true
 				local item_str = trimmed:sub(3)
 				if item_str == "" then
 					local item_val, next_idx = parse_lines(index + 1, indent + 2)

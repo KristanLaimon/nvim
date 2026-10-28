@@ -22,9 +22,6 @@
 --                                          devdocs.io serves.
 -- ============================================================================
 
-local lazy_req = require("fox.core.lazy_require")
-local store = lazy_req("fox.core.store")
-
 local M = {}
 
 M.settings = {
@@ -87,7 +84,7 @@ local function pick(prompt_title, items, display, on_select, default_index)
 				end,
 			}),
 			sorter = conf.generic_sorter({}),
-			attach_mappings = function(prompt_bufnr, map)
+			attach_mappings = function(prompt_bufnr)
 				actions.select_default:replace(function()
 					local selection = action_state.get_selected_entry()
 					actions.close(prompt_bufnr)

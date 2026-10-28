@@ -95,7 +95,7 @@ describe("Alt / Meta keymaps functionality", function()
 		expect(a_h_map).toBeTruthy()
 		if a_h_map and a_h_map.callback then
 			-- Ensure executing the callback does not throw an error
-			local status, err = pcall(a_h_map.callback)
+			local status = pcall(a_h_map.callback)
 			expect(status).toBe(true)
 		end
 	end)

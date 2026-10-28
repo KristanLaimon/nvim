@@ -26,14 +26,6 @@ M.lsp_config = {
 			local args = cmeta.get_clangd_extra_args()
 			if #args > 0 then
 				config.cmd = config.cmd or { "clangd" }
-				-- Avoid duplicating --std= if already present
-				local has_std = false
-				for _, a in ipairs(config.cmd) do
-					if a:match("^%-%-std=") then
-						has_std = true
-						break
-					end
-				end
 				for _, arg in ipairs(args) do
 					local dup = false
 					for _, a in ipairs(config.cmd) do

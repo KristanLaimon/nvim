@@ -47,7 +47,7 @@ describe("terminal auto insert & click behavior", function()
 	end)
 
 	it("returns to terminal window when moving right from neo-tree if originated in terminal", function()
-		local editor_map = require("keymaps.editor")
+		require("keymaps.editor")
 		local neotree_buf = vim.api.nvim_create_buf(false, true)
 		local term_buf = vim.api.nvim_create_buf(false, true)
 		table.insert(created_bufs, neotree_buf)

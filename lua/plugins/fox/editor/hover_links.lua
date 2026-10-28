@@ -316,7 +316,7 @@ end
 --- Attaches keymaps to a hover float buffer.
 --- @param bufnr integer
 --- @param winid integer
-function M.attach_hover_keymaps(bufnr, winid)
+function M.attach_hover_keymaps(bufnr, _winid)
 	if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
 		return
 	end

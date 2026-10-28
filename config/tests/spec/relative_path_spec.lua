@@ -7,9 +7,12 @@ local describe, it, expect, beforeEach, afterEach = t.describe, t.it, t.expect, 
 local rp = require("plugins.fox.editor.relative_path")
 
 describe("plugins.fox.editor.relative_path", function()
-	local test_buf
+	local test_buf, root, saved_cwd
 
 	beforeEach(function()
+		root, saved_cwd = vim.fn.tempname(), vim.fn.getcwd()
+		vim.fn.mkdir(root, "p")
+		vim.api.nvim_set_current_dir(root)
 		rp.setup()
 		test_buf = vim.api.nvim_create_buf(true, false)
 	end)
@@ -18,6 +21,8 @@ describe("plugins.fox.editor.relative_path", function()
 		if test_buf and vim.api.nvim_buf_is_valid(test_buf) then
 			pcall(vim.api.nvim_buf_delete, test_buf, { force = true })
 		end
+		vim.api.nvim_set_current_dir(saved_cwd)
+		vim.fn.delete(root, "rf")
 	end)
 
 	it("returns relative path from current working directory", function()

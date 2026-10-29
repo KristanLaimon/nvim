@@ -1,6 +1,6 @@
 # Plugin List
 
-Active inventory from Lazy: **23 external dependencies** and **71 local plugin specs**. Installed leftovers from replaced plugins are excluded.
+Active inventory from Lazy: **21 external dependencies** and **71 local plugin specs**. Installed leftovers from replaced plugins are excluded.
 
 ## External — dependencies
 
@@ -11,9 +11,7 @@ These repositories are still downloaded and managed by Lazy. Transitive dependen
 | [b0o/schemastore.nvim](https://github.com/b0o/schemastore.nvim) | `schemastore.nvim` |
 | [folke/lazy.nvim](https://github.com/folke/lazy.nvim) | `lazy.nvim` |
 | [folke/snacks.nvim](https://github.com/folke/snacks.nvim) | `snacks.nvim` |
-| [iamcco/markdown-preview.nvim](https://github.com/iamcco/markdown-preview.nvim) | `markdown-preview.nvim` |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim) | `gitsigns.nvim` |
-| [m00qek/baleia.nvim](https://github.com/m00qek/baleia.nvim) | `baleia.nvim` |
 | [MeanderingProgrammer/render-markdown.nvim](https://github.com/MeanderingProgrammer/render-markdown.nvim) | `render-markdown.nvim` |
 | [mfussenegger/nvim-dap](https://github.com/mfussenegger/nvim-dap) | `nvim-dap` |
 | [MunifTanjim/nui.nvim](https://github.com/MunifTanjim/nui.nvim) | `nui.nvim` |
@@ -74,6 +72,7 @@ The `fox-<name>` labels below identify local implementations; the Lazy ID column
 | `fox-launch-profiles` | `fox_launch_profiles` | [lua/plugins/fox/dev/launch_profiles.lua](lua/plugins/fox/dev/launch_profiles.lua) |
 | `fox-line-endings` | `fox_line_endings` | [lua/plugins/fox/editor/line_endings.lua](lua/plugins/fox/editor/line_endings.lua) |
 | `fox-lsp-references` | `fox_lsp_references` | [lua/plugins/fox/tools/lsp_references.lua](lua/plugins/fox/tools/lsp_references.lua) |
+| `fox-markdown-preview` | `fox_markdown_preview` | [lua/plugins/editor/markdown.lua](lua/plugins/editor/markdown.lua), [lua/fox/markdown/](lua/fox/markdown/) |
 | `fox-neotree-hidden` | `fox_neotree_hidden` | [lua/plugins/fox/editor/neotree_hidden.lua](lua/plugins/fox/editor/neotree_hidden.lua) |
 | `fox-neotree-mover` | `fox_neotree_mover` | [lua/plugins/fox/editor/neotree_mover.lua](lua/plugins/fox/editor/neotree_mover.lua) |
 | `fox-notes` | `fox_notes` | [lua/plugins/fox/tools/notes.lua](lua/plugins/fox/tools/notes.lua) |

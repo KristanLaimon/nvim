@@ -38,8 +38,8 @@ files; theme tests isolate Omarchy/Ryoku sync settings from the desktop's saved
 preferences. A passing run on one OS does not replace native Windows or Ryoku
 validation.
 
-The browser test runs from the config root and requires Node 22+, `chromium`,
-`nvim`, and the installed `markdown-preview.nvim` plugin. It starts an isolated
+The browser test runs from the config root and requires Node 22+, Chromium/Edge,
+and `nvim`. It uses the local FOX Markdown preview and starts an isolated
 browser profile and a local preview server, checks
 [`config/tests/fixtures/markdown/gfm.md`](../config/tests/fixtures/markdown/gfm.md), and removes
 its temporary files afterward.

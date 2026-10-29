@@ -33,7 +33,20 @@ M.settings = {
 
 	keys = {
 		--- Toggle comment. One entry per keyboard layout that produces it.
-		comment = { "<C-'>", "<C-S-'>", '<C-">', "<C-`>", "<C-~>", "<C-^>", "<C-acute>" },
+		comment = {
+			"<C-'>",
+			"<C-S-'>",
+			'<C-">',
+			"<C-`>",
+			"<C-~>",
+			"<C-^>",
+			"<C-acute>",
+			"\27[39;5u",
+			"\27[27;5;39~",
+			"\27[39;6u",
+			"\27[27;6;39~",
+			"<A-'>",
+		},
 		save = { "<C-s>", "<C-S>" },
 		copy = { "<C-c>", "<C-S-c>" },
 		paste = { "<C-v>", "<C-S-v>" },

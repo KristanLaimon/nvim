@@ -18,7 +18,7 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `<C-z>` | n, i, v | Undo |
 | `<C-y>` / `<C-S-z>` | n, i | Redo |
 | `<C-w>` | n | Close current buffer (smart tab-close style) |
-| `<C-'>` / `<C-S-'>` / `<C-">` / `` <C-`> `` / `<C-~>` / `<C-^>` / `<C-acute>` | n, i, v, t | Toggle comment — line, or selection in visual mode |
+| `<C-'>` / `<C-S-'>` / `<C-">` / `` <C-`> `` / `<C-~>` / `<C-^>` / `<C-acute>` / `<A-'>` | n, i, v, t | Toggle comment — line, or selection in visual mode. Use `Alt+'` when the Windows terminal does not send `Ctrl+'`; `gcc` / visual `gc` also work. |
 | `<F1>` / `:FoxHelp` / `:Cheatsheet` | n, i, v, t | Open Help Menu & Runtime Cheatsheet Manager |
 | `<F2>` | n | Rename symbol, file on disk, or Neo-tree item |
 | `<F3>` | n, i, v, t | Cycle Editor / Query directly |

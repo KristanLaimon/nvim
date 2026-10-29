@@ -234,3 +234,25 @@ Windows reads the Win32 keyboard state. Linux reads keyboard LED brightness unde
 commands or elevated permissions. Linux requires readable Caps Lock LED entries;
 it cannot infer the keyboard state of a remote SSH client. macOS does not yet have
 a state backend.
+
+## WakaTime coding stats
+
+`wakatime/vim-wakatime` tracks editor activity and loads at startup. Set its
+tracking key with `:WakaTimeApiKey` (also in the Command Palette). The upstream
+plugin manages its CLI installation. Activity is sent to WakaTime; privacy and
+file exclusion options live in `~/.wakatime.cfg` (or `$WAKATIME_HOME/.wakatime.cfg`).
+
+Open **WakaTime: Coding Stats (ASCII Charts)** from the Command Palette or run
+`:WakaTimeStats`. The floating dashboard shows the last seven days, including
+today in your account timezone, with daily activity and top eight language and
+project ASCII bar charts. Scroll normally, press `r` to refresh, `t` to enter a
+token, and `q` or Escape to close. Bars scale to the largest entry in each chart.
+
+Stats require a separate [personal OAuth token](https://wakatime.com/oauth) with
+`read_summaries` permission; tracking API keys are write-only. Enter it with
+`:WakaTimeStatsToken` or `t` in the dashboard (masked, kept for this session only),
+or set `WAKATIME_ACCESS_TOKEN` in the environment before starting Neovim. Never
+put credentials in this repository. Stats use asynchronous HTTPS through `curl`
+on PATH; the token travels through stdin rather than process arguments. History
+availability depends on your WakaTime plan, and recent activity may take time to
+appear. See the [API documentation](https://wakatime.com/developers#summaries).

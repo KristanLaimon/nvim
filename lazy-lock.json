@@ -19,5 +19,6 @@
   "schemastore.nvim": { "branch": "main", "commit": "246ca2fa1323ee1312b84352ab09b8c2fa292888" },
   "snacks.nvim": { "branch": "main", "commit": "882c996cf28183f4d63640de0b4c02ec886d01f2" },
   "telescope-file-browser.nvim": { "branch": "master", "commit": "3610dc7dc91f06aa98b11dca5cc30dfa98626b7e" },
-  "telescope.nvim": { "branch": "master", "commit": "40aedd8a68c78a656a10a8d62d80c54af59420fb" }
+  "telescope.nvim": { "branch": "master", "commit": "40aedd8a68c78a656a10a8d62d80c54af59420fb" },
+  "vim-wakatime": { "branch": "master", "commit": "98cb7a8a09f8a0cb225b5955bf491ffb9860569f" }
 }

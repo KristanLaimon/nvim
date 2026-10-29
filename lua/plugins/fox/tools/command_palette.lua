@@ -368,7 +368,7 @@ M.commands = {
 		cmd = "FoxInstallDependencies",
 		category = "Setup",
 	},
-	{ name = "🔑 Run System Setup (Sudo/Root UI Password Prompt)", cmd = "FoxSystemSetup", category = "Setup" },
+	{ name = "🔑 Run System Setup (Sudo UI Password Prompt)", cmd = "FoxSystemSetup", category = "Setup" },
 	{ name = "🚀 Install Google Antigravity CLI (agy)", cmd = "FoxInstallAgy", category = "Setup" },
 	{ name = "🤖 Install Claude Code CLI (claude)", cmd = "FoxInstallClaude", category = "Setup" },
 	{ name = "⚡ Fast Automated Batch Installer", cmd = "FoxInstallAll", category = "Setup" },

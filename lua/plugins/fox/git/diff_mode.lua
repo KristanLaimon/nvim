@@ -2579,7 +2579,7 @@ function M.open_config_dialog(choice_index, start)
 	if choice_index then
 		choose(true, choice_index)
 	else
-		require("plugins.fox.git.diff_menu").open("Diff scope / range", choices, function(index)
+		require("plugins.fox.git.git_center.diff_menu").open("Diff scope / range", choices, function(index)
 			choose(true, index)
 		end)
 	end
@@ -2632,7 +2632,7 @@ end
 
 --- Opens the main Git Diff Mode interactive launcher menu
 function M.open()
-	local menu = require("plugins.fox.git.diff_menu")
+	local menu = require("plugins.fox.git.git_center.diff_menu")
 	local cards = {
 		{
 			title = "Working Tree vs HEAD",

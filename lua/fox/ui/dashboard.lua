@@ -178,10 +178,8 @@ function M.setup(opts)
 			saved[win] = nil
 		end,
 	})
-	vim.schedule(function()
-		if vim.fn.argc() == 0 and vim.api.nvim_buf_get_name(0) == "" and not vim.bo.modified and vim.bo.buftype == "" then
-			M.start()
-		end
-	end)
+	if vim.fn.argc() == 0 and vim.api.nvim_buf_get_name(0) == "" and not vim.bo.modified and vim.bo.buftype == "" then
+		M.start()
+	end
 end
 return M

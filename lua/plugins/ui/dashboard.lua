@@ -33,7 +33,7 @@ return {
 	name = "fox_dashboard",
 	dir = require("fox.core.lazyspec").for_module(),
 	cmd = { "Alpha", "AlphaRedraw" },
-	event = "VimEnter",
+	lazy = false,
 	config = function()
 		local alpha = require("fox.ui.dashboard")
 		local dashboard = alpha.layout()
@@ -236,18 +236,6 @@ return {
 		end
 
 		alpha.setup(dashboard.opts)
-
-		vim.api.nvim_create_autocmd("VimEnter", {
-			callback = function()
-				if vim.fn.argc() == 0 then
-					vim.schedule(function()
-						if vim.bo.filetype ~= "alpha" then
-							vim.cmd("Alpha")
-						end
-					end)
-				end
-			end,
-		})
 
 		local function show_dashboard()
 			for _, win in ipairs(vim.api.nvim_list_wins()) do

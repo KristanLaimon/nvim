@@ -407,6 +407,7 @@ return {
 	},
 	{
 		"saghen/blink.cmp",
+		dependencies = { "fox_autopairs" },
 		event = { "InsertEnter", "CmdlineEnter" },
 		-- Prebuilt fuzzy-match libraries are published for release tags. Tracking
 		-- main leaves Blink unable to determine which binary to download.

@@ -2,7 +2,7 @@
 return {
 	name = "fox_autopairs",
 	dir = require("fox.core.lazyspec").for_module(),
-	lazy = false,
+	event = "InsertEnter",
 	config = function()
 		local is_native_termux
 		local env_ok, env_mod = pcall(require, "fox.core.environment")

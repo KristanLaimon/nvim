@@ -32,6 +32,22 @@ local metadata = {
 }
 
 describe("FoxQuerier SQL structure", function()
+	it("resolves named WITH tables, chained CTEs and explicit output names", function()
+		for _, engine in ipairs({ "postgres", "mysql" }) do
+			local text =
+				"WITH ids AS (SELECT o.id FROM orders o), named(player_id) AS (SELECT id FROM ids) SELECT * FROM named"
+			local data = vim.tbl_extend("force", metadata, { engine = engine })
+			local graph = sql.analyze(text, data)
+			expect(#graph.unresolved).toBe(0)
+			local item = sql.object_at(text, #text, data)
+			expect(item.name).toBe("named")
+			expect(item.cte).toBe(true)
+			expect(item.columns[1].name).toBe("player_id")
+			local lines = table.concat(render.graph(graph, data, 100), "\n")
+			expect(lines).toContain("WITH table")
+			expect(lines:find("subquery 1", 1, true)).toBe(nil)
+		end
+	end)
 	it("includes derived, scalar, predicate and nested subqueries with scoped aliases", function()
 		for _, text in ipairs({
 			"SELECT d.id FROM (SELECT o.id FROM orders o) AS d",

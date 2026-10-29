@@ -442,6 +442,25 @@ function M.items(engine)
 end
 
 function M.hover(buf)
+	local query = package.loaded["fox.query"]
+	local state = query and query.states[vim.b[buf].fox_query_root or vim.b[buf].fox_sql_root or ""]
+	if state then
+		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+		local cursor = vim.api.nvim_win_get_cursor(0)
+		local offset = cursor[2] + 1
+		for row = 1, cursor[1] - 1 do
+			offset = offset + #lines[row] + 1
+		end
+		local item, column = require("fox.query.sql").object_at(table.concat(lines, "\n"), offset, state.metadata)
+		if item then
+			local content = { "# " .. item.name, item.cte and "WITH table (query only)" or "Table: " .. item.key, "" }
+			for _, entry in ipairs(column and { column } or item.columns) do
+				content[#content + 1] = "- " .. entry.name .. (entry.type and (" : " .. entry.type) or "")
+			end
+			vim.lsp.util.open_floating_preview(content, "markdown", { border = "rounded", focus_id = "fox_sql_hover" })
+			return
+		end
+	end
 	local engine = require("fox.langs.sql.dialect").read(buf) or vim.b[buf].fox_sql_dialect
 	local word = vim.fn.expand("<cword>"):upper()
 	for _, item in ipairs(M.items(engine or "sqlite")) do

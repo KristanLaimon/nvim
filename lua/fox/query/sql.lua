@@ -371,6 +371,55 @@ function M.analyze(text, metadata, level)
 	local tokens = M.tokens(text, metadata.syntax or metadata.engine)
 	local children, parts, first, i = {}, {}, 1, 1
 	local scoped = vim.tbl_extend("force", metadata, { tables = vim.list_extend({}, metadata.tables or {}) })
+	local ctes = {}
+	if tokens[1] and tokens[1].upper == "WITH" then
+		local at = tokens[2] and tokens[2].upper == "RECURSIVE" and 3 or 2
+		while identifier(tokens[at]) do
+			local name, columns = tokens[at].value, {}
+			at = at + 1
+			if tokens[at] and tokens[at].value == "(" then
+				at = at + 1
+				while tokens[at] and tokens[at].value ~= ")" do
+					if identifier(tokens[at]) then
+						columns[#columns + 1] = tokens[at].value
+					end
+					at = at + 1
+				end
+				at = at + 1
+			end
+			if not tokens[at] or tokens[at].upper ~= "AS" then
+				break
+			end
+			at = at + 1
+			if tokens[at] and tokens[at].upper == "NOT" then
+				at = at + 1
+			end
+			if tokens[at] and tokens[at].upper == "MATERIALIZED" then
+				at = at + 1
+			end
+			if not tokens[at] or tokens[at].value ~= "(" then
+				break
+			end
+			ctes[at] = { name = name, columns = columns }
+			local depth = 1
+			at = at + 1
+			while tokens[at] and depth > 0 do
+				if tokens[at].kind == "symbol" then
+					if tokens[at].value == "(" then
+						depth = depth + 1
+					end
+					if tokens[at].value == ")" then
+						depth = depth - 1
+					end
+				end
+				at = at + 1
+			end
+			if not tokens[at] or tokens[at].value ~= "," then
+				break
+			end
+			at = at + 1
+		end
+	end
 	while i <= #tokens do
 		local token, next_token = tokens[i], tokens[i + 1]
 		if
@@ -394,18 +443,37 @@ function M.analyze(text, metadata, level)
 			end
 			local closing = tokens[finish - 1]
 			local body = text:sub(token.last + 1, closing.first - 1)
-			local child = M.analyze(body, metadata, level + 1)
+			local cte = ctes[i]
+			local child = M.analyze(body, scoped, level + 1)
 			local preceding = tokens[i - 1]
 			local derived = preceding
 				and preceding.kind == "word"
 				and (preceding.upper == "FROM" or preceding.upper == "JOIN")
-			local key = "__fox_subquery_" .. (#children + 1)
+			local key = cte and cte.name or "__fox_subquery_" .. (#children + 1)
 			local at = finish
 			if tokens[at] and tokens[at].upper == "AS" then
 				at = at + 1
 			end
-			local alias = derived and identifier(tokens[at]) and tokens[at].value or ("subquery " .. (#children + 1))
-			local item = { key = key, name = key, columns = {}, subquery = true }
+			local source_names = {}
+			for _, node in ipairs(child.nodes) do
+				if not node.nested then
+					source_names[#source_names + 1] = node.alias
+				end
+			end
+			local alias = cte and cte.name
+				or derived and identifier(tokens[at]) and tokens[at].value
+				or (
+					(
+						preceding and preceding.upper == "IN" and "IN"
+						or preceding and preceding.upper == "EXISTS" and "EXISTS"
+						or "SELECT"
+					)
+					.. " from "
+					.. table.concat(source_names, ", ")
+					.. " #"
+					.. (#children + 1)
+				)
+			local item = { key = key, name = cte and cte.name or alias, columns = {}, subquery = true, cte = cte ~= nil }
 			local names = {}
 			local function column(name, type_name)
 				if not names[name] then
@@ -468,12 +536,24 @@ function M.analyze(text, metadata, level)
 				end
 			end
 			output()
+			if cte then
+				for index, name in ipairs(cte.columns) do
+					if item.columns[index] then
+						item.columns[index].name = name
+					end
+				end
+			end
 			scoped.tables[#scoped.tables + 1] = item
 			children[#children + 1] =
-				{ graph = child, item = item, alias = alias, derived = derived, body = body, first = token.first }
-			parts[#parts + 1] = text:sub(first, token.first - 1)
-			parts[#parts + 1] = derived and key or "NULL"
+				{ graph = child, item = item, alias = alias, derived = derived, body = body, first = token.first, cte = cte }
+			if not cte then
+				parts[#parts + 1] = text:sub(first, token.first - 1)
+				parts[#parts + 1] = derived and key or "NULL"
+			end
 			first, i = closing.last + 1, finish
+			if cte and tokens[i] and tokens[i].value == "," then
+				first = tokens[i].last + 1
+			end
 		else
 			i = i + 1
 		end
@@ -494,14 +574,14 @@ function M.analyze(text, metadata, level)
 		if not wrapper then
 			wrapper = {
 				alias = child.alias,
-				name = "scalar / predicate subquery",
+				name = child.cte and "WITH table (query only)" or "Query result",
 				table = child.item,
 				roles = {},
 				first = child.first,
 			}
 			graph.nodes[#graph.nodes + 1] = wrapper
 		else
-			wrapper.name = "derived subquery"
+			wrapper.name = child.cte and "WITH table (query only)" or "Derived table"
 		end
 		local prefix = wrapper.alias .. " / "
 		local child_aliases = {}
@@ -604,6 +684,44 @@ function M.completion_graph(text, offset, metadata, level)
 		end
 	end
 	return graph
+end
+
+function M.object_at(text, offset, metadata)
+	for _, statement in ipairs(M.statements(text, metadata.syntax or metadata.engine) or {}) do
+		if offset >= statement.first and offset <= statement.last then
+			offset, text = offset - statement.first + 1, statement.sql
+			break
+		end
+	end
+	local tokens = M.tokens(text, metadata.syntax or metadata.engine)
+	local graph = M.analyze(text, metadata)
+	for index, token in ipairs(tokens) do
+		if identifier(token) and offset >= token.first and offset <= token.last then
+			local qualifier = tokens[index - 1] and tokens[index - 1].value == "." and tokens[index - 2]
+			local found, found_column
+			for _, node in ipairs(graph.nodes) do
+				if node.table and not node.nested then
+					if
+						not qualifier
+						and (node.alias:lower() == token.value:lower() or node.table.name:lower() == token.value:lower())
+					then
+						return node.table
+					end
+					if not qualifier or node.alias:lower() == qualifier.value:lower() then
+						for _, column in ipairs(node.table.columns) do
+							if column.name:lower() == token.value:lower() then
+								if found then
+									return nil
+								end
+								found, found_column = node.table, column
+							end
+						end
+					end
+				end
+			end
+			return found, found_column
+		end
+	end
 end
 
 function M.join_candidates(metadata, graph)

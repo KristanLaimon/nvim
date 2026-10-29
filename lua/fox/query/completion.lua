@@ -94,6 +94,9 @@ function M.get_completions(_, context, callback)
 			local columns = {}
 			for _, node in ipairs(graph.nodes) do
 				if node.table and not node.nested then
+					if node.table.cte then
+						add(node.table.name, 7, "WITH table (query only)")
+					end
 					for _, column in ipairs(node.table.columns) do
 						add(node.alias .. "." .. column.name, 5, tostring(column.type))
 						local key = column.name:lower()

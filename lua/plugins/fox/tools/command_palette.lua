@@ -141,7 +141,7 @@ M.commands = {
 	{ name = "Query: Pin / Follow Statement Diagram", cmd = "FoxQueryPin", category = "Query" },
 	{ name = "Query: Clear RAM Parameters", cmd = "FoxQueryClearParameters", category = "Query" },
 	{ name = "Query: Clear Metadata Cache", cmd = "FoxQueryClearCache", category = "Query" },
-	{ name = "Project: Set Root from Current File", cmd = "ProjectRoot", category = "Files" },
+	--{ name = "Project: Set Root from Current File", cmd = "ProjectRoot", category = "Files" },
 	{ name = "Debug: Enable Inline Variable Values", cmd = "DapVirtualTextEnable", category = "Debug" },
 	{ name = "Debug: Disable Inline Variable Values", cmd = "DapVirtualTextDisable", category = "Debug" },
 	{ name = "Debug: Toggle Inline Variable Values", cmd = "DapVirtualTextToggle", category = "Debug" },

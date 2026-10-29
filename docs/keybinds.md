@@ -38,6 +38,8 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `:q` / `:q!` / `<C-q>` | n, Cmd | Smart quit — split → tab → dashboard → quit |
 | `:ReloadConfig` | Cmd | Reload the Neovim configuration |
 
+For Windows Terminal, rerun `config/scripts/setup-powershell.ps1` and restart the terminal to forward `Ctrl+'` and `Ctrl+Shift+'` to Neovim. `Alt+'` works as the fallback without this setup.
+
 ---
 
 ## 🪟 Windows, Splits & Buffers

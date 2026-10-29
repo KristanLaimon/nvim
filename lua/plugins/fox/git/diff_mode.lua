@@ -2940,7 +2940,7 @@ function M.read_zip_manifest(zip_path)
 	-- Method 1: Python 3 or Python
 	local py_bin = (vim.fn.executable("python3") == 1 and "python3") or (vim.fn.executable("python") == 1 and "python")
 	if py_bin then
-		local py_script = "import sys, zipfile; "
+		local py_script = "import sys, zipfile\n"
 			.. "try:\n"
 			.. "    zf = zipfile.ZipFile(sys.argv[1], 'r')\n"
 			.. "    if '.fox_diff_manifest.json' not in zf.namelist(): sys.exit(2)\n"

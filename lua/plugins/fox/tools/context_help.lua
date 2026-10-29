@@ -109,7 +109,6 @@ M.settings = {
 local function current_context()
 	local ft = vim.bo.filetype or ""
 	local bt = vim.bo.buftype or ""
-	local buf_name = vim.api.nvim_buf_get_name(0)
 
 	-- If it's an ordinary file/code buffer (buftype == ""), it's always the editor context
 	if
@@ -122,6 +121,7 @@ local function current_context()
 		return M.settings.contexts[#M.settings.contexts]
 	end
 
+	local buf_name = vim.api.nvim_buf_get_name(0)
 	for _, context in ipairs(M.settings.contexts) do
 		if context.detect and context.detect(ft, buf_name) then
 			return context

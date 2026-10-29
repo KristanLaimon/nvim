@@ -23,6 +23,25 @@ t.describe("Native Treesitter autotag", function()
 		t.expect(line()).toBe("<div></div>")
 		t.expect(tag.close(buf, 0, 5)).toBe(false)
 	end)
+	t.it("prepares the syntax parser only once before looking up the tag", function()
+		set("<img>", "html", "html")
+		local original = vim.treesitter.get_parser
+		local calls = 0
+		local parser_spy = t.spyOn(vim.treesitter, "get_parser")
+		local node_spy = t.spyOn(vim.treesitter, "get_node")
+		parser_spy.mockImplementation(function(...)
+			calls = calls + 1
+			return original(...)
+		end)
+		node_spy.mockImplementation(function()
+			return nil
+		end)
+		local closed = tag.close(buf, 0, 5)
+		parser_spy.mockRestore()
+		node_spy.mockRestore()
+		t.expect(closed).toBe(false)
+		t.expect(calls).toBe(1)
+	end)
 	t.it("skips void tags, self-closing tags, comments and quoted greater-than signs", function()
 		for _, source in ipairs({ "<img>", "<input />", "<!-- <div> -->", '<div title="a > b">' }) do
 			set(source, "html", "html")

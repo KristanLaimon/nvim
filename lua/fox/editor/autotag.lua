@@ -117,10 +117,13 @@ function M.rename(buf)
 	end
 end
 function M.close(buf, row, col)
-	if not vim.api.nvim_buf_is_valid(buf) or not vim.bo[buf].modifiable or not parser(buf) or col < 1 then
+	if not vim.api.nvim_buf_is_valid(buf) or not vim.bo[buf].modifiable or col < 1 then
 		return false
 	end
 	local p = parser(buf)
+	if not p then
+		return false
+	end
 	local ok, node =
 		pcall(vim.treesitter.get_node, { bufnr = buf, lang = p:lang(), pos = { row, col - 1 }, ignore_injections = false })
 	if not ok then

@@ -354,6 +354,7 @@ function M.setup()
 	local group = vim.api.nvim_create_augroup("FoxSnippetReload", { clear = true })
 	vim.api.nvim_create_autocmd("BufWritePost", {
 		group = group,
+		pattern = vim.fs.normalize(M.settings.snippets_dir) .. "/*.json",
 		callback = function(event)
 			local file = vim.fs.normalize(vim.api.nvim_buf_get_name(event.buf))
 			local dir = vim.fs.normalize(M.settings.snippets_dir):gsub("/+$", "")
@@ -387,6 +388,7 @@ end
 return setmetatable({
 	name = "snippet_manager",
 	dir = require("fox.core.lazyspec").for_module(),
-	event = "VeryLazy",
+	event = { { event = "BufWritePost", pattern = vim.fs.normalize(M.settings.snippets_dir) .. "/*.json" } },
+	cmd = { "SnippetManager", "FoxSnippetManager", "FoxSnippetEdit", "FoxSnippetAdd", "FoxSnippetReload" },
 	config = M.setup,
 }, { __index = M })

@@ -9,6 +9,8 @@ t.describe("Query environment restoration", function()
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
 		local saved_envs, saved_slot = _G._fox_environments, _G._fox_active_env_slot
 		local saved_dir, saved_layout = envs.settings.storage_dir, require("fox.query.layout").path
+		local foreign = vim.api.nvim_create_buf(true, false)
+		vim.api.nvim_buf_set_name(foreign, root .. "/previous-project/old.lua")
 		vim.fn.mkdir(root .. "/one", "p")
 		vim.fn.mkdir(root .. "/two", "p")
 		envs.settings.storage_dir = root .. "/sessions"
@@ -39,6 +41,9 @@ t.describe("Query environment restoration", function()
 					vim.wait(200, function()
 						return false
 					end, 10)
+					t.expect(vim.bo[foreign].buflisted).toBe(false)
+					t.expect(vim.b[foreign].fox_env_slot).toBe(nil)
+					t.expect(envs.is_buffer_in_current_environment(foreign)).toBe(false)
 					t.expect(vim.api.nvim_get_current_tabpage()).toBe(state.tab)
 					t.expect(vim.api.nvim_win_get_buf(state.sql_win)).toBe(buf)
 					t.expect(vim.api.nvim_win_get_buf(state.result_win)).toBe(state.result_buf)
@@ -70,6 +75,7 @@ t.describe("Query environment restoration", function()
 			end
 		end
 		vim.cmd("silent! Neotree close")
+		vim.api.nvim_buf_delete(foreign, { force = true })
 		_G._fox_environments, _G._fox_active_env_slot = saved_envs, saved_slot
 		envs.settings.storage_dir, require("fox.query.layout").path = saved_dir, saved_layout
 		vim.api.nvim_set_current_dir(cwd)

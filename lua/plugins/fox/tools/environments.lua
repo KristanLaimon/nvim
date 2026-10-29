@@ -477,9 +477,8 @@ function M.is_buffer_in_current_environment(bufnr)
 		end
 	end
 
-	-- Default unassigned buffer in current environment
-	vim.b[bufnr].fox_env_slot = cur_slot
-	return true
+	-- Old workspace buffers must not be adopted by whichever environment renders first.
+	return false
 end
 
 --- Returns active LSP client names attached to buffers in the given environment.
@@ -981,7 +980,6 @@ function M.switch_environment(target_slot, callback)
 						end
 					end
 				end
-				b_slot = b_slot or target_slot
 				vim.b[buf].fox_env_slot = b_slot
 			end
 

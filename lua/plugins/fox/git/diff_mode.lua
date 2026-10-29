@@ -2505,23 +2505,23 @@ function M.open_two_commits_picker(cwd)
 end
 
 --- Opens configuration dialog for diff scope / commits behind
-function M.open_config_dialog()
+function M.open_config_dialog(choice_index, start)
 	local input_modal = require("plugins.fox.ui.input_modal")
 	local choices = {
-		"1. 🟢 Working Tree vs HEAD (Staged & Unstaged changes) [Default]",
-		string.format(
-			"2. 📦 Working Tree + Last N Commits (HEAD~N vs Working Tree) [Current N: %d]",
-			math.max(1, M.state.commits_behind)
-		),
-		string.format(
-			"3. 🔒 Committed History Only (HEAD~N vs HEAD) [Current N: %d]",
-			math.max(1, M.state.commits_behind)
-		),
-		"4. 📜 Compare 2 Specific Commits (Commit Graph)",
-		"5. 🌳 Working Tree + Commits until a Branch (ancestor of current branch)",
+		{ title = "Working Tree vs HEAD", lines = { "Staged + unstaged changes" } },
+		{
+			title = "Last N commits + Worktree",
+			lines = { "HEAD~N vs Working Tree", "Current N: " .. math.max(1, M.state.commits_behind) },
+		},
+		{
+			title = "Committed history only",
+			lines = { "HEAD~N vs HEAD", "Current N: " .. math.max(1, M.state.commits_behind) },
+		},
+		{ title = "Two specific commits", lines = { "Choose base and target" } },
+		{ title = "Until a branch", lines = { "Working Tree + commits", "Since the common ancestor" } },
 	}
 
-	vim.ui.select(choices, { prompt = "⚡ Select Diff Scope / Range:" }, function(choice, idx)
+	local function choose(choice, idx)
 		if not choice or not idx then
 			return
 		end
@@ -2533,7 +2533,7 @@ function M.open_config_dialog()
 			M.state.target_ref = "WORKTREE"
 			M.state.custom_commits = false
 			notify("Diff scope: Working Tree (Staged & Unstaged) vs HEAD")
-			if M.state.is_active and M.state.mode == "same_branch" then
+			if start or M.state.is_active and M.state.mode == "same_branch" then
 				M.start_same_branch({ commits_behind = 0, include_worktree = true, cwd = M.state.cwd })
 			end
 		elseif idx == 2 then
@@ -2547,7 +2547,7 @@ function M.open_config_dialog()
 						M.state.commits_behind = n
 						M.state.include_worktree = true
 						notify(string.format("Diff scope: Working Tree + last %d commit(s)", n))
-						if M.state.is_active and M.state.mode == "same_branch" then
+						if start or M.state.is_active and M.state.mode == "same_branch" then
 							M.start_same_branch({ commits_behind = n, include_worktree = true, cwd = M.state.cwd })
 						end
 					end
@@ -2564,7 +2564,7 @@ function M.open_config_dialog()
 						M.state.commits_behind = n
 						M.state.include_worktree = false
 						notify(string.format("Diff scope: Committed history only (HEAD~%d vs HEAD)", n))
-						if M.state.is_active and M.state.mode == "same_branch" then
+						if start or M.state.is_active and M.state.mode == "same_branch" then
 							M.start_same_branch({ commits_behind = n, include_worktree = false, cwd = M.state.cwd })
 						end
 					end
@@ -2575,7 +2575,14 @@ function M.open_config_dialog()
 		elseif idx == 5 then
 			M.pick_ancestor_branch_and_start(M.state.cwd)
 		end
-	end)
+	end
+	if choice_index then
+		choose(true, choice_index)
+	else
+		require("plugins.fox.git.diff_menu").open("Diff scope / range", choices, function(index)
+			choose(true, index)
+		end)
+	end
 end
 
 --- Opens a picker of branches sharing an ancestor with the current branch and
@@ -2625,51 +2632,85 @@ end
 
 --- Opens the main Git Diff Mode interactive launcher menu
 function M.open()
-	local status_label = (M.state.is_active and M.state.mode == "same_branch") and "ACTIVE" or "Toggle"
-	local same_branch_title
-	if M.state.target_ref == "WORKTREE" then
-		if M.state.commits_behind > 0 then
-			same_branch_title =
-				string.format("1. 🔍 Same Branch Diff (Worktree + HEAD~%d) [%s]", M.state.commits_behind, status_label)
-		elseif M.state.base_ref and M.state.base_ref ~= "HEAD" then
-			same_branch_title =
-				string.format("1. 🔍 Same Branch Diff (Worktree + until %s) [%s]", M.state.base_ref, status_label)
-		else
-			same_branch_title = string.format("1. 🔍 Same Branch Diff (Worktree vs HEAD) [%s]", status_label)
-		end
-	else
-		same_branch_title =
-			string.format("1. 🔍 Same Branch Diff (HEAD vs HEAD~%d) [%s]", M.state.commits_behind, status_label)
-	end
-
-	local choices = {
-		same_branch_title,
-		"2. 🌿 Between 2 Branches Diff (Side-by-Side Dual Menus)",
-		"3. ⚙️ Configure Diff Scope / Range (Working Tree vs Commits)",
-		"4. 📜 Select 2 Commits to Compare",
-		"5. ❌ Close / Exit Git Diff Mode",
+	local menu = require("plugins.fox.git.diff_menu")
+	local cards = {
+		{
+			title = "Working Tree vs HEAD",
+			lines = {
+				"Same branch",
+				"Staged + unstaged",
+				"",
+				"HEAD ------> Working Tree",
+				"Compare local changes",
+			},
+		},
+		{
+			title = "Last N commits",
+			lines = {
+				"Same branch + Working Tree",
+				"HEAD~N vs Working Tree",
+				"",
+				"o---o---o---HEAD---WT",
+				"|<---- N commits ---->|",
+				"Current N: " .. math.max(1, M.state.commits_behind),
+			},
+		},
+		{
+			title = "Until a branch",
+			lines = {
+				"Same branch + Working Tree",
+				"Since the common ancestor",
+				"",
+				"main  o---o---o",
+				[[       \]],
+				"topic   o---o---WT",
+			},
+		},
+		{ title = "Other Git Diff Modes", lines = { "Branches / two commits", "Committed history only" } },
+		{
+			title = "Advanced",
+			lines = { "Scope / resume / close", "Current: " .. (M.state.is_active and "active" or "inactive") },
+		},
 	}
-
-	vim.ui.select(choices, { prompt = "⚡ Git Diff Mode Manager:" }, function(choice, idx)
-		if not choice or not idx then
-			return
-		end
-		if idx == 1 then
-			if M.state.is_active and M.state.mode == "same_branch" then
-				M.close()
-				notify("Git Diff Mode closed")
-			else
-				M.start_same_branch()
-			end
-		elseif idx == 2 then
-			M.open_branch_selector_modal()
-		elseif idx == 3 then
-			M.open_config_dialog()
-		elseif idx == 4 then
-			M.open_two_commits_picker()
-		elseif idx == 5 then
-			M.close()
-			notify("Git Diff Mode closed")
+	return menu.open("Git Diff Mode Manager", cards, function(index)
+		if index <= 2 then
+			M.open_config_dialog(index, true)
+		elseif index == 3 then
+			M.pick_ancestor_branch_and_start(M.state.cwd)
+		elseif index == 4 then
+			menu.open("Other Git Diff Modes", {
+				{ title = "Between two branches", lines = { "Side-by-side comparison" } },
+				{ title = "Two specific commits", lines = { "Choose base and target" } },
+				{ title = "Committed history only", lines = { "HEAD~N vs HEAD" } },
+				{ title = "Back" },
+			}, function(choice)
+				if choice == 1 then
+					M.open_branch_selector_modal()
+				elseif choice == 2 then
+					M.open_two_commits_picker()
+				elseif choice == 3 then
+					M.open_config_dialog(3, true)
+				else
+					M.open()
+				end
+			end)
+		else
+			menu.open("Advanced", {
+				{ title = "Configure scope / range" },
+				{ title = "Resume current scope" },
+				{ title = "Close Git Diff Mode" },
+				{ title = "Back" },
+			}, function(choice)
+				if choice == 1 then
+					M.open_config_dialog()
+				elseif choice == 2 then
+					M.start_same_branch()
+				elseif choice == 3 then
+					M.close()
+				else
+					M.open()
+				end
+			end)
 		end
 	end)
 end

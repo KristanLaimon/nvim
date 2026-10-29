@@ -16,6 +16,9 @@ function M.attach(buf, root)
 	vim.keymap.set("n", "K", function()
 		require("fox.langs.sql.functions").hover(buf)
 	end, { buffer = buf, desc = "SQL dialect documentation" })
+	vim.keymap.set("n", "gS", function()
+		require("fox.query").syntax_check()
+	end, { buffer = buf, desc = "Query: toggle project SQL syntax checking" })
 	require("fox.langs.sql.diagnostics").attach(buf)
 end
 

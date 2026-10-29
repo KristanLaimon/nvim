@@ -2,6 +2,7 @@
 local M = { ns = vim.api.nvim_create_namespace("fox_color_highlights") }
 local colorify = require("fox.lsp.colorify")
 local options, enabled, generations = {}, true, {}
+local variable_cache = {}
 local function color(value)
 	local hex = value:match("^#(%x+)$") or value:match("^0x(%x+)$")
 	if hex then
@@ -116,16 +117,28 @@ function M.refresh(buf)
 	then
 		return
 	end
-	local variables = {}
-	-- Bound work for giant generated files; only visible text is decorated.
-	local lines = vim.api.nvim_buf_get_lines(buf, 0, math.min(20000, vim.api.nvim_buf_line_count(buf)), false)
-	for _, line in ipairs(lines) do
-		for name, value in line:gmatch("(%-%-[%w_-]+)%s*:%s*([^;]+)") do
-			variables[name] = color(vim.trim(value))
-		end
+	local windows = vim.fn.win_findbuf(buf)
+	if #windows == 0 then
+		return
 	end
+	local tick = vim.api.nvim_buf_get_changedtick(buf)
+	local cached = variable_cache[buf]
+	if not cached or cached.tick ~= tick then
+		local variables = {}
+		-- Bound work for giant generated files; only visible text is decorated.
+		local lines = vim.api.nvim_buf_get_lines(buf, 0, math.min(20000, vim.api.nvim_buf_line_count(buf)), false)
+		for _, line in ipairs(lines) do
+			for name, value in line:gmatch("(%-%-[%w_-]+)%s*:%s*([^;]+)") do
+				variables[name] = color(vim.trim(value))
+			end
+		end
+		cached = { tick = tick, values = variables }
+		variable_cache[buf] = cached
+	end
+	local variables = cached.values
 	local seen = {}
-	for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+	local highlights = {}
+	for _, win in ipairs(windows) do
 		local first, last = unpack(vim.api.nvim_win_call(win, function()
 			return { vim.fn.line("w0"), vim.fn.line("w$") }
 		end))
@@ -137,7 +150,10 @@ function M.refresh(buf)
 					for _, span in ipairs(M.spans(line, variables)) do
 						local hex = span[3]
 						local hl = "FoxColor" .. hex:sub(2)
-						vim.api.nvim_set_hl(0, hl, { bg = hex, fg = colorify.get_contrast_fg(hex) })
+						if not highlights[hl] then
+							vim.api.nvim_set_hl(0, hl, { bg = hex, fg = colorify.get_contrast_fg(hex) })
+							highlights[hl] = true
+						end
 						vim.api.nvim_buf_set_extmark(
 							buf,
 							M.ns,
@@ -180,6 +196,7 @@ function M.setup(opts)
 		group = group,
 		callback = function(a)
 			generations[a.buf] = nil
+			variable_cache[a.buf] = nil
 		end,
 	})
 	vim.api.nvim_create_user_command("HighlightColors", function(a)

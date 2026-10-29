@@ -1,6 +1,33 @@
 local t = require("fox.lib.foxnvim.test")
 local m = require("fox.ui.color_highlights")
 t.describe("Color previews", function()
+	t.it("reuses CSS variables on scroll and invalidates them after edits", function()
+		local buf = vim.api.nvim_create_buf(false, true)
+		vim.api.nvim_set_current_buf(buf)
+		vim.bo[buf].buftype = ""
+		m.setup({})
+		vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "--accent: #f00;", "var(--accent)", "" })
+		local original = vim.api.nvim_buf_get_lines
+		local scans = 0
+		local spy = t.spyOn(vim.api, "nvim_buf_get_lines")
+		spy.mockImplementation(function(buffer, first, last, strict)
+			if buffer == buf and first == 0 and last == 3 then
+				scans = scans + 1
+			end
+			return original(buffer, first, last, strict)
+		end)
+		m.refresh(buf)
+		m.refresh(buf)
+		local before_edit = scans
+		vim.api.nvim_buf_set_lines(buf, 0, 1, false, { "--accent: #0f0;" })
+		m.refresh(buf)
+		spy.mockRestore()
+		local marks = vim.api.nvim_buf_get_extmarks(buf, m.ns, { 1, 0 }, { 1, -1 }, { details = true })
+		vim.api.nvim_buf_delete(buf, { force = true })
+		t.expect(before_edit).toBe(1)
+		t.expect(scans).toBe(2)
+		t.expect(marks[1][4].hl_group).toBe("FoxColor00ff00")
+	end)
 	t.it("parses valid short/alpha hex, rgb percentages and hsl", function()
 		t.expect(m.color("#f008")).toBe("#ff0000")
 		t.expect(m.color("#abcdef88")).toBe("#abcdef")

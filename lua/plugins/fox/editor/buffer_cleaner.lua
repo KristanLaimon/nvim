@@ -417,6 +417,7 @@ function M.clean_buffers()
 	for _, buf in ipairs(real_buffers()) do
 		if vim.api.nvim_buf_get_name(buf) ~= "" and vim.bo[buf].buftype == "" then
 			open_files = open_files + 1
+			break
 		end
 	end
 	if open_files == 0 then
@@ -467,10 +468,18 @@ function M.setup()
 		end,
 	})
 
+	local cleanup_pending = false
 	vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
 		group = vim.api.nvim_create_augroup("FOXCleanNoNameBuffers", { clear = true }),
 		callback = function()
-			vim.schedule(M.clean_buffers)
+			if cleanup_pending then
+				return
+			end
+			cleanup_pending = true
+			vim.schedule(function()
+				cleanup_pending = false
+				M.clean_buffers()
+			end)
 		end,
 	})
 

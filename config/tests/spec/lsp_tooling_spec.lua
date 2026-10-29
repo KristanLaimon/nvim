@@ -1,6 +1,11 @@
 local t = require("fox.lib.foxnvim.test")
 local m = require("fox.lsp.tooling")
 t.describe("Local LSP tooling", function()
+	t.it("keeps custom launchers and absent commands unchanged", function()
+		local launcher = function() end
+		t.expect(m.resolve_command(launcher)).toBe(launcher)
+		t.expect(m.resolve_command(nil)).toBe(nil)
+	end)
 	t.it("maps every managed LSP from its owning metadata", function()
 		local packages = m.packages()
 		t.expect(packages.lua_ls).toBe("lua-language-server")
@@ -35,6 +40,11 @@ t.describe("Local LSP tooling", function()
 		t.expect(called).toBe(false)
 	end)
 end)
+
+-- These fixtures require Linux permissions and case-sensitive executable names.
+if vim.fn.has("linux") ~= 1 then
+	return
+end
 
 t.describe("LSP executable case fallback", function()
 	local root, original_path
@@ -88,10 +98,5 @@ t.describe("LSP executable case fallback", function()
 		executable(root .. "/first", "FoxServer", "rw-r--r--")
 		local cmd = { "foxserver" }
 		t.expect(m.resolve_command(cmd)).toBe(cmd)
-	end)
-	t.it("keeps custom launchers and absent commands unchanged", function()
-		local launcher = function() end
-		t.expect(m.resolve_command(launcher)).toBe(launcher)
-		t.expect(m.resolve_command(nil)).toBe(nil)
 	end)
 end)

@@ -552,9 +552,17 @@ function M.get_selected_terminal()
 	return _G._fox_selected_terminal or 1
 end
 
+local function close_git_center()
+	local center = package.loaded["plugins.fox.git.git_center"]
+	if center and center.is_open() then
+		center.close_git_center({ keep_cached_view = true })
+	end
+end
+
 --- Selects terminal `n` and shows it, reusing the visible terminal window.
 --- @param n integer Slot number.
 function M.select_terminal(n)
+	close_git_center()
 	sync_terminals()
 	_G._fox_selected_terminal = n
 
@@ -585,6 +593,7 @@ end
 --- Opens terminal `n`, creating the dock pane or floating window when there is none.
 --- @param n integer|nil Slot number. Defaults to the selected terminal.
 function M.open_terminal(n)
+	close_git_center()
 	sync_terminals()
 
 	n = n or _G._fox_selected_terminal or 1
@@ -631,6 +640,22 @@ function M.open_terminal(n)
 	vim.cmd("startinsert")
 end
 
+--- Hides the visible pane without stopping any terminal job.
+function M.hide_terminal()
+	sync_terminals()
+	local win = get_active_terminal_win()
+	if not win then
+		return
+	end
+	pcall(vim.cmd, "stopinsert")
+	vim.api.nvim_win_close(win, true)
+	for _, term in pairs(terminals) do
+		if term.win == win then
+			term.win = nil
+		end
+	end
+end
+
 --- Hides the terminal when focused, shows or creates it otherwise.
 function M.toggle_selected_terminal()
 	sync_terminals()
@@ -640,15 +665,7 @@ function M.toggle_selected_terminal()
 	local active_win = get_active_terminal_win()
 
 	if active_win and current == active_win then
-		pcall(vim.cmd, "stopinsert")
-		pcall(vim.api.nvim_win_close, active_win, true)
-
-		-- Every slot sharing that pane loses its window handle, not just this one.
-		for _, term in pairs(terminals) do
-			if term.win == active_win then
-				term.win = nil
-			end
-		end
+		M.hide_terminal()
 
 		if is_valid_win(code_win) then
 			pcall(vim.api.nvim_set_current_win, code_win)

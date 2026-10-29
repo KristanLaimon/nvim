@@ -386,6 +386,10 @@ function M.open_git_center()
 		notify("Current directory is not a valid Git repository", vim.log.levels.WARN, "Git Center (FOX)")
 		return
 	end
+	local terminal = package.loaded["plugins.fox.dev.terminal"]
+	if terminal then
+		terminal.hide_terminal()
+	end
 
 	config.root_dir = root
 	panel_session_id = panel_session_id + 1

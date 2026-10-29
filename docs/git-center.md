@@ -4,6 +4,8 @@
 
 The **Git Control Center** (`<C-S-g>`) is a high-speed, interactive floating Git interface with live VSCode-style diff previews, branch status tracking, and one-key staging/commit/push operations.
 
+Git Center and the multi-terminal pane are mutually exclusive. Opening Git Center hides the terminal without stopping its jobs; opening or selecting a terminal closes Git Center and preserves its cached view. Other windows keep their normal stacking behavior.
+
 ---
 
 ## ⚡ Highlights

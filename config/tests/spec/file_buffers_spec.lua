@@ -3,7 +3,7 @@ t.describe("Filesystem buffer reconciliation", function()
 	local buffers, root
 	t.beforeEach(function()
 		buffers = {}
-		root = vim.fn.tempname()
+		root = require("fox.core.path").normalize(vim.fn.tempname())
 	end)
 	t.afterEach(function()
 		for _, b in ipairs(buffers) do

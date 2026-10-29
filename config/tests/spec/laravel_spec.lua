@@ -9,7 +9,7 @@ t.describe("FOX Laravel references", function()
 		return file
 	end
 	t.beforeEach(function()
-		root = vim.fn.tempname()
+		root = require("fox.core.path").normalize(vim.fn.tempname())
 		vim.fn.mkdir(root, "p")
 		system, select = vim.system, vim.ui.select
 		vim.system = function()

@@ -1,5 +1,9 @@
 local t = require("fox.lib.foxnvim.test")
 local linux = require("fox.core.os.linux")
+if vim.fn.has("linux") ~= 1 then
+	return
+end
+
 t.describe("Linux Caps Lock detection", function()
 	local root, saved
 	t.beforeEach(function()

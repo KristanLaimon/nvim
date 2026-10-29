@@ -20,7 +20,7 @@ t.describe("package manager actions and registry state", function()
 		requests[index].callback({ stdout = stdout or "", code = code or 0, stderr = stderr or "" })
 	end
 	t.beforeEach(function()
-		dir = vim.fn.tempname()
+		dir = require("fox.core.path").normalize(vim.fn.tempname())
 		vim.fn.mkdir(dir, "p")
 		old = vim.api.nvim_get_current_buf()
 		buf = vim.api.nvim_create_buf(false, false)

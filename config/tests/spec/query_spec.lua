@@ -32,6 +32,21 @@ local metadata = {
 }
 
 describe("FoxQuerier SQL structure", function()
+	it("resolves hover tables and qualified columns inside nested query scopes", function()
+		local text = "SELECT * FROM customers p WHERE p.id IN (SELECT pp.id FROM orders pp WHERE pp.total IN (8,20))"
+		local outer = sql.object_at(text, assert(text:find("customers", 1, true)), metadata)
+		expect(outer.key).toBe("customers")
+		local inner = sql.object_at(text, assert(text:find("orders", 1, true)), metadata)
+		expect(inner.key).toBe("orders")
+		local item, column = sql.object_at(text, assert(text:find("pp.total", 1, true)) + 3, metadata)
+		expect(item.key).toBe("orders")
+		expect(column.name).toBe("total")
+		expect(column.type).toBe("decimal")
+		text = "SELECT p.id FROM customers p WHERE EXISTS (SELECT p.total FROM orders p)"
+		item, column = sql.object_at(text, assert(text:find("p.total", 1, true)) + 2, metadata)
+		expect(item.key).toBe("orders")
+		expect(column.name).toBe("total")
+	end)
 	it("resolves named WITH tables, chained CTEs and explicit output names", function()
 		for _, engine in ipairs({ "postgres", "mysql" }) do
 			local text =

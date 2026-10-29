@@ -694,7 +694,7 @@ function M.object_at(text, offset, metadata)
 		end
 	end
 	local tokens = M.tokens(text, metadata.syntax or metadata.engine)
-	local graph = M.analyze(text, metadata)
+	local graph = M.completion_graph(text, offset, metadata)
 	for index, token in ipairs(tokens) do
 		if identifier(token) and offset >= token.first and offset <= token.last then
 			local qualifier = tokens[index - 1] and tokens[index - 1].value == "." and tokens[index - 2]

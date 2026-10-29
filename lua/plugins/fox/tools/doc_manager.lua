@@ -638,7 +638,8 @@ function M.setup()
 	end, { nargs = "*", desc = "Add new offline doc topic" })
 
 	vim.api.nvim_create_autocmd("BufReadPost", {
-		pattern = M.settings.docs_dir .. "/*/*/**",
+		group = vim.api.nvim_create_augroup("FoxOfflineDocs", { clear = true }),
+		pattern = vim.fs.normalize(M.settings.docs_dir) .. "/*/*/**",
 		callback = function(ev)
 			if ev.file:match("%.html?$") then
 				render_html_buffer(ev.buf)
@@ -659,6 +660,7 @@ end
 return setmetatable({
 	name = "doc_manager",
 	dir = require("fox.core.lazyspec").for_module(),
-	event = "VeryLazy",
+	event = { { event = "BufReadPost", pattern = vim.fs.normalize(M.settings.docs_dir) .. "/*/*/**" } },
+	cmd = { "DocManager", "FoxDocManager", "FoxDocOpen", "FoxDocSearch", "FoxDocView", "FoxDocAdd", "FoxDocDownload" },
 	config = M.setup,
 }, { __index = M })

@@ -1,0 +1,15 @@
+local t = require("fox.lib.foxnvim.test")
+
+t.describe("offline docs on demand", function()
+	t.it("renders a directly opened HTML document without opening the manager first", function()
+		local plugins = require("lazy.core.config").plugins
+		t.expect(plugins.doc_manager._.loaded).toBe(nil)
+		local buf = vim.api.nvim_create_buf(false, true)
+		vim.api.nvim_buf_set_name(buf, vim.fn.stdpath("config") .. "/docs/offline/lua/test/startup.html")
+		vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "<h1>Startup</h1>" })
+		vim.api.nvim_exec_autocmds("BufReadPost", { buffer = buf, modeline = false })
+		t.expect(plugins.doc_manager._.loaded ~= nil).toBe(true)
+		t.expect(vim.bo[buf].filetype).toBe("markdown")
+		vim.api.nvim_buf_delete(buf, { force = true })
+	end)
+end)

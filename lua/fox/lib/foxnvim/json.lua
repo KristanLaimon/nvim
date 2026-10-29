@@ -51,8 +51,7 @@ end
 --- @example
 --- local str = json.encode({ name = "Project", tags = { "lua", "nvim" } })
 --- print(str) -- Output: {"name":"Project","tags":["lua","nvim"]}
-function M.encode(obj, opts)
-	opts = opts or {}
+function M.encode(obj, _opts)
 	local ok, res = pcall(vim.json.encode, obj)
 	if not ok then
 		error("foxnvim.json: Error encoding JSON: " .. tostring(res))

@@ -59,7 +59,7 @@ describe("git_center binary blacklist and safe diff", function()
 
 	it("formats binary files safely in format_side_by_side_single for live preview", function()
 		local raw = { "Binary files a/disk.img and b/disk.img differ" }
-		local combined, l_kinds, r_kinds, col_w = diff.format_side_by_side_single(raw, false, 80, "disk.img")
+		local combined, _, _, col_w = diff.format_side_by_side_single(raw, false, 80, "disk.img")
 
 		expect(type(combined)).toBe("table")
 		expect(#combined > 0).toBe(true)

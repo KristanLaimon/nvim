@@ -4,8 +4,10 @@ local diagnostics = require("fox.langs.sql.diagnostics")
 local storage = require("fox.query.storage")
 
 t.describe("SQL dialect tooling", function()
-	local root, buf
+	local root, buf, tab
 	t.beforeEach(function()
+		tab = vim.api.nvim_get_current_tabpage()
+		vim.cmd("tabnew")
 		root = vim.fn.tempname()
 		vim.fn.mkdir(root, "p")
 		buf = vim.api.nvim_create_buf(false, true)
@@ -13,6 +15,8 @@ t.describe("SQL dialect tooling", function()
 	end)
 	t.afterEach(function()
 		vim.api.nvim_buf_delete(buf, { force = true })
+		vim.cmd("tabclose!")
+		vim.api.nvim_set_current_tabpage(tab)
 		vim.fn.delete(root, "rf")
 	end)
 

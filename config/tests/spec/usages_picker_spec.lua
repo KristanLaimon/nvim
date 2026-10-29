@@ -54,7 +54,6 @@ describe("plugins.fox.tools.usages_picker", function()
 
 	it("persists theme changes when set_style is called", function()
 		local picker = require("plugins.fox.tools.usages_picker")
-		local initial = picker.get_current_style()
 
 		picker.set_style("plain")
 		expect(picker.get_current_style()).toBe("plain")

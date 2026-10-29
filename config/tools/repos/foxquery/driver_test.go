@@ -246,3 +246,36 @@ func TestPostgresMetadata(t *testing.T) {
 		}
 	}
 }
+
+func TestMariaDBPrimaryKeyMetadata(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	db.SetMaxOpenConns(1)
+	// MariaDB exposes TABLE_CATALOG in KEY_COLUMN_USAGE, but not TABLE_CONSTRAINTS.
+	_, err = db.Exec(`ATTACH ':memory:' AS information_schema;
+CREATE VIEW information_schema.tables AS SELECT 'fixture' AS table_schema, 'items' AS table_name, 'BASE TABLE' AS table_type;
+CREATE VIEW information_schema.columns AS SELECT 'fixture' AS table_schema, 'items' AS table_name, 'id' AS column_name, 'bigint' AS column_type, 'NO' AS is_nullable, NULL AS column_default, 1 AS ordinal_position;
+CREATE VIEW information_schema.table_constraints AS SELECT 'def' AS constraint_catalog, 'fixture' AS constraint_schema, 'PRIMARY' AS constraint_name, 'fixture' AS table_schema, 'items' AS table_name, 'PRIMARY KEY' AS constraint_type;
+CREATE VIEW information_schema.key_column_usage AS SELECT 'def' AS constraint_catalog, 'fixture' AS constraint_schema, 'PRIMARY' AS constraint_name, 'def' AS table_catalog, 'fixture' AS table_schema, 'items' AS table_name, 'id' AS column_name, NULL AS referenced_table_schema, NULL AS referenced_table_name, NULL AS referenced_column_name, 1 AS ordinal_position;
+CREATE VIEW information_schema.statistics AS SELECT 'fixture' AS table_schema, 'items' AS table_name, 'PRIMARY' AS index_name, 0 AS non_unique, 'id' AS column_name, 1 AS seq_in_index;`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := &driver{db: db, profile: profile{Engine: "mysql", Database: "fixture"}}
+	d.conn, err = db.Conn(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(d.close)
+	metadata, err := d.metadata(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tables := metadata.(object)["tables"].([]object)
+	if len(tables) != 1 || tables[0]["columns"].([]object)[0]["pk"] != true {
+		t.Fatal("MariaDB primary key was not identified")
+	}
+}

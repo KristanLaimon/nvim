@@ -132,7 +132,7 @@ end
 --- Supplies completions for the field under the cursor.
 --- @param context table blink.cmp context.
 --- @param callback fun(result: table)
-function M:get_completions(context, callback)
+function M.get_completions(_self, context, callback)
 	local function respond(items)
 		callback({ items = items or {}, is_incomplete_forward = false, is_incomplete_backward = false })
 	end

@@ -42,6 +42,8 @@ local project = lazy_req("fox.core.project")
 local path = lazy_req("fox.core.path")
 local ui = lazy_req("fox.core.ui")
 local runtimes = lazy_req("fox.launch.runtimes")
+local environment = require("fox.core.environment").detect()
+local is_mobile_lp = environment.is_termux or environment.is_proot or environment.is_mobile
 
 local M = {}
 

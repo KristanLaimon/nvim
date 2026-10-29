@@ -165,7 +165,7 @@ local function goto_definition()
 		end
 	end
 
-	local status, err = pcall(function()
+	local status = pcall(function()
 		vim.lsp.buf.definition({
 			on_list = function(options)
 				if not options or not options.items or #options.items == 0 then
@@ -278,7 +278,7 @@ local function show_symbol_usages()
 		end
 	end
 
-	local status, err = pcall(function()
+	local status = pcall(function()
 		vim.lsp.buf.references(nil, {
 			on_list = function(options)
 				if not options or not options.items or #options.items == 0 then

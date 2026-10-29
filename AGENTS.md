@@ -47,7 +47,7 @@ When adding support for a new programming language (or updating an existing one)
 ### 🧰 1.3 Command Palette Preference (No `<leader>` Shortcuts)
 * **Prefer Command Palette Commands**: Always prefer registering actions and tools in the **Command Palette** (`<C-S-p>` or `:CommandPalette`) over assigning `<leader>` keymaps.
 * **Command Registration**: Add user-facing features to `M.commands` in `lua/plugins/fox/command_palette.lua` with descriptive names and categories.
-* **Ex Commands**: Provide explicit User Commands (e.g., `:FormatDocument`, `:PHPCheckTools`, `:BladeNavClearCache`) so actions are discoverable via Neovim command-line completion and palette search.
+* **Ex Commands**: Provide explicit User Commands (e.g., `:FormatDocument`, `:BladeNavClearCache`) so actions are discoverable via Neovim command-line completion and palette search.
 
 ---
 
@@ -63,6 +63,10 @@ FoxVim follows a modular four-layer design:
 4. **`.foxnvim/`**: Per-project config directory created in workspace roots holding tasks, launch profiles, breakpoints, and local script definitions.
 
 ---
+
+### Query Mode backend
+
+FoxQuery uses the bundled Go JSONL worker in `config/tools/foxquery/`. Its source and backend tests live in `config/tools/repos/foxquery/`; the Neovim transport is `lua/fox/query/client.lua`. SQLite, MySQL/MariaDB, and PostgreSQL drivers are compiled in. MariaDB connections select `engine: "mysql"`; no separate driver installation is needed. Read `docs/query-mode.md` for current runtime behavior and connection storage.
 
 ## 📚 3. Wiki Sitemap & Comprehensive Use-Case Index
 
@@ -110,7 +114,7 @@ Refer to the specific wiki documentation page for each feature or development us
 
 Detailed setup, Ex commands, DAP debug profiles, and plugin integrations for each supported language:
 
-* 🐘 [**PHP & Laravel Guide**](docs/languages/php.md) — Intelephense, Pint, PHP-CS-Fixer, blade-formatter, `blade-nav.nvim`, Xdebug (`:PHPCheckTools`, `:BladeNavClearCache`, `:FormatDocument`).
+* 🐘 [**PHP & Laravel Guide**](docs/languages/php.md) — Intelephense, Pint, PHP-CS-Fixer, blade-formatter, `blade-nav.nvim`, Xdebug (`:BladeNavClearCache`, `:FormatDocument`).
 * 🟨 [**TypeScript & JavaScript Guide**](docs/languages/typescript.md) — `tsc`, ESLint, Biome, Prettier/Prettierd, `js-debug-adapter`, `type-injector`, `tailwind-organizer`.
 * ⚡ [**C / C++ Guide**](docs/languages/cpp.md) — `clangd`, `clang-format`, `cppcheck`, `cpplint`, `codelldb` DAP.
 * ⚡ [**Zig Guide**](docs/languages/zig.md) — `zls` (Zig Language Server), `zigfmt` (`zig fmt`).

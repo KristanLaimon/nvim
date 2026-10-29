@@ -38,8 +38,7 @@ local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
 --- @example
 --- local res = M.exec("bun run build")
 --- assert(res.ok, "Build failed with exit code " .. res.code)
-local function run_cmd(cmd_str, opts)
-	opts = opts or {}
+local function run_cmd(cmd_str, _opts)
 	if type(cmd_str) == "table" then
 		cmd_str = table.concat(cmd_str, " ")
 	end

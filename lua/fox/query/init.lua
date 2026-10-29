@@ -4,8 +4,10 @@ local sql = require("fox.query.sql")
 local render = require("fox.query.render")
 local client = require("fox.query.client")
 local layout = require("fox.query.layout")
+local parameters = require("fox.query.parameters")
 local ns = vim.api.nvim_create_namespace("fox_query")
 local statement_ns = vim.api.nvim_create_namespace("fox_query_statement")
+local parameter_ns = vim.api.nvim_create_namespace("fox_query_parameters")
 local group = vim.api.nvim_create_augroup("FoxQuery", { clear = true })
 
 local function notify(message, level)
@@ -20,6 +22,11 @@ function M.state(root)
 			notify(err, vim.log.levels.WARN)
 		end
 		local limit = settings and settings.diagram_columns
+		local tab_pins, pin_err = storage.load(root, "private/tab-pins.json", {})
+		if pin_err or type(tab_pins) ~= "table" or not vim.islist(tab_pins) then
+			notify(pin_err or "Invalid Query tab pins", vim.log.levels.WARN)
+			tab_pins = {}
+		end
 		M.states[root] = {
 			root = root,
 			view = "standard",
@@ -29,6 +36,7 @@ function M.state(root)
 			autorun = false,
 			diagram_columns = type(limit) == "number" and limit >= 1 and limit <= 200 and limit % 1 == 0 and limit or 15,
 			connection_status = {},
+			tab_pins = tab_pins,
 		}
 	end
 	return M.states[root]
@@ -98,9 +106,14 @@ local function query_keys(buf)
 		},
 		gN = {
 			function()
-				M.create()
+				local state = M.states[vim.b[buf].fox_query_root]
+				if state and state.side_buf == buf then
+					M.notes()
+				else
+					M.create()
+				end
 			end,
-			"New query",
+			"Open table note / new query",
 		},
 		["<F1>"] = {
 			function()
@@ -249,7 +262,7 @@ end
 
 function M.cycle(direction)
 	local state, buffers = M.state(), {}
-	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+	for _, buf in ipairs(require("fox.ui.tabline").buffers()) do
 		if state.consoles[buf] and vim.bo[buf].buflisted then
 			buffers[#buffers + 1] = buf
 		end
@@ -472,6 +485,150 @@ local function text_at_cursor(state)
 	return table.concat(lines, "\n"), offset
 end
 
+local function parameter_hints(state, text, engine)
+	local buf = state.active
+	if not valid(buf, "buf") then
+		return
+	end
+	vim.api.nvim_buf_clear_namespace(buf, parameter_ns, 0, -1)
+	for _, statement in ipairs(sql.statements(text, engine) or {}) do
+		local description = parameters.describe(statement.sql, engine)
+		if #description.groups > 0 then
+			local values = parameters.values(state.root, vim.b[buf].fox_query_document, description)
+			for _, entry in ipairs(description.groups) do
+				local value = values and values[entry.key]
+				if value ~= nil then
+					local hint = value == "" and '""' or vim.fn.strtrans(value)
+					if vim.fn.strchars(hint) > 40 then
+						hint = vim.fn.strcharpart(hint, 0, 40) .. "…"
+					end
+					for _, position in ipairs(entry.positions) do
+						local prefix = text:sub(1, statement.first + position - 1)
+						local row = select(2, prefix:gsub("\n", ""))
+						vim.api.nvim_buf_set_extmark(buf, parameter_ns, row, #prefix:match("[^\n]*$"), {
+							virt_text = { { " ⟨" .. hint .. "⟩", "Comment" } },
+							virt_text_pos = "inline",
+							right_gravity = false,
+						})
+					end
+				end
+			end
+		end
+	end
+end
+
+function M.draw_parameters(state, focus)
+	local text, offset = text_at_cursor(state)
+	local engine = state.metadata.syntax or state.metadata.engine
+	parameter_hints(state, text, engine)
+	local statement = sql.scope(text, offset, "statement", nil, engine)
+	local description = statement and parameters.describe(statement, engine)
+	local visible = description
+		and #description.groups > 0
+		and (state.view == "standard" or focus or state.parameters_statement == description.id)
+		and valid(state.sql_win, "win")
+	if not visible then
+		if valid(state.parameters_win, "win") then
+			-- Keep equalalways from redistributing heights outside the Parameters column.
+			vim._with({ o = { eadirection = "hor" } }, function()
+				vim.api.nvim_win_close(state.parameters_win, true)
+			end)
+		end
+		state.parameters_win, state.parameters_statement = nil, nil
+		return
+	end
+	local owner = state.active
+	local document = vim.b[owner].fox_query_document
+	local values, err = parameters.values(state.root, document, description)
+	local buf = panel(state, "parameters_buf")
+	local lines = {}
+	for _, entry in ipairs(description.groups) do
+		local value = values and values[entry.key]
+		lines[#lines + 1] = entry.label
+			.. (entry.clause == "FROM" and ": " or " = ")
+			.. (value == nil and "<unset>" or value == "" and '""' or value)
+	end
+	set_lines(buf, lines)
+	local function edit(clear)
+		local entry = description.groups[vim.api.nvim_win_get_cursor(0)[1]]
+		if not entry then
+			return
+		end
+		local function save(value)
+			if not clear and value == nil then
+				return
+			end
+			local ok, save_err = parameters.set(state.root, document, description, entry.key, value)
+			if not ok then
+				notify(save_err, vim.log.levels.ERROR)
+			end
+			M.refresh_view(state)
+		end
+		if clear then
+			save(nil)
+		else
+			vim.ui.input({
+				prompt = entry.label .. " (NULL = null; blank = empty; text:NULL = text): ",
+				default = values and values[entry.key] or "",
+			}, save)
+		end
+	end
+	vim.keymap.set("n", "<CR>", function()
+		edit(false)
+	end, { buffer = buf, silent = true })
+	vim.keymap.set("n", "dd", function()
+		edit(true)
+	end, { buffer = buf, silent = true })
+	vim.keymap.set("n", "q", function()
+		vim.api.nvim_set_current_win(state.sql_win)
+	end, { buffer = buf, silent = true })
+	for _, key in ipairs({ "<F5>", "<C-CR>" }) do
+		vim.keymap.set("n", key, function()
+			M.run("statement")
+		end, { buffer = buf, silent = true })
+	end
+	if not valid(state.parameters_win, "win") then
+		local anchor = valid(state.side_win, "win") and state.side_win or state.sql_win
+		vim._with({ o = { eadirection = "hor" } }, function()
+			state.parameters_win = vim.api.nvim_open_win(buf, false, {
+				split = "below",
+				win = anchor,
+				height = math.max(3, math.floor(vim.api.nvim_win_get_height(anchor) * 0.5)),
+			})
+		end)
+	end
+	vim.wo[state.parameters_win].winbar = "Parameters | Enter Edit | dd Clear | F5 Run"
+	vim.wo[state.parameters_win].wrap = false
+	vim.wo[state.parameters_win].number = false
+	vim.wo[state.parameters_win].relativenumber = false
+	vim.wo[state.parameters_win].cursorline = true
+	if focus then
+		state.parameters_statement = description.id
+		vim.api.nvim_set_current_win(state.parameters_win)
+	end
+	if err then
+		notify(err, vim.log.levels.ERROR)
+	end
+end
+
+function M.parameters()
+	local state = M.state()
+	current_metadata(state)
+	M.draw_parameters(state, true)
+end
+
+function M.clear_parameters()
+	local state = M.state()
+	local ok, err = storage.save(state.root, "private/parameters.json", {})
+	if not ok then
+		notify(err, vim.log.levels.ERROR)
+	end
+	for _, item in pairs(state.consoles) do
+		item.params = {}
+	end
+	M.refresh_view(state)
+end
+
 local function mark_statement(state)
 	local active, buf = console(state)
 	if not active then
@@ -542,7 +699,7 @@ end
 
 function M.refresh_view(state)
 	state = state or M.state()
-	if not valid(state.tab, "tab") or vim.api.nvim_get_current_tabpage() ~= state.tab then
+	if state.building_layout or not valid(state.tab, "tab") or vim.api.nvim_get_current_tabpage() ~= state.tab then
 		return
 	end
 	local active = console(state)
@@ -558,6 +715,7 @@ function M.refresh_view(state)
 		end
 	end
 	current_metadata(state)
+	M.draw_parameters(state)
 	if valid(state.sql_win, "win") then
 		mark_statement(state)
 	end
@@ -568,7 +726,7 @@ function M.refresh_view(state)
 		.. "] "
 		.. label
 		.. " | "
-		.. (require("fox.langs.sql.dialect").read(state.active or 0) or "SQL")
+		.. (active and require("fox.langs.sql.dialect").read(state.active) or "SQL")
 		.. " | "
 		.. (connected and "READ ONLY" or "disconnected")
 		.. " | "
@@ -585,7 +743,7 @@ function M.refresh_view(state)
 	end
 	if state.view == "visual" then
 		local text, offset = text_at_cursor(state)
-		if state.pinned and state.pinned.buf == state.active then
+		if active and state.pinned and state.pinned.buf == state.active then
 			local mark = vim.api.nvim_buf_get_extmark_by_id(state.active, ns, state.pinned.id, {})
 			if #mark == 2 then
 				local lines = vim.api.nvim_buf_get_lines(state.active, 0, mark[1], false)
@@ -678,6 +836,42 @@ local function show_document(state, relative, filetype)
 	end
 	vim.api.nvim_set_current_buf(buf)
 	return buf
+end
+
+function M.hover(buf)
+	buf = buf or vim.api.nvim_get_current_buf()
+	local state = M.states[vim.b[buf].fox_query_root or ""]
+	if not state or not state.consoles[buf] or vim.api.nvim_get_current_buf() ~= buf then
+		return false
+	end
+	state.active = buf
+	local metadata = current_metadata(state)
+	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+	local position = vim.api.nvim_win_get_cursor(0)
+	local text, offset = table.concat(lines, "\n"), position[2] + 1
+	for line = 1, position[1] - 1 do
+		offset = offset + #lines[line] + 1
+	end
+	local symbol, err = sql.symbol(text, offset, metadata)
+	if err then
+		notify(err, vim.log.levels.WARN)
+		return true
+	end
+	if not symbol then
+		return false
+	end
+	if symbol.column then
+		local line = symbol.table.key .. "." .. symbol.column.name .. " : " .. tostring(symbol.column.type or "unknown")
+		vim.lsp.util.open_floating_preview({ (line:gsub("[%c]", " ")) }, "sql", {
+			border = "rounded",
+			focus_id = "fox_query_schema_hover",
+			max_width = 70,
+			max_height = 4,
+		})
+	else
+		M.inspect(symbol.table, state)
+	end
+	return true
 end
 
 function M.inspect(item, state)
@@ -787,6 +981,7 @@ function M.hide(state)
 		vim.cmd("tabclose")
 		state.tab, state.sql_win, state.side_win, state.result_win, state.activity_win = nil, nil, nil, nil, nil
 		state.connections_win, state.queries_win = nil, nil
+		state.parameters_win, state.parameters_statement = nil, nil
 		if current ~= state.tab and valid(state.editor_tab, "tab") then
 			vim.api.nvim_set_current_tabpage(state.editor_tab)
 		end
@@ -809,6 +1004,7 @@ function M.show(view)
 		M.hide(state)
 	end
 	state.view, state.mode = view or state.view, "query"
+	state.building_layout = true
 	require("fox.query.tree").setup()
 	M.privacy_enter(state)
 	state.editor_tab = vim.api.nvim_get_current_tabpage()
@@ -820,6 +1016,12 @@ function M.show(view)
 		if not state.opened then
 			M.draw_queries(state)
 			local saved = storage.load(state.root, "private/last-query.json", {})
+			for _, document in ipairs(state.tab_pins) do
+				local file = type(document) == "string" and document:match("^queries/(.+)$")
+				if file and vim.tbl_contains(state.query_files, file) then
+					M.new(file)
+				end
+			end
 			local file = saved and saved.file
 			M.new(vim.tbl_contains(state.query_files, file) and file or state.query_files[1])
 			_, buf = console(state)
@@ -894,6 +1096,12 @@ function M.show(view)
 	map(state.side_buf, "gn", function()
 		M.notes(selected_object(state))
 	end)
+	map(state.side_buf, "gD", function()
+		local item = selected_object(state)
+		if item then
+			M.notes(item, "delete")
+		end
+	end)
 	map(state.side_buf, "b", function()
 		M.browse(selected_object(state))
 	end)
@@ -936,6 +1144,7 @@ function M.show(view)
 	if active and active.cursor then
 		pcall(vim.api.nvim_win_set_cursor, state.sql_win, active.cursor)
 	end
+	state.building_layout = nil
 	M.refresh_view(state)
 	M.restore_connection(state)
 end
@@ -960,6 +1169,28 @@ function M.buffer_label(buf)
 			.. "/"
 			.. vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t")
 	end
+end
+
+function M.toggle_tab_pin(buf)
+	local state = M.states[vim.b[buf].fox_query_root or ""]
+	if not state or not state.consoles[buf] then
+		return
+	end
+	local document = vim.b[buf].fox_query_document
+	local pins = vim.deepcopy(state.tab_pins)
+	local index = vim.fn.index(pins, document)
+	if index >= 0 then
+		table.remove(pins, index + 1)
+	else
+		pins[#pins + 1] = document
+	end
+	local ok, err = storage.save(state.root, "private/tab-pins.json", pins)
+	if not ok then
+		notify("Cannot save Query tab pins: " .. tostring(err), vim.log.levels.ERROR)
+		return
+	end
+	state.tab_pins = pins
+	require("fox.ui.tabline").set_pin(buf, index < 0)
 end
 
 function M.pin()
@@ -1141,6 +1372,7 @@ function M.new(relative, dialect)
 	end
 	require("fox.langs.sql").attach(buf, state.root)
 	state.consoles[buf] = state.consoles[buf] or { status = "idle", params = {} }
+	require("fox.ui.tabline").set_pin(buf, vim.tbl_contains(state.tab_pins, relative))
 	state.active = buf
 	if state.consoles[buf].metadata then
 		state.metadata = state.consoles[buf].metadata
@@ -1395,7 +1627,12 @@ function M.add_profile(existing)
 			end
 		end
 	end
-	M.select({ "sqlite", "mysql", "postgres" }, { prompt = "Database engine" }, function(engine)
+	M.select({ "sqlite", "mysql", "postgres" }, {
+		prompt = "Database engine",
+		format_item = function(engine)
+			return engine == "mysql" and "MySQL / MariaDB" or engine
+		end,
+	}, function(engine)
 		if not engine then
 			return
 		end
@@ -1875,42 +2112,22 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 			vim.defer_fn(elapsed, 500)
 			M.refresh_view(state)
 		end
-		if supplied_params then
+		if supplied_params or prepared.parameters == 0 then
 			execute()
 			return
 		end
-		for index = 1, prepared.parameters do
-			local previous = item.executed_sql == query and item.params[index] or nil
-			local default = previous == vim.NIL and "NULL" or previous and tostring(previous) or ""
-			local ok, value =
-				pcall(vim.fn.inputsecret, "Parameter " .. index .. " (NULL/null; blank/empty; Ctrl-C cancels): ", default)
-			if not ok then
-				connection.busy = false
-				item.status = "input canceled"
-				M.refresh_view(state)
-				return
-			end
-			params[index] = value == "NULL" and vim.NIL or value:gsub("^text:", "")
+		local engine = require("fox.langs.sql.dialect").read(buf) or item.syntax or profile.engine
+		local bound, binding_err = parameters.bound(state.root, vim.b[buf].fox_query_document, query, engine)
+		if not bound or #bound ~= prepared.parameters then
+			connection.busy = false
+			item.status = binding_err or "Placeholder detection differs from the database; SQL was not executed"
+			notify(item.status, vim.log.levels.WARN)
+			M.refresh_view(state)
+			M.draw_parameters(state, true)
+			return
 		end
-		if prepared.parameters > 0 then
-			M.select({ "Run with these RAM parameters", "Cancel" }, {
-				prompt = "Execute "
-					.. prepared.statements
-					.. " statement(s) with "
-					.. prepared.parameters
-					.. " bound value(s)?",
-			}, function(choice)
-				if choice == "Run with these RAM parameters" then
-					execute()
-				else
-					connection.busy = false
-					item.status = "input canceled"
-					M.refresh_view(state)
-				end
-			end)
-		else
-			execute()
-		end
+		params = bound
+		execute()
 	end)
 	M.refresh_view(state)
 end
@@ -1926,27 +2143,69 @@ function M.cancel()
 	end
 end
 
-function M.notes(item)
+function M.notes(item, action)
 	local state = M.state()
+	local document = vim.b.fox_query_document
+	local opened = action == "delete" and type(document) == "string" and document:match("^notes/")
+	if opened then
+		item = { key = vim.b.fox_query_note_key }
+	end
 	item = item or selected_object(state)
 	local active = console(state)
-	if not item or not active or not active.profile then
+	if not item or not item.key or not active or not active.profile then
 		notify("Select a table with a connection first", vim.log.levels.WARN)
 		return
 	end
 	local key = storage.fingerprint(active.profile) .. "/" .. vim.fn.sha256(item.key):sub(1, 24) .. ".md"
+	local relative = opened and document or "notes/" .. key
+	if action == "delete" then
+		local path = storage.path(state.root, relative)
+		local buf = vim.fn.bufnr(path)
+		local function unchanged()
+			if valid(buf, "buf") then
+				if vim.bo[buf].modified then
+					notify("Save the note before deleting it", vim.log.levels.WARN)
+					return false
+				end
+				if (storage.read(state.root, relative) or "") ~= vim.b[buf].fox_query_disk then
+					notify("Note changed externally; reload it before deleting", vim.log.levels.WARN)
+					return false
+				end
+			end
+			return true
+		end
+		if not unchanged() then
+			return
+		end
+		local words = { "maple", "river", "cloud", "stone", "ocean", "forest", "sunset", "meadow" }
+		local word = words[math.random(#words)]
+		vim.ui.input(
+			{ prompt = "Delete note for " .. item.key .. ': write the following word to confirm "' .. word .. '": ' },
+			function(answer)
+				if answer ~= word or not unchanged() then
+					return
+				end
+				local ok, err, code = (vim.uv or vim.loop).fs_unlink(path)
+				if not ok and code ~= "ENOENT" then
+					notify(err, vim.log.levels.ERROR)
+					return
+				end
+				if valid(buf, "buf") then
+					if valid(state.sql_win, "win") and valid(state.active, "buf") then
+						vim.api.nvim_win_set_buf(state.sql_win, state.active)
+					end
+					vim.api.nvim_buf_delete(buf, { force = false })
+				end
+				M.note_badges(state, active.profile)
+				M.refresh_view(state)
+			end
+		)
+		return
+	end
 	state.note_keys = state.note_keys or {}
 	state.note_keys[item.key] = true
-	local buf = show_document(state, "notes/" .. key, "markdown")
-	if vim.api.nvim_buf_line_count(buf) == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == "" then
-		vim.api.nvim_buf_set_lines(
-			buf,
-			0,
-			-1,
-			false,
-			{ "# " .. item.key, "", "## Business rules", "", "## Example queries", "" }
-		)
-	end
+	local buf = show_document(state, relative, "markdown")
+	vim.b[buf].fox_query_note_key = item.key
 end
 
 function M.note_badges(state, profile)
@@ -2211,6 +2470,7 @@ function M.help()
 		lines = {
 			"F3: Editor / Query | Shift+F3 or gV: toggle diagram | gC: connections sidebar",
 			"Ctrl+Enter or F5: run (Normal / Insert); Ctrl+Space or Ctrl+X Ctrl+O: complete (Insert)",
+			"SQL Shift+K: column source/type, table inspector, or dialect function documentation",
 			"Ctrl+Shift+Enter: run in a 90% results popup; B: browse table in popup; q / Esc: close popup",
 			"Ctrl+h/j/k/l: focus pane | gN: new query | gE: explorer/diagram",
 			"Connections pane: a add, e edit, d delete profile, Enter connect, D disconnect",
@@ -2218,13 +2478,13 @@ function M.help()
 			"FoxQueryRun statement / selection / section / file",
 			"FoxQueryCancel: cancel; reconnect if session is uncertain",
 			"FoxQueryResults / FoxQueryActivity: results / submitted SQL",
-			"Explorer/diagram: Enter inspect, J Insert JOIN, C column limit, b browse; / ? n N search; gn notes",
+			"Explorer/diagram: Enter inspect, J Insert JOIN, C column limit, b browse; / ? n N search; gn/gN notes, gD delete note",
 			"SQL files: Enter opens/toggles folders; a SQL, A folder, r rename, d delete; Alt+h/l tabs",
 			"Status: click/y copies; Enter error details",
 			"Results: H/L columns, J/K rows, Enter expand row, y copy, e export, gR follow FK",
 			"Map: / native search, Enter recenter, +/- depth, zh/zl pan, q back",
 			"Diagram markers: * selected, k JOIN, f filter, ? candidate FK; dim unused",
-			"Parameters: Ctrl-C cancels; NULL is null; text:NULL is literal text",
+			"Parameters pane: j/k rows, Enter edit, dd unset; NULL is null, text:NULL is literal text",
 			"Workspaces: save SQL first; explicit saves restore disconnected",
 			"Manual execution by default; FoxQueryAutoRun explicitly enables automatic SELECT.",
 		},

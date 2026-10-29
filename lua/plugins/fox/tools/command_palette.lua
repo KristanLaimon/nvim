@@ -121,12 +121,15 @@ M.commands = {
 	{ name = "Query: Run Section", cmd = "FoxQueryRun section", category = "Query" },
 	{ name = "Query: Run File", cmd = "FoxQueryRun file", category = "Query" },
 	{ name = "Query: Cancel Execution", cmd = "FoxQueryCancel", category = "Query" },
+	{ name = "Query: Statement Parameters", cmd = "FoxQueryParameters", category = "Query" },
 	{ name = "Query: Database Explorer", cmd = "FoxQueryExplorer", category = "Query" },
 	{ name = "Query: Inspect Table", cmd = "FoxQueryInspect", category = "Query" },
+	{ name = "Query: Inspect SQL Symbol at Cursor", cmd = "FoxQueryHover", category = "Query" },
 	{ name = "Query: Browse Table in Popup", cmd = "FoxQueryBrowsePopup", category = "Query" },
 	{ name = "Query: Database Relationship Map", cmd = "FoxQueryGraph all", category = "Query" },
 	{ name = "Query: Table Neighborhood", cmd = "FoxQueryGraph neighborhood", category = "Query" },
 	{ name = "Query: Table Notes", cmd = "FoxQueryNotes", category = "Query" },
+	{ name = "Query: Delete Table Note", cmd = "FoxQueryDeleteNote", category = "Query" },
 	{ name = "Query: Preview / Insert JOIN", cmd = "FoxQueryInsertJoin", category = "Query" },
 	{ name = "Query: Refresh Schema Metadata", cmd = "FoxQueryRefresh", category = "Query" },
 	{ name = "Query: Results", cmd = "FoxQueryResults", category = "Query" },
@@ -299,7 +302,6 @@ M.commands = {
 	-- --------------------------------------------------------------------------
 	-- 🐘 PHP & Laravel
 	-- --------------------------------------------------------------------------
-	{ name = "🐘 Check PHP & Laravel Environment Status", cmd = "PHPCheckTools", category = "PHP / Laravel" },
 	{ name = "Open Laravel reference at cursor", cmd = "BladeNavGoToFile", category = "PHP / Laravel" },
 	{ name = "🧹 Clear Blade & Laravel Caches", cmd = "BladeNavClearCache", category = "PHP / Laravel" },
 	{
@@ -401,7 +403,7 @@ M.commands = {
 	},
 	{ name = "🎨 Toggle UI Icons Mode (Nerd Font Symbols vs Emojis)", cmd = "ToggleIconsMode", category = "UI" },
 	{
-		name = "📌 Toggle Pin Current Tab (Code Buffer)",
+		name = "📌 Toggle Pin Current Tab (Editor / Query)",
 		fn = function()
 			require("plugins.fox.ui.pinned_tabs").toggle_pin()
 		end,

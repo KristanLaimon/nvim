@@ -9,10 +9,6 @@ local config = require("plugins.fox.git.git_center.config")
 
 local M = {}
 
-local env_ok, env_mod = pcall(require, "fox.core.environment")
-local env = env_ok and env_mod.detect() or {}
-local is_mobile_or_proot = env.is_termux or env.is_proot or env.is_mobile or (vim.env.TERMUX_VERSION ~= nil)
-
 M.submodule_statuses = {}
 M.fetching_submodules = {}
 
@@ -504,7 +500,6 @@ function M.build_panel_content(info, width)
 	local lines, line_map, section_lines, highlights = {}, {}, {}, {}
 
 	local function add(text, hl_group)
-		local start_idx = #lines
 		if type(text) == "string" and (text:find("\n") or text:find("\r")) then
 			local split_lines = vim.split(text:gsub("\r\n", "\n"):gsub("\r", "\n"), "\n", { plain = true })
 			for _, l in ipairs(split_lines) do

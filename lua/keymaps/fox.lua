@@ -68,7 +68,6 @@ M.settings = {
 		task_slot_prefix = "<C-",
 		explorer = { "<C-/>", "<C-_>" },
 		wsl_explorer = nil,
-		sneak_peek = is_mobile and { "<C-S-y>", "<C-S-Y>", "<C-Y>", "<C-y>" } or { "<C-S-y>", "<C-S-Y>" },
 		--- Run the current Lua script.
 		run_script = { "<C-,>", "<C-comma>" },
 		--- Open the Lua library wiki.
@@ -200,10 +199,6 @@ if M.settings.keys.wsl_explorer then
 		require("plugins.fox.tools.file_explorer").open_wsl_explorer()
 	end, opts("Open Floating WSL File Explorer"))
 end
-
-map_all_modes(M.settings.keys.sneak_peek, function()
-	require("plugins.fox.dev.sneak_peek").toggle_or_pick()
-end, "Sneak-Peek Project Modal (90% Window)")
 
 map_all_modes({ "<C-r>", "<C-R>", "<C-S-r>", "<C-S-R>", "<leader>fp" }, function()
 	if _G.OpenRecentProjects then

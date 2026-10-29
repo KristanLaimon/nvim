@@ -18,7 +18,26 @@ M.lsp_server = { "omnisharp", "csharp_ls" }
 ---@type table<string, vim.lsp.Config>
 M.lsp_config = {
 	omnisharp = {
-		cmd = { "omnisharp", "--languageserver", "--hostPID", tostring(vim.fn.getpid()) },
+		cmd = function(dispatchers, config)
+			-- OmniSharp scans its process directory unless --source is explicit.
+			local cmd = require("fox.lsp.tooling").resolve_command({
+				"OmniSharp",
+				"-z",
+				"--hostPID",
+				tostring(vim.fn.getpid()),
+				"DotNet:enablePackageRestore=false",
+				"--encoding",
+				"utf-8",
+				"--languageserver",
+				"--source",
+				config.root_dir,
+			})
+			return vim.lsp.rpc.start(cmd, dispatchers, {
+				cwd = config.cmd_cwd or config.root_dir,
+				env = config.cmd_env,
+				detached = config.detached,
+			})
+		end,
 		enable_roslyn_analyzers = true,
 		organize_imports_on_format = true,
 		enable_import_completion = true,

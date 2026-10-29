@@ -98,12 +98,23 @@ describe("plugins.fox.git.diff_mode", function()
 	it("persists the Enhanced Mode preference across restarts", function()
 		local store = require("fox.core.store")
 		local state_file = vim.fn.stdpath("data") .. "/fox_git_enhanced.json"
-
-		diff_mode.set_enhanced_mode(true)
-		expect(store.load(state_file, {}).enabled).toBe(true)
-
-		diff_mode.set_enhanced_mode(false)
-		expect(store.load(state_file, {}).enabled).toBe(false)
+		local temporary = vim.fn.tempname()
+		local load, save = store.load, store.save
+		local ok, err = pcall(function()
+			store.save = function(path, data)
+				return save(path == state_file and temporary or path, data)
+			end
+			store.load = function(path, fallback)
+				return load(path == state_file and temporary or path, fallback)
+			end
+			diff_mode.set_enhanced_mode(true)
+			expect(store.load(state_file, {}).enabled).toBe(true)
+			diff_mode.set_enhanced_mode(false)
+			expect(store.load(state_file, {}).enabled).toBe(false)
+		end)
+		store.load, store.save = load, save
+		vim.fn.delete(temporary)
+		assert(ok, err)
 	end)
 
 	it("retrieves changed files between refs in git repository", function()

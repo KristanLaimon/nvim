@@ -8,6 +8,14 @@ function M.get_trigger_characters()
 	return { "." }
 end
 
+function M.compare(a, b)
+	local left = type(a.data) == "table" and a.data.fox_query_priority or nil
+	local right = type(b.data) == "table" and b.data.fox_query_priority or nil
+	if left ~= right then
+		return (left or math.huge) < (right or math.huge)
+	end
+end
+
 function M.get_completions(_, context, callback)
 	local query = package.loaded["fox.query"]
 	local state = query and query.states[vim.b[context.bufnr].fox_query_root or ""]
@@ -68,9 +76,14 @@ function M.get_completions(_, context, callback)
 		local graph = sql.completion_graph(statement or text, statement_offset, metadata)
 		local line = (vim.api.nvim_buf_get_lines(context.bufnr, cursor[1] - 1, cursor[1], false)[1] or ""):sub(1, cursor[2])
 		local alias = line:match("([%w_]+)%.[%w_]*$")
-		local function add(label, kind, detail)
+		local function add(label, kind, detail, priority)
 			if not seen[label] then
-				items[#items + 1] = { label = label, kind = kind, detail = detail }
+				items[#items + 1] = {
+					label = label,
+					kind = kind,
+					detail = detail,
+					data = priority and { fox_query_priority = priority } or nil,
+				}
 				seen[label] = true
 			end
 		end
@@ -89,7 +102,7 @@ function M.get_completions(_, context, callback)
 			end
 		else
 			for _, table in ipairs(state.metadata.tables or {}) do
-				add(table.key, 7, "table/view")
+				add(metadata.engine == "mysql" and table.name or table.key, 7, "table/view")
 			end
 			local columns = {}
 			for _, node in ipairs(graph.nodes) do
@@ -97,17 +110,22 @@ function M.get_completions(_, context, callback)
 					if node.table.cte then
 						add(node.table.name, 7, "WITH table (query only)")
 					end
+					local depth = node.completion_depth or 0
 					for _, column in ipairs(node.table.columns) do
-						add(node.alias .. "." .. column.name, 5, tostring(column.type))
+						add(node.alias .. "." .. column.name, 5, tostring(column.type), depth * 2 + 1)
 						local key = column.name:lower()
 						local previous = columns[key]
-						columns[key] = { column = column, count = (previous and previous.count or 0) + 1, table = node.table }
+						if not previous or depth < previous.depth then
+							columns[key] = { column = column, count = 1, table = node.table, depth = depth }
+						elseif depth == previous.depth then
+							previous.count = previous.count + 1
+						end
 					end
 				end
 			end
 			for _, entry in pairs(columns) do
 				if entry.count == 1 then
-					add(entry.column.name, 5, entry.table.key .. " | " .. tostring(entry.column.type))
+					add(entry.column.name, 5, entry.table.key .. " | " .. tostring(entry.column.type), entry.depth * 2)
 				end
 			end
 		end

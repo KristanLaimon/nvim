@@ -6,7 +6,6 @@ local lazy_req = require("fox.core.lazy_require")
 local git = lazy_req("fox.git.cmd")
 local status = lazy_req("fox.git.status")
 local diff = lazy_req("fox.git.diff")
-local path_util = lazy_req("fox.core.path")
 local config = require("plugins.fox.git.git_center.config")
 
 local M = {}

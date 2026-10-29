@@ -306,26 +306,27 @@ function M.format(raw_lines, is_untracked, filename)
 			push(file_banner, "header")
 		end
 
-		if is_noise(line) then -- skip
-		elseif line:match(M.hunk_pattern) then
-			in_header = false
-			hunk_count = hunk_count + 1
+		if not is_noise(line) then
+			if line:match(M.hunk_pattern) then
+				in_header = false
+				hunk_count = hunk_count + 1
 
-			local context = line:match("@@ %-%d+,?%d* %+%d+,?%d* @@(.*)") or ""
-			local range = line:match("(@@ %-%d+,?%d* %+%d+,?%d* @@)") or line
-			local header = string.format(
-				" ─── Hunk %d %s %s",
-				hunk_count,
-				range,
-				context ~= "" and ("(" .. context:gsub("^%s*", "") .. ") ") or ""
-			)
-			if #header < M.separator_width then
-				header = header .. string.rep("─", M.separator_width - #header)
+				local context = line:match("@@ %-%d+,?%d* %+%d+,?%d* @@(.*)") or ""
+				local range = line:match("(@@ %-%d+,?%d* %+%d+,?%d* @@)") or line
+				local header = string.format(
+					" ─── Hunk %d %s %s",
+					hunk_count,
+					range,
+					context ~= "" and ("(" .. context:gsub("^%s*", "") .. ") ") or ""
+				)
+				if #header < M.separator_width then
+					header = header .. string.rep("─", M.separator_width - #header)
+				end
+				push(header, "header")
+			elseif not in_header then
+				local first = line:sub(1, 1)
+				push(line, first == "+" and "add" or (first == "-" and "delete" or "context"))
 			end
-			push(header, "header")
-		elseif not in_header then
-			local first = line:sub(1, 1)
-			push(line, first == "+" and "add" or (first == "-" and "delete" or "context"))
 		end
 	end
 
@@ -447,8 +448,6 @@ function M.apply_highlights(bufnr, kinds, filename)
 			if prefix_len > 0 then
 				vim.api.nvim_buf_add_highlight(bufnr, M.namespace, "GitCenterDiffDeletePrefix", row, 0, prefix_len)
 			end
-		elseif kind == "context" then
-			-- Context line uses default terminal foreground / syntax highlights
 		end
 	end
 

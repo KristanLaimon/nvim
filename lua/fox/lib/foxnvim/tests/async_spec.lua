@@ -2,14 +2,14 @@ local M = {}
 
 function M.run()
 	local async = require("fox.lib.foxnvim.async")
-	local foxnvim = require("fox.lib.foxnvim")
+	require("fox.lib.foxnvim")
 
 	print("  ⚡ Running foxnvim.async deep testing suite...")
 
 	-- 1. Real Async Task (Promise-like) with delayed resolution
 	local promise_resolved = false
 	local promise_val = nil
-	local async_task = async.task(function(resolve, reject)
+	local async_task = async.task(function(resolve)
 		async.sleep(20, function()
 			resolve("real_promise_data_42")
 		end)
@@ -104,7 +104,7 @@ function M.run()
 	-- 6. JS-style Timers: setTimeout, clearTimeout, setInterval, clearInterval
 	local timeout_fired = false
 	local timeout_arg = nil
-	local timeout_id = setTimeout(function(arg)
+	setTimeout(function(arg)
 		timeout_fired = true
 		timeout_arg = arg
 	end, 15, "test_arg")
@@ -116,7 +116,8 @@ function M.run()
 	clearTimeout(cleared_id)
 
 	local interval_ticks = 0
-	local interval_id = setInterval(function()
+	local interval_id
+	interval_id = setInterval(function()
 		interval_ticks = interval_ticks + 1
 		if interval_ticks >= 3 then
 			clearInterval(interval_id)

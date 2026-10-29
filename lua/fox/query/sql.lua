@@ -2,7 +2,7 @@ local M = {}
 
 -- Positions are byte offsets, matching Neovim edits and selections.
 function M.tokens(text, engine)
-	local tokens, i, incomplete = {}, 1, false
+	local tokens, i, incomplete, unicode_identifiers = {}, 1, false, false
 	local function add(value, kind, first, last)
 		tokens[#tokens + 1] = { value = value, upper = value:upper(), kind = kind, first = first, last = last }
 	end
@@ -55,8 +55,9 @@ function M.tokens(text, engine)
 			incomplete = incomplete or not finish
 			i = finish and finish + #tag or #text + 1
 			add(text:sub(first, i - 1), "string", first, i - 1)
-		elseif char:match("[%a_$]") then
-			local value = text:sub(i):match("^[%w_$]+")
+		elseif char:match("[%a_$]") or char:byte() >= 128 then
+			local value = text:sub(i):match("^[%w_$\128-\255]+")
+			unicode_identifiers = unicode_identifiers or value:find("[\128-\255]") ~= nil
 			i = i + #value
 			add(value, "word", first, i - 1)
 		else
@@ -64,7 +65,32 @@ function M.tokens(text, engine)
 			i = i + 1
 		end
 	end
-	return tokens, incomplete
+	local legacy
+	if unicode_identifiers then
+		-- Preserve the old token identities so saved parameter values can migrate without resetting.
+		legacy = {}
+		for _, token in ipairs(tokens) do
+			if token.kind == "word" and token.value:find("[\128-\255]") then
+				local at = token.first
+				while at <= token.last do
+					local char = text:sub(at, at)
+					local word = char:match("[%a_$]") and text:sub(at):match("^[%w_$]+")
+					local value = word or char
+					legacy[#legacy + 1] = {
+						kind = word and "word" or "symbol",
+						value = value,
+						upper = value:upper(),
+						first = at,
+						last = at + #value - 1,
+					}
+					at = at + #value
+				end
+			else
+				legacy[#legacy + 1] = token
+			end
+		end
+	end
+	return tokens, incomplete, legacy
 end
 
 function M.statements(text, engine)
@@ -635,6 +661,7 @@ end
 function M.completion_graph(text, offset, metadata, level)
 	level = level or 0
 	local graph = M.analyze(text, metadata)
+	graph.completion_level = level
 	if level >= 24 or #text > 128 * 1024 then
 		return graph
 	end
@@ -676,7 +703,8 @@ function M.completion_graph(text, offset, metadata, level)
 				end
 				for _, node in ipairs(graph.nodes) do
 					if not node.nested and node.table and not node.table.subquery and not aliases[node.alias:lower()] then
-						child.nodes[#child.nodes + 1] = node
+						child.nodes[#child.nodes + 1] =
+							vim.tbl_extend("force", node, { completion_depth = child.completion_level - level })
 					end
 				end
 				return child
@@ -686,41 +714,135 @@ function M.completion_graph(text, offset, metadata, level)
 	return graph
 end
 
-function M.object_at(text, offset, metadata)
-	for _, statement in ipairs(M.statements(text, metadata.syntax or metadata.engine) or {}) do
-		if offset >= statement.first and offset <= statement.last then
-			offset, text = offset - statement.first + 1, statement.sql
+function M.symbol(text, offset, metadata)
+	if #text > 128 * 1024 then
+		return nil
+	end
+	local engine = metadata.syntax or metadata.engine
+	local statement
+	for _, scope in ipairs(M.statements(text, engine) or {}) do
+		if offset >= scope.first and offset <= scope.last then
+			statement, offset = scope.sql, offset - scope.first + 1
 			break
 		end
 	end
-	local tokens = M.tokens(text, metadata.syntax or metadata.engine)
-	local graph = M.completion_graph(text, offset, metadata)
-	for index, token in ipairs(tokens) do
-		if identifier(token) and offset >= token.first and offset <= token.last then
-			local qualifier = tokens[index - 1] and tokens[index - 1].value == "." and tokens[index - 2]
-			local found, found_column
-			for _, node in ipairs(graph.nodes) do
-				if node.table and not node.nested then
-					if
-						not qualifier
-						and (node.alias:lower() == token.value:lower() or node.table.name:lower() == token.value:lower())
-					then
-						return node.table
-					end
-					if not qualifier or node.alias:lower() == qualifier.value:lower() then
-						for _, column in ipairs(node.table.columns) do
-							if column.name:lower() == token.value:lower() then
-								if found then
-									return nil
-								end
-								found, found_column = node.table, column
-							end
-						end
+	if not statement then
+		return nil
+	end
+	local tokens = M.tokens(statement, engine)
+	local index
+	for at, token in ipairs(tokens) do
+		if token.first <= offset and offset <= token.last then
+			index = at
+			break
+		end
+	end
+	if not index then
+		return nil
+	end
+	if tokens[index].kind == "symbol" and tokens[index].value == "." then
+		index = index - 1
+	end
+	if not identifier(tokens[index]) then
+		return nil
+	end
+	local first, last = index, index
+	while tokens[first - 1] and tokens[first - 1].value == "." and identifier(tokens[first - 2]) do
+		first = first - 2
+	end
+	while tokens[last + 1] and tokens[last + 1].value == "." and identifier(tokens[last + 2]) do
+		last = last + 2
+	end
+	local names = {}
+	for at = first, last, 2 do
+		names[#names + 1] = tokens[at].value
+	end
+	local preceding, following = tokens[first - 1], tokens[last + 1]
+	local graph = M.completion_graph(statement, offset, metadata)
+	local function source_table(name)
+		for _, node in ipairs(graph.nodes) do
+			if not node.nested and node.table and node.table.key:lower() == name:lower() then
+				return node.table
+			end
+		end
+		return M.table(metadata, name)
+	end
+	if preceding and preceding.kind == "word" and (preceding.upper == "FROM" or preceding.upper == "JOIN") then
+		local item = source_table(table.concat(names, "."))
+		return item and { table = item } or nil
+	end
+	if #names == 1 then
+		local at = first - (preceding and preceding.upper == "AS" and 2 or 1)
+		local finish = at
+		while tokens[at - 1] and tokens[at - 1].value == "." and identifier(tokens[at - 2]) do
+			at = at - 2
+		end
+		local keyword = tokens[at - 1]
+		if
+			identifier(tokens[at])
+			and keyword
+			and keyword.kind == "word"
+			and (keyword.upper == "FROM" or keyword.upper == "JOIN")
+		then
+			local path = {}
+			for part = at, finish, 2 do
+				path[#path + 1] = tokens[part].value
+			end
+			local item = source_table(table.concat(path, "."))
+			return item and { table = item } or nil
+		end
+		if preceding and preceding.kind == "word" and preceding.upper == "AS" then
+			return nil
+		end
+	end
+	if following and following.kind == "symbol" and following.value == "(" then
+		return nil
+	end
+	local column_name = names[#names]
+	local qualifier = #names > 1 and table.concat(names, ".", 1, #names - 1):lower()
+	local result, count, depth = nil, 0, math.huge
+	for _, node in ipairs(graph.nodes) do
+		local item = node.table
+		if
+			item
+			and (not item.subquery or item.cte)
+			and not node.nested
+			and (not qualifier or node.alias:lower() == qualifier or item.key:lower() == qualifier)
+		then
+			for _, column in ipairs(item.columns or {}) do
+				if column.name:lower() == column_name:lower() then
+					local level = node.completion_depth or 0
+					if level < depth then
+						result, count, depth = { table = item, column = column }, 1, level
+					elseif level == depth then
+						count = count + 1
 					end
 				end
 			end
-			return found, found_column
 		end
+	end
+	if count > 1 then
+		return nil, "Ambiguous column " .. table.concat(names, ".") .. "; qualify it with a table alias"
+	end
+	if result or qualifier then
+		return result
+	end
+	for _, node in ipairs(graph.nodes) do
+		if
+			node.table
+			and (not node.table.subquery or node.table.cte)
+			and not node.nested
+			and node.alias:lower() == column_name:lower()
+		then
+			return { table = node.table }
+		end
+	end
+end
+
+function M.object_at(text, offset, metadata)
+	local symbol = M.symbol(text, offset, metadata)
+	if symbol then
+		return symbol.table, symbol.column
 	end
 end
 

@@ -5,6 +5,7 @@ dofile(vim.fn.stdpath("config") .. "/config/tests/query/neotree.lua")
 
 local function project(check)
 	local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
+	local old_input = vim.ui.input
 	local layout = require("fox.query.layout")
 	local old_layout_path = layout.path
 	layout.path = root .. "/global-layout.json"
@@ -12,6 +13,7 @@ local function project(check)
 	vim.api.nvim_set_current_dir(root)
 	query.setup()
 	local ok, err = pcall(check, root)
+	vim.ui.input = old_input
 	local state = query.state()
 	for buf, item in pairs(state.consoles) do
 		if item.client then
@@ -37,6 +39,241 @@ local function project(check)
 end
 
 describe("FoxQuerier live workflow", function()
+	it("uses Shift+K for compact column types, the existing table inspector and function documentation", function()
+		project(function()
+			query.show("standard")
+			local state, original_preview = query.state(), vim.lsp.util.open_floating_preview
+			local schema = {
+				tables = {
+					{
+						key = "alumnos",
+						name = "alumnos",
+						columns = { { name = "nombre", type = "VARCHAR(100)" }, { name = "año_ingreso", type = "SMALLINT" } },
+					},
+					{ key = "carreras", name = "carreras", columns = { { name = "nombre", type = "VARCHAR(50)" } } },
+				},
+				relations = {},
+			}
+			state.consoles[state.active].metadata = schema
+			local received, options
+			local ok, err = pcall(function()
+				vim.lsp.util.open_floating_preview = function(lines, _, opts)
+					received, options = lines, opts
+				end
+				local text = "SELECT ca.nombre, a.año_ingreso, COUNT(*) FROM alumnos a JOIN carreras ca ON 1 = 1"
+				vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { text })
+				vim.api.nvim_set_current_win(state.sql_win)
+				local function hover(fragment)
+					vim.api.nvim_win_set_cursor(0, { 1, assert(text:find(fragment, 1, true)) - 1 })
+					vim.fn.maparg("K", "n", false, true).callback()
+				end
+				hover("ca.nombre")
+				expect(received).toEqual({ "carreras.nombre : VARCHAR(50)" })
+				expect(options.max_height).toBe(4)
+				hover("a.año_ingreso")
+				expect(received).toEqual({ "alumnos.año_ingreso : SMALLINT" })
+				hover("COUNT")
+				expect(table.concat(received, "\n")).toContain("COUNT(")
+				expect(table.concat(received, "\n")).toContain("Example:")
+				hover("carreras ca")
+				expect(state.inspectors[vim.api.nvim_get_current_win()]).toBeTruthy()
+				expect(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")).toContain("carreras")
+				expect(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")).toContain("VARCHAR(50)")
+				vim.fn.maparg("q", "n", false, true).callback()
+				expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+			end)
+			vim.lsp.util.open_floating_preview = original_preview
+			assert(ok, err)
+		end)
+	end)
+
+	it("keeps Query pins separate, restores them and cycles in displayed order", function()
+		project(function(root)
+			local tabs = require("fox.ui.tabline")
+			local pins = require("plugins.fox.ui.pinned_tabs")
+			query.show("standard")
+			local first = query.state().active
+			vim.cmd("write")
+			local second = query.new("second.sql", "mysql")
+			vim.cmd("write")
+			local third = query.new("third.sql", "mysql")
+			vim.cmd("write")
+			pins.toggle_pin()
+			expect(tabs.is_pinned(third)).toBe(true)
+			expect(storage.load(root, "private/tab-pins.json")).toEqual({ "queries/third.sql" })
+			expect(vim.fn.filereadable(root .. "/.foxnvim/pins.json")).toBe(0)
+			expect(tabs.buffers()).toEqual({ third, first, second })
+			query.cycle(1)
+			expect(query.state().active).toBe(first)
+			query.cycle(-1)
+			expect(query.state().active).toBe(third)
+			local renamed, rename_err = require("fox.query.files").rename(query.state(), "third.sql", "pinned.sql")
+			expect(renamed or rename_err).toBe(true)
+			expect(storage.load(root, "private/tab-pins.json")).toEqual({ "queries/pinned.sql" })
+			query.new("second.sql")
+			expect(query.close_root(root)).toBe(true)
+			for _, buf in ipairs({ first, second, third }) do
+				vim.api.nvim_buf_delete(buf, { force = false })
+			end
+			query.show("standard")
+			expect(vim.b[query.state().active].fox_query_document).toBe("queries/second.sql")
+			local restored = vim.fn.bufnr(storage.path(root, "queries/pinned.sql"))
+			expect(query.state().consoles[restored]).toBeTruthy()
+			expect(tabs.is_pinned(restored)).toBe(true)
+			query.new("pinned.sql")
+			pins.toggle_pin()
+			expect(tabs.is_pinned(restored)).toBe(false)
+			expect(storage.load(root, "private/tab-pins.json")).toEqual({})
+		end)
+	end)
+
+	it("moves focus left with Ctrl+h and right with Ctrl+l in both Query views", function()
+		project(function()
+			for _, view in ipairs({ "standard", "visual" }) do
+				query.show(view)
+				local state = query.state()
+				for _, mode in ipairs({ "n", "i", "x" }) do
+					vim.api.nvim_set_current_win(state.sql_win)
+					local origin = vim.api.nvim_win_get_position(state.sql_win)[2]
+					vim.fn.maparg("<C-l>", mode, false, true).callback()
+					expect(vim.api.nvim_win_get_position(0)[2] > origin).toBe(true)
+					vim.fn.maparg("<C-h>", mode, false, true).callback()
+					expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+					if view == "standard" then
+						vim.fn.maparg("<C-h>", mode, false, true).callback()
+						expect(vim.api.nvim_win_get_position(0)[2] < origin).toBe(true)
+						vim.fn.maparg("<C-l>", mode, false, true).callback()
+						expect(vim.api.nvim_get_current_win()).toBe(state.sql_win)
+					end
+				end
+			end
+		end)
+	end)
+
+	it("registers gN once per pane and opens notes only from Tables", function()
+		project(function()
+			local set, notes, create = vim.keymap.set, query.notes, query.create
+			local registrations, opened, created = {}, 0, 0
+			local ok, err = pcall(function()
+				vim.keymap.set = function(mode, key, callback, opts)
+					if key == "gN" and opts and opts.buffer then
+						registrations[opts.buffer] = (registrations[opts.buffer] or 0) + 1
+					end
+					return set(mode, key, callback, opts)
+				end
+				query.show("standard")
+				local state = query.state()
+				query.notes = function()
+					opened = opened + 1
+				end
+				query.create = function()
+					created = created + 1
+				end
+				expect(registrations[state.side_buf]).toBe(1)
+				vim.api.nvim_set_current_win(state.side_win)
+				vim.fn.maparg("gN", "n", false, true).callback()
+				expect(opened).toBe(1)
+				expect(created).toBe(0)
+				vim.api.nvim_set_current_win(state.sql_win)
+				vim.fn.maparg("gN", "n", false, true).callback()
+				expect(created).toBe(1)
+				expect(opened).toBe(1)
+			end)
+			vim.keymap.set, query.notes, query.create = set, notes, create
+			assert(ok, err)
+		end)
+	end)
+
+	it("opens blank table notes and deletes them after confirmation", function()
+		project(function(root)
+			local pending, word
+			vim.ui.input = function(opts, callback)
+				word = opts.prompt:match('confirm "(%a+)"')
+				assert(word and opts.default == nil)
+				pending = callback
+			end
+			query.show("standard")
+			local state = query.state()
+			local item = { key = "school.students", name = "students", columns = {} }
+			state.metadata = { tables = { item }, relations = {} }
+			state.consoles[state.active].metadata = state.metadata
+			state.consoles[state.active].profile = { id = "notes", engine = "sqlite", path = "unused.db" }
+			query.notes(item)
+			local buf, relative = vim.api.nvim_get_current_buf(), vim.b.fox_query_document
+			expect(vim.api.nvim_buf_get_lines(buf, 0, -1, false)).toEqual({ "" })
+			expect(vim.bo[buf].modified).toBe(false)
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "Business note" })
+			vim.cmd("write")
+			expect(storage.read(root, relative)).toBe("Business note")
+			query.notes(nil, "delete")
+			pending(nil)
+			expect(storage.read(root, relative)).toBe("Business note")
+			query.notes(nil, "delete")
+			pending("wrong")
+			expect(storage.read(root, relative)).toBe("Business note")
+			query.notes(nil, "delete")
+			pending(word)
+			expect(storage.read(root, relative)).toBeNil()
+			expect(vim.api.nvim_buf_is_valid(buf)).toBe(false)
+			expect(state.note_keys[item.key]).toBeNil()
+			expect(vim.api.nvim_win_get_buf(state.sql_win)).toBe(state.active)
+			query.notes(item)
+			expect(vim.api.nvim_buf_get_lines(0, 0, -1, false)).toEqual({ "" })
+			query.notes(nil, "delete")
+			pending(word)
+			expect(state.note_keys[item.key]).toBeNil()
+			query.notes(item)
+			vim.cmd("write")
+			vim.api.nvim_win_set_buf(state.sql_win, state.active)
+			query.refresh_view(state)
+			vim.api.nvim_set_current_win(state.side_win)
+			vim.api.nvim_win_set_cursor(state.side_win, { 1, 0 })
+			vim.fn.maparg("gD", "n", false, true).callback()
+			pending(word)
+			expect(storage.read(root, relative)).toBeNil()
+			expect(state.note_keys[item.key]).toBeNil()
+		end)
+	end)
+
+	it("preserves modified and externally changed table notes on deletion", function()
+		project(function(root)
+			query.show("visual")
+			local state = query.state()
+			local item = { key = "students", name = "students", columns = {} }
+			state.metadata = { tables = { item }, relations = {} }
+			state.consoles[state.active].metadata = state.metadata
+			state.consoles[state.active].profile = { id = "notes", engine = "sqlite", path = "unused.db" }
+			query.notes(item)
+			local buf, relative = vim.api.nvim_get_current_buf(), vim.b.fox_query_document
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "Unsaved note" })
+			query.notes(nil, "delete")
+			expect(vim.api.nvim_get_current_buf()).toBe(buf)
+			expect(vim.api.nvim_buf_get_lines(buf, 0, -1, false)).toEqual({ "Unsaved note" })
+			vim.cmd("write")
+			storage.write(root, relative, "External edit")
+			query.notes(nil, "delete")
+			expect(vim.api.nvim_get_current_buf()).toBe(buf)
+			expect(storage.read(root, relative)).toBe("External edit")
+		end)
+	end)
+
+	it("refreshes safely after the last SQL buffer is wiped", function()
+		project(function()
+			query.show()
+			local state = query.state()
+			local buf = state.active
+			state.pinned = { buf = buf, id = 1 }
+			vim.api.nvim_buf_delete(buf, { force = true })
+			expect(vim.api.nvim_buf_is_valid(buf)).toBe(false)
+			expect(next(state.consoles)).toBeNil()
+			expect(vim.api.nvim_get_current_tabpage()).toBe(state.tab)
+			for _, view in ipairs({ "standard", "visual" }) do
+				state.view = view
+				query.refresh_view(state)
+			end
+		end)
+	end)
+
 	it("asks for a new SQL dialect, remembers it, and leaves no file on cancellation", function()
 		project(function(root)
 			query.show()
@@ -1741,5 +1978,213 @@ describe("FoxQuerier live workflow", function()
 		expect(dim).toBeTruthy()
 		expect(hint).toBeTruthy()
 		expect(text:find("Possible M:N bridge", 1, true)).toBeNil()
+	end)
+	it("keeps other panes in place when Parameters opens and closes", function()
+		project(function()
+			query.show("standard")
+			local state = query.state()
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "SELECT ?;", "SELECT 1;" })
+			vim.api.nvim_win_set_cursor(state.sql_win, { 2, 0 })
+			query.refresh_view(state)
+			local sizes = {}
+			for _, win in ipairs({
+				state.sql_win,
+				state.result_win,
+				state.queries_win,
+				state.connections_win,
+				state.activity_win,
+			}) do
+				sizes[win] =
+					{ vim.api.nvim_win_get_position(win), vim.api.nvim_win_get_width(win), vim.api.nvim_win_get_height(win) }
+			end
+			for _ = 1, 3 do
+				vim.api.nvim_win_set_cursor(state.sql_win, { 1, 0 })
+				query.refresh_view(state)
+				expect(vim.api.nvim_win_is_valid(state.parameters_win)).toBeTruthy()
+				for win, size in pairs(sizes) do
+					expect({
+						vim.api.nvim_win_get_position(win),
+						vim.api.nvim_win_get_width(win),
+						vim.api.nvim_win_get_height(win),
+					}).toEqual(size)
+				end
+				vim.api.nvim_win_set_cursor(state.sql_win, { 2, 0 })
+				query.refresh_view(state)
+				expect(state.parameters_win).toBeNil()
+				for win, size in pairs(sizes) do
+					expect({
+						vim.api.nvim_win_get_position(win),
+						vim.api.nvim_win_get_width(win),
+						vim.api.nvim_win_get_height(win),
+					}).toEqual(size)
+				end
+			end
+		end)
+	end)
+
+	it("shows dim inline parameter values across statements without changing the SQL", function()
+		project(function(root)
+			query.show("standard")
+			local state = query.state()
+			local lines = {
+				"SELECT '?' AS literal, 'á' AS unicode FROM alumnos WHERE nombre = ? AND edad > ?;",
+				"SELECT * FROM cursos c WHERE c.id = ? OR c.id = ?;",
+			}
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, lines)
+			vim.api.nvim_buf_call(state.active, function()
+				vim.cmd("write")
+			end)
+			local tick = vim.api.nvim_buf_get_changedtick(state.active)
+			local parameters = require("fox.query.parameters")
+			local document = vim.b[state.active].fox_query_document
+			local first = parameters.describe(lines[1]:sub(1, -2), "sqlite")
+			local second = parameters.describe(lines[2]:sub(1, -2), "sqlite")
+			assert(parameters.set(root, document, first, first.groups[1].key, "Ana"))
+			assert(parameters.set(root, document, first, first.groups[2].key, ""))
+			assert(parameters.set(root, document, second, second.groups[1].key, "NULL"))
+			query.refresh_view(state)
+			local namespace = vim.api.nvim_get_namespaces().fox_query_parameters
+			local marks = vim.api.nvim_buf_get_extmarks(state.active, namespace, 0, -1, { details = true })
+			expect(#marks).toBe(4)
+			for index, hint in ipairs({ " ⟨Ana⟩", ' ⟨""⟩', " ⟨NULL⟩", " ⟨NULL⟩" }) do
+				local mark = marks[index]
+				expect(mark[4].virt_text).toEqual({ { hint, "Comment" } })
+				expect(mark[4].virt_text_pos).toBe("inline")
+				expect(lines[mark[2] + 1]:sub(mark[3], mark[3])).toBe("?")
+			end
+			expect(marks[1][3]).toBe(lines[1]:find("? AND", 1, true))
+			expect(vim.api.nvim_buf_get_lines(state.active, 0, -1, false)).toEqual(lines)
+			expect(vim.api.nvim_buf_get_changedtick(state.active)).toBe(tick)
+			expect(vim.bo[state.active].modified).toBe(false)
+			assert(parameters.set(root, document, first, first.groups[1].key, nil))
+			query.refresh_view(state)
+			expect(#vim.api.nvim_buf_get_extmarks(state.active, namespace, 0, -1, {})).toBe(3)
+			assert(parameters.set(root, document, first, first.groups[1].key, "Bea\n" .. string.rep("x", 80)))
+			query.refresh_view(state)
+			marks = vim.api.nvim_buf_get_extmarks(state.active, namespace, 0, -1, { details = true })
+			local hint = marks[1][4].virt_text[1][1]
+			expect(hint:find("\n", 1, true)).toBeNil()
+			expect(hint).toContain("…")
+			query.clear_parameters()
+			expect(#vim.api.nvim_buf_get_extmarks(state.active, namespace, 0, -1, {})).toBe(0)
+		end)
+	end)
+
+	it("labels equality and FROM rows using their SQL context", function()
+		project(function()
+			query.show("standard")
+			local state = query.state()
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, {
+				"SELECT * FROM ? WHERE apellido_paterno = ? AND año = ? UNION SELECT * FROM ? WHERE nombre = ?",
+			})
+			query.refresh_view(state)
+			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({
+				"From #1: <unset>",
+				"apellido_paterno = <unset>",
+				"año = <unset>",
+				"From #2: <unset>",
+				"nombre = <unset>",
+			})
+		end)
+	end)
+
+	it("removes only the deleted intention from Parameters and leaves a restored slot unset", function()
+		project(function(root)
+			query.show("standard")
+			local state = query.state()
+			local text = "SELECT * FROM alumnos WHERE nombre = ? AND edad > ?"
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { text })
+			query.refresh_view(state)
+			local parameters = require("fox.query.parameters")
+			local description = parameters.describe(text, "sqlite")
+			local document = vim.b[state.active].fox_query_document
+			assert(parameters.set(root, document, description, description.groups[1].key, "Ana"))
+			assert(parameters.set(root, document, description, description.groups[2].key, "18"))
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "SELECT * FROM alumnos WHERE edad > ?" })
+			query.refresh_view(state)
+			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({ "Parameter 1 = 18" })
+			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { text })
+			query.refresh_view(state)
+			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({
+				"nombre = <unset>",
+				"Parameter 2 = 18",
+			})
+		end)
+	end)
+
+	it("keeps Parameters in the right sidebar when opening SQL and returning from live mode", function()
+		project(function(root)
+			assert(storage.write(root, "queries/params.sql", "SELECT * FROM t WHERE id = ?"))
+			local function check_layout()
+				local state = query.state()
+				local side = vim.api.nvim_win_get_position(state.side_win)
+				local params = vim.api.nvim_win_get_position(state.parameters_win)
+				expect(params[2]).toBe(side[2])
+				expect(params[1] > side[1]).toBe(true)
+				expect(vim.api.nvim_win_get_width(state.parameters_win)).toBe(vim.api.nvim_win_get_width(state.side_win))
+				expect(
+					math.abs(vim.api.nvim_win_get_height(state.parameters_win) - vim.api.nvim_win_get_height(state.side_win)) <= 2
+				).toBe(true)
+			end
+			query.show("standard")
+			check_layout()
+			query.show("visual")
+			query.show("standard")
+			check_layout()
+		end)
+	end)
+
+	it("shows only the active statement's parameters and executes persisted values without prompts", function()
+		project(function(root)
+			query.show("standard")
+			local state = query.state()
+			local buf = state.active
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+				"SELECT * FROM t WHERE t.id = ? OR t.id = ?;",
+				"SELECT 1;",
+			})
+			vim.api.nvim_win_set_cursor(state.sql_win, { 1, 0 })
+			query.refresh_view(state)
+			expect(vim.api.nvim_win_is_valid(state.parameters_win)).toBeTruthy()
+			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({ "t.id = <unset>" })
+			local parameters = require("fox.query.parameters")
+			local description = parameters.describe("SELECT * FROM t WHERE t.id = ? OR t.id = ?", "sqlite")
+			query.parameters()
+			local old_input = vim.ui.input
+			local edited, edit_err = pcall(function()
+				vim.ui.input = function(opts, callback)
+					expect(opts.default).toBe("")
+					callback("42")
+				end
+				vim.fn.maparg("<CR>", "n", false, true).callback()
+			end)
+			vim.ui.input = old_input
+			assert(edited, edit_err)
+			expect(parameters.values(root, vim.b[buf].fox_query_document, description)[description.groups[1].key]).toBe("42")
+			local item, executed = state.consoles[buf], nil
+			item.profile = { id = "test", engine = "sqlite", path = "test.db" }
+			item.client = {
+				connected = true,
+				close = function() end,
+				request = function(_, operation, data, callback)
+					if operation == "prepare" then
+						callback({ parameters = 2, statements = 1 })
+					elseif operation == "execute" then
+						executed = data.params
+						callback({ sets = {} })
+					end
+				end,
+			}
+			query.run("statement")
+			expect(executed).toEqual({ "42", "42" })
+			vim.api.nvim_win_set_cursor(state.sql_win, { 2, 0 })
+			query.refresh_view(state)
+			expect(state.parameters_win).toBeNil()
+			vim.api.nvim_win_set_cursor(state.sql_win, { 1, 0 })
+			query.refresh_view(state)
+			expect(vim.api.nvim_buf_get_lines(state.parameters_buf, 0, -1, false)).toEqual({ "t.id = 42" })
+			query.show("visual")
+			expect(state.parameters_win).toBeNil()
+		end)
 	end)
 end)

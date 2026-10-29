@@ -62,16 +62,16 @@ The shell-keybinding setup supports **Windows Terminal, Kitty, Foot, WezTerm, Al
 
 ## Plugin inventory
 
-FoxVim has **74 local plugin specs** across [`lua/plugins/`](lua/plugins) and **21 external plugins**, including lazy.nvim, pinned in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
+FoxVim has **71 local plugin specs** across [`lua/plugins/`](lua/plugins) and **21 external plugins**, including lazy.nvim, pinned in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
 
 ### Hand-crafted FoxVim plugins
 
 | Area | Modules |
 |---|---|
-| Developer workflow | Bun DAP, DAP Breakpoints, Dev Server, FoxNvim Completion, Launch Completion, Launch Profiles, Sneak Peek, Tasks, Terminal |
+| Developer workflow | Bun DAP, DAP Breakpoints, Dev Server, FoxNvim Completion, Launch Completion, Launch Profiles, Tasks, Terminal |
 | Editing | Package Info, Auto Pairs, Buffer Cleaner, Caps Lock, Folding, Hover Links, Line Endings, Neo-tree Hidden Files, Neo-tree Mover, Smart Check, Tailwind Organizer |
 | Git | Conflict Resolver, Diff Mode, Git Accounts, Git Center, Secondary Git |
-| Tools | Command Palette, .NET Creator, Environments, File Explorer, Installer, LSP References, Notes, NuGet Manager, PHP Tools, TODO Sidebar, Type Injector, Lua Type Injector, TypeScript Type Injector, Usages Picker, Workspaces, WSL Bridge |
+| Tools | Command Palette, .NET Creator, Environments, File Explorer, Installer, LSP References, Notes, NuGet Manager, TODO Sidebar, Type Injector, Lua Type Injector, TypeScript Type Injector, Usages Picker, Workspaces, WSL Bridge |
 | UI | Colorscheme Preview, Font, Help Modal, Input Modal, Omarchy Theme Sync, Pinned Tabs, Statusline Picker, Theme Picker, Wiki Modal |
 
 ### External plugins

@@ -38,6 +38,7 @@ These scripts configure terminal emulator shortcuts for FoxVim; they do not conf
 | Script | Purpose |
 |---|---|
 | `config/scripts/setup-kitty.sh` / `config/scripts/unsetup-kitty.sh` | Enable or undo Ctrl+Shift+Enter, Ctrl+Shift+P/A/Q/H/L and Ctrl+Shift+1..9 passthrough in Kitty |
+| `config/scripts/setup-qutebrowser.sh` / `config/scripts/unsetup-qutebrowser.sh` | Apply or undo FoxVim browser shortcuts and Google defaults on Linux |
 | `config/scripts/setup-bash.sh` / `config/scripts/unsetup-bash.sh` | Configure or undo shortcuts across supported terminals using Bash |
 | `config/scripts/setup-powershell.ps1` / `config/scripts/unsetup-powershell.ps1` | Windows Terminal shortcuts and PSReadLine key handlers |
 
@@ -80,7 +81,6 @@ FoxVim provides several built-in commands to inspect runtime dependencies from w
 - `:FoxHealthCheck` — FoxVim's complete CLI report, including Tree-sitter, StyLua, and Luacheck.
 - `:Mason` — Opens the Mason UI to view installed LSP servers, formatters, and debug adapters.
 - `:Lazy` — Opens the Lazy plugin manager to verify plugin status and updates.
-- `:PHPCheckTools` — Diagnostic modal probing host and WSL PHP, Composer, Intelephense, Pint, and Xdebug.
 - `:NvimWiki` — Opens this interactive Wiki inside the editor.
 
 ---

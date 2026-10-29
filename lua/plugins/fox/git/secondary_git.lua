@@ -80,7 +80,7 @@ function M.cmd_run(args)
 		return
 	end
 
-	sec_git.run(alias_name, parts, function(ok, output)
+	sec_git.run(alias_name, parts, function(_, output)
 		local lines = vim.split(output or "", "\n")
 		if #lines == 0 or (#lines == 1 and lines[1] == "") then
 			lines = { "(Command returned no output)" }
@@ -403,7 +403,7 @@ function M.switch_secondary_repo()
 				end,
 			}),
 			sorter = conf.values.generic_sorter({}),
-			attach_mappings = function(prompt_bufnr, map)
+			attach_mappings = function(prompt_bufnr)
 				actions.select_default:replace(function()
 					actions.close(prompt_bufnr)
 					local selection = action_state.get_selected_entry()

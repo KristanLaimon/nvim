@@ -18,7 +18,7 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `<C-z>` | n, i, v | Undo |
 | `<C-y>` / `<C-S-z>` | n, i | Redo |
 | `<C-w>` | n | Close current buffer (smart tab-close style) |
-| `<C-'>` / `<C-S-'>` / `<C-">` / `` <C-`> `` / `<C-~>` / `<C-^>` / `<C-acute>` / `<A-'>` | n, i, v, t | Toggle comment — line, or selection in visual mode. Use `Alt+'` when the Windows terminal does not send `Ctrl+'`; `gcc` / visual `gc` also work. |
+| `<C-'>` / `<C-S-'>` / `<C-">` / `` <C-`> `` / `<C-~>` / `<C-^>` / `<C-acute>` / `<C-´>` / `<A-'>` | n, i, v, t | Toggle comment — line, or selection in visual mode; CSI-u and modifyOtherKeys supported. Use `Alt+'` when the Windows terminal does not send `Ctrl+'`; `gcc` / visual `gc` also work. |
 | `gy` | n | Copy current file relative path to clipboard (`:CopyRelativePath`) |
 | `gS` | n, SQL buffers only | Toggle project SQL syntax checking (`:FoxQuerySyntaxCheck`), off by default |
 | `<F1>` / `:FoxHelp` / `:Cheatsheet` | n, i, v, t | Open Help Menu & Runtime Cheatsheet Manager |
@@ -39,6 +39,26 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `:ReloadConfig` | Cmd | Reload the Neovim configuration |
 
 For Windows Terminal, rerun `config/scripts/setup-powershell.ps1` and restart the terminal to forward `Ctrl+'` and `Ctrl+Shift+'` to Neovim. `Alt+'` works as the fallback without this setup.
+If Ctrl+' arrives as a plain apostrophe (check with
+`:lua print(vim.fn.keytrans(vim.fn.getcharstr()))`), the terminal must send a
+distinct sequence. For US-International layouts, include the `dead_acute` key.
+Ordinary apostrophes remain unchanged.
+
+In `~/.config/kitty/kitty.conf` ([Kitty mapping reference](https://sw.kovidgoyal.net/kitty/mapping/)):
+
+```conf
+map ctrl+apostrophe send_text all \x1b[39;5u
+map ctrl+dead_acute send_text all \x1b[39;5u
+```
+
+In the existing `[text-bindings]` section of `~/.config/foot/foot.ini`:
+
+```ini
+\x1b[39;5u=Control+apostrophe Control+dead_acute
+```
+
+Reload Kitty or open a new Foot window. When running PowerShell, configure its
+host terminal rather than the shell profile.
 
 ---
 
@@ -126,8 +146,8 @@ For Windows Terminal, rerun `config/scripts/setup-powershell.ps1` and restart th
 | `<C-k>` / `<C-K>` / `<C-/>` / `<C-_>` | n, i | Find files, respecting `.gitignore` |
 | `<C-A-k>` / `<C-S-/>` / `<C-?>` | n, i, v | Find files, ignoring `.gitignore` |
 | `<C-f>` | n, i | Live grep across the project |
-| `<C-S-y>` | n, i, v, t | Sneak-Peek project modal (90% width & height on-top window) |
 | `<C-S-f>` | n, i, v | Floating Desktop file explorer |
+| `<C-S-y>` | n, i | Browse folders and open one as the active project |
 | `<C-r>` | n | Recent projects modal |
 | `<C-S-p>` | n, i, v, t | Command palette |
 
@@ -180,4 +200,3 @@ For Windows Terminal, rerun `config/scripts/setup-powershell.ps1` and restart th
 | `:NugetManager` | Nuget package manager for `.csproj` |
 | `:TailwindOrganize` / `:TailwindOrganizerToggle` | Organize Tailwind CSS classes |
 | `:FoxTypes` / `:TypeInjector` | Type injector menu |
-| `:PHPCheckTools` | PHP / Composer / Intelephense / Pint / Xdebug diagnostic modal |

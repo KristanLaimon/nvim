@@ -16,7 +16,6 @@
 
 local ui = require("fox.core.ui")
 local zindex = require("fox.core.z_index")
-local lazy_req = require("fox.core.lazy_require")
 
 local M = {}
 
@@ -869,7 +868,7 @@ function M.open()
 	})
 
 	-- Keybindings inside modal
-	local function map_keys(buf, win)
+	local function map_keys(buf, _win)
 		local function make_opts(desc)
 			return { noremap = true, silent = true, buffer = buf, nowait = true, desc = desc }
 		end

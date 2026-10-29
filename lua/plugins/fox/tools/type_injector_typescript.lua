@@ -294,11 +294,7 @@ function M.update_npm_types(schema_folder, callback, core)
 
 	local manifest = store.load(pkg_json, {})
 	local dev_deps = manifest.devDependencies or manifest.dependencies or {}
-	local pkg_to_update
-	for dep_name, _ in pairs(dev_deps) do
-		pkg_to_update = dep_name
-		break
-	end
+	local pkg_to_update = next(dev_deps)
 
 	if not pkg_to_update then
 		pkg_to_update = schema_folder:find("^@") and schema_folder or ("@types/" .. schema_folder)

@@ -3,7 +3,7 @@ local describe, it, expect = t.describe, t.it, t.expect
 local history = require("fox.projects.history")
 
 describe("local ProjectRoot command", function()
-	local root, buf, original_buf, cwd, file, create_command, keymap, picker, commands, clients
+	local root, buf, original_buf, cwd, file, create_command, keymap, picker, commands, clients, find
 	t.beforeEach(function()
 		root, original_buf, cwd, file = vim.fn.tempname(), vim.api.nvim_get_current_buf(), vim.fn.getcwd(), history.file
 		vim.fn.mkdir(root .. "/app/src", "p")
@@ -14,6 +14,7 @@ describe("local ProjectRoot command", function()
 		vim.api.nvim_set_current_buf(buf)
 		create_command, keymap, picker, clients =
 			vim.api.nvim_create_user_command, vim.keymap.set, _G.OpenRecentProjects, vim.lsp.get_clients
+		find = vim.fs.find
 		commands = {}
 		vim.api.nvim_create_user_command = function(name, callback)
 			commands[name] = callback
@@ -24,6 +25,7 @@ describe("local ProjectRoot command", function()
 	t.afterEach(function()
 		vim.api.nvim_create_user_command, vim.keymap.set, _G.OpenRecentProjects, vim.lsp.get_clients =
 			create_command, keymap, picker, clients
+		vim.fs.find = find
 		history.file = file
 		vim.api.nvim_set_current_dir(cwd)
 		vim.api.nvim_set_current_buf(original_buf)
@@ -45,6 +47,10 @@ describe("local ProjectRoot command", function()
 
 	it("falls back to the attached LSP root when no marker exists", function()
 		vim.fn.delete(root .. "/app/package.json")
+		-- Parent directories may themselves contain project markers.
+		vim.fs.find = function()
+			return {}
+		end
 		vim.lsp.get_clients = function()
 			return { { config = { root_dir = root .. "/app" } } }
 		end

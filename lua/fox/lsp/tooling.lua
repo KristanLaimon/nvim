@@ -1,5 +1,40 @@
 -- Explicit LSP package actions. Language metadata remains in fox.langs.
 local M = {}
+--- Resolve a missing LSP executable by case, preserving arguments and PATH order.
+---@param cmd table|function|nil
+---@return table|function|nil
+function M.resolve_command(cmd)
+	if type(cmd) ~= "table" or type(cmd[1]) ~= "string" or vim.fn.executable(cmd[1]) == 1 then
+		return cmd
+	end
+	local executable = cmd[1]
+	local explicit_path = executable:find("/", 1, true) or executable:find("\\", 1, true)
+	local directories = explicit_path and { vim.fs.dirname(executable) }
+		or vim.split(vim.env.PATH or "", vim.fn.has("win32") == 1 and ";" or ":", { plain = true })
+	local basename = vim.fs.basename(executable):lower()
+	for _, directory in ipairs(directories) do
+		directory = directory == "" and "." or directory
+		local match
+		for name in vim.fs.dir(directory) do
+			if name:lower() == basename then
+				local candidate = vim.fs.joinpath(directory, name)
+				if vim.fn.executable(candidate) == 1 then
+					-- Case variants in one directory are ambiguous; keep the startup error.
+					if match then
+						return cmd
+					end
+					match = candidate
+				end
+			end
+		end
+		if match then
+			local resolved = vim.deepcopy(cmd)
+			resolved[1] = vim.fn.fnamemodify(match, ":p")
+			return resolved
+		end
+	end
+	return cmd
+end
 function M.packages()
 	local packages = {}
 	for name, tool in pairs(require("fox.core.installer").tools) do

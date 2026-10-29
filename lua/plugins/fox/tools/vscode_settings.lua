@@ -21,7 +21,6 @@
 -- ============================================================================
 
 local lazy_req = require("fox.core.lazy_require")
-local store = lazy_req("fox.core.store")
 local project = lazy_req("fox.core.project")
 local path = lazy_req("fox.core.path")
 
@@ -92,7 +91,7 @@ function M.apply_settings(bufnr)
 	end
 
 	local root = project.root(bufnr)
-	local filepath, settings = M.load_settings(root)
+	local _, settings = M.load_settings(root)
 	if not settings then
 		return
 	end
@@ -169,14 +168,14 @@ end
 --- Shows the active VSCode settings summary or opens the settings file.
 function M.open_settings_menu()
 	local root = project.root()
-	local filepath, settings = M.load_settings(root)
+	local filepath = M.load_settings(root)
 
 	if not filepath then
 		local default_path = path.join(root, ".vscode", "settings.json")
 		vim.ui.select({
 			"➕ Create .vscode/settings.json in Project Root",
 			"❌ Cancel",
-		}, { prompt = "No .vscode/settings.json found in " .. root }, function(choice, idx)
+		}, { prompt = "No .vscode/settings.json found in " .. root }, function(_, idx)
 			if idx == 1 then
 				path.ensure_dir(path.join(root, ".vscode"))
 				local f = io.open(default_path, "w")
@@ -197,7 +196,7 @@ function M.open_settings_menu()
 		"🔄 Re-apply VSCode Settings to Current Buffer",
 	}
 
-	vim.ui.select(options, { prompt = "⚙️ VSCode Settings (" .. filepath .. ")" }, function(choice, idx)
+	vim.ui.select(options, { prompt = "⚙️ VSCode Settings (" .. filepath .. ")" }, function(_, idx)
 		if idx == 1 then
 			vim.cmd("edit " .. vim.fn.fnameescape(filepath))
 		elseif idx == 2 then

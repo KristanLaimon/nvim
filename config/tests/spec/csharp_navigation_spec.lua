@@ -167,10 +167,15 @@ t.describe("Local OmniSharp navigation", function()
 		t.expect(pending[4].method).toBe("o#/findimplementations")
 		nav.handler(
 			nil,
-			{ { uri = "file:///$metadata$/String.cs", range = { start = { line = 0, character = 0 }, ["end"] = {
-				line = 0,
-				character = 1,
-			} } } },
+			{
+				{
+					uri = "file:///$metadata$/String.cs",
+					range = { start = { line = 0, character = 0 }, ["end"] = {
+						line = 0,
+						character = 1,
+					} },
+				},
+			},
 			{ bufnr = buf, client_id = client.id }
 		)
 		t.expect(pending[5].method).toBe("o#/v2/gotodefinition")

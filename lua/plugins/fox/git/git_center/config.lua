@@ -3,15 +3,8 @@
 -- ============================================================================
 
 local lazy_req = require("fox.core.lazy_require")
-local git = lazy_req("fox.git.cmd")
-local status = lazy_req("fox.git.status")
-local diff = lazy_req("fox.git.diff")
-local submodules = lazy_req("fox.git.submodules")
-local ui = lazy_req("fox.core.ui")
 local store = lazy_req("fox.core.store")
 local project = lazy_req("fox.core.project")
-local path_util = lazy_req("fox.core.path")
-local icons = lazy_req("fox.core.icons")
 
 local env_ok, env_mod = pcall(require, "fox.core.environment")
 local env = env_ok and env_mod.detect() or {}

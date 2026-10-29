@@ -101,7 +101,6 @@
 ---@field js_debug_config? fun(profile: table, root: string, ctx: table): table Helper function building js-debug adapter launch configs.
 ---@field dap_tool? string Custom DAP tool name override (e.g. "delve").
 ---@field composer? table Submodule reference (e.g. PHP composer helper).
----@field modal? table Submodule reference (e.g. PHP tools modal helper).
 ---@field php_debug_port? integer Custom PHP debug port alias.
 
 local M = {}

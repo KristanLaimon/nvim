@@ -13,7 +13,6 @@ local M = {}
 local _version_cache = {}
 local _version_pending = {}
 local _interpreter_cache = {}
-local _active_interpreter = nil
 
 --- Resolves the active Python interpreter path for the project/buffer.
 --- @param bufnr integer|nil
@@ -35,7 +34,6 @@ function M.get_python_interpreter(bufnr)
 			local py_path = settings["python.defaultInterpreterPath"] or settings["python.pythonPath"]
 			if type(py_path) == "string" and py_path ~= "" and vim.fn.executable(py_path) == 1 then
 				_interpreter_cache[cwd] = py_path
-				_active_interpreter = py_path
 				return py_path
 			end
 		end
@@ -44,7 +42,6 @@ function M.get_python_interpreter(bufnr)
 	-- 2. Check vim.g.python3_host_prog
 	if vim.g.python3_host_prog and vim.g.python3_host_prog ~= "" and vim.fn.executable(vim.g.python3_host_prog) == 1 then
 		_interpreter_cache[cwd] = vim.g.python3_host_prog
-		_active_interpreter = vim.g.python3_host_prog
 		return vim.g.python3_host_prog
 	end
 
@@ -58,7 +55,6 @@ function M.get_python_interpreter(bufnr)
 					or vim.tbl_get(client.config, "settings", "basedpyright", "pythonPath")
 				if type(py) == "string" and py ~= "" and vim.fn.executable(py) == 1 then
 					_interpreter_cache[cwd] = py
-					_active_interpreter = py
 					return py
 				end
 			end
@@ -79,7 +75,6 @@ function M.get_python_interpreter(bufnr)
 		local full = cwd .. candidate
 		if vim.fn.executable(full) == 1 then
 			_interpreter_cache[cwd] = full
-			_active_interpreter = full
 			return full
 		end
 	end
@@ -90,7 +85,6 @@ function M.get_python_interpreter(bufnr)
 		fallback = "python3"
 	end
 	_interpreter_cache[cwd] = fallback
-	_active_interpreter = fallback
 	return fallback
 end
 
@@ -238,7 +232,6 @@ function M.set_interpreter(new_path)
 		return
 	end
 
-	_active_interpreter = new_path
 	vim.g.python3_host_prog = new_path
 
 	-- 1. Save to .vscode/settings.json or .foxnvim/settings.json

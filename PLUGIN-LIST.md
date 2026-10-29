@@ -1,6 +1,6 @@
 # Plugin List
 
-Active inventory from Lazy: **23 external dependencies** and **73 local plugin specs**. Installed leftovers from replaced plugins are excluded.
+Active inventory from Lazy: **23 external dependencies** and **71 local plugin specs**. Installed leftovers from replaced plugins are excluded.
 
 ## External — dependencies
 
@@ -81,8 +81,6 @@ The `fox-<name>` labels below identify local implementations; the Lazy ID column
 | `fox-nuget-manager` | `fox_nuget_manager` | [lua/plugins/fox/tools/nuget.lua](lua/plugins/fox/tools/nuget.lua) |
 | `fox-omarchy-theme` | `fox_omarchy_theme` | [lua/plugins/fox/ui/omarchy_theme.lua](lua/plugins/fox/ui/omarchy_theme.lua) |
 | `fox-packages` | `fox_packages` | [lua/plugins/editor/package-info.lua](lua/plugins/editor/package-info.lua) |
-| `fox-php-tools` | `fox_php_tools` | [lua/plugins/lsp/laravel.lua](lua/plugins/lsp/laravel.lua) |
-| `fox-php-tools-modal` | `fox_php_tools_modal` | [lua/plugins/fox/tools/php_tools_modal.lua](lua/plugins/fox/tools/php_tools_modal.lua) |
 | `fox-pinned-tabs` | `fox_pinned_tabs` | [lua/plugins/fox/ui/pinned_tabs.lua](lua/plugins/fox/ui/pinned_tabs.lua) |
 | `fox-query` | `fox_query` | [lua/plugins/fox/tools/query.lua](lua/plugins/fox/tools/query.lua) |
 | `fox-recent-projects` | `fox_recent_projects` | [lua/plugins/editor/project.lua](lua/plugins/editor/project.lua) |
@@ -90,7 +88,6 @@ The `fox-<name>` labels below identify local implementations; the Lazy ID column
 | `fox-ryoku-theme` | `fox_ryoku_theme` | [lua/plugins/fox/ui/ryoku_theme.lua](lua/plugins/fox/ui/ryoku_theme.lua) |
 | `fox-secondary-git` | `fox_secondary_git` | [lua/plugins/fox/git/secondary_git.lua](lua/plugins/fox/git/secondary_git.lua) |
 | `fox-smart-check` | `fox_smart_check` | [lua/plugins/fox/editor/smart_check.lua](lua/plugins/fox/editor/smart_check.lua) |
-| `fox-sneak-peek` | `fox_sneak_peek` | [lua/plugins/fox/dev/sneak_peek.lua](lua/plugins/fox/dev/sneak_peek.lua) |
 | `fox-statusline` | `fox_statusline` | [lua/plugins/ui/statusline.lua](lua/plugins/ui/statusline.lua) |
 | `fox-statusline-picker` | `fox_statusline_picker` | [lua/plugins/fox/ui/statusline_picker.lua](lua/plugins/fox/ui/statusline_picker.lua) |
 | `fox-symbol-usage` | `fox_symbol_usage` | [lua/plugins/lsp/symbol_usage.lua](lua/plugins/lsp/symbol_usage.lua) |

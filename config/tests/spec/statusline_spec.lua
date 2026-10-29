@@ -148,7 +148,9 @@ describe("native statusline rendering", function()
 	local engine = require("fox.ui.statusline")
 	local buf, previous, old_status, old_last
 	t.beforeEach(function()
-		previous = vim.api.nvim_get_current_buf()
+		previous = vim.api.nvim_get_current_tabpage()
+		-- A previous explorer test may leave window-local navigation hooks behind.
+		vim.cmd("tabnew")
 		old_status, old_last = vim.o.statusline, vim.o.laststatus
 		buf = vim.api.nvim_create_buf(true, false)
 		vim.api.nvim_set_current_buf(buf)
@@ -158,7 +160,8 @@ describe("native statusline rendering", function()
 	end)
 	t.afterEach(function()
 		vim.diagnostic.reset(nil, buf)
-		vim.api.nvim_set_current_buf(previous)
+		vim.cmd("tabclose!")
+		vim.api.nvim_set_current_tabpage(previous)
 		vim.api.nvim_buf_delete(buf, { force = true })
 		vim.o.statusline, vim.o.laststatus = old_status, old_last
 		require("fox.ui.statusline_git").invalidate()

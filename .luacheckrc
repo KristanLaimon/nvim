@@ -45,7 +45,6 @@ globals = {
 	"LaunchCmp",
 	"LaunchProfiles",
 	"NugetManager",
-	"PhpToolsModal",
 	"ProjectTasks",
 	"SmartCheck",
 	"TailwindOrganizer",
@@ -75,21 +74,22 @@ globals = {
 	"fox_testing",
 }
 
-files["run_me.lua"] = {
-	ignore = {
-		"121", -- setting read-only field (os.exit patching in safe_dofile)
-		"212/_.*", -- unused argument (the 'choice' param in cli.menu callback)
-	},
-}
-
+-- Bundled API declaration stubs define external globals and methods for the LSP.
 files["config/schemas-langs/**"] = {
 	ignore = {
-		"211",  -- unused local variable
-		"212",  -- unused argument
-		"213",  -- unused loop variable
-		"311",  -- value assigned but never used
-		"411",  -- redefining variable
-		"412",  -- redefining argument
-		"431",  -- redefining global
+		"111", -- defining external globals
+		"112", -- mutating external globals
+		"113", -- referring to external globals
+		"121", -- declaring external fields
+		"122", -- declaring standard-library fields
+		"142", -- extending standard-library declarations
+		"241", -- declaration tables are consumed by the LSP
+		"211", -- unused local variable
+		"212", -- unused argument
+		"213", -- unused loop variable
+		"311", -- value assigned but never used
+		"411", -- redefining variable
+		"412", -- redefining argument
+		"431", -- redefining global
 	},
 }

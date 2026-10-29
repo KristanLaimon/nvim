@@ -13,12 +13,12 @@ typo in a plugin file is invisible until then.
 | Command | What it checks | Speed |
 | :--- | :--- | :--- |
 | `nvim -l config/tests/syntax_check.lua` | Every `.lua` file parses | instant |
-| `nvim -l config/tests/run.lua --only-failure` | Unit specs, no plugins loaded | ~1s |
+| `nvim -l config/tests/run.lua --only-failure` | Full Lua suite, including worker and local HTTP checks | about 1–2 minutes |
 | `nvim -l config/tests/run.lua tasks --only-failure` | Only specs whose name contains "tasks" | ~1s |
 | `nvim --headless -S config/tests/integration/run.lua -- --only-failure` | Specs that need the real editor | a few seconds |
 | `node config/tests/integration/markdown_browser.mjs` | GFM and Mermaid rendering and live updates in Chromium | a few seconds |
 | `nvim --headless -S config/tests/integration/run.lua -- kitty_shortcuts --only-failure` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
-| `:FoxTest --only-failure` | The unit specs, from inside the editor | ~1s |
+| `:FoxTest --only-failure` | Full Lua suite in a separate headless process | about 1–2 minutes |
 | `:FoxTest git --only-failure` | Filtered, from inside the editor | ~1s |
 
 AI assistants use `--only-failure` by default, for full and filtered Lua test
@@ -27,6 +27,16 @@ runs. It hides passing cases, passing suite headings, and their `print`,
 errors, and the final totals and exit
 status remain unchanged. Omit the flag when verbose output is useful. The flag
 also works with `run_me.lua --tests` or `--all`.
+
+`:FoxTest` and `run_me.lua` launch the unit suite in a clean Neovim process so
+test mocks cannot interfere with the editor's plugins or active language servers.
+
+The full Lua suite also exercises installed plugin integrations, the bundled Query
+worker, and Markdown HTTP serving over loopback using `curl`. A restricted sandbox
+must allow local TCP sockets for those HTTP checks. Test preferences use temporary
+files; theme tests isolate Omarchy/Ryoku sync settings from the desktop's saved
+preferences. A passing run on one OS does not replace native Windows or Ryoku
+validation.
 
 The browser test runs from the config root and requires Node 22+, `chromium`,
 `nvim`, and the installed `markdown-preview.nvim` plugin. It starts an isolated

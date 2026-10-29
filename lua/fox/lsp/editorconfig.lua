@@ -233,7 +233,7 @@ end
 ---
 --- @param context table blink.cmp context.
 --- @param callback fun(result: table)
-function M:get_completions(context, callback)
+function M.get_completions(_self, context, callback)
 	local line = context.line or ""
 	local before_cursor = line:sub(1, context.cursor[2])
 

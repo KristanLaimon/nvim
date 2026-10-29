@@ -102,6 +102,12 @@ end
 --- Toggles pin status of the active code buffer tab.
 function M.toggle_pin()
 	local bufnr = vim.api.nvim_get_current_buf()
+	local query = package.loaded["fox.query"]
+	local state = query and query.states[vim.b[bufnr].fox_query_root or ""]
+	if state and state.consoles[bufnr] then
+		query.toggle_tab_pin(bufnr)
+		return
+	end
 	if not M.is_code_buffer(bufnr) then
 		vim.notify(
 			"Pin tab (<Ctrl+P>) is only available in code buffer tabs",

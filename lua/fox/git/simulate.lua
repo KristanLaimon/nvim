@@ -216,7 +216,6 @@ function M.simulate_rebase(upstream_branch, topic_branch, cwd)
 	-- Otherwise, step through commits to pinpoint the first conflicting commit
 	local current_base = upstream_branch
 	for i, sha in ipairs(commit_shas) do
-		local check = git.lines({ "merge-tree", "--write-tree", current_base, sha }, cwd)
 		local check_res = vim.system(git.build({ "merge-tree", "--write-tree", current_base, sha }, cwd)):wait()
 
 		local commit_info = git.lines({ "log", "-1", "--format=%h%x1f%s%x1f%an", sha }, cwd)[1] or ""

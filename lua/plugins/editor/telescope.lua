@@ -42,7 +42,6 @@ local settings = {
 	},
 	live_grep_key = "<C-f>",
 	help_tags_key = nil,
-	open_folder_key = "<C-S-y>",
 	desktop_explorer_key = "<C-/>",
 	wsl_explorer_key = nil,
 
@@ -185,12 +184,8 @@ return {
 	config = function()
 		local telescope = require("telescope")
 		local builtin = require("telescope.builtin")
-		local pickers = require("telescope.pickers")
-		local finders = require("telescope.finders")
-		local conf = require("telescope.config").values
 		local actions = require("telescope.actions")
 		local action_state = require("telescope.actions.state")
-		local themes = require("telescope.themes")
 
 		local default_ignore_patterns = {
 			"node_modules[/\\]",
@@ -355,125 +350,6 @@ return {
 		-- Folder picker
 		-- ------------------------------------------------------------------
 
-		--- Absolute directory path with no trailing separator, except at a root
-		--- (`C:/`, `/`), where the separator is part of the path.
-		--- @param p string|nil
-		--- @return string
-		local function normalize_dir(p)
-			if not p or p == "" then
-				return ""
-			end
-			local full = vim.fn.fnamemodify(p, ":p")
-			if full:match("^[A-Za-z]:[/\\]$") or full == "/" then
-				return full
-			end
-			return (full:gsub("[/\\]$", ""))
-		end
-
-		--- Subdirectories of `dir`, at most `folder_scan_depth` levels deep.
-		--- `fd` when available; plenary's scanner otherwise.
-		--- @param dir string Root directory.
-		--- @return string[] directories Including `dir` itself, first.
-		local function scan_directories(dir)
-			local dirs = { dir }
-
-			if vim.fn.executable("fd") == 1 then
-				local cmd = { "fd", ".", dir, "--type", "d", "--hidden" }
-				for _, exclude in ipairs(settings.folder_excludes) do
-					vim.list_extend(cmd, { "--exclude", exclude })
-				end
-				vim.list_extend(cmd, { "--max-depth", tostring(settings.folder_scan_depth) })
-
-				local output = vim.fn.systemlist(cmd)
-				if vim.v.shell_error == 0 then
-					for _, line in ipairs(output) do
-						if line ~= "" then
-							table.insert(dirs, (line:gsub("\\", "/"):gsub("/$", "")))
-						end
-					end
-				end
-				return dirs
-			end
-
-			local ok, scandir = pcall(require, "plenary.scandir")
-			if ok then
-				for _, found in
-					ipairs(scandir.scan_dir(dir, {
-						only_dirs = true,
-						depth = settings.folder_scan_depth,
-						hidden = false,
-					}))
-				do
-					table.insert(dirs, (found:gsub("\\", "/"):gsub("/$", "")))
-				end
-			end
-			return dirs
-		end
-
-		--- Records a directory as the most recent project, in the local history and the WSL list.
-		--- @param dir string Directory path.
-		local function remember_project(dir)
-			if not dir or dir == "" then
-				return
-			end
-
-			local favorites = require("fox.projects.favorites")
-			local key = favorites.key(dir)
-
-			local ok, err = require("fox.projects.history").remember(key)
-			if not ok then
-				vim.notify("Cannot save project history: " .. tostring(err), vim.log.levels.ERROR)
-			end
-
-			pcall(function()
-				require("plugins.fox.tools.wsl").add_recent_project(key)
-			end)
-		end
-
-		--- Adopts a directory as the active project.
-		--- @param dir string Directory path.
-		local function open_directory(dir)
-			dir = normalize_dir(dir)
-			if vim.fn.isdirectory(dir) == 0 then
-				vim.notify("Directory does not exist: " .. dir, vim.log.levels.ERROR)
-				return
-			end
-
-			pcall(vim.cmd, "Neotree close")
-			vim.cmd("silent! only")
-
-			vim.cmd("enew")
-			local new_buf = vim.api.nvim_get_current_buf()
-			for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-				if buf ~= new_buf and vim.api.nvim_buf_is_valid(buf) then
-					pcall(vim.api.nvim_buf_delete, buf, { force = true })
-				end
-			end
-
-			pcall(vim.api.nvim_set_current_dir, dir)
-			local pinned_tabs = require("plugins.fox.ui.pinned_tabs")
-			local has_pins = #pinned_tabs.load_pins() > 0
-			if not has_pins then
-				if not pcall(vim.cmd, "Alpha") then
-					pcall(vim.cmd, "enew")
-				end
-			end
-			remember_project(dir)
-			if _G.AddOpenedFolder then
-				_G.AddOpenedFolder(dir)
-			end
-
-			pcall(vim.cmd, "Neotree focus dir=" .. vim.fn.fnameescape(dir))
-			if has_pins then
-				vim.schedule(function()
-					vim.schedule(function()
-						pinned_tabs.restore_pins({ focus = true })
-					end)
-				end)
-			end
-			vim.notify("📁 Opened folder: " .. dir, vim.log.levels.INFO)
-		end
-
 		local open_folder_picker
 
 		--- Browses directories; <CR> adopts one (or calls on_select), <C-l> descends, <C-h> goes up.
@@ -491,11 +367,6 @@ return {
 		vim.api.nvim_create_user_command("TelescopeOpenFolder", function()
 			open_folder_picker()
 		end, { desc = "Browse folders and open one as the active project" })
-		if settings.open_folder_key then
-			vim.keymap.set({ "n", "i" }, settings.open_folder_key, function()
-				require("plugins.fox.dev.sneak_peek").toggle_or_pick()
-			end, { desc = "Sneak-Peek Project Modal (Ctrl+Shift+O)" })
-		end
 
 		vim.api.nvim_create_user_command("TelescopeFileBrowserDesktop", function()
 			require("plugins.fox.tools.file_explorer").open_desktop_explorer()

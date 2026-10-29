@@ -79,7 +79,6 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 
 - `fox_blade` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
 - `fox_laravel` — [`lsp/blade_navigation.lua`](../../lua/plugins/lsp/blade_navigation.lua)
-- `fox_php_tools` — [`lsp/laravel.lua`](../../lua/plugins/lsp/laravel.lua)
 
 **UI**
 
@@ -112,7 +111,6 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox_lsp_references` — [`fox/tools/lsp_references.lua`](../../lua/plugins/fox/tools/lsp_references.lua)
 - `fox_notes` — [`fox/tools/notes.lua`](../../lua/plugins/fox/tools/notes.lua)
 - `fox_nuget_manager` — [`fox/tools/nuget.lua`](../../lua/plugins/fox/tools/nuget.lua)
-- `fox_php_tools_modal` — [`fox/tools/php_tools_modal.lua`](../../lua/plugins/fox/tools/php_tools_modal.lua)
 - `fox_todo_sidebar` — [`fox/tools/todo_sidebar.lua`](../../lua/plugins/fox/tools/todo_sidebar.lua)
 - `fox_type_injector` — [`fox/tools/type_injector.lua`](../../lua/plugins/fox/tools/type_injector.lua)
 - `fox_type_injector_lua` — [`fox/tools/type_injector_lua.lua`](../../lua/plugins/fox/tools/type_injector_lua.lua)
@@ -140,7 +138,6 @@ Specs locales: no requieren clonar otro repositorio. Se incluyen también las de
 - `fox_dev_server` — [`fox/dev/dev_server.lua`](../../lua/plugins/fox/dev/dev_server.lua)
 - `fox_launch_cmp` — [`fox/dev/launch_cmp.lua`](../../lua/plugins/fox/dev/launch_cmp.lua)
 - `fox_launch_profiles` — [`fox/dev/launch_profiles.lua`](../../lua/plugins/fox/dev/launch_profiles.lua)
-- `fox_sneak_peek` — [`fox/dev/sneak_peek.lua`](../../lua/plugins/fox/dev/sneak_peek.lua)
 - `fox_tasks` — [`fox/dev/tasks.lua`](../../lua/plugins/fox/dev/tasks.lua)
 - `fox_terminal` — [`fox/dev/terminal.lua`](../../lua/plugins/fox/dev/terminal.lua)
 

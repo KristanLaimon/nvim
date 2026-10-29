@@ -25,6 +25,7 @@
 -- ============================================================================
 
 local M = {}
+local is_entry = false
 
 --- Directory holding the spec files, relative to the config root.
 M.spec_dir = "config/tests/spec"
@@ -90,6 +91,19 @@ end
 --- @param options table|nil Reporter options, including only_failure.
 --- @return integer exit_code 0 on success, 1 on any failure.
 function M.run(root, filter, options)
+	if not is_entry then
+		-- Unit-test mocks must not share a process with editor plugins and live LSPs.
+		local command = { vim.v.progpath, "-l", root .. "/config/tests/run.lua" }
+		if filter then
+			command[#command + 1] = filter
+		end
+		if options and options.only_failure then
+			command[#command + 1] = "--only-failure"
+		end
+		local result = vim.system(command, { text = true }):wait()
+		print((result.stdout or "") .. (result.stderr or ""))
+		return result.code
+	end
 	vim.g.fox_testing = true
 	_G.fox_testing = true
 	local loaded, errors = M.load_specs(root, filter)
@@ -114,7 +128,6 @@ end
 
 -- Only self-execute when THIS file is the `-l` entry script (not when dofile'd by run_me.lua).
 local script_source = debug.getinfo(1, "S").source:sub(2)
-local is_entry = false
 if vim.v.argv then
 	local script_p = vim.fn.fnamemodify(script_source, ":p")
 	for i = 1, #vim.v.argv do

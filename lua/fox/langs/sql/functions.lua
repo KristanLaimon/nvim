@@ -452,7 +452,7 @@ function M.hover(buf)
 			offset = offset + #lines[row] + 1
 		end
 		local item, column = require("fox.query.sql").object_at(table.concat(lines, "\n"), offset, state.metadata)
-		if item then
+		if item and (item.cte or not state.consoles[buf]) then
 			local content = { "# " .. item.name, item.cte and "WITH table (query only)" or "Table: " .. item.key, "" }
 			for _, entry in ipairs(column and { column } or item.columns) do
 				content[#content + 1] = "- " .. entry.name .. (entry.type and (" : " .. entry.type) or "")
@@ -460,6 +460,9 @@ function M.hover(buf)
 			vim.lsp.util.open_floating_preview(content, "markdown", { border = "rounded", focus_id = "fox_sql_hover" })
 			return
 		end
+	end
+	if vim.b[buf].fox_query_root and require("fox.query").hover(buf) then
+		return
 	end
 	local engine = require("fox.langs.sql.dialect").read(buf) or vim.b[buf].fox_sql_dialect
 	local word = vim.fn.expand("<cword>"):upper()

@@ -35,3 +35,63 @@ t.describe("Local LSP tooling", function()
 		t.expect(called).toBe(false)
 	end)
 end)
+
+t.describe("LSP executable case fallback", function()
+	local root, original_path
+	local function executable(directory, name, permissions)
+		local filename = directory .. "/" .. name
+		vim.fn.writefile({ "#!/bin/sh", "exit 0" }, filename)
+		vim.fn.setfperm(filename, permissions or "rwxr-xr-x")
+		return filename
+	end
+	t.beforeEach(function()
+		root, original_path = vim.fn.tempname(), vim.env.PATH
+		vim.fn.mkdir(root .. "/first", "p")
+		vim.fn.mkdir(root .. "/second", "p")
+		vim.env.PATH = root .. "/first:" .. root .. "/second"
+	end)
+	t.afterEach(function()
+		vim.env.PATH = original_path
+		vim.fn.delete(root, "rf")
+	end)
+	t.it("finds mixed case, preserves arguments and leaves the input unchanged", function()
+		local expected = executable(root .. "/first", "FoxServer")
+		local cmd = { "foxserver", "--stdio", "CaseSensitiveArgument" }
+		t.expect(m.resolve_command(cmd)).toEqual({ expected, "--stdio", "CaseSensitiveArgument" })
+		t.expect(cmd[1]).toBe("foxserver")
+	end)
+	t.it("prefers exact names even later in PATH", function()
+		executable(root .. "/first", "FoxServer")
+		executable(root .. "/second", "foxserver")
+		local cmd = { "foxserver" }
+		t.expect(m.resolve_command(cmd)).toBe(cmd)
+	end)
+	t.it("uses PATH order for case fallback and skips nonexistent directories", function()
+		vim.env.PATH = root .. "/missing:" .. vim.env.PATH
+		local expected = executable(root .. "/first", "FoxServer")
+		executable(root .. "/second", "FOXSERVER")
+		t.expect(m.resolve_command({ "foxserver" })[1]).toBe(expected)
+	end)
+	t.it("resolves explicit paths only inside their directory", function()
+		local expected = executable(root .. "/first", "FoxServer")
+		t.expect(m.resolve_command({ root .. "/first/foxserver" })[1]).toBe(expected)
+		local cmd = { root .. "/second/foxserver" }
+		t.expect(m.resolve_command(cmd)).toBe(cmd)
+	end)
+	t.it("rejects ambiguous case variants", function()
+		executable(root .. "/first", "FoxServer")
+		executable(root .. "/first", "FOXSERVER")
+		local cmd = { "foxserver" }
+		t.expect(m.resolve_command(cmd)).toBe(cmd)
+	end)
+	t.it("does not launch non-executable matches or rewrite missing commands", function()
+		executable(root .. "/first", "FoxServer", "rw-r--r--")
+		local cmd = { "foxserver" }
+		t.expect(m.resolve_command(cmd)).toBe(cmd)
+	end)
+	t.it("keeps custom launchers and absent commands unchanged", function()
+		local launcher = function() end
+		t.expect(m.resolve_command(launcher)).toBe(launcher)
+		t.expect(m.resolve_command(nil)).toBe(nil)
+	end)
+end)

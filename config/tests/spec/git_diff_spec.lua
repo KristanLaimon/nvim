@@ -241,7 +241,7 @@ describe("side-by-side git diff format", function()
 	end)
 
 	it("formats side-by-side dual column into single combined buffer lines", function()
-		local combined, l_kinds, r_kinds, col_w = diff.format_side_by_side_single(SAMPLE, false, 80)
+		local combined, _, _, col_w = diff.format_side_by_side_single(SAMPLE, false, 80)
 
 		expect(#combined).toBeGreaterThan(0)
 		expect(col_w).toBeGreaterThan(15)
@@ -294,7 +294,7 @@ describe("side-by-side git diff format", function()
 			"+bar new",
 		}
 
-		local l_lines, _, r_lines, _ = diff.format_side_by_side_dual(MULTI_SAMPLE, false)
+		local _, _, r_lines = diff.format_side_by_side_dual(MULTI_SAMPLE, false)
 		local found_foo, found_bar = false, false
 		for _, line in ipairs(r_lines) do
 			if line:find("foo.lua", 1, true) then
@@ -327,7 +327,7 @@ describe("side-by-side git diff format", function()
 			"+local new = 2",
 		}
 
-		local l_lines, _, r_lines, _ = diff.format_side_by_side_dual(RAW_WITH_COMMIT_METADATA, false, "app.lua")
+		local l_lines, _, r_lines = diff.format_side_by_side_dual(RAW_WITH_COMMIT_METADATA, false, "app.lua")
 		for _, l in ipairs(l_lines) do
 			expect(l:match("^commit %x+")).toBeNil()
 			expect(l:match("^Author:")).toBeNil()

@@ -38,10 +38,15 @@ describe("project UI themes", function()
 		local saved_root, saved_file = project.root, theme_picker.settings.store_file
 		local saved_select, saved_theme = vim.ui.select, vim.g.colors_name or "default"
 		local saved_project = theme_picker._project_file
+		local ryoku = require("plugins.fox.ui.ryoku_theme")
+		local omarchy = require("plugins.fox.ui.omarchy_theme")
+		local ryoku_file, omarchy_file = ryoku.settings.store_file, omarchy.settings.store_file
 		project.root = function()
 			return active
 		end
 		theme_picker.settings.store_file = root .. "/global/theme.json"
+		ryoku.settings.store_file, omarchy.settings.store_file =
+			theme_picker.settings.store_file, theme_picker.settings.store_file
 		local ok, err = pcall(function()
 			assert(
 				store.save(theme_picker.settings.store_file, { theme = "nord-fox", ryoku_sync = false, omarchy_sync = false })
@@ -83,6 +88,7 @@ describe("project UI themes", function()
 		end)
 		project.root, theme_picker.settings.store_file = saved_root, saved_file
 		theme_picker._project_file = saved_project
+		ryoku.settings.store_file, omarchy.settings.store_file = ryoku_file, omarchy_file
 		vim.ui.select = saved_select
 		pcall(vim.cmd.colorscheme, saved_theme)
 		assert(ok, err)

@@ -194,9 +194,17 @@ describe("FoxQuerier usability", function()
 		local previous = vim.api.nvim_get_current_buf()
 		local key = "query-completion-test"
 		local metadata = {
+			engine = "mysql",
 			tables = {
 				{ key = "Match", name = "Match", columns = { { name = "id" }, { name = "date_played_id" } } },
 				{ key = "other", name = "other", columns = { { name = "id" } } },
+				{ key = "alumnos", name = "alumnos", columns = { { name = "id" }, { name = "carrera_id" } } },
+				{ key = "escolar.carreras", name = "carreras", columns = { { name = "id" }, { name = "nivel" } } },
+				{
+					key = "cursos",
+					name = "cursos",
+					columns = { { name = "id" }, { name = "alumno_id" }, { name = "periodo" } },
+				},
 			},
 			relations = {},
 		}
@@ -212,11 +220,17 @@ describe("FoxQuerier usability", function()
 					.new()
 					:get_completions({ bufnr = buf, cursor = { 1, column } }, function(response)
 						for _, item in ipairs(response.items) do
-							result[item.label] = true
+							result[item.label] = item
 						end
 					end)
 				return result
 			end
+			local tables = labels("SELECT * FROM ", 14)
+			expect(tables.carreras.kind).toBe(7)
+			expect(tables["escolar.carreras"]).toBeNil()
+			metadata.engine = "postgres"
+			expect(labels("SELECT * FROM ", 14)["escolar.carreras"].kind).toBe(7)
+			metadata.engine = "mysql"
 			expect(labels("SELECT date FROM Match;", 11).date_played_id).toBeTruthy()
 			expect(labels("SELECT M.da FROM Match m;", 11).date_played_id).toBeTruthy()
 			local ambiguous = labels("SELECT id FROM Match m JOIN other o ON m.id = o.id;", 9)
@@ -227,6 +241,27 @@ describe("FoxQuerier usability", function()
 			expect(labels("SELECT * FROM (SELECT m.da FROM Match m) d", 25).date_played_id).toBeTruthy()
 			local scoped = labels("SELECT m.id FROM other m WHERE EXISTS (SELECT m.da FROM Match m)", 48)
 			expect(scoped.date_played_id).toBeTruthy()
+			local completion = require("fox.query.completion")
+			expect(completion.compare({ data = 42 }, { data = "opaque LSP data" })).toBeNil()
+			local prefix = "SELECT * FROM alumnos INNER JOIN escolar.carreras AS c ON alumnos.carrera_id = c.id "
+				.. "WHERE c.nivel = 'BACHILLERATO' AND alumnos.id IN (SELECT "
+			for _, suffix in ipairs({ " FROM cursos WHERE periodo = 1)", " FROM cursos WHERE periodo = 1" }) do
+				local inner = labels(prefix .. suffix, #prefix)
+				expect(inner.id.detail).toContain("cursos |")
+				expect(completion.compare(inner.id, { data = 42 })).toBe(true)
+				expect(completion.compare(inner.alumno_id, inner["cursos.alumno_id"])).toBe(true)
+				expect(completion.compare(inner["cursos.id"], inner.carrera_id)).toBe(true)
+				expect(completion.compare(inner["cursos.id"], inner["c.nivel"])).toBe(true)
+				expect(inner["alumnos.id"]).toBeTruthy()
+			end
+			local nested_prefix = prefix .. "* FROM cursos WHERE EXISTS (SELECT "
+			local nested = labels(nested_prefix .. " FROM other)", #nested_prefix)
+			expect(nested.id.detail).toContain("other |")
+			expect(completion.compare(nested["other.id"], nested.alumno_id)).toBe(true)
+			expect(completion.compare(nested["cursos.id"], nested.carrera_id)).toBe(true)
+			local qualified = labels(prefix .. "alumnos. FROM cursos)", #prefix + #"alumnos.")
+			expect(qualified.carrera_id).toBeTruthy()
+			expect(qualified.alumno_id).toBeNil()
 		end)
 		query.states[key] = nil
 		vim.api.nvim_set_current_buf(previous)
@@ -326,6 +361,57 @@ describe("FoxQuerier usability", function()
 			end
 		end
 		expect(found_unique).toBeTruthy()
+	end)
+
+	it("creates a MariaDB profile from the default view connection sidebar", function()
+		local storage = require("fox.query.storage")
+		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
+		local old_input, old_connect = vim.ui.input, query.connect
+		vim.fn.mkdir(root, "p")
+		vim.api.nvim_set_current_dir(root)
+		local connected
+		local ok, err = pcall(function()
+			query.show("standard")
+			query.profile()
+			vim.fn.maparg("a", "n", false, true).callback()
+			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+			expect(lines[4]).toBe("MySQL / MariaDB")
+			local values = { "local-mariadb", "127.0.0.1", "3306", "app", "reader", "FOXQUERY_TEST_PASSWORD" }
+			local index = 0
+			vim.ui.input = function(opts, callback)
+				index = index + 1
+				if index == 3 then
+					expect(opts.default).toBe("3306")
+				end
+				callback(values[index])
+			end
+			query.connect = function(profile)
+				connected = profile
+			end
+			vim.fn.maparg("j", "n", false, true).callback()
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			expect(index).toBe(6)
+			expect(connected.engine).toBe("mysql")
+			expect(connected.port).toBe(3306)
+			local profiles = assert(storage.profiles(root))
+			expect(#profiles).toBe(1)
+			expect(profiles[1].id).toBe("local-mariadb")
+			expect(profiles[1].engine).toBe("mysql")
+			expect(profiles[1].password_env).toBe("FOXQUERY_TEST_PASSWORD")
+			query.hide()
+		end)
+		vim.ui.input, query.connect = old_input, old_connect
+		query.close_root(root)
+		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+			if vim.b[buf].fox_query_root == storage.root(root) then
+				pcall(vim.api.nvim_buf_delete, buf, { force = true })
+			end
+		end
+		vim.api.nvim_set_current_dir(cwd)
+		vim.fn.delete(root, "rf")
+		if not ok then
+			error(err)
+		end
 	end)
 
 	it("uses the existing explorer for SQLite paths and leaves cancellation unsaved", function()

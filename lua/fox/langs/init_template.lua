@@ -132,7 +132,7 @@ M.formatters_by_ft = {
 --- Inherits completion for `condition`, `command`, `args`, `stdin`, `cwd` from `FoxConformFormatterOpts`.
 M.conform_formatters = {
 	example_fmt = {
-		condition = function(_, ctx)
+		condition = function()
 			-- Only run if binary exists on PATH or vendored in project
 			return vim.fn.executable("example-formatter") == 1
 		end,

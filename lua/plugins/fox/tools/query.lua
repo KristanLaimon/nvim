@@ -16,11 +16,14 @@ local commands = {
 	"FoxQueryCancel",
 	"FoxQueryExplorer",
 	"FoxQueryInspect",
+	"FoxQueryHover",
 	"FoxQueryGraph",
 	"FoxQueryNotes",
+	"FoxQueryDeleteNote",
 	"FoxQueryRefresh",
 	"FoxQueryResults",
 	"FoxQueryClearParameters",
+	"FoxQueryParameters",
 	"FoxQueryClearCache",
 	"FoxQueryInsertJoin",
 	"FoxQueryExport",
@@ -158,12 +161,18 @@ return {
 		command("FoxQueryNotes", function()
 			query.notes()
 		end)
+		command("FoxQueryDeleteNote", function()
+			query.notes(nil, "delete")
+		end)
 		command("FoxQueryRefresh", function()
 			query.refresh_metadata()
 		end)
 		command("FoxQueryResults", query.results)
 		command("FoxQueryActivity", function()
 			query.focus_panel("activity")
+		end)
+		command("FoxQueryHover", function()
+			require("fox.langs.sql.functions").hover(vim.api.nvim_get_current_buf())
 		end)
 		command("FoxQueryHelp", query.help)
 		command("FoxQueryErrorDetails", query.error_details)
@@ -173,11 +182,8 @@ return {
 		command("FoxQueryExport", query.export)
 		command("FoxQueryPin", query.pin)
 		command("FoxQueryColumns", query.column_limit)
-		command("FoxQueryClearParameters", function()
-			for _, item in pairs(query.state().consoles) do
-				item.params = {}
-			end
-		end)
+		command("FoxQueryParameters", query.parameters)
+		command("FoxQueryClearParameters", query.clear_parameters)
 		command("FoxQueryClearCache", function()
 			local storage = require("fox.query.storage")
 			local root = storage.root()

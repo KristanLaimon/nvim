@@ -296,7 +296,7 @@ function M.open()
 		local links = {}
 		local s_pos = 1
 		while true do
-			local m_start, m_end, label, target = line:find("(%[[^%]]+%]%(([^%)]+)%))", s_pos)
+			local m_start, m_end, _, target = line:find("(%[[^%]]+%]%(([^%)]+)%))", s_pos)
 			if not m_start then
 				break
 			end
@@ -392,7 +392,7 @@ function M.open()
 		})
 	end
 
-	local function map_keys(buf, win)
+	local function map_keys(buf, _win)
 		local function make_opts(desc)
 			return { noremap = true, silent = true, buffer = buf, nowait = true, desc = desc }
 		end

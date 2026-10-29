@@ -10,7 +10,7 @@ t.describe("SQL metadata hover", function()
 		local buf = vim.api.nvim_create_buf(false, true)
 		local received
 		local ok, err = pcall(function()
-			query.states[root] = { metadata = { tables = {}, relations = {} } }
+			query.state(root)
 			vim.b[buf].fox_query_root = root
 			vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
 				"-- foxquery: dialect=postgres",

@@ -3,6 +3,8 @@ local terminal = require("plugins.fox.dev.terminal")
 
 t.describe("terminal return focus", function()
 	t.it("exchanges Git Center and terminal panes while preserving unrelated floats and terminal contents", function()
+		local cwd = vim.fn.getcwd()
+		vim.api.nvim_set_current_dir(vim.fn.stdpath("config"))
 		local center = require("plugins.fox.git.git_center")
 		local config = require("plugins.fox.git.git_center.config")
 		local original, selected = vim.api.nvim_get_current_win(), terminal.get_selected_terminal()
@@ -43,6 +45,7 @@ t.describe("terminal return focus", function()
 		if vim.api.nvim_win_is_valid(original) then
 			vim.api.nvim_set_current_win(original)
 		end
+		vim.api.nvim_set_current_dir(cwd)
 		assert(ok, err)
 	end)
 	t.it("returns to a floating panel after focusing an already visible terminal", function()

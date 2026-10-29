@@ -7,6 +7,7 @@ dofile(vim.fn.stdpath("config") .. "/config/tests/query/neotree.lua")
 t.describe("Query environment restoration", function()
 	t.it("restores editor focus and Query panels through repeated switches and saves", function()
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
+		local original_win, original_buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
 		local saved_envs, saved_slot = _G._fox_environments, _G._fox_active_env_slot
 		local saved_dir, saved_layout = envs.settings.storage_dir, require("fox.query.layout").path
 		local foreign = vim.api.nvim_create_buf(true, false)
@@ -75,7 +76,19 @@ t.describe("Query environment restoration", function()
 			end
 		end
 		vim.cmd("silent! Neotree close")
+		if vim.api.nvim_win_is_valid(original_win) then
+			vim.api.nvim_set_current_win(original_win)
+		end
+		if vim.api.nvim_buf_is_valid(original_buf) then
+			vim.api.nvim_set_current_buf(original_buf)
+		end
 		vim.api.nvim_buf_delete(foreign, { force = true })
+		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+			local owner = vim.b[buf].fox_query_root
+			if owner == storage.root(root .. "/one") or owner == storage.root(root .. "/two") then
+				vim.api.nvim_buf_delete(buf, { force = true })
+			end
+		end
 		_G._fox_environments, _G._fox_active_env_slot = saved_envs, saved_slot
 		envs.settings.storage_dir, require("fox.query.layout").path = saved_dir, saved_layout
 		vim.api.nvim_set_current_dir(cwd)

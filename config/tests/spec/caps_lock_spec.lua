@@ -6,6 +6,25 @@ local t = require("fox.lib.foxnvim.test")
 local describe, it, expect, afterEach = t.describe, t.it, t.expect, t.afterEach
 local caps_lock = require("plugins.fox.editor.caps_lock")
 
+describe("Caps Lock focus checks", function()
+	it("checks once when focus returns and stops polling on focus loss", function()
+		caps_lock.setup()
+		local calls = 0
+		local spy = t.spyOn(caps_lock, "check")
+		spy.mockImplementation(function()
+			calls = calls + 1
+		end)
+		vim.api.nvim_exec_autocmds("FocusGained", { group = "FOX_CapsLockWarning" })
+		local polling = caps_lock.get_state().polling
+		vim.api.nvim_exec_autocmds("FocusLost", { group = "FOX_CapsLockWarning" })
+		vim.api.nvim_exec_autocmds("VimLeavePre", { group = "FOX_CapsLockWarning" })
+		spy.mockRestore()
+		expect(calls).toBe(1)
+		expect(polling).toBe(true)
+		expect(caps_lock.get_state().polling).toBe(false)
+	end)
+end)
+
 local scratch_buffers = {}
 
 --- Opens a scratch buffer with the given filetype and focuses it.

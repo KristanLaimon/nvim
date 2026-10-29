@@ -40,7 +40,7 @@ M.settings = {
 	notification_level = vim.log.levels.WARN,
 
 	--- Events that trigger an immediate check.
-	check_events = { "FocusGained", "CursorHold", "CursorHoldI", "WinEnter", "BufEnter", "ModeChanged" },
+	check_events = { "CursorHold", "CursorHoldI", "WinEnter", "BufEnter", "ModeChanged" },
 }
 
 -- ============================================================================

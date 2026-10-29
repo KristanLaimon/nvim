@@ -36,6 +36,15 @@ pcall(function()
 	require("plugins.fox.dev.tasks").setup()
 end)
 
+-- Headless startup has no UIEnter, which Lazy uses to load VeryLazy plugins.
+vim.api.nvim_exec_autocmds("UIEnter", { modeline = false })
+assert(
+	vim.wait(5000, function()
+		return vim.g.did_very_lazy == true
+	end),
+	"Lazy startup did not finish"
+)
+
 describe("user commands", function()
 	it("registers the task runner commands", function()
 		for _, name in ipairs({ "TaskRunner", "TaskMenu", "TaskRestart", "TaskKill", "TaskRunDefault" }) do
@@ -118,7 +127,7 @@ end)
 
 describe("keymaps", function()
 	it("binds the FOX panels", function()
-		for _, key in ipairs({ "<C-S-g>", "<C-S-t>", "<C-S-w>", "<C-S-p>", "<C-S-f>", "<C-S-s>", "<C-S-q>" }) do
+		for _, key in ipairs({ "<C-S-g>", "<C-S-t>", "<C-S-w>", "<C-S-p>", "<C-/>", "<C-S-s>", "<C-S-q>" }) do
 			expect({ key, has_keymap(key, { "n", "i", "v", "t" }) }).toEqual({ key, true })
 		end
 	end)

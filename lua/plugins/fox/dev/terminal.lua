@@ -1065,15 +1065,23 @@ return setmetatable({
 		"TerminalIncreaseHeight",
 		"TerminalDecreaseHeight",
 	},
-	keys = {
-		{ "<C-;>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal" },
-		{ "<A-;>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal" },
-		{ "<M-;>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal" },
-		{ "<C-t>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal (Mobile)" },
-		{ "<C-T>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal (Mobile)" },
-		{ "<C-\\>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal (Mobile)" },
-		{ "<leader>t", mode = { "n", "v" }, desc = "Toggle Selected Terminal" },
-		{ "<F4>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal (F4)" },
-	},
+	keys = function()
+		local keys = {
+			{ "<C-;>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal" },
+			{ "<A-;>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal" },
+			{ "<M-;>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal" },
+			{ "<C-t>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal (Mobile)" },
+			{ "<C-T>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal (Mobile)" },
+			{ "<C-\\>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal (Mobile)" },
+			{ "<leader>t", mode = { "n", "v" }, desc = "Toggle Selected Terminal" },
+			{ "<F4>", mode = { "n", "i", "t" }, desc = "Toggle Selected Terminal (F4)" },
+		}
+		for n = 1, M.settings.count do
+			for _, prefix in ipairs({ M.settings.keys.select_prefix, "<M-" }) do
+				keys[#keys + 1] = { prefix .. n .. ">", mode = { "n", "i", "t" }, desc = "Select Terminal #" .. n }
+			end
+		end
+		return keys
+	end,
 	config = M.setup,
 }, { __index = M })

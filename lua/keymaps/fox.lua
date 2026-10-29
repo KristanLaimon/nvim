@@ -97,6 +97,8 @@ local function opts(desc)
 	return { noremap = true, silent = true, desc = desc }
 end
 
+vim.keymap.set("n", "gy", "<Cmd>CopyRelativePath<CR>", opts("Copy current file relative path"))
+
 local function from_any_mode(fn)
 	return function()
 		local cur_buf = vim.api.nvim_get_current_buf()

@@ -579,6 +579,7 @@ return {
 			end
 
 			require("neo-tree").setup({
+				use_popups_for_input = false,
 				-- Was true: while dap-ui tears its panels down, neo-tree can briefly
 				-- be the last window, close itself, and take the whole session with
 				-- it. Smart quit (<C-q>) still handles quitting explicitly.

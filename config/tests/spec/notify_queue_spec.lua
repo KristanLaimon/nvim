@@ -18,6 +18,25 @@ t.describe("native notification queue", function()
 			return #notify.active_wins == count
 		end, 5)).toBe(true)
 	end
+	t.it("uses the upper left during Git review and returns to the right after closing it", function()
+		local key = "plugins.fox.git.diff_mode"
+		local saved = package.loaded[key]
+		package.loaded[key] = { state = { is_active = true } }
+		local ok, err = pcall(function()
+			notify("Review message")
+			open(1)
+			local win = notify.active_wins[1].win
+			local cfg = vim.api.nvim_win_get_config(win)
+			t.expect(cfg.row).toBe(1)
+			t.expect(cfg.col).toBe(1)
+			package.loaded[key].state.is_active = false
+			t.expect(vim.wait(500, function()
+				return vim.api.nvim_win_get_config(win).col > 1
+			end, 5)).toBe(true)
+		end)
+		package.loaded[key] = saved
+		assert(ok, err)
+	end)
 	t.it("queues overflow without overlap or stealing focus, then drains pending messages", function()
 		for i = 1, 12 do
 			notify("Message " .. i)

@@ -139,12 +139,19 @@ end
 local function animated(item)
 	return config.stages ~= "static" and item.record.options.animate ~= false
 end
+local function left_notifications()
+	local review = package.loaded["plugins.fox.git.diff_mode"]
+	return review and review.state.is_active
+end
+local function column(item)
+	return left_notifications() and 1 or math.max(0, vim.o.columns - item.width - 2)
+end
 local function exit(item)
 	if not item.win or not vim.api.nvim_win_is_valid(item.win) or not animated(item) then
 		remove(item)
 	elseif not item.exiting then
 		item.exiting = now()
-		local base = math.max(0, vim.o.columns - item.width - 2)
+		local base = column(item)
 		item.exit_offset = math.max(0, (item.layout and item.layout.col or base) - base)
 		item.exit_blend = vim.wo[item.win].winblend
 	end
@@ -196,7 +203,7 @@ local function open(item, row)
 		style = "minimal",
 		border = "rounded",
 		row = row,
-		col = math.max(0, vim.o.columns - item.width - 2),
+		col = column(item),
 		width = item.width,
 		height = item.height,
 		focusable = false,
@@ -245,7 +252,7 @@ local function animate(item, row, stamp)
 		local initial = item.exit_offset or 0
 		offset = initial + (item.width + 2 - initial) * ease
 	end
-	local col = math.max(0, vim.o.columns - item.width - 2) + math.floor(offset)
+	local col = column(item) + (left_notifications() and 0 or math.floor(offset))
 	local layout = {
 		relative = "editor",
 		row = math.max(0, item.row),

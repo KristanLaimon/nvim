@@ -218,6 +218,11 @@ function M.setup_highlights()
 	end
 end
 
+vim.api.nvim_create_autocmd("ColorScheme", {
+	group = vim.api.nvim_create_augroup("FoxGitDiffHighlights", { clear = true }),
+	callback = M.setup_highlights,
+})
+
 --- True when a diff line is header noise rather than content.
 --- @param line string
 --- @return boolean

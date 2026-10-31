@@ -21,6 +21,14 @@ local SAMPLE = {
 }
 
 describe("git diff format", function()
+	it("restores review colors after a colorscheme clears highlights", function()
+		diff.setup_highlights()
+		vim.api.nvim_set_hl(0, "GitCenterDiffAdd", {})
+		vim.api.nvim_set_hl(0, "GitCenterDiffDelete", {})
+		vim.api.nvim_exec_autocmds("ColorScheme", { pattern = "test" })
+		expect(vim.api.nvim_get_hl(0, { name = "GitCenterDiffAdd" }).bg).toBe(0x1c3427)
+		expect(vim.api.nvim_get_hl(0, { name = "GitCenterDiffDelete" }).bg).toBe(0x3b1d22)
+	end)
 	it("drops the machine header lines", function()
 		local lines = diff.format(SAMPLE, false)
 

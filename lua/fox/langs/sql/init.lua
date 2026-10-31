@@ -26,13 +26,20 @@ function M.setup()
 	vim.api.nvim_create_autocmd("FileType", {
 		pattern = "sql",
 		callback = function(args)
+			if vim.bo[args.buf].buftype ~= "" then
+				return
+			end
 			if not require("fox.langs").has_editorconfig(args.buf) then
 				for key, value in pairs(M.defaults) do
 					vim.bo[args.buf][key] = value
 				end
 			end
 			vim.schedule(function()
-				if not vim.api.nvim_buf_is_valid(args.buf) or vim.b[args.buf].fox_query_root then
+				if
+					not vim.api.nvim_buf_is_valid(args.buf)
+					or vim.bo[args.buf].buftype ~= ""
+					or vim.b[args.buf].fox_query_root
+				then
 					return
 				end
 				local dialect = require("fox.langs.sql.dialect")

@@ -4,6 +4,26 @@ local diagnostics = require("fox.langs.sql.diagnostics")
 local storage = require("fox.query.storage")
 
 t.describe("SQL dialect tooling", function()
+	t.it("leaves Git SQL previews alone without prompting for a dialect", function()
+		local sql = require("fox.langs.sql")
+		sql.setup()
+		local preview = vim.api.nvim_create_buf(false, true)
+		local old_select, prompts = vim.ui.select, 0
+		vim.ui.select = function()
+			prompts = prompts + 1
+		end
+		local ok, err = pcall(function()
+			vim.bo[preview].filetype = "sql"
+			vim.wait(30, function()
+				return false
+			end, 5)
+			t.expect(prompts).toBe(0)
+			t.expect(vim.b[preview].fox_sql_root).toBe(nil)
+		end)
+		vim.ui.select = old_select
+		vim.api.nvim_buf_delete(preview, { force = true })
+		assert(ok, err)
+	end)
 	local root, buf, tab
 	t.beforeEach(function()
 		tab = vim.api.nvim_get_current_tabpage()

@@ -46,6 +46,36 @@ describe("terminal auto insert & click behavior", function()
 		end
 	end)
 
+	it("enters input on a content click in the already focused terminal, including its first row", function()
+		terminal.setup()
+		local buf = vim.api.nvim_create_buf(false, true)
+		table.insert(created_bufs, buf)
+		vim.b[buf].fox_is_multi_term = true
+		vim.api.nvim_set_current_buf(buf)
+		vim.api.nvim_exec_autocmds("BufEnter", { buffer = buf })
+		vim.wait(20, function()
+			return false
+		end)
+		local old_mouse, old_cmd = vim.fn.getmousepos, vim.cmd
+		local inserted = false
+		vim.fn.getmousepos = function()
+			return { winid = vim.api.nvim_get_current_win(), line = 1, winrow = 1 }
+		end
+		vim.cmd = function(cmd)
+			inserted = cmd == "startinsert"
+		end
+		local ok, err = pcall(function()
+			local map = vim.fn.maparg("<LeftMouse>", "n", false, true)
+			expect(map.callback()).toBe("<LeftMouse>")
+			vim.wait(30, function()
+				return inserted
+			end, 5)
+			expect(inserted).toBe(true)
+		end)
+		vim.fn.getmousepos, vim.cmd = old_mouse, old_cmd
+		assert(ok, err)
+	end)
+
 	it("returns to terminal window when moving right from neo-tree if originated in terminal", function()
 		require("keymaps.editor")
 		local neotree_buf = vim.api.nvim_create_buf(false, true)

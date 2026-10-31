@@ -66,10 +66,6 @@ M.settings = {
 		border = "rounded",
 	},
 
-	--- Top border row threshold for mouse height resizing/dragging (in rows).
-	--- Clicking within this top threshold allows dragging the window height instead of entering terminal insert mode.
-	resize_drag_threshold = 2,
-
 	keys = {
 		--- Prefix for per-terminal selection; the number is appended (`<A-1>`).
 		select_prefix = "<A-",
@@ -960,8 +956,6 @@ function M.setup()
 	-- automatically puts Neovim into terminal (insert) mode (`startinsert`).
 	local auto_insert_group = vim.api.nvim_create_augroup("FoxTerminalAutoInsert", { clear = true })
 
-	local threshold = M.settings.resize_drag_threshold or 2
-
 	local function setup_term_buffer(bufnr)
 		if is_term_buf(bufnr) then
 			for _, k in ipairs(M.settings.keys.resize_up or {}) do
@@ -987,13 +981,15 @@ function M.setup()
 
 			pcall(vim.keymap.set, "n", "<LeftMouse>", function()
 				local mouse = vim.fn.getmousepos()
-				-- If click is on statusline, winbar, separator, border, or within the top threshold zone
-				-- (line <= 0 or winrow <= threshold), return "<LeftMouse>" so Neovim executes built-in split resize!
-				if not mouse or mouse.line <= 0 or mouse.winrow <= threshold then
+				-- Leave borders and separators available for native resizing.
+				if not mouse or mouse.line <= 0 then
 					return "<LeftMouse>"
 				end
-				-- If click is on a different window than current, let Neovim switch focus first
-				if mouse.winid and mouse.winid ~= vim.api.nvim_get_current_win() then
+				if
+					mouse.winid
+					and vim.api.nvim_win_is_valid(mouse.winid)
+					and is_term_buf(vim.api.nvim_win_get_buf(mouse.winid))
+				then
 					vim.schedule(function()
 						if vim.api.nvim_win_is_valid(mouse.winid) and vim.api.nvim_get_current_win() == mouse.winid then
 							pcall(vim.cmd, "startinsert")
@@ -1001,8 +997,6 @@ function M.setup()
 					end)
 					return "<LeftMouse>"
 				end
-				-- When inside terminal window in Normal mode, return <LeftMouse> so mouse clicking
-				-- and mouse text selection (drag) work natively.
 				return "<LeftMouse>"
 			end, {
 				buffer = bufnr,

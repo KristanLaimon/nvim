@@ -4,6 +4,8 @@
 
 The **Lazy-Loading Multi-Terminal Manager** manages up to 9 independent terminal buffers with instant switching, split height persistence, and clean window focus navigation.
 
+Clicking terminal content enters terminal input mode, including when the terminal already has focus. Borders and separators remain available for resizing.
+
 ---
 
 ## ⚡ Key Capabilities

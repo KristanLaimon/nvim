@@ -114,7 +114,7 @@ local function feed_from_any_mode(keys)
 			pcall(vim.cmd, "stopinsert")
 			pcall(vim.cmd, "wincmd p")
 		end
-		vim.api.nvim_feedkeys(keys, "m", false)
+		vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "n", false)
 	end
 end
 
@@ -137,17 +137,22 @@ if M.settings.keys.netrw then
 	vim.keymap.set("n", M.settings.keys.netrw, vim.cmd.Ex, opts("Open netrw directory listing"))
 end
 
--- Use the native line operator directly so buffer-local gcc mappings cannot intercept it.
+-- Call the native operator in every editing mode, independent of gc/gcc remaps.
+vim.api.nvim_create_user_command("ToggleComment", function(command)
+	require("vim._comment").toggle_lines(command.line1, command.line2)
+end, { range = true, desc = "Toggle comments on the current line or range", force = true })
+
 for _, key in ipairs(M.settings.keys.comment) do
 	vim.keymap.set("n", key, function()
 		return require("vim._comment").operator() .. "_"
 	end, { expr = true, silent = true, desc = "Comment line" })
-	vim.keymap.set("v", key, feed_from_any_mode("gc"), opts("Comment selection"))
+	vim.keymap.set("x", key, function()
+		return require("vim._comment").operator()
+	end, { expr = true, silent = true, desc = "Comment selection" })
 	vim.keymap.set("i", key, function()
-		vim.cmd("stopinsert")
-		feed_from_any_mode("gcc")()
-	end, opts("Comment line"))
-	vim.keymap.set("t", key, feed_from_any_mode("gcc"), opts("Comment line from terminal"))
+		return "<C-o>" .. require("vim._comment").operator() .. "_"
+	end, { expr = true, silent = true, desc = "Comment line" })
+	vim.keymap.set("t", key, feed_from_any_mode("<Cmd>ToggleComment<CR>"), opts("Comment line from terminal"))
 end
 
 local save_keys = type(M.settings.keys.save) == "table" and M.settings.keys.save or { M.settings.keys.save }

@@ -78,10 +78,16 @@ for key in ('a', 'q', 'h', 'l'):
     actions = mappings.matching_key_actions(keymap.get(parse_shortcut('ctrl+shift+' + key), []))
     if %s:
         assert actions and all(not item.is_sequence and not item.definition for item in actions), (key, actions)
+for key in ('apostrophe', 'dead_acute'):
+    for shift, mod in (('', 5), ('shift+', 6)):
+        actions = mappings.matching_key_actions(keymap.get(parse_shortcut('ctrl+' + shift + key), []))
+        if %s:
+            assert actions and actions[-1].definition == 'send_text all \\x1b[39;' + str(mod) + 'u', (key, actions)
 unrelated = mappings.matching_key_actions(keymap[parse_shortcut('ctrl+shift+x')])
 assert unrelated[-1].definition == 'copy_to_clipboard', unrelated
 ]],
 			vim.json.encode(config),
+			enabled and "True" or "False",
 			enabled and "True" or "False",
 			enabled and "True" or "False"
 		)

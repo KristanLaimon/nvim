@@ -24,8 +24,14 @@ previous_block = '# >>> FOXVIM KITTY SHORTCUTS >>>\n' + shortcuts + '# <<< FOXVI
 # Override the sequence prefix itself, so Kitty does not wait for another key.
 prefix_block = previous_block.replace('map ctrl+shift+p\n', 'map ctrl+shift+p no_op\n')
 previous_letters_block = prefix_block.replace('map ctrl+shift+p no_op\n', 'map ctrl+shift+p no_op\nmap ctrl+shift+a no_op\nmap ctrl+shift+q no_op\n')
-block = previous_letters_block.replace('map ctrl+shift+q no_op\n', 'map ctrl+shift+q no_op\nmap ctrl+shift+h no_op\nmap ctrl+shift+l no_op\n')
-updated = text.replace(block, '').replace(previous_letters_block, '').replace(prefix_block, '').replace(previous_block, '').replace(old_block, '').replace(legacy, '')
+previous_navigation_block = previous_letters_block.replace('map ctrl+shift+q no_op\n', 'map ctrl+shift+q no_op\nmap ctrl+shift+h no_op\nmap ctrl+shift+l no_op\n')
+comment_maps = ''.join(
+    f'map ctrl+{shift}{key} send_text all \\x1b[39;{mod}u\n'
+    for shift, mod in (('', 5), ('shift+', 6))
+    for key in ('apostrophe', 'dead_acute')
+)
+block = previous_navigation_block.replace('# <<< FOXVIM KITTY SHORTCUTS <<<', comment_maps + '# <<< FOXVIM KITTY SHORTCUTS <<<')
+updated = text.replace(block, '').replace(previous_navigation_block, '').replace(previous_letters_block, '').replace(prefix_block, '').replace(previous_block, '').replace(old_block, '').replace(legacy, '')
 if updated == text:
     print('No FoxVim Kitty shortcut overrides found.')
 else:

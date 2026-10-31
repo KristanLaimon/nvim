@@ -76,6 +76,7 @@ foreach ($SettingsPath in $SettingsPaths) {
     Copy-Item -Path $SettingsPath -Destination $BackupPath -Force
     $Content = Get-Content -Path $SettingsPath -Raw
     $Payload = ""
+    $CommentBindings = ""
     $Changed = $false
 
     # --- INYECCIÓN Y HIJACK DINÁMICO ---
@@ -84,6 +85,22 @@ foreach ($SettingsPath in $SettingsPaths) {
         $codigo = $atajo.Codigo
         $mod = $atajo.Mod
         $escapedKey = [regex]::Escape($tecla)
+
+        # Current Windows Terminal stores shortcuts separately from actions.
+        # Bind the comment action there too; an old inline keys property can
+        # otherwise be shadowed by an existing keybindings entry.
+        if ($codigo -eq 39 -and $Content -match '"keybindings"\s*:\s*\[') {
+            $actionId = "FoxVim.Comment.$mod"
+            $escapedId = [regex]::Escape($actionId)
+            $bindingPattern = '\{[^{}]*"keys"\s*:\s*"' + $escapedKey + '"[^{}]*\}\s*,?'
+            $Content = [regex]::Replace($Content, $bindingPattern, '')
+            $CommentBindings += '        { "keys": "' + $tecla + '", "id": "' + $actionId + '" },' + "`n"
+            if ($Content -notmatch '"id"\s*:\s*"' + $escapedId + '"') {
+                $Payload += '        { "command": { "action": "sendInput", "input": "\u001b[' + $codigo + ';' + $mod + '" }, "id": "' + $actionId + '" },' + "`n"
+            }
+            $Changed = $true
+            continue
+        }
 
         $patternExisting = '(?s)\{\s*"command":\s*[^}]+,\s*"keys":\s*"' + $escapedKey + '"\s*\},?'
         $patternSendInput = '(?s)\{\s*"command":\s*\{\s*"action":\s*"sendInput",\s*"input":\s*"\\u001b\[' + $codigo + ';' + $mod + '"\s*\},\s*"keys":\s*"' + $escapedKey + '"\s*\}'
@@ -123,6 +140,13 @@ foreach ($SettingsPath in $SettingsPaths) {
         } else {
             Write-Warning "No se encontro el bloque 'actions: [' en tu archivo."
         }
+    }
+
+    if ($CommentBindings -ne "") {
+        $Content = [regex]::Replace($Content, '("keybindings"\s*:\s*\[)', {
+            param($match)
+            $match.Value + "`n" + $CommentBindings
+        })
     }
 
     # --- CONFIGURACION VISUAL ---

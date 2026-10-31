@@ -166,6 +166,7 @@ M.commands = {
 	{ name = "📋 Copy Current File Relative Path to Clipboard", cmd = "CopyRelativePath", category = "Files" },
 	{ name = "📝 Open Notes Folder (File Explorer)", cmd = "Notes", category = "Notes" },
 	{ name = "📁 Change Default Notes Folder", cmd = "NotesChangeFolder", category = "Notes" },
+	{ name = "Toggle Comment (Ctrl+')", cmd = "ToggleComment", category = "Editor" },
 	{ name = "📝 Toggle Todo & Comments Sidebar (Right)", cmd = "TodoToggle", category = "Files" },
 	{ name = "🔍 Search Todo & Comments (Telescope)", cmd = "TodoSearch", category = "Files" },
 	{ name = "🔄 Refresh Todo & Comments Workspace Scan", cmd = "TodoRefresh", category = "Files" },

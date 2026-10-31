@@ -38,7 +38,11 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `:q` / `:q!` / `<C-q>` | n, Cmd | Smart quit — split → tab → dashboard → quit |
 | `:ReloadConfig` | Cmd | Reload the Neovim configuration |
 
-For Windows Terminal, rerun `config/scripts/setup-powershell.ps1` and restart the terminal to forward `Ctrl+'` and `Ctrl+Shift+'` to Neovim. `Alt+'` works as the fallback without this setup.
+For Kitty, run `bash config/scripts/setup-kitty.sh` once after updating FoxVim. It forwards `Ctrl+'` and `Ctrl+Shift+'` (including the US-International dead acute key) and reloads Kitty. Restart Neovim to load the updated mappings.
+
+`:ToggleComment` toggles the current line; `:2,5ToggleComment` toggles a range. The Command Palette also includes **Toggle Comment**.
+
+For Windows Terminal, rerun `config/scripts/setup-powershell.ps1` from PowerShell and restart the terminal to forward `Ctrl+'` and `Ctrl+Shift+'` to Neovim. `Alt+'` works as the fallback without this setup.
 If Ctrl+' arrives as a plain apostrophe (check with
 `:lua print(vim.fn.keytrans(vim.fn.getcharstr()))`), the terminal must send a
 distinct sequence. For US-International layouts, include the `dead_acute` key.

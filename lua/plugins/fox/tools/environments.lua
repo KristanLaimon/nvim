@@ -904,6 +904,8 @@ function M.switch_environment(target_slot, callback)
 	end
 
 	-- 1. Engage switching lock to suppress all cascading DirChanged events in other plugins
+	local restore_token = {}
+	M._restore_token = restore_token
 	vim.g._fox_environment_switching = true
 
 	-- 2. Fast in-memory snapshot of current environment (0 disk I/O, 0 deepcopy)
@@ -1064,8 +1066,22 @@ function M.switch_environment(target_slot, callback)
 	if target_env.selected_terminal then
 		_G._fox_selected_terminal = target_env.selected_terminal
 	end
-	if target_env.terminal_open and _G.TerminalManager and _G.TerminalManager.open_terminal then
+	local restore_win, restore_buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
+	local function schedule_restore(fn)
 		vim.schedule(function()
+			-- A newer switch or user-opened panel takes precedence over saved UI state.
+			if
+				M._restore_token == restore_token
+				and M.get_active_slot() == target_slot
+				and vim.api.nvim_get_current_win() == restore_win
+				and vim.api.nvim_get_current_buf() == restore_buf
+			then
+				fn()
+			end
+		end)
+	end
+	if target_env.terminal_open and _G.TerminalManager and _G.TerminalManager.open_terminal then
+		schedule_restore(function()
 			_G.TerminalManager.open_terminal(target_env.selected_terminal)
 		end)
 	end
@@ -1104,28 +1120,28 @@ function M.switch_environment(target_slot, callback)
 
 	-- 12. Async restore git tools if they were open in target environment
 	if target_env.diff_mode_open then
-		vim.schedule(function()
+		schedule_restore(function()
 			local ok_dm, dm = pcall(require, "plugins.fox.git.diff_mode")
 			if ok_dm and dm.open then
 				pcall(dm.open)
 			end
 		end)
 	elseif target_env.log_diff_open then
-		vim.schedule(function()
+		schedule_restore(function()
 			local ok_ld, ld = pcall(require, "plugins.fox.git.log_diff")
 			if ok_ld and ld.open then
 				pcall(ld.open)
 			end
 		end)
 	elseif target_env.conflict_resolver_open then
-		vim.schedule(function()
+		schedule_restore(function()
 			local ok_cr, cr = pcall(require, "plugins.fox.git.conflict_resolver")
 			if ok_cr and cr.open then
 				pcall(cr.open, target_env.conflict_resolver_file)
 			end
 		end)
 	elseif target_env.git_center_open then
-		vim.schedule(function()
+		schedule_restore(function()
 			local ok_gc, gc = pcall(require, "plugins.fox.git.git_center")
 			if ok_gc and gc.open_git_center then
 				pcall(gc.open_git_center)

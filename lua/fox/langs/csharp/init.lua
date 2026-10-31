@@ -32,7 +32,18 @@ M.lsp_config = {
 				"--source",
 				config.root_dir,
 			})
-			return vim.lsp.rpc.start(cmd, dispatchers, {
+			local rpc_dispatchers = vim.tbl_extend("force", {}, dispatchers)
+			rpc_dispatchers.on_error = function(code, err)
+				-- OmniSharp sometimes emits a standalone JSON null during project loading.
+				if code == vim.lsp.rpc.client_errors.INVALID_SERVER_MESSAGE and err == vim.NIL then
+					return
+				end
+				if dispatchers.on_error then
+					return dispatchers.on_error(code, err)
+				end
+				vim.lsp.log.error("client_error:", vim.lsp.rpc.client_errors[code], err)
+			end
+			return vim.lsp.rpc.start(cmd, rpc_dispatchers, {
 				cwd = config.cmd_cwd or config.root_dir,
 				env = config.cmd_env,
 				detached = config.detached,

@@ -500,15 +500,6 @@ function M.toggle_sync()
 	return new_state
 end
 
---- Manually syncs active Neovim colors with Omarchy immediately and enables sync.
-function M.sync_now()
-	if not M.is_omarchy_available() then
-		vim.notify("⚠️ Omarchy Linux desktop is not available.", vim.log.levels.WARN)
-		return
-	end
-	M.set_sync_enabled(true)
-end
-
 --- Starts filesystem watcher and FocusGained autocmd to adapt dynamically on theme change.
 function M.start_watcher()
 	M.stop_watcher()
@@ -598,17 +589,6 @@ function M.setup()
 		M.toggle_sync()
 	end, { desc = "Toggle Omarchy theme synchronization (Default: OFF)" })
 
-	vim.api.nvim_create_user_command("FoxOmarchySyncNow", function()
-		M.sync_now()
-	end, { desc = "Sync Neovim colors with Omarchy theme immediately" })
-
-	vim.api.nvim_create_user_command("FoxOmarchySyncStatus", function()
-		local enabled = M.is_sync_enabled()
-		local theme = M.get_omarchy_theme_name()
-		local status = enabled and "ENABLED (Auto-syncing with: " .. theme .. ")" or "DISABLED (Manual theme)"
-		vim.notify("🎨 Omarchy Theme Sync: " .. status, vim.log.levels.INFO)
-	end, { desc = "Show Omarchy theme synchronization status" })
-
 	if M.is_sync_enabled() and M.is_omarchy_available() then
 		M.apply_omarchy_theme({ quiet = true })
 		M.start_watcher()
@@ -620,7 +600,7 @@ local plugin_spec = {
 	name = "fox_omarchy_theme",
 	dir = require("fox.core.lazyspec").for_module(),
 	lazy = true,
-	cmd = { "FoxOmarchySyncToggle", "FoxOmarchySyncNow", "FoxOmarchySyncStatus" },
+	cmd = { "FoxOmarchySyncToggle" },
 	config = M.setup,
 }
 

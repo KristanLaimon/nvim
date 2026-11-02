@@ -386,18 +386,11 @@ M.commands = {
 	{ name = "💡 Open Help Menu & Cheatsheet Manager (<F1>)", cmd = "FoxHelp", category = "UI" },
 	-- { name = "⌨️ View Active Runtime Shortcuts Cheatsheet", cmd = "Cheatsheet", category = "UI" },
 	{ name = "📚 Open Documentation Center & Wiki (Ctrl+Shift+D)", cmd = "FoxWiki", category = "UI" },
-	{ name = "🎨 Toggle Ryoku Theme Auto Sync", cmd = "FoxRyokuSyncToggle", category = "UI" },
-	{ name = "🎨 Sync Colors with Ryoku Theme Now", cmd = "FoxRyokuSyncNow", category = "UI" },
-	{ name = "🎨 Ryoku Theme Sync Status", cmd = "FoxRyokuSyncStatus", category = "UI" },
+	{ name = "🎨 Toggle Ryoku Theme Sync", cmd = "FoxRyokuSyncToggle", category = "UI" },
 	{ name = "🎨 Select UI-Theme", cmd = "FoxThemePicker", category = "UI" },
 	{
-		name = "🎨 Toggle Omarchy Theme Sync (Adapt colors to Omarchy - Default: OFF)",
+		name = "🎨 Toggle Omarchy Theme Sync",
 		cmd = "FoxOmarchySyncToggle",
-		category = "UI",
-	},
-	{
-		name = "🔄 Sync Colors with Omarchy Theme Now",
-		cmd = "FoxOmarchySyncNow",
 		category = "UI",
 	},
 	{

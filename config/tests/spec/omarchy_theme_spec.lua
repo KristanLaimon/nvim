@@ -129,19 +129,26 @@ blue = "#89b4fa"
 		omarchy.setup()
 		local cmds = vim.api.nvim_get_commands({})
 		expect(cmds["FoxOmarchySyncToggle"]).toBeDefined()
-		expect(cmds["FoxOmarchySyncNow"]).toBeDefined()
-		expect(cmds["FoxOmarchySyncStatus"]).toBeDefined()
+		expect(cmds["FoxOmarchySyncNow"]).toBe(nil)
+		expect(cmds["FoxOmarchySyncStatus"]).toBe(nil)
 	end)
 
-	it("includes omarchy sync toggle in command palette UI section", function()
-		local found = false
-		for _, cmd in ipairs(cp.commands) do
-			if cmd.cmd == "FoxOmarchySyncToggle" and cmd.category == "UI" then
-				found = true
-				break
+	it("offers exactly one sync command per desktop in the palette and lazy spec", function()
+		for _, desktop in ipairs({ "Omarchy", "Ryoku" }) do
+			local prefix = "Fox" .. desktop .. "Sync"
+			local count = 0
+			for _, cmd in ipairs(cp.commands) do
+				if type(cmd.cmd) == "string" and cmd.cmd:find(prefix, 1, true) == 1 then
+					expect(cmd.cmd).toBe(prefix .. "Toggle")
+					expect(cmd.category).toBe("UI")
+					count = count + 1
+				end
 			end
+			expect(count).toBe(1)
+			local spec = require("plugins.fox.ui." .. desktop:lower() .. "_theme")
+			expect(#spec.cmd).toBe(1)
+			expect(spec.cmd[1]).toBe(prefix .. "Toggle")
 		end
-		expect(found).toBe(true)
 	end)
 
 	it("strictly gates out non-Omarchy environments like Windows and WSL", function()

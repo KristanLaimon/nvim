@@ -160,12 +160,6 @@ function M.setup()
 			vim.notify("Ryoku theme sync: " .. (enabled and "ON" or "OFF"))
 		end
 	end, { desc = "Toggle automatic Ryoku theme synchronization" })
-	vim.api.nvim_create_user_command("FoxRyokuSyncNow", function()
-		M.apply()
-	end, { desc = "Apply current Ryoku palette" })
-	vim.api.nvim_create_user_command("FoxRyokuSyncStatus", function()
-		vim.notify("Ryoku theme sync: " .. (M.is_sync_enabled() and "ON" or "OFF"))
-	end, { desc = "Show Ryoku theme synchronization status" })
 	vim.api.nvim_create_autocmd("VimLeavePre", { callback = M.stop_watcher })
 	vim.api.nvim_create_autocmd("FocusGained", { callback = M.refresh })
 end
@@ -173,6 +167,6 @@ end
 return setmetatable({
 	name = "fox_ryoku_theme",
 	dir = require("fox.core.lazyspec").for_module(),
-	cmd = { "FoxRyokuSyncToggle", "FoxRyokuSyncNow", "FoxRyokuSyncStatus" },
+	cmd = { "FoxRyokuSyncToggle" },
 	config = M.setup,
 }, { __index = M })

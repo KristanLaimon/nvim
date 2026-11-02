@@ -46,12 +46,9 @@ Global themes are saved in the Neovim config directory under `.foxnvim/theme.jso
 
 When running under [Omarchy Linux](https://omarchy.org/) (Hyprland), FoxVim can dynamically adapt all editor highlights, syntax tokens, and UI colors to match the active system theme:
 
-- **Command Palette Toggle:** Open `<C-S-p>` and choose `🎨 Toggle Omarchy Theme Sync (Adapt colors to Omarchy - Default: OFF)`.
+- **Command Palette Toggle:** Open `<C-S-p>` and choose `🎨 Toggle Omarchy Theme Sync`.
 - **Default State:** Disabled (`false`) by default, preserving your explicit local theme choice until explicitly turned on.
-- **Commands:**
-  - `:FoxOmarchySyncToggle` — Toggle live Omarchy synchronization on/off.
-  - `:FoxOmarchySyncNow` — Force an immediate re-sync with Omarchy's current active theme.
-  - `:FoxOmarchySyncStatus` — Inspect current sync status and detected Omarchy theme.
+- **Command:** `:FoxOmarchySyncToggle` — Enable sync and apply the current desktop colors immediately, or disable sync and restore the previous editor theme. A notification confirms the new state.
 - **Live Adaptation:** When enabled, a libuv filesystem event watcher (`vim.uv.new_fs_event`) monitors `~/.local/state/omarchy/current/theme/colors.toml` and `theme.name`. When `omarchy theme set <theme>` is executed in your terminal or desktop shell, Neovim automatically recompiles and applies the matching color palette on the fly with no restart required. Supports all 20+ Omarchy stock themes and custom themes in dark and light modes.
 
 ---
@@ -90,10 +87,10 @@ To add a custom theme, create a new file `config/colors/mytheme.lua` adhering to
 ### Ryoku (Arch Linux)
 
 On Ryoku, the dashboard shows `FOX Neovim (Ryoku - Arch Linux)`.
-Choose **Toggle Ryoku Theme Auto Sync** in `:CommandPalette`, or run
+Choose **Toggle Ryoku Theme Sync** in `:CommandPalette`, or run
 `:FoxRyokuSyncToggle`, to enable or disable persistent desktop theme sync.
-`:FoxRyokuSyncNow` applies the current palette once; `:FoxRyokuSyncStatus`
-shows whether automatic sync is enabled. Sync follows wallpaper and theme
+Enabling sync applies the current palette immediately; a notification confirms
+the new state. Sync follows wallpaper and theme
 changes by checking `~/.cache/ryoku/colors.json` every second and on editor focus,
 reading the palette only when the file changes, including atomic replacements.
 Both Material palettes and terminal-only `color0`–`color15` palettes are supported.

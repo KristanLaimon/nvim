@@ -7,6 +7,8 @@
 -- Hot-reload configuration without restarting Neovim via `:CordReload`.
 -- ============================================================================
 
+local application_id = "1566816819879092294"
+
 local function hot_reload()
 	local presence = package.loaded["fox.discord"]
 	if presence and presence.stop then
@@ -16,8 +18,6 @@ local function hot_reload()
 		package.loaded[module] = nil
 	end
 	package.loaded["plugins.ui.discord"] = nil
-	package.loaded["cord"] = nil
-	package.loaded["cord.api.config"] = nil
 
 	local ok_spec, spec = pcall(require, "plugins.ui.discord")
 	if not ok_spec or type(spec) ~= "table" then
@@ -28,6 +28,9 @@ local function hot_reload()
 	local opts = spec.opts or {}
 	local ok_cord, cord = pcall(require, "cord")
 	if ok_cord and cord.setup then
+		if not require("cord.api.config").verify(opts) then
+			return
+		end
 		require("fox.discord").setup()
 		cord.setup(opts)
 		pcall(function()
@@ -73,8 +76,9 @@ return {
 			enabled = true,
 		},
 		editor = {
-			client = "neovim",
-			tooltip = "Neovim",
+			client = application_id,
+			tooltip = "Foxnvim",
+			icon = "https://raw.githubusercontent.com/vyfor/icons/master/icons/minecraft/dark/neovim.png",
 		},
 		display = {
 			theme = "minecraft",

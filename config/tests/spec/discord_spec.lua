@@ -1,6 +1,71 @@
 local t = require("fox.lib.foxnvim.test")
 local discord = require("fox.discord")
 
+t.describe("Discord application identity", function()
+	t.it("applies config to the existing Cord modules before restarting its server", function()
+		local modules = {
+			"cord",
+			"cord.api.config",
+			"cord.api.command",
+			"fox.discord",
+			"plugins.ui.discord",
+			"fox.discord.ai_cli_names",
+			"fox.discord.loading_msgs",
+		}
+		local saved = {}
+		for _, name in ipairs(modules) do
+			saved[name] = package.loaded[name]
+		end
+		local preload, notify = package.preload["fox.discord"], vim.notify
+		local applied, stopped, restarted = false, false, false
+		local config = {
+			verify = function(opts)
+				assert(opts.editor.client == "1566816819879092294")
+				assert(opts.advanced.server.pipe_path == nil, "Cord's global server lock requires the shared IPC path")
+				applied = true
+				return opts
+			end,
+		}
+		package.loaded["cord.api.config"] = config
+		package.loaded["cord"] = {
+			setup = function()
+				assert(applied)
+			end,
+		}
+		package.loaded["cord.api.command"] = {
+			restart = function()
+				assert(applied and stopped)
+				restarted = true
+			end,
+		}
+		package.loaded["fox.discord"] = {
+			stop = function()
+				stopped = true
+			end,
+		}
+		package.preload["fox.discord"] = function()
+			return { setup = function() end }
+		end
+		vim.notify = function() end
+		local ok, err = pcall(function()
+			package.loaded["plugins.ui.discord"] = nil
+			require("plugins.ui.discord")
+			vim.cmd("CordReload")
+			t.expect(restarted).toBe(true)
+			t.expect(package.loaded["cord.api.config"] == config).toBe(true)
+		end)
+		vim.notify, package.preload["fox.discord"] = notify, preload
+		for _, name in ipairs(modules) do
+			package.loaded[name] = saved[name]
+		end
+		vim.api.nvim_del_user_command("CordReload")
+		vim.api.nvim_del_user_command("DiscordReload")
+		if not ok then
+			error(err)
+		end
+	end)
+end)
+
 t.describe("Discord AI activity", function()
 	t.it("finds native executables and npm script agents", function()
 		t.expect(discord.process_agent("codex.exe", "")).toBe("codex")

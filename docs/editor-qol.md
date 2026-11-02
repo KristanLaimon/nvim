@@ -265,6 +265,10 @@ for 50 ms, with a 250 ms minimum interval. Cord retries the latest activity ever
 [Cord's FAQ](https://github.com/vyfor/cord.nvim/wiki/FAQ#rich-presence-updates-take-a-long-time-to-appear-in-discord-why)).
 Discord may still delay displaying a change; its timer ticks independently of
 the 15-second AI message rotation. Reloading also reloads the CLI and message lists.
+Foxnvim uses Discord application `1566816819879092294` through Cord's default
+shared IPC path. Cord permits one server process, even when custom IPC paths
+are configured. Changing the application ID requires `:Cord restart` after
+connecting; restarting Neovim alone can reuse the existing server's identity.
 
 ## WakaTime coding stats
 

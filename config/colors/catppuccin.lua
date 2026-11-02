@@ -1,5 +1,5 @@
 -- ============================================================================
--- COLORSCHEME: nord-fox -- NvChad Nord theme in nagatoro-fox format.
+-- COLORSCHEME: catppuccin -- NvChad Catppuccin theme in foxnvim format.
 -- ============================================================================
 
 vim.cmd("highlight clear")
@@ -7,27 +7,27 @@ if vim.fn.exists("syntax_on") == 1 then
 	vim.cmd("syntax reset")
 end
 
-vim.g.colors_name = "nord-fox"
+vim.g.colors_name = "catppuccin"
 
 local p = {
-	bg = "#2e3440",
-	bg_dark = "#272c36",
-	bg_highlight = "#3b4252",
-	bg_selected = "#434c5e",
-	fg = "#d8dee9",
-	fg_muted = "#e5e9f0",
-	comment = "#616e88",
+	bg = "#1e1e2e",
+	bg_dark = "#181825",
+	bg_highlight = "#2A2A3C",
+	bg_selected = "#45475a",
+	fg = "#cdd6f4",
+	fg_muted = "#a6adc8",
+	comment = "#6c7086",
 
-	keyword = "#81a1c1",
-	func = "#88c0d0",
-	string = "#a3be8c",
-	number = "#b48ead",
-	type = "#8fbcbb",
-	operator = "#81a1c1",
-	declaration = "#b48ead",
-	accent = "#88c0d0",
-	error = "#bf616a",
-	warning = "#ebcb8b",
+	keyword = "#cba6f7",
+	func = "#89b4fa",
+	string = "#a6e3a1",
+	number = "#fab387",
+	type = "#f9e2af",
+	operator = "#94e2d5",
+	declaration = "#f5c2e7",
+	accent = "#89b4fa",
+	error = "#f38ba8",
+	warning = "#f9e2af",
 	none = "NONE",
 }
 
@@ -41,10 +41,10 @@ local highlights = {
 	CursorLine = { bg = p.bg_highlight },
 	CursorColumn = { bg = p.bg_highlight },
 	ColorColumn = { bg = p.bg_dark },
-	LineNr = { fg = "#4c566a" },
+	LineNr = { fg = "#585b70" },
 	CursorLineNr = { fg = p.accent, bold = true },
-	VertSplit = { fg = "#272c36", bg = p.none },
-	WinSeparator = { fg = "#272c36", bg = p.none },
+	VertSplit = { fg = "#181825", bg = p.none },
+	WinSeparator = { fg = "#181825", bg = p.none },
 	MatchParen = { fg = p.accent, bg = p.bg_selected, bold = true },
 
 	Visual = { bg = p.bg_selected },
@@ -111,14 +111,14 @@ local highlights = {
 	DiagnosticError = { fg = p.error },
 	DiagnosticWarn = { fg = p.warning },
 	DiagnosticInfo = { fg = p.func },
-	DiagnosticHint = { fg = p.type },
+	DiagnosticHint = { fg = p.operator },
 
 	GitSignsAdd = { fg = p.string },
 	GitSignsChange = { fg = p.warning },
 	GitSignsDelete = { fg = p.error },
-	DiffAdd = { bg = "#354339", fg = p.string },
-	DiffChange = { bg = "#474335", fg = p.warning },
-	DiffDelete = { bg = "#453235", fg = p.error },
+	DiffAdd = { bg = "#253427", fg = p.string },
+	DiffChange = { bg = "#3c3425", fg = p.warning },
+	DiffDelete = { bg = "#3b232c", fg = p.error },
 
 	NeoTreeNormal = { fg = p.fg, bg = p.bg_dark },
 	NeoTreeDirectoryName = { fg = p.accent, bold = true },

@@ -232,7 +232,7 @@ Run `:FoxStatuslineTheme` or select from Command Palette (`<C-Shift-P>`) to swit
 - `minimal` (Compact)
 
 ### Editor Themes in `config/colors/*.lua`:
-To create a new theme matching `nagatoro-fox` format, copy `config/colors/nagatoro-fox.lua` to `config/colors/mytheme-fox.lua`, change `vim.g.colors_name = "mytheme-fox"`, and edit the palette table `p`:
+To create a new theme matching `foxnvim` format, copy `config/colors/foxnvim.lua` to `config/colors/mytheme.lua`, change `vim.g.colors_name = "mytheme"`, and edit the palette table `p`:
 ```lua
 local p = {
     bg = "#1a1b26",

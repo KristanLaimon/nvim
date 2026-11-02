@@ -1,10 +1,10 @@
 -- ============================================================================
--- COLORSCHEME: dark-fox-night -- Omarchy Vantablack.
+-- COLORSCHEME: foxnvim-full-back -- Omarchy Vantablack.
 -- ============================================================================
 -- Copy of Omarchy's Vantablack Neovim palette. It is intentionally grayscale.
 --
 -- USAGE
---   :colorscheme dark-fox-night    (or pick it in :FoxThemePicker)
+--   :colorscheme foxnvim-full-back    (or pick it in :FoxThemePicker)
 --
 -- HOW TO RETHEME
 --   `p` is Omarchy's base, `s` is its Aether syntax palette.
@@ -16,7 +16,7 @@ if vim.fn.exists("syntax_on") == 1 then
 end
 
 vim.o.background = "dark"
-vim.g.colors_name = "dark-fox-night"
+vim.g.colors_name = "foxnvim-full-back"
 
 -- Vantablack base (Omarchy's current theme), untouched by design.
 local p = {

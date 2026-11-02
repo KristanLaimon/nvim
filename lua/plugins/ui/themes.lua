@@ -19,7 +19,7 @@ return {
 				picker.setup()
 				picker.restore_saved_theme()
 			else
-				pcall(vim.cmd.colorscheme, "nagatoro-fox")
+				pcall(vim.cmd.colorscheme, "foxnvim")
 			end
 		end,
 	},

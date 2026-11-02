@@ -1,5 +1,5 @@
 -- ============================================================================
--- config/tests/spec/theme_picker_spec.lua -- Nagatoro theme discovery & picker.
+-- config/tests/spec/theme_picker_spec.lua -- Local theme discovery & picker.
 -- ============================================================================
 
 local t = require("fox.lib.foxnvim.test")
@@ -7,13 +7,33 @@ local describe, it, expect = t.describe, t.it, t.expect
 local theme_picker = require("plugins.fox.ui.theme_picker")
 
 describe("plugins.fox.ui.theme_picker", function()
-	it("discovers all -fox and nagatoro-* formatted themes in colors/", function()
+	it("discovers renamed palettes and Doki Rei in colors/", function()
 		local themes = theme_picker.discover_themes()
-		expect(themes).toContain("nagatoro-fox")
-		expect(themes).toContain("nagatoro-light")
-		expect(themes).toContain("onedark-fox")
-		expect(themes).toContain("catppuccin-fox")
-		expect(themes).toContain("nord-fox")
+		expect(themes).toContain("foxnvim")
+		expect(themes).toContain("foxnvim-light")
+		expect(themes).toContain("onedar")
+		expect(themes).toContain("catppuccin")
+		expect(themes).toContain("nord")
+		expect(themes).toContain("kanagawa")
+		expect(themes).toContain("foxnvim-full-back")
+		expect(themes).toContain("doki-rey-ayanami-dark")
+	end)
+
+	it("resolves legacy saved theme names", function()
+		local renamed = {
+			["onedark-fox"] = "onedar",
+			["nord-fox"] = "nord",
+			["nagatoro-light"] = "foxnvim-light",
+			["nagatoro-fox"] = "foxnvim",
+			["kanagawa-fox"] = "kanagawa",
+			["dark-fox-night"] = "foxnvim-full-back",
+			["catppuccin-fox"] = "catppuccin",
+		}
+		for old, name in pairs(renamed) do
+			expect(theme_picker.resolve_theme(old)).toBe(name)
+		end
+		expect(theme_picker.resolve_theme("doki-rey-ayanami-dark")).toBe("doki-rey-ayanami-dark")
+		expect(theme_picker.resolve_theme(nil)).toBe(nil)
 	end)
 
 	it("registers FoxThemePicker user command", function()
@@ -52,39 +72,39 @@ describe("project UI themes", function()
 				store.save(theme_picker.settings.store_file, { theme = "nord-fox", ryoku_sync = false, omarchy_sync = false })
 			)
 			local global_before = store.read_file(theme_picker.settings.store_file)
-			theme_picker.set_theme("onedark-fox", "project")
-			expect(store.load(active .. "/.foxnvim/theme.json", {}).theme).toBe("onedark-fox")
+			theme_picker.set_theme("onedar", "project")
+			expect(store.load(active .. "/.foxnvim/theme.json", {}).theme).toBe("onedar")
 			expect(store.read_file(theme_picker.settings.store_file)).toBe(global_before)
-			expect(vim.g.colors_name).toBe("onedark-fox")
+			expect(vim.g.colors_name).toBe("onedar")
 			active = root .. "/two"
 			theme_picker.restore_saved_theme()
-			expect(vim.g.colors_name).toBe("nord-fox")
-			assert(store.save(active .. "/.vscode/theme.json", { theme = "onedark-fox" }))
-			expect(theme_picker.get_current_theme()).toBe("nord-fox")
+			expect(vim.g.colors_name).toBe("nord")
+			assert(store.save(active .. "/.vscode/theme.json", { theme = "onedar" }))
+			expect(theme_picker.get_current_theme()).toBe("nord")
 			vim.ui.select = function(options, _, callback)
 				expect(#options).toBe(2)
 				callback(nil)
 			end
-			vim.cmd.colorscheme("nagatoro-light")
-			theme_picker.choose_scope("nagatoro-light", "nord-fox", theme_picker.project_theme_file())
-			expect(vim.g.colors_name).toBe("nord-fox")
+			vim.cmd.colorscheme("foxnvim-light")
+			theme_picker.choose_scope("foxnvim-light", "nord", theme_picker.project_theme_file())
+			expect(vim.g.colors_name).toBe("nord")
 			expect(store.read_file(theme_picker.settings.store_file)).toBe(global_before)
 			expect(store.read_file(theme_picker.project_theme_file())).toBe(nil)
 			assert(store.save(theme_picker.project_theme_file(), { theme = false }))
-			expect(theme_picker.get_current_theme()).toBe("nord-fox")
+			expect(theme_picker.get_current_theme()).toBe("nord")
 			active = root .. "/one"
 			vim.api.nvim_exec_autocmds("BufEnter", { modeline = false })
 			vim.wait(1000, function()
-				return vim.g.colors_name == "onedark-fox"
+				return vim.g.colors_name == "onedar"
 			end)
-			expect(vim.g.colors_name).toBe("onedark-fox")
-			theme_picker.set_theme("catppuccin-fox", "global")
-			expect(store.load(theme_picker.settings.store_file, {}).theme).toBe("catppuccin-fox")
-			expect(store.load(theme_picker.project_theme_file(), {}).theme).toBe("onedark-fox")
-			expect(vim.g.colors_name).toBe("onedark-fox")
+			expect(vim.g.colors_name).toBe("onedar")
+			theme_picker.set_theme("catppuccin", "global")
+			expect(store.load(theme_picker.settings.store_file, {}).theme).toBe("catppuccin")
+			expect(store.load(theme_picker.project_theme_file(), {}).theme).toBe("onedar")
+			expect(vim.g.colors_name).toBe("onedar")
 			active = root .. "/two"
 			theme_picker.restore_saved_theme()
-			expect(vim.g.colors_name).toBe("catppuccin-fox")
+			expect(vim.g.colors_name).toBe("catppuccin")
 		end)
 		project.root, theme_picker.settings.store_file = saved_root, saved_file
 		theme_picker._project_file = saved_project

@@ -25,7 +25,7 @@ M.settings = {
 	omarchy_colors_file = vim.fn.expand("~/.local/state/omarchy/current/theme/colors.toml"),
 	omarchy_system_themes_dir = "/usr/share/omarchy/themes",
 	omarchy_user_themes_dir = vim.fn.expand("~/.config/omarchy/themes"),
-	default_fallback_theme = "nagatoro-fox",
+	default_fallback_theme = "foxnvim",
 	debounce_ms = 150,
 }
 
@@ -473,7 +473,8 @@ function M.set_sync_enabled(enable, opts)
 		end
 
 		if opts.restore_theme ~= false then
-			local restored = cfg.previous_theme or M.settings.default_fallback_theme
+			local restored = require("plugins.fox.ui.theme_picker").resolve_theme(cfg.previous_theme)
+				or M.settings.default_fallback_theme
 			if restored == "omarchy-fox" then
 				restored = M.settings.default_fallback_theme
 			end

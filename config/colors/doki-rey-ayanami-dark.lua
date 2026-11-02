@@ -1,5 +1,7 @@
 -- ============================================================================
--- COLORSCHEME: nagatoro-light -- Doki Theme "Hayase Nagatoro Light", ported.
+-- COLORSCHEME: doki-rey-ayanami-dark -- Doki Ayanami Rei Dark, ported.
+-- Palette: https://github.com/doki-theme/doki-theme-vim/blob/master/autoload/rei.vim
+-- Copyright (c) 2020 Alex Simons. MIT license: doki-theme-LICENSE.txt
 -- ============================================================================
 
 vim.cmd("highlight clear")
@@ -7,27 +9,28 @@ if vim.fn.exists("syntax_on") == 1 then
 	vim.cmd("syntax reset")
 end
 
-vim.g.colors_name = "nagatoro-light"
+vim.o.background = "dark"
+vim.g.colors_name = "doki-rey-ayanami-dark"
 
 local p = {
-	bg = "#FAFAFA",
-	bg_dark = "#F0F0F0",
-	bg_highlight = "#EAEAEA",
-	bg_selected = "#E2D0C6",
-	fg = "#2A2A2A",
-	fg_muted = "#666666",
-	comment = "#7A8288",
+	bg = "#191b1f",
+	bg_dark = "#131514",
+	bg_highlight = "#1f2125",
+	bg_selected = "#25435a",
+	fg = "#F8F8F2",
+	fg_muted = "#7da1c2",
+	comment = "#6272a4",
 
-	keyword = "#4A5BB2",
-	func = "#C28500",
-	string = "#456D8A",
-	number = "#B34289",
-	type = "#299999",
-	operator = "#2E9931",
-	declaration = "#A81D80",
-	accent = "#C45B1E",
-	error = "#D91E1E",
-	warning = "#D9821E",
+	keyword = "#788a8b",
+	func = "#6AADFF",
+	string = "#F6E3CC",
+	number = "#86dbfd",
+	type = "#45e68a",
+	operator = "#89c0d9",
+	declaration = "#6AADFF",
+	accent = "#b53241",
+	error = "#f44747",
+	warning = "#EFA554",
 	none = "NONE",
 }
 
@@ -41,15 +44,15 @@ local highlights = {
 	CursorLine = { bg = p.bg_highlight },
 	CursorColumn = { bg = p.bg_highlight },
 	ColorColumn = { bg = p.bg_dark },
-	LineNr = { fg = "#A0A0A0" },
+	LineNr = { fg = "#666879" },
 	CursorLineNr = { fg = p.accent, bold = true },
-	VertSplit = { fg = "#D0D0D0", bg = p.none },
-	WinSeparator = { fg = "#D0D0D0", bg = p.none },
+	VertSplit = { fg = "#131514", bg = p.none },
+	WinSeparator = { fg = "#131514", bg = p.none },
 	MatchParen = { fg = p.accent, bg = p.bg_selected, bold = true },
 
 	Visual = { bg = p.bg_selected },
 	VisualNOS = { bg = p.bg_selected },
-	Search = { fg = p.fg, bg = p.bg_selected },
+	Search = { fg = "#ffffff", bg = "#6b232d" },
 	IncSearch = { fg = p.bg, bg = p.accent, bold = true },
 	CurSearch = { fg = p.bg, bg = p.accent, bold = true },
 
@@ -110,15 +113,15 @@ local highlights = {
 
 	DiagnosticError = { fg = p.error },
 	DiagnosticWarn = { fg = p.warning },
-	DiagnosticInfo = { fg = p.keyword },
+	DiagnosticInfo = { fg = p.func },
 	DiagnosticHint = { fg = p.type },
 
-	GitSignsAdd = { fg = p.operator },
+	GitSignsAdd = { fg = p.type },
 	GitSignsChange = { fg = p.warning },
 	GitSignsDelete = { fg = p.error },
-	DiffAdd = { bg = "#E2F0E2", fg = p.operator },
-	DiffChange = { bg = "#FFF0D6", fg = p.warning },
-	DiffDelete = { bg = "#FCE4E4", fg = p.error },
+	DiffAdd = { bg = "#142F14", fg = p.type },
+	DiffChange = { bg = "#203952", fg = p.warning },
+	DiffDelete = { bg = "#262626", fg = p.error },
 
 	NeoTreeNormal = { fg = p.fg, bg = p.bg_dark },
 	NeoTreeDirectoryName = { fg = p.accent, bold = true },
@@ -141,8 +144,8 @@ local highlights = {
 	CmpKindBg_Struct = { fg = p.bg, bg = p.type, bold = true },
 	CmpKindBg_TypeParameter = { fg = p.bg, bg = p.type, bold = true },
 	CmpKindBg_Enum = { fg = p.bg, bg = p.type, bold = true },
-	CmpKindBg_Field = { fg = p.bg, bg = p.operator, bold = true },
-	CmpKindBg_Property = { fg = p.bg, bg = p.operator, bold = true },
+	CmpKindBg_Field = { fg = p.bg, bg = p.string, bold = true },
+	CmpKindBg_Property = { fg = p.bg, bg = p.string, bold = true },
 	CmpKindBg_Operator = { fg = p.bg, bg = p.operator, bold = true },
 	CmpKindBg_Module = { fg = p.bg, bg = p.accent, bold = true },
 	CmpKindBg_Folder = { fg = p.bg, bg = p.accent, bold = true },

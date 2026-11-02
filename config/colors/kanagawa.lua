@@ -1,11 +1,11 @@
 -- ============================================================================
--- COLORSCHEME: kanagawa-fox -- Static FoxVim port of Omarchy's Kanagawa palette.
+-- COLORSCHEME: kanagawa -- Static FoxVim port of Omarchy's Kanagawa palette.
 -- ============================================================================
 -- This colorscheme is self-contained: it does not read Omarchy state files or
 -- require the Omarchy theme adapter. It is based on the Kanagawa palette that
 -- was active in Omarchy when this file was created.
 --
--- Usage: :colorscheme kanagawa-fox
+-- Usage: :colorscheme kanagawa
 -- ============================================================================
 
 vim.cmd("highlight clear")
@@ -14,7 +14,7 @@ if vim.fn.exists("syntax_on") == 1 then
 end
 
 vim.o.background = "dark"
-vim.g.colors_name = "kanagawa-fox"
+vim.g.colors_name = "kanagawa"
 
 local p = {
 	bg = "#1f1f28",

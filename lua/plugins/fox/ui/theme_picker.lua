@@ -1,9 +1,8 @@
 -- ============================================================================
--- FOX PLUGIN: Nagatoro Theme System & Interactive Theme Picker.
+-- FOX PLUGIN: FoxVim Theme System & Interactive Theme Picker.
 -- ============================================================================
 -- WHAT IT DOES
---   Discovers all themes formatted for nagatoro-fox (nagatoro-fox, nagatoro-light,
---   onedark-fox, catppuccin-fox, nord-fox), previews them live in Telescope or
+--   Discovers local themes in config/colors/, previews them live in Telescope or
 --   vim.ui.select, and persists choice in .foxnvim/theme.json.
 -- ============================================================================
 
@@ -15,11 +14,26 @@ local project = lazy_req("fox.core.project")
 
 M.settings = {
 	store_file = vim.fn.stdpath("config") .. "/.foxnvim/theme.json",
-	default_theme = "nagatoro-fox",
+	default_theme = "foxnvim",
 	keymap = nil,
 }
 
---- Scans config/colors/ directory for available nagatoro-fox formatted themes.
+local renamed_themes = {
+	["onedark-fox"] = "onedar",
+	["nord-fox"] = "nord",
+	["nagatoro-light"] = "foxnvim-light",
+	["nagatoro-fox"] = "foxnvim",
+	["kanagawa-fox"] = "kanagawa",
+	["dark-fox-night"] = "foxnvim-full-back",
+	["catppuccin-fox"] = "catppuccin",
+}
+
+--- Preserve theme choices saved before the palettes were renamed.
+function M.resolve_theme(name)
+	return renamed_themes[name] or name
+end
+
+--- Scans config/colors/ directory for available local themes.
 --- @return string[] theme_names
 function M.discover_themes()
 	local themes = {}
@@ -37,7 +51,7 @@ function M.discover_themes()
 			if has_omarchy and omarchy_mod.is_omarchy_available() then
 				table.insert(themes, name)
 			end
-		elseif name:match("%-fox$") or name:match("^nagatoro%-") or name == "dark-fox-night" then
+		else
 			table.insert(themes, name)
 		end
 	end
@@ -62,14 +76,14 @@ function M.get_project_theme()
 	end
 	local data = store.load(file, {})
 	if type(data.theme) == "string" and data.theme:match("^[%w_-]+$") then
-		return data.theme
+		return M.resolve_theme(data.theme)
 	end
 end
 
 --- Gets the project override or global default.
 function M.get_current_theme()
 	local data = store.load(M.settings.store_file, {})
-	return M.get_project_theme() or data.theme or M.settings.default_theme
+	return M.get_project_theme() or M.resolve_theme(data.theme) or M.settings.default_theme
 end
 
 --- Applies colorscheme and saves to store.
@@ -130,7 +144,7 @@ function M.restore_saved_theme()
 		return
 	end
 
-	local saved = store.load(M.settings.store_file, {}).theme or M.settings.default_theme
+	local saved = M.resolve_theme(store.load(M.settings.store_file, {}).theme) or M.settings.default_theme
 	if saved then
 		pcall(vim.cmd.colorscheme, saved)
 	end

@@ -5,7 +5,8 @@
 Theme startup uses the local `fox_theme_startup` spec in `lua/plugins/ui/themes.lua`.
 All palettes offered by `:FoxThemePicker` live in `config/colors/`; no external Doki plugin
 is required. Additional scheme names exclusive to the upstream Doki catalog are
-not bundled. Existing local palette attributions are preserved.
+not bundled. Existing local palette attributions are preserved. Saved selections using the old theme names
+resolve to the renamed palettes automatically.
 
 This guide explains how to manage, customize, and extend colorschemes in this Neovim configuration.
 
@@ -13,26 +14,29 @@ This guide explains how to manage, customize, and extend colorschemes in this Ne
 
 ## 📁 Key Files & Directories
 
-- **Nagatoro Theme System & Picker:** [`lua/plugins/fox/ui/theme_picker.lua`](../lua/plugins/fox/ui/theme_picker.lua)
+- **FoxVim Theme System & Picker:** [`lua/plugins/fox/ui/theme_picker.lua`](../lua/plugins/fox/ui/theme_picker.lua)
 - **Statusline Theme Picker:** [`lua/plugins/fox/ui/statusline_picker.lua`](../lua/plugins/fox/ui/statusline_picker.lua)
 - **Colorify Engine (CMP Completion):** [`lua/fox/lsp/colorify.lua`](../lua/fox/lsp/colorify.lua)
-- **Theme Palette Files:** `config/colors/nagatoro-fox.lua`, `config/colors/nagatoro-light.lua`, `config/colors/onedark-fox.lua`, `config/colors/catppuccin-fox.lua`, `config/colors/nord-fox.lua`
+- **Theme Palette Files:** `config/colors/foxnvim.lua`, `config/colors/foxnvim-light.lua`, `config/colors/onedar.lua`, `config/colors/catppuccin.lua`, `config/colors/nord.lua`
 - **Customization Guide:** [`how-to-customize-editor.md`](how-to-customize-editor.md)
 
 ---
 
-## 🎨 Nagatoro Theme System (`:FoxThemePicker`)
+## 🎨 FoxVim Theme System (`:FoxThemePicker`)
 
-FoxVim ships with a set of complete, hand-crafted themes matching the `nagatoro-fox` palette schema. Run `:FoxThemePicker` or choose **Select UI-Theme** in the Command Palette. After selecting a theme, choose **Global theme** or **This project only**.
+FoxVim ships with a set of complete, hand-crafted themes matching the `foxnvim` palette schema. Run `:FoxThemePicker` or choose **Select UI-Theme** in the Command Palette. After selecting a theme, choose **Global theme** or **This project only**.
 
-Global themes are saved in the Neovim config directory under `.foxnvim/theme.json`. Project overrides are read exclusively from `<project>/.foxnvim/theme.json` (`{"theme":"nord-fox"}`). They load on startup and when switching projects; projects without an override use the global default. Choosing a global theme updates the default; existing project overrides remain saved. Delete the project file to return permanently to the global default.
+Global themes are saved in the Neovim config directory under `.foxnvim/theme.json`. Project overrides are read exclusively from `<project>/.foxnvim/theme.json` (`{"theme":"nord"}`). They load on startup and when switching projects; projects without an override use the global default. Choosing a global theme updates the default; existing project overrides remain saved. Delete the project file to return permanently to the global default.
 
 - **Available Themes:**
-  - `nagatoro-fox` (Hayase Nagatoro Dark — Default)
-  - `nagatoro-light` (Hayase Nagatoro Light)
-  - `onedark-fox` (NvChad OneDark in nagatoro format)
-  - `catppuccin-fox` (NvChad Catppuccin Mocha in nagatoro format)
-  - `nord-fox` (NvChad Nord in nagatoro format)
+  - `foxnvim` (Hayase Nagatoro Dark — Default)
+  - `foxnvim-light` (Hayase Nagatoro Light)
+  - `onedar` (NvChad OneDark in FoxVim format)
+  - `catppuccin` (NvChad Catppuccin Mocha in FoxVim format)
+  - `nord` (NvChad Nord in FoxVim format)
+  - `kanagawa` (Omarchy Kanagawa)
+  - `foxnvim-full-back` (Omarchy Vantablack)
+  - `doki-rey-ayanami-dark` (Doki Ayanami Rei Dark; [official palette](https://github.com/doki-theme/doki-theme-vim/blob/master/autoload/rei.vim))
   - `omarchy-fox` (Dynamic theme synced with Omarchy Linux)
 - **Live Preview & Store Persistence:** Previews themes in real time while tabbed/selected. Cancelling (`<Esc>`) restores the previous theme; confirming (`<Enter>`) asks where to save the choice via [`fox.core.store`](architecture.md#layer-2--shared-libraries-luafox).
 
@@ -81,7 +85,7 @@ Completion items in `blink.cmp` use NvChad layout:
 
 ## 📦 How to Add a New Theme
 
-To add a custom theme, create a new file `config/colors/mytheme-fox.lua` adhering to the `nagatoro-fox.lua` palette format. See [`how-to-customize-editor.md#5-how-to-customize-statusline--themes`](how-to-customize-editor.md#5-how-to-customize-statusline--themes) for full step-by-step instructions and code examples.
+To add a custom theme, create a new file `config/colors/mytheme.lua` adhering to the `foxnvim.lua` palette format. See [`how-to-customize-editor.md#5-how-to-customize-statusline--themes`](how-to-customize-editor.md#5-how-to-customize-statusline--themes) for full step-by-step instructions and code examples.
 
 ### Ryoku (Arch Linux)
 

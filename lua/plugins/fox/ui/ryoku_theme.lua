@@ -125,13 +125,13 @@ function M.set_sync_enabled(enabled, opts)
 	local cfg = store.load(M.settings.store_file, {})
 	if enabled then
 		if cfg.theme ~= "ryoku-fox" then
-			cfg.ryoku_previous_theme = cfg.theme or "nagatoro-fox"
+			cfg.ryoku_previous_theme = cfg.theme or "foxnvim"
 		end
 		cfg.theme = "ryoku-fox"
 	end
 	cfg.ryoku_sync = enabled
 	if not enabled and opts.restore_theme ~= false then
-		cfg.theme = cfg.ryoku_previous_theme or "nagatoro-fox"
+		cfg.theme = require("plugins.fox.ui.theme_picker").resolve_theme(cfg.ryoku_previous_theme) or "foxnvim"
 	end
 	local ok, err = store.save(M.settings.store_file, cfg)
 	if not ok then

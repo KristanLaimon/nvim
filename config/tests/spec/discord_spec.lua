@@ -6,6 +6,7 @@ t.describe("Discord application identity", function()
 		local modules = {
 			"cord",
 			"cord.api.config",
+			"cord.api.icon",
 			"cord.api.command",
 			"fox.discord",
 			"plugins.ui.discord",
@@ -18,18 +19,25 @@ t.describe("Discord application identity", function()
 		end
 		local preload, notify = package.preload["fox.discord"], vim.notify
 		local applied, stopped, restarted = false, false, false
+		local icons = { ICONS_URL = "upstream" }
+		local icons_url = "https://raw.githubusercontent.com/KristanLaimon/nvim-config/main/config/discord-theme-icons/"
 		local config = {
 			verify = function(opts)
 				assert(opts.editor.client == "1566816819879092294")
+				assert(icons.ICONS_URL == icons_url, "icon source must change before Cord resolves its defaults")
+				assert(opts.editor.icon == icons_url .. "minecraft/dark/neovim.png")
+				assert(opts.idle.icon == icons_url .. "minecraft/dark/idle.png")
 				assert(opts.advanced.server.pipe_path == nil, "Cord's global server lock requires the shared IPC path")
 				applied = true
 				return opts
 			end,
 		}
 		package.loaded["cord.api.config"] = config
+		package.loaded["cord.api.icon"] = icons
 		package.loaded["cord"] = {
 			setup = function()
 				assert(applied)
+				assert(icons.ICONS_URL == icons_url)
 			end,
 		}
 		package.loaded["cord.api.command"] = {
@@ -49,10 +57,13 @@ t.describe("Discord application identity", function()
 		vim.notify = function() end
 		local ok, err = pcall(function()
 			package.loaded["plugins.ui.discord"] = nil
-			require("plugins.ui.discord")
+			local spec = require("plugins.ui.discord")
 			vim.cmd("CordReload")
 			t.expect(restarted).toBe(true)
 			t.expect(package.loaded["cord.api.config"] == config).toBe(true)
+			icons.ICONS_URL = "upstream"
+			spec.config(nil, spec.opts)
+			t.expect(icons.ICONS_URL).toBe(icons_url)
 		end)
 		vim.notify, package.preload["fox.discord"] = notify, preload
 		for _, name in ipairs(modules) do
@@ -158,9 +169,43 @@ t.describe("Discord lifecycle", function()
 			t.expect(feature.terminal_text()).toBe("Running commands in nvim terminal")
 			vim.api.nvim_set_current_buf(terminal)
 			t.expect(feature.terminal_text()).toBe(message)
-			local activity = {}
+			local activity = { assets = { large_image = "terminal", small_image = "neovim" } }
 			feature.post_activity({}, activity)
 			t.expect(activity.timestamps.start).toBe(saved_start)
+			local icon = activity.assets.large_image
+			local filename = icon:match(
+				"^https://raw%.githubusercontent%.com/KristanLaimon/nvim%-config/main/config/discord%-theme%-icons/minecraft/fox%-custom/(fox%-[^/]+%.png)$"
+			)
+			assert(filename, "fox icon must use the public repository's raw URL")
+			assert(
+				vim.fn.filereadable(stdpath("config") .. "/config/discord-theme-icons/minecraft/fox-custom/" .. filename) == 1
+			)
+			t.expect(activity.assets.small_image).toBe("neovim")
+			local repeated = { assets = { large_image = "terminal" } }
+			feature.post_activity({}, repeated)
+			t.expect(repeated.assets.large_image).toBe(icon)
+			for tick = 1, 32 do
+				rawset(os, "time", function()
+					return now() + 15 * tick
+				end)
+				local rotated = { assets = { large_image = "terminal" } }
+				feature.post_activity({}, rotated)
+				assert(rotated.assets.large_image ~= icon, "consecutive fox icons must differ")
+				icon = rotated.assets.large_image
+			end
+			local idle = { assets = { large_image = "idle" } }
+			feature.post_activity({ is_idle = true }, idle)
+			t.expect(idle.assets.large_image).toBe("idle")
+			vim.api.nvim_set_current_buf(original)
+			local editing = { assets = { large_image = "lua" } }
+			feature.post_activity({}, editing)
+			t.expect(editing.assets.large_image).toBe("lua")
+			vim.api.nvim_set_current_buf(terminal)
+			vim.b[terminal].terminal_job_id = 54321
+			local shell = { assets = { large_image = "terminal" } }
+			feature.post_activity({}, shell)
+			t.expect(shell.assets.large_image).toBe("terminal")
+			vim.b[terminal].terminal_job_id = 12345
 			rawset(os, "time", function()
 				return now() + 15
 			end)

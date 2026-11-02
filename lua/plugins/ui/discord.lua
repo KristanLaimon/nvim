@@ -8,6 +8,7 @@
 -- ============================================================================
 
 local application_id = "1566816819879092294"
+local icons_url = "https://raw.githubusercontent.com/KristanLaimon/nvim-config/main/config/discord-theme-icons/"
 
 local function hot_reload()
 	local presence = package.loaded["fox.discord"]
@@ -28,6 +29,7 @@ local function hot_reload()
 	local opts = spec.opts or {}
 	local ok_cord, cord = pcall(require, "cord")
 	if ok_cord and cord.setup then
+		require("cord.api.icon").ICONS_URL = icons_url
 		if not require("cord.api.config").verify(opts) then
 			return
 		end
@@ -59,6 +61,7 @@ return {
 	build = ":Cord update",
 	lazy = false,
 	config = function(_, opts)
+		require("cord.api.icon").ICONS_URL = icons_url
 		require("fox.discord").setup()
 		require("cord").setup(opts)
 	end,
@@ -78,7 +81,7 @@ return {
 		editor = {
 			client = application_id,
 			tooltip = "Foxnvim",
-			icon = "https://raw.githubusercontent.com/vyfor/icons/master/icons/minecraft/dark/neovim.png",
+			icon = icons_url .. "minecraft/dark/neovim.png",
 		},
 		display = {
 			theme = "minecraft",
@@ -88,6 +91,7 @@ return {
 		},
 		idle = {
 			enabled = true,
+			icon = icons_url .. "minecraft/dark/idle.png",
 			show_status = true,
 			timeout = 300000,
 		},

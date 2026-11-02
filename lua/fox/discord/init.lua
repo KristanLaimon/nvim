@@ -6,6 +6,19 @@ for _, name in ipairs(require("fox.discord.ai_cli_names")) do
 	end
 end
 local messages = require("fox.discord.loading_msgs")
+local fox_icons_url =
+	"https://raw.githubusercontent.com/KristanLaimon/nvim-config/main/config/discord-theme-icons/minecraft/fox-custom/"
+local fox_icons = {
+	"fox-arctic-looking-straight",
+	"fox-arctic-sleeping",
+	"fox-arctic-with-emerald-in-mouth",
+	"fox-orange-looking-left",
+	"fox-orange-looking-right",
+	"fox-orange-looking-upwards",
+	"fox-orange-sleeping",
+	"fox-orange-with-emerald-in-mouth",
+}
+local rotation = {}
 local session, timer, manager, polling
 local agents = {}
 local last_poll = {}
@@ -198,20 +211,36 @@ local function poll()
 	end
 end
 
-function M.terminal_text()
+local function ai_activity()
 	local buf = vim.api.nvim_get_current_buf()
 	local agent = agents[buf]
-	if agent and agent.channel == vim.b[buf].terminal_job_id then
+	if vim.bo[buf].buftype == "terminal" and agent and agent.channel == vim.b[buf].terminal_job_id then
 		local index = (math.floor(os.time() / 15) + buf) % #messages + 1
-		return messages[index] .. "..."
+		if rotation.message ~= index then
+			local icon = math.random(#fox_icons - (rotation.icon and 1 or 0))
+			if rotation.icon and icon >= rotation.icon then
+				icon = icon + 1
+			end
+			rotation = { message = index, icon = icon }
+		end
+		return messages[index] .. "...", fox_icons_url .. fox_icons[rotation.icon] .. ".png"
 	end
-	return "Running commands in nvim terminal"
 end
 
-function M.post_activity(_, activity)
+function M.terminal_text()
+	return ai_activity() or "Running commands in nvim terminal"
+end
+
+function M.post_activity(opts, activity)
 	if session and activity then
 		-- Match Cord's native os.time() timestamps; Discord advances elapsed time itself.
 		activity.timestamps = { start = session.start }
+	end
+	if activity and activity.assets and not opts.is_idle and not activity.is_idle then
+		local _, icon = ai_activity()
+		if icon then
+			activity.assets.large_image = icon
+		end
 	end
 end
 

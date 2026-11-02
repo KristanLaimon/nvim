@@ -244,6 +244,19 @@ status; returning to that terminal restores AI messages. Other terminals show
 "Running commands in nvim terminal". AI activity keeps presence active while
 you wait for an agent; ordinary editing retains Cord's five-minute idle timeout.
 
+Each AI message change also picks a random custom fox icon, excluding the previous
+icon. The eight PNGs in `config/discord-theme-icons/minecraft/fox-custom/` use raw
+HTTPS URLs from the `main` branch of `KristanLaimon/nvim-config`. Push these images
+to that public repository before using the rotation, then run `:CordReload`.
+No Discord Developer Portal upload is needed. Normal terminal, file and idle
+icons keep the Minecraft theme, mirrored in this repository under
+`config/discord-theme-icons/minecraft/{dark,light,accent}/`. Cord uses this
+repository's raw URLs for those icons too, including the Neovim editor badge.
+Push the mirrored icons along with the custom foxes before reloading. Attribution
+and licenses are included in the `minecraft` folder; `fox-custom` contains
+Kristan's separate artwork. Hosting the mirror avoids a runtime dependency on
+the upstream icon repository; it does not speed up Discord's update cooldown.
+
 Edit the CLI list in `lua/fox/discord/ai_cli_names.lua` and messages in
 `lua/fox/discord/loading_msgs.lua`. Detection checks the focused terminal's
 process tree asynchronously using Windows PowerShell/CIM or Unix `ps`, on entry

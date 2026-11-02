@@ -235,6 +235,37 @@ commands or elevated permissions. Linux requires readable Caps Lock LED entries;
 it cannot infer the keyboard state of a remote SSH client. macOS does not yet have
 a state backend.
 
+## Discord presence
+
+FoxVim keeps `vyfor/cord.nvim` for Discord Rich Presence. While you focus a
+terminal running a recognized AI CLI, its status cycles through a new loading
+message every 15 seconds. Switching to a file restores Cord's normal editing
+status; returning to that terminal restores AI messages. Other terminals show
+"Running commands in nvim terminal". AI activity keeps presence active while
+you wait for an agent; ordinary editing retains Cord's five-minute idle timeout.
+
+Edit the CLI list in `lua/fox/discord/ai_cli_names.lua` and messages in
+`lua/fox/discord/loading_msgs.lua`. Detection checks the focused terminal's
+process tree asynchronously using Windows PowerShell/CIM or Unix `ps`, on entry
+and every 15 seconds. An exited agent returns to ordinary terminal presence on
+the next check. Processes inside WSL, SSH or containers are not visible to the
+host process tree, so those sessions use ordinary terminal presence.
+
+The elapsed timer retains its original start when Neovim reopens less than ten
+minutes after its last exit, including that short gap. After ten minutes it
+starts fresh. State is saved in `stdpath("state")/discord-session.json` at exit
+and every 15 seconds, providing a recent checkpoint after a crash. This is one
+timer shared by editor restarts, independent of the workspace. Toggle presence
+with `:Cord toggle`; reload Cord settings with `:CordReload`.
+
+Cord starts with Neovim and skips network update checks at startup; run
+`:Cord update` manually to update its server. Local presence changes debounce
+for 50 ms, with a 250 ms minimum interval. Cord retries the latest activity every
+12 seconds because Discord can drop updates during its own cooldown (see
+[Cord's FAQ](https://github.com/vyfor/cord.nvim/wiki/FAQ#rich-presence-updates-take-a-long-time-to-appear-in-discord-why)).
+Discord may still delay displaying a change; its timer ticks independently of
+the 15-second AI message rotation. Reloading also reloads the CLI and message lists.
+
 ## WakaTime coding stats
 
 `wakatime/vim-wakatime` tracks editor activity and loads at startup. Set its

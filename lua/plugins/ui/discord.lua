@@ -8,6 +8,13 @@
 -- ============================================================================
 
 local function hot_reload()
+	local presence = package.loaded["fox.discord"]
+	if presence and presence.stop then
+		presence.stop()
+	end
+	for _, module in ipairs({ "fox.discord", "fox.discord.ai_cli_names", "fox.discord.loading_msgs" }) do
+		package.loaded[module] = nil
+	end
 	package.loaded["plugins.ui.discord"] = nil
 	package.loaded["cord"] = nil
 	package.loaded["cord.api.config"] = nil
@@ -21,6 +28,7 @@ local function hot_reload()
 	local opts = spec.opts or {}
 	local ok_cord, cord = pcall(require, "cord")
 	if ok_cord and cord.setup then
+		require("fox.discord").setup()
 		cord.setup(opts)
 		pcall(function()
 			require("cord.api.command").restart()
@@ -46,11 +54,23 @@ end
 return {
 	"vyfor/cord.nvim",
 	build = ":Cord update",
-	event = "VeryLazy",
+	lazy = false,
+	config = function(_, opts)
+		require("fox.discord").setup()
+		require("cord").setup(opts)
+	end,
 	opts = {
 		usercmds = true,
-		timer = {
-			enable = true,
+		advanced = {
+			plugin = { debounce = { delay = 50, interval = 250 } },
+			server = { auto_update = false },
+			discord = {
+				-- Retry the latest activity when Discord drops a rate-limited update.
+				sync = { enabled = true, mode = "periodic", interval = 12000, reset_on_update = false, pad = true },
+			},
+		},
+		timestamp = {
+			enabled = true,
 		},
 		editor = {
 			client = "neovim",
@@ -63,7 +83,7 @@ return {
 			show_repository = true,
 		},
 		idle = {
-			enable = true,
+			enabled = true,
 			show_status = true,
 			timeout = 300000,
 		},
@@ -71,9 +91,20 @@ return {
 			terminal = function()
 				local cur_buf = vim.api.nvim_get_current_buf()
 				if vim.bo[cur_buf].buftype == "terminal" then
-					return "Running commands in nvim terminal"
+					return require("fox.discord").terminal_text()
 				end
 				return false
+			end,
+		},
+		hooks = {
+			ready = function(manager)
+				require("fox.discord").ready(manager)
+			end,
+			shutdown = function()
+				require("fox.discord").shutdown()
+			end,
+			post_activity = function(opts, activity)
+				require("fox.discord").post_activity(opts, activity)
 			end,
 		},
 	},

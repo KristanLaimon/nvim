@@ -285,10 +285,40 @@ connecting; restarting Neovim alone can reuse the existing server's identity.
 
 ## WakaTime coding stats
 
-`wakatime/vim-wakatime` tracks editor activity and loads at startup. Set its
-tracking key with `:WakaTimeApiKey` (also in the Command Palette). The upstream
-plugin manages its CLI installation. Activity is sent to WakaTime; privacy and
-file exclusion options live in `~/.wakatime.cfg` (or `$WAKATIME_HOME/.wakatime.cfg`).
+FoxVim's local Lua tracker (`lua/fox/wakatime/init.lua`) loads at startup.
+It requires [wakatime-cli](https://github.com/wakatime/wakatime-cli) on PATH or
+an existing `$WAKATIME_HOME/.wakatime/wakatime-cli` (`~/.wakatime/wakatime-cli`
+by default). Install and update the CLI separately; the editor does not download
+executables. Set the tracking key with `:WakaTimeApiKey` in the Command Palette,
+or use `WAKATIME_API_KEY`. The key prompt is masked and saves the key with owner-only
+permissions, preserving other configuration entries.
+
+Heartbeats follow cursor movement, entering Insert mode, and saves. The same file
+is throttled to one heartbeat per two minutes, except saves. Merely reloading an
+externally edited buffer does not send a heartbeat. Special buffers and macros
+are ignored. The CLI handles project detection, exclusions, and offline storage.
+Privacy options live in `$WAKATIME_HOME/.wakatime.cfg`, an existing
+`~/.wakatime.cfg`, or `$XDG_CONFIG_HOME/wakatime/wakatime.cfg` (default
+`~/.config/wakatime/wakatime.cfg`), matching the CLI's configuration lookup.
+
+Manual line counts come from buffer changes during actual keyboard input only.
+External buffer updates and reloads are ignored. Insert mode exit, leaving a
+buffer, and saves flush pending manual counts. Counts use WakaTime's signed net
+line-change convention (added lines minus removed lines); they are not keystroke
+or changed-character totals. Synchronous editor mappings count as manual input.
+
+The local tracker can independently synchronize AI transcripts at startup, every
+30 seconds, and on exit using `wakatime-cli --sync-ai-activity`. This works while
+a terminal buffer is focused, without marking terminal keystrokes as manual code.
+The CLI owns transcript parsing, deduplication, offline delivery, and model
+attribution. Claude Code, Codex, Antigravity CLI (`agy`), and OpenCode require
+compatible transcripts discoverable by the installed CLI. No extra Neovim plugin
+is needed. Enable this data export explicitly with
+`require("fox.wakatime").setup({ sync_ai = true })` in the local plugin spec;
+it is disabled by default, including implicit AI parsing on editor heartbeats.
+
+Existing dashboard history is unaffected. Restart Neovim after replacing the
+upstream plugin to avoid running both trackers in the same session.
 
 Open **WakaTime: Coding Stats (ASCII Charts)** from the Command Palette or run
 `:WakaTimeStats`. The floating dashboard shows the last seven days, including

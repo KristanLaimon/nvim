@@ -68,7 +68,7 @@ And the per-language debugger modules in `lua/plugins/fox/debuggers/`: `_shared.
 ### Core & LSP
 | Plugin | Purpose |
 |---|---|
-| `wakatime/vim-wakatime` | Coding activity tracking; local `:WakaTimeStats` dashboard provides ASCII charts via the Command Palette. See [setup](editor-qol.md#wakatime-coding-stats). |
+| `fox_wakatime` (local Lua) | Coding activity tracking through `wakatime-cli`; local `:WakaTimeStats` dashboard provides ASCII charts via the Command Palette. See [setup](editor-qol.md#wakatime-coding-stats). |
 | `neovim/nvim-lspconfig` | LSP server configuration |
 | `williamboman/mason.nvim` | Package manager for LSPs, formatters, linters, debug adapters |
 | `fox.lsp.tooling` | Explicit Mason actions using local language metadata |

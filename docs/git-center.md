@@ -30,6 +30,8 @@ Git Center and the multi-terminal pane are mutually exclusive. Opening Git Cente
 
 The **Working Tree + Commits until a Branch** scope compares against the merge base with the selected branch, excluding that base commit. Five commits made after branching from `main` contribute only those five commits plus working tree changes. Later commits on `main` are excluded too.
 
+The picker includes local and remote branches. If a local base branch is behind its remote, select the remote ref (for example, `origin/ubuntu`) to exclude changes already present there. Remote refs reflect your last fetch.
+
 `:GitDiffMode` opens a floating card menu. Its three main cards start **Working Tree vs HEAD**, **Working Tree + Last N Commits**, and **Working Tree + Commits until a Branch**. Press `1`–`5` to highlight a card, then `Enter` to confirm; arrows and `Tab` also change the selection. Other Git Diff Modes contains branch comparisons, two commits, and committed history. Advanced contains scope settings, resume, and close. Cards reflow on smaller terminals; `Esc` cancels without changing the diff.
 - **Git Diff Mode (Between 2 Branches) (`v` / `:GitDiffBetweenBranches`)**: Dual synchronized split view comparing the same file across two branches or refs (selected via dual Base & Target floating menus with custom branch/ref input prompt). Supports synchronized scrolling (`scrollbind`/`cursorbind`), side-by-side color highlights, and jumping between modifications with `]c`/`[c` or `]d`/`[d`.
 - **In-Buffer GitSigns Integration (`gitsigns.nvim`)**: Real-time signcolumn diff indicators (`▎`, ``) and hunk navigation (`]c`/`[c`). See [Keybinds](keybinds.md#git--gitsigns) for full list.

@@ -2597,11 +2597,11 @@ function M.pick_ancestor_branch_and_start(cwd)
 	end
 
 	local current = vim.trim(git.lines({ "branch", "--show-current" }, cwd)[1] or "")
-	local raw = git.lines({ "branch", "--format=%(refname:short)" }, cwd)
+	local raw = git.lines({ "for-each-ref", "--format=%(refname:short) %(symref)", "refs/heads", "refs/remotes" }, cwd)
 	local branches = {}
-	for _, name in ipairs(raw) do
-		name = vim.trim(name)
-		if name ~= "" and name ~= current and #git.lines({ "merge-base", "HEAD", name }, cwd) > 0 then
+	for _, ref in ipairs(raw) do
+		local name, symbolic = ref:match("^(%S+)%s*(.*)$")
+		if name and symbolic == "" and name ~= current and #git.lines({ "merge-base", "HEAD", name }, cwd) > 0 then
 			table.insert(branches, name)
 		end
 	end

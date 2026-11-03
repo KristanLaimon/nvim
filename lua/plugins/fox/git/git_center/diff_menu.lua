@@ -8,10 +8,13 @@ function M.open(title, cards, confirm)
 	vim.wo[win].wrap = false
 	local function draw()
 		local width = math.max(1, math.min(150, vim.o.columns - 4))
-		local wide = width >= 112 and #cards == 5
+		local wide = width >= 132 and #cards == 5
 		local columns = wide and 4 or width >= 72 and 2 or 1
 		local card_width = math.floor((width - columns + 1) / columns)
-		local height = wide and 18 or 8
+		local height = 8
+		for _, card in ipairs(cards) do
+			height = math.max(height, #(card.lines or {}) + 4)
+		end
 		local lines = { "Choose a card: 1-" .. #cards .. " / arrows / Tab. Enter confirms; Esc cancels.", "" }
 		regions = {}
 		for index, card in ipairs(cards) do

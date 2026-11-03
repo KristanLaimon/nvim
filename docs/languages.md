@@ -28,6 +28,7 @@ LSP executable lookup first uses the configured spelling. If it is missing, FOX 
 | **JSON** | `jsonls` *(SchemaStore + local schemas)* | `prettierd` → `prettier` → `biome` | `json` | — |
 | **Web Frontend Vanilla** | `html`, `cssls`, `emmet_ls`, `tailwindcss` | `prettierd` → `prettier` → `biome` | `html`, `css` | browser adapters |
 | **Web Frameworks (Astro)** | `astro` | `prettier` (always) | `astro` | browser adapters |
+| **[MDX](languages/mdx.md)** | `mdx_analyzer` | `prettier` (project config required) | `markdown`, `markdown_inline` | — |
 | **Web UI (Svelte / Angular / React)** | `svelte`, `angularls`, `vtsls` | `prettierd` → `prettier` → `biome` | `svelte`, `html`, `scss`, `typescript`, `javascript`, `tsx`, `jsx` | `js-debug-adapter`, Bun adapter |
 | **Python** | `basedpyright`, `ruff` | `black` → `isort` → `ruff` | `python` | `debugpy` DAP |
 | **Go** | `gopls` | `gofumpt` → `goimports` | `go`, `gomod`, `gowork`, `gotmpl` | `delve` DAP (local `fox.langs.go`) |

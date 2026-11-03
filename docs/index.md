@@ -38,6 +38,7 @@ If you have just installed or launched FoxVim for the first time, follow these s
 | 🌙 **Lua & Scripts** | [**Lua & Scripts Guide**](languages/lua.md) | lua_ls, stylua, type_injector |
 | 🌐 **Web Frontend Vanilla** | [**Web Frontend Guide**](languages/web.md) | HTML, CSS, Tailwind CSS, Emmet, snippets |
 | 🪐 **Web Frameworks** | [**Astro Guide**](languages/astro.md) | Astro LSP and Prettier |
+| 📝 **MDX** | [**MDX Guide**](languages/mdx.md) | MDX language server, Prettier, Markdown highlighting |
 | 🧩 **Web UI** | [**Web UI Guide**](languages/web-ui.md) | Svelte, Angular, React/TSX, TypeScript LSP |
 | 🦀 **Rust** | [**Rust Guide**](languages/rust.md) | rust-analyzer, rustfmt, Cargo |
 | 📄 **LaTeX / BibTeX** | [**LaTeX Guide**](languages/latex.md) | Texlab, latexindent, LaTeX/BibTeX parsers |

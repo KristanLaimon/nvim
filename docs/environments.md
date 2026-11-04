@@ -20,8 +20,9 @@ The **Environments Manager** allows managing up to 9 concurrent, isolated projec
 - **Bufferline & Screen Indicator**:
   - The top bufferline tab bar dynamically filters out buffers from other environments, keeping your tab bar focused exclusively on the active project.
   - A statusline indicator badge (`󰒋 [Env N: name]`) appears automatically **only when > 1 environments are active**. When running in single-project mode, it is completely hidden.
-- **Full Persistence & Workspaces Integration**:
-  - All environment layouts and metadata are saved to `stdpath("data")/environments/index.json`.
+- **Session-only State & Workspaces Integration**:
+  - Slots, project roots, buffers, terminals, and UI snapshots live only in RAM until Neovim exits. No environment index or session files are read or written under `.foxnvim`, `.krsnvim`, or the Neovim data directory. Existing saved environment files are ignored.
+  - Changing projects through Recent Projects, a file explorer, or `:cd` updates the active slot. Switching away and back returns to its latest project. Custom slot names are preserved; automatic folder labels follow the new project. Other environments keep their buffers and LSPs.
   - Can export any environment slot as a named Workspace (`:EnvironmentSaveAsWorkspace`) or load any saved Workspace into an environment slot (`:EnvironmentLoadWorkspace`).
 
 ---
@@ -50,7 +51,6 @@ Open the menu with `<C-S-e>`, `:EnvironmentMenu`, or `:Environments`. The picker
 | `a` / `A` / `<C-a>` | Normal / Insert | **Add / Configure** a slot using the **Recent Projects** selector or **File Explorer** (`e`) |
 | `r` / `R` / `<C-r>` / `<F2>` | Normal / Insert | **Rename** the selected environment |
 | `d` / `D` / `<C-d>` / `<Del>` | Normal / Insert | **Close & Delete** the selected environment (stops scoped LSPs & terminals) |
-| `s` / `S` / `<C-s>` / `<C-S-s>` | Normal / Insert | **Save** all environments and session snapshots to disk |
 | `w` / `W` / `<C-w>` | Normal / Insert | **Export** the selected environment slot as a named Workspace |
 | `1` .. `9` | Normal | Directly switch to slot number 1..9 |
 | `q` / `<Esc>` | Normal | Close menu |
@@ -74,8 +74,6 @@ When switching to an empty slot with `<C-S-1..9>` (or creating a slot via `a` / 
 - `:EnvironmentNew [slot] [dir] [name]`: Creates a new environment slot.
 - `:EnvironmentClose [slot]`: Closes an environment slot, unloads buffers, terminates scoped terminals, and stops scoped LSPs.
 - `:EnvironmentRename [slot] [name]`: Renames an environment.
-- `:EnvironmentSave`: Manually persists all active environment layouts and metadata.
-- `:EnvironmentRestore`: Restores all previously saved environments and resumes the active slot.
 - `:EnvironmentList`: Displays a concise notification listing all slots, their status, cwds, and attached LSPs.
 - `:EnvironmentSaveAsWorkspace [slot] [name]`: Exports an environment slot as a named Workspace.
 - `:EnvironmentLoadWorkspace [slot] [workspace_name]`: Loads a saved Workspace into an environment slot.

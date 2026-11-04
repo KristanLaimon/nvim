@@ -96,6 +96,8 @@ M.settings = {
 --- Everything the palette offers, in display order. EDIT THIS LIST.
 --- @type table[]
 M.commands = {
+	{ name = "Project Search Sidebar", cmd = "ProjectSearch", category = "Search" },
+	{ name = "Project-wide Replace Preview", cmd = "ProjectReplace", category = "Search" },
 	-- { name = "WakaTime: Coding Stats (ASCII Charts)", cmd = "WakaTimeStats", category = "Tools" },
 	{ name = "WakaTime: Set Stats OAuth Token (Session)", cmd = "WakaTimeStatsToken", category = "Tools" },
 	{ name = "WakaTime: Set Tracking API Key", cmd = "WakaTimeApiKey", category = "Tools" },
@@ -186,8 +188,6 @@ M.commands = {
 	-- --------------------------------------------------------------------------
 	{ name = "🌐 Open Environments Manager Menu (Ctrl+Shift+E)", cmd = "EnvironmentMenu", category = "Environments" },
 	-- { name = "➕ Add / Create New Environment Slot", cmd = "EnvironmentNew", category = "Environments" },
-	-- { name = "💾 Save All Environments Session State", cmd = "EnvironmentSave", category = "Environments" },
-	-- { name = "🔄 Restore Saved Environments Session", cmd = "EnvironmentRestore", category = "Environments" },
 	-- { name = "📋 List All Environment Slots (Status & LSPs)", cmd = "EnvironmentList", category = "Environments" },
 	-- { name = "🚪 Close Current Environment Slot", cmd = "EnvironmentClose", category = "Environments" },
 	-- { name = "⚡ Switch to Environment Slot 1 (Ctrl+Shift+1)", cmd = "EnvironmentSwitch 1", category = "Environments" },

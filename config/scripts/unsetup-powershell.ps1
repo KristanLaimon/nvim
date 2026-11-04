@@ -27,6 +27,7 @@ $OriginalContent = $Content
 
 # Recreamos la misma lista para saber qué buscar y destruir
 $Atajos = @(
+    @{ Codigo = 114; Mod = "7u"; Tecla = "ctrl+alt+r"; Id = "FoxVim.ProjectReplace" }
     @{ Codigo = 111; Mod = "7u"; Tecla = "ctrl+alt+o" }
     @{ Codigo = 13; Mod = "5u"; Tecla = "ctrl+enter" }
     @{ Codigo = 32; Mod = "5u"; Tecla = "ctrl+space" }
@@ -57,6 +58,13 @@ foreach ($atajo in $Atajos) {
     $tecla = $atajo.Tecla
     $codigo = $atajo.Codigo
     $mod = $atajo.Mod
+
+    if ($codigo -eq 39 -or $atajo.Id) {
+        $actionId = if ($atajo.Id) { $atajo.Id } else { "FoxVim.Comment.$mod" }
+        $escapedId = [regex]::Escape($actionId)
+        $Content = [regex]::Replace($Content, '\{[^{}]*"id"\s*:\s*"' + $escapedId + '"[^{}]*\}\s*,?', '')
+        $Content = [regex]::Replace($Content, '\{\s*"command"\s*:\s*\{[^{}]*\}\s*,\s*"id"\s*:\s*"' + $escapedId + '"\s*\}\s*,?', '')
+    }
 
     # Construimos la expresión regular exacta para este bloque JSON
     $EscapedKey = [regex]::Escape($tecla)

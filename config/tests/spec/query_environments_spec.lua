@@ -5,16 +5,15 @@ local storage = require("fox.query.storage")
 dofile(vim.fn.stdpath("config") .. "/config/tests/query/neotree.lua")
 
 t.describe("Query environment restoration", function()
-	t.it("restores editor focus and Query panels through repeated switches and saves", function()
+	t.it("restores editor focus and Query panels through repeated switches", function()
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
 		local original_win, original_buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
 		local saved_envs, saved_slot = _G._fox_environments, _G._fox_active_env_slot
-		local saved_dir, saved_layout = envs.settings.storage_dir, require("fox.query.layout").path
+		local saved_layout = require("fox.query.layout").path
 		local foreign = vim.api.nvim_create_buf(true, false)
 		vim.api.nvim_buf_set_name(foreign, root .. "/previous-project/old.lua")
 		vim.fn.mkdir(root .. "/one", "p")
 		vim.fn.mkdir(root .. "/two", "p")
-		envs.settings.storage_dir = root .. "/sessions"
 		require("fox.query.layout").path = root .. "/layout.json"
 		_G._fox_environments, _G._fox_active_env_slot = {}, 1
 		local ok, err = pcall(function()
@@ -57,7 +56,6 @@ t.describe("Query environment restoration", function()
 						end
 					end
 				end
-				envs.save_all()
 				t.expect(vim.api.nvim_win_get_buf(state.result_win)).toBe(state.result_buf)
 				t.expect(vim.api.nvim_win_get_buf(state.sql_win)).toBe(buf)
 				t.expect(vim.bo[buf].modified).toBeTruthy()
@@ -90,7 +88,7 @@ t.describe("Query environment restoration", function()
 			end
 		end
 		_G._fox_environments, _G._fox_active_env_slot = saved_envs, saved_slot
-		envs.settings.storage_dir, require("fox.query.layout").path = saved_dir, saved_layout
+		require("fox.query.layout").path = saved_layout
 		vim.api.nvim_set_current_dir(cwd)
 		vim.fn.delete(root, "rf")
 		if not ok then

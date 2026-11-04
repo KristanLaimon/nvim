@@ -104,15 +104,15 @@ function M.buffers()
 		end
 	end
 	order = valid
-	local selected, ordinary, sources = {}, {}, {}
+	local selected, ordinary, previews, sources = {}, {}, {}, {}
 	for _, buf in ipairs(order) do
 		if M.visible(buf) and not sources[source(buf)] then
 			sources[source(buf)] = true
-			local list = M.is_pinned(buf) and selected or ordinary
+			local list = M.is_pinned(buf) and selected or vim.b[buf].fox_preview_owner and previews or ordinary
 			list[#list + 1] = buf
 		end
 	end
-	return vim.list_extend(selected, ordinary)
+	return vim.list_extend(vim.list_extend(selected, ordinary), previews)
 end
 function M.get_elements()
 	local elements = {}
@@ -122,6 +122,10 @@ function M.get_elements()
 	return { elements = elements }
 end
 function M.label(buf)
+	local owner = vim.b[buf].fox_preview_owner
+	if owner then
+		return "[" .. owner .. "] " .. vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t")
+	end
 	local query = package.loaded["fox.query"]
 	local label = query and query.buffer_label(buf)
 	if label then

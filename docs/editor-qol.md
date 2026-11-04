@@ -334,3 +334,64 @@ put credentials in this repository. Stats use asynchronous HTTPS through `curl`
 on PATH; the token travels through stdin rather than process arguments. History
 availability depends on your WakaTime plan, and recent activity may take time to
 appear. See the [API documentation](https://wakatime.com/developers#summaries).
+
+## Project search and replace sidebar
+
+Press **Ctrl+F** or run `:ProjectSearch` for the right sidebar. **Ctrl+Shift+M**,
+**F9**, and `:ProjectReplace` open the same sidebar with replacement previews enabled.
+The Command Palette offers both actions. Ctrl+Alt+R remains a terminal alias;
+use Ctrl+Shift+M or F9 in Neovide to avoid keyboard-layout/AltGr translation.
+
+The sidebar has native editable fields and a results tree. In normal mode,
+`1` focuses Search, `2` Replace, `3` the file glob, and `4` Results. Use `i`/`a`
+and standard Vim editing in the fields; search updates as you type.
+`Tab`/`Shift+Tab` cycle sections; `Enter` in a field searches immediately and
+focuses Results. File globs such as `*.lua` and `src/*` filter relative paths.
+
+| Key in sidebar normal mode | Action |
+|---|---|
+| `j` / `k`, `gg` / `G` | Move through results; preview follows the cursor |
+| `Enter` | Focus the matching line, or fold/unfold a file header |
+| `h` / `l`, `za`, `zM` / `zR` | Collapse/expand files |
+| `gc` | Toggle case-sensitive matching (`Aa`); off by default |
+| `gr` | Toggle Vim regular expressions; off by default |
+| `gw` | Toggle whole-word matching |
+| `gR` | Toggle replacement preview, including empty-string deletion |
+| `Space` in Results | Include/exclude a file from replacement |
+| `a` in Results | Apply the selected previewed replacements to disk |
+| `o` in Results | Keep the selected file as a normal editor tab |
+| `r` in Results | Refresh the search |
+| `q` / `:ProjectSearchClose` | Close the sidebar and its temporary preview |
+
+Selecting a result updates a single **[Search]** buffer tab and highlights its
+match in the editor while focus stays in the sidebar. Browsing replaces that
+preview instead of adding tabs. Files already open stay open. Editing or pinning
+a preview keeps it as a normal tab. Closing the sidebar removes its temporary
+tab and highlight, restoring the editor's original buffer when appropriate.
+Search state lives only in RAM and closes on project-directory changes.
+
+The sidebar is local Lua code. When `rg` is available, an asynchronous ripgrep
+process selects candidate files and respects `.gitignore`/`.ignore`. Vim still
+handles matching and replacement, including Vim regex syntax. Without `rg`,
+the built-in Lua scanner works with the fixed exclusions below; it does not parse
+ignore files. No additional Neovim plugin is required. Searching reads file
+snapshots without opening source buffers; only previewed or replaced files load
+into the editor. Changing the query or closing the sidebar cancels pending work.
+Search and replacement are single-line;
+regex mode uses Vim patterns and replacement backreferences such as `\1`.
+Hidden files are included, but `.git`, `.hg`, `.svn`, `.foxnvim`, `.krsnvim`,
+`node_modules`, `vendor`, `.venv`, `target`, `dist`, and `build` are excluded.
+Symlinks are not followed. Binary files and
+files larger than 2 MiB are skipped and counted. Searches stop with an error
+above 50,000 entries or 10,000 matches; narrow the working directory/file filter.
+
+Searching never writes project files and includes unsaved text in loaded files.
+Files whose buffer representation differs from their disk bytes, such as mixed
+LF/CRLF files, remain searchable and show `[search only]`. They are excluded from
+replacement to preserve their original bytes.
+Before applying replacements, save modified matching buffers or deselect those
+files. Apply validates every selected file and buffer against its preview.
+If any changed, refresh with `r`. Writes preserve line endings, encoding, final
+newlines, and buffer undo history. Save hooks are bypassed so formatters cannot
+change the previewed replacement. Multi-file writes are not transactional; a
+write failure reports how many files were already saved.

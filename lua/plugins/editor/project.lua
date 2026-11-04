@@ -246,10 +246,9 @@ return {
 				return
 			end
 
-			-- Stop all LSP clients from previous project to free memory and avoid cross-project pollution
-			for _, client in ipairs(vim.lsp.get_clients()) do
-				client:stop()
-			end
+			local environments = require("plugins.fox.tools.environments")
+			environments.update_current_directory()
+			environments.stop_environment_lsps(environments.get_active_environment())
 
 			pcall(vim.cmd, "Neotree close")
 			vim.cmd("silent! only")
@@ -257,12 +256,17 @@ return {
 			vim.cmd("enew")
 			local new_buf = vim.api.nvim_get_current_buf()
 			for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-				if buf ~= new_buf and vim.api.nvim_buf_is_valid(buf) then
+				if buf ~= new_buf and vim.api.nvim_buf_is_valid(buf) and environments.is_buffer_in_current_environment(buf) then
 					pcall(vim.api.nvim_buf_delete, buf, { force = true })
 				end
 			end
 
-			pcall(vim.api.nvim_set_current_dir, dir)
+			local changed, err = pcall(vim.api.nvim_set_current_dir, dir)
+			if not changed then
+				vim.notify(tostring(err), vim.log.levels.ERROR)
+				return
+			end
+			environments.update_current_directory()
 			local pinned_tabs = require("plugins.fox.ui.pinned_tabs")
 			local has_pins = #pinned_tabs.load_pins() > 0
 			if not has_pins then

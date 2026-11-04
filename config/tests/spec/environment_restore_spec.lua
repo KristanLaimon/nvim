@@ -7,7 +7,7 @@ t.describe("deferred environment UI restoration", function()
 		vim.fn.mkdir(root, "p")
 		local saved_envs, saved_slot = _G._fox_environments, _G._fox_active_env_slot
 		local saved_terms, saved_manager = _G._fox_terminals, _G.TerminalManager
-		local saved_dir, cwd = envs.settings.storage_dir, vim.fn.getcwd()
+		local cwd = vim.fn.getcwd()
 		local saved_schedule = vim.schedule
 		local key = "plugins.fox.git.git_center"
 		local saved_center, saved_query = package.loaded[key], package.loaded["fox.query"]
@@ -15,7 +15,6 @@ t.describe("deferred environment UI restoration", function()
 		vim.cmd("tabnew")
 		local tab = vim.api.nvim_get_current_tabpage()
 		local ok, err = pcall(function()
-			envs.settings.storage_dir = root .. "/sessions"
 			_G._fox_environments, _G._fox_active_env_slot, _G._fox_terminals = {}, 1, {}
 			package.loaded["fox.query"] = nil
 			package.loaded[key] = {
@@ -68,7 +67,6 @@ t.describe("deferred environment UI restoration", function()
 		_G._fox_environments, _G._fox_active_env_slot = saved_envs, saved_slot
 		_G._fox_terminals, _G.TerminalManager = saved_terms, saved_manager
 		package.loaded[key], package.loaded["fox.query"] = saved_center, saved_query
-		envs.settings.storage_dir = saved_dir
 		vim.api.nvim_set_current_dir(cwd)
 		if vim.api.nvim_tabpage_is_valid(tab) then
 			vim.api.nvim_set_current_tabpage(tab)

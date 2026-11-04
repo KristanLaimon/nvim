@@ -1781,7 +1781,9 @@ function M.open_file_same_branch(file_path, opts)
 		return
 	end
 
-	local ok, _ = pcall(vim.cmd, "edit " .. vim.fn.fnameescape(full_path))
+	local preview = require("fox.core.preview_tab")
+	M.state.preview_tab = M.state.preview_tab or preview.new("Diff", target_win)
+	local ok, _ = pcall(preview.show, M.state.preview_tab, full_path, target_win)
 	if not ok then
 		notify("Could not open file: " .. file_path, vim.log.levels.WARN)
 		return
@@ -2094,6 +2096,8 @@ function M.start_between_branches(branch1, branch2, cwd)
 
 	M.state.cwd = cwd
 	M.state.mode = "between_branches"
+	require("fox.core.preview_tab").close(M.state.preview_tab)
+	M.state.preview_tab = nil
 	M.state.is_active = true
 	M.state.base_ref = branch1
 	M.state.target_ref = branch2
@@ -2160,6 +2164,8 @@ function M.close(opts)
 
 		-- Tear down blame author columns (diff-mode only surface)
 		M.close_blame()
+		require("fox.core.preview_tab").close(M.state.preview_tab)
+		M.state.preview_tab = nil
 
 		-- Determine target editor window to restore focus to
 		local target_win = M.state.editor_win or M.state.prev_win

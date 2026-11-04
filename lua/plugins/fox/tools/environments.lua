@@ -21,14 +21,13 @@
 --      - Bufferline tabs only show files belonging to the active environment.
 --      - A discreet statusline indicator shows `󰒋 [Env N: name]` ONLY when > 1
 --        environments are active. When only 1 environment is active, nothing is shown.
---   7. Full Persistence & Workspaces Compatibility:
---      - Saves environment layouts and metadata in stdpath("data")/environments.
+--   7. Session-only environments & Workspaces Compatibility:
+--      - Environment state lives only in RAM until Neovim exits.
 --      - Can export any environment slot as a named Workspace (:EnvironmentSaveAsWorkspace)
 --        or load any saved Workspace into a slot (:EnvironmentLoadWorkspace).
 -- ============================================================================
 
 local lazy_req = require("fox.core.lazy_require")
-local store = lazy_req("fox.core.store")
 local path = lazy_req("fox.core.path")
 
 local M = {}
@@ -38,22 +37,13 @@ local M = {}
 -- ============================================================================
 
 M.settings = {
-	--- Where environment session files and the index live.
-	storage_dir = vim.fn.stdpath("data") .. "/environments",
-
-	--- Index file name inside `storage_dir`.
-	index_file = "index.json",
-
 	--- Title on every notification from this module.
 	notify_title = "FOX Environments",
 
 	--- Maximum number of environment slots (1..9 for numeric pad/number row).
 	max_slots = 9,
 
-	--- Session options recorded for environment snapshots.
-	session_options = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,localoptions",
-
-	--- Filetypes treated as transient UI: closed before saving layout.
+	--- Filetypes treated as transient UI during environment switches.
 	transient_filetypes = {
 		"TaskRunner",
 		"toggleterm",
@@ -119,48 +109,8 @@ local function sync_internal_state()
 end
 
 -- ============================================================================
--- STORAGE & PATH HELPERS
+-- NOTIFICATIONS
 -- ============================================================================
-
-if not _G._fox_initial_cwd then
-	_G._fox_initial_cwd = vim.fn.getcwd()
-end
-
---- Resolves the primary root cwd (slot 1 / initial project root).
---- All environment slots and sessions are anchored and persisted in this first cwd.
---- @return string
-local function get_primary_root_dir()
-	if _G._fox_environments and _G._fox_environments[1] and _G._fox_environments[1].cwd then
-		return _G._fox_environments[1].cwd
-	end
-
-	if _G._fox_initial_cwd and _G._fox_initial_cwd ~= "" then
-		return _G._fox_initial_cwd
-	end
-
-	if vim.g.fox_initial_cwd and vim.g.fox_initial_cwd ~= "" then
-		return vim.g.fox_initial_cwd
-	end
-
-	return vim.fn.getcwd()
-end
-
-local function storage_dir(root_dir)
-	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/environments") then
-		return path.ensure_dir(M.settings.storage_dir)
-	end
-	local root = root_dir or get_primary_root_dir()
-	local p_dir = path.join(root, ".foxnvim", "environments")
-	return path.ensure_dir(p_dir)
-end
-
-local function index_path(root_dir)
-	return path.join(storage_dir(root_dir), M.settings.index_file)
-end
-
-local function session_path_for_slot(slot, root_dir)
-	return path.join(storage_dir(root_dir), string.format("env_slot_%d.vim", slot))
-end
 
 --- Notification helper.
 --- @param msg string
@@ -192,129 +142,6 @@ local function format_relative_time(timestamp)
 		end
 	end
 	return ""
-end
-
--- ============================================================================
--- INDEX PERSISTENCE
--- ============================================================================
-
---- Loads persisted environments index.
---- @param root_dir string|nil
---- @return table
-function M.load_index(root_dir)
-	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/environments") then
-		local raw = store.load(index_path(), { active_slot = 1, slots = {} })
-		if type(raw) ~= "table" then
-			raw = { active_slot = 1, slots = {} }
-		end
-		raw.slots = raw.slots or {}
-		return raw
-	end
-
-	local root = root_dir or get_primary_root_dir()
-	local cur_path = index_path(root)
-	local local_entries = store.load(cur_path, nil)
-	if not local_entries then
-		local root_json = path.join(root, ".foxnvim", "environments.json")
-		local_entries = store.load(root_json, nil)
-	end
-
-	if
-		local_entries
-		and type(local_entries) == "table"
-		and local_entries.slots
-		and not vim.tbl_isempty(local_entries.slots)
-	then
-		return local_entries
-	end
-
-	-- Check legacy global storage fallback if local index does not exist yet
-	local global_path = path.join(vim.fn.stdpath("data"), "environments", M.settings.index_file)
-	local global_entries = store.load(global_path, nil)
-	if
-		global_entries
-		and type(global_entries) == "table"
-		and global_entries.slots
-		and not vim.tbl_isempty(global_entries.slots)
-	then
-		return global_entries
-	end
-
-	return local_entries or { active_slot = 1, slots = {} }
-end
-
---- Collects relative paths of listed file buffers.
---- @return string[]
-local function get_listed_buffer_names()
-	local list = {}
-	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_is_valid(buf) and vim.fn.buflisted(buf) == 1 then
-			local name = vim.api.nvim_buf_get_name(buf)
-			if name ~= "" and vim.bo[buf].buftype == "" and not vim.b[buf].fox_query_root then
-				table.insert(list, vim.fn.fnamemodify(name, ":."))
-			end
-		end
-	end
-	return list
-end
-
---- Saves environments index to disk (per-project in .foxnvim/environments and global cache).
---- @param data table|nil
---- @param root_dir string|nil
---- @return boolean ok
-function M.save_index(data, root_dir)
-	if not data then
-		local slots_data = {}
-		for slot = 1, M.settings.max_slots do
-			local env = _G._fox_environments[slot]
-			if env then
-				slots_data[tostring(slot)] = {
-					slot = env.slot,
-					id = env.id,
-					name = env.name,
-					cwd = env.cwd,
-					cwd_name = env.cwd_name,
-					session_file = env.session_file or session_path_for_slot(slot, root_dir),
-					created_at = env.created_at,
-					updated_at = env.updated_at,
-					buffers = env.buffers or {},
-					last_buffer = env.last_buffer and not env.last_buffer:find("/.foxnvim/query/", 1, true) and env.last_buffer
-						or nil,
-					selected_terminal = env.selected_terminal,
-					terminal_open = env.terminal_open,
-					neotree_open = env.neotree_open,
-					git_center_open = env.git_center_open,
-					conflict_resolver_open = env.conflict_resolver_open,
-					conflict_resolver_file = env.conflict_resolver_file,
-					log_diff_open = env.log_diff_open,
-					diff_mode_open = env.diff_mode_open,
-					diff_mode_state = env.diff_mode_state,
-				}
-			end
-		end
-		data = {
-			active_slot = _G._fox_active_env_slot or 1,
-			slots = slots_data,
-		}
-	end
-
-	if M.settings.storage_dir and M.settings.storage_dir ~= (vim.fn.stdpath("data") .. "/environments") then
-		return store.save(index_path(), data)
-	end
-
-	local root = root_dir or get_primary_root_dir()
-	local cur_path = index_path(root)
-	local ok = store.save(cur_path, data)
-	pcall(store.save, path.join(root, ".foxnvim", "environments.json"), data)
-
-	-- Also maintain global index cache
-	pcall(function()
-		local global_path = path.join(vim.fn.stdpath("data"), "environments", M.settings.index_file)
-		path.ensure_dir(path.join(vim.fn.stdpath("data"), "environments"))
-		store.save(global_path, data)
-	end)
-
-	return ok
 end
 
 -- ============================================================================
@@ -423,20 +250,6 @@ local function restore_neotree(cwd)
 	end
 end
 
---- Closes and purges neo-tree buffers before saving layout.
-local function purge_neotree()
-	pcall(vim.cmd, "Neotree close")
-	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "neo-tree" and not vim.b[buf].fox_query_root then
-			pcall(vim.api.nvim_buf_delete, buf, { force = true })
-		end
-	end
-end
-
---- Checks whether a buffer belongs to the currently active environment.
---- Optimized for hot render loops (bufferline custom_filter).
---- @param bufnr integer
---- @return boolean
 function M.is_buffer_in_current_environment(bufnr)
 	if not M.has_multiple_environments() then
 		return true
@@ -653,7 +466,6 @@ local function ensure_current_slot_initialized()
 			cwd_name = cwd_name,
 			created_at = os.time(),
 			updated_at = os.time(),
-			session_file = session_path_for_slot(active_slot),
 			buffers = {},
 			terminals = term_pool,
 			neotree_open = is_neotree_open(),
@@ -672,10 +484,9 @@ local function ensure_current_slot_initialized()
 	end
 end
 
---- Saves the layout and state of the currently active environment to its session file.
 --- Captures the in-memory state of the currently active environment WITHOUT
 --- tearing down any UI. This is a fast, zero-I/O snapshot used during hot
---- environment switches. Disk persistence is deferred to VimLeavePre / explicit save.
+--- environment switches. Environment state never writes to disk.
 --- @param env table|nil
 --- @return boolean ok
 local function snapshot_active_environment(env)
@@ -683,6 +494,8 @@ local function snapshot_active_environment(env)
 	if not env then
 		return false
 	end
+
+	M.update_current_directory()
 
 	-- Remember which buffer the user was editing so we can restore it on switch-back
 	env.last_window = vim.api.nvim_get_current_win()
@@ -709,6 +522,15 @@ local function snapshot_active_environment(env)
 		end
 	end
 	env.terminals = term_pool
+	env.buffers = {}
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.api.nvim_buf_is_valid(buf) and vim.b[buf].fox_env_slot == env.slot and vim.bo[buf].buftype == "" then
+			vim.b[buf].fox_env_listed = vim.bo[buf].buflisted
+			if vim.bo[buf].buflisted then
+				table.insert(env.buffers, vim.api.nvim_buf_get_name(buf))
+			end
+		end
+	end
 	env.neotree_open = is_neotree_open()
 
 	-- Fast read-only git tool checks without require() churn
@@ -736,84 +558,6 @@ local function snapshot_active_environment(env)
 		env.diff_mode_state = nil
 	end
 	env.git_center_open = (gc_open and not ld_open and not cr_open and not dm_open) or false
-
-	return true
-end
-
---- Full snapshot that tears down UI and writes to disk.
---- Used only by save_all() and VimLeavePre, NOT during hot switches.
---- @param env table|nil
---- @return boolean ok
-local function snapshot_and_persist_environment(env)
-	env = env or M.get_active_environment()
-	if not env then
-		return false
-	end
-
-	local query = package.loaded["fox.query"]
-	local restore_query = query and query.suspend()
-	-- Snapshot the editor tab, whose sidebar is separate from Query's file tree.
-	snapshot_active_environment(env)
-	env.buffers = get_listed_buffer_names()
-	local editor_win = vim.api.nvim_get_current_win()
-
-	-- Now tear down UI for a clean session file
-	vim.opt.sessionoptions = M.settings.session_options
-	local neotree_was_open = env.neotree_open
-	purge_neotree()
-	dismiss_visible_terminals()
-
-	-- Close git tools for clean session
-	if env.log_diff_open then
-		pcall(function()
-			local ld = package.loaded["plugins.fox.git.log_diff"]
-			if ld and ld.close then
-				ld.close()
-			end
-		end)
-	end
-	if env.conflict_resolver_open then
-		pcall(function()
-			local cr = package.loaded["plugins.fox.git.conflict_resolver"]
-			if cr and cr.close then
-				cr.close()
-			end
-		end)
-	end
-	if env.diff_mode_open then
-		pcall(function()
-			local dm = package.loaded["plugins.fox.git.diff_mode"]
-			if dm and dm.close then
-				dm.close()
-			end
-		end)
-	end
-	if env.git_center_open then
-		pcall(function()
-			local gc = package.loaded["plugins.fox.git.git_center"]
-			if gc then
-				local close_fn = gc.close_git_center or gc.close
-				if close_fn then
-					close_fn()
-				end
-			end
-		end)
-	end
-
-	-- Write session file to disk
-	env.session_file = env.session_file or session_path_for_slot(env.slot)
-	pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(env.session_file))
-
-	-- Restore UI after disk write
-	if neotree_was_open then
-		restore_neotree(env.cwd)
-	end
-	if vim.api.nvim_win_is_valid(editor_win) then
-		vim.api.nvim_set_current_win(editor_win)
-	end
-	if restore_query then
-		restore_query()
-	end
 
 	return true
 end
@@ -858,7 +602,6 @@ function M.create_environment(slot, dir, name, auto_switch)
 		cwd_name = cwd_name,
 		created_at = os.time(),
 		updated_at = os.time(),
-		session_file = session_path_for_slot(slot),
 		buffers = {},
 		terminals = {},
 		neotree_open = false,
@@ -866,7 +609,6 @@ function M.create_environment(slot, dir, name, auto_switch)
 
 	_G._fox_environments[slot] = env
 	sync_internal_state()
-	M.save_index()
 	notify(string.format("Created Environment #%d: '%s' (%s)", slot, name, cwd_name))
 
 	if auto_switch ~= false then
@@ -874,6 +616,24 @@ function M.create_environment(slot, dir, name, auto_switch)
 	end
 
 	return env
+end
+
+--- Follow project changes made by Recent Projects, file explorers, or :cd.
+function M.update_current_directory()
+	ensure_current_slot_initialized()
+	local env = M.get_active_environment()
+	local cwd = path.normalize(vim.fn.getcwd())
+	if path.normalize(env.cwd) == cwd then
+		return
+	end
+	local name = vim.fn.fnamemodify(cwd, ":t")
+	if env.name == env.cwd_name then
+		env.name = name
+	end
+	env.cwd, env.cwd_name = cwd, name
+	env.last_buffer, env.last_buffer_nr = nil, nil
+	env.updated_at = os.time()
+	sync_internal_state()
 end
 
 --- Switches to the target environment slot.
@@ -890,6 +650,14 @@ function M.switch_environment(target_slot, callback)
 
 	local cur_slot = M.get_active_slot()
 	if target_slot == cur_slot and _G._fox_environments[target_slot] then
+		local directory = _G._fox_environments[target_slot].cwd
+		if path.normalize(vim.fn.getcwd()) ~= path.normalize(directory) then
+			local ok, err = pcall(vim.api.nvim_set_current_dir, directory)
+			if not ok then
+				notify(tostring(err), vim.log.levels.ERROR)
+				return false
+			end
+		end
 		notify(string.format("Already in Environment #%d (%s)", cur_slot, _G._fox_environments[cur_slot].name or ""))
 		if callback then
 			callback()
@@ -985,7 +753,7 @@ function M.switch_environment(target_slot, callback)
 				vim.b[buf].fox_env_slot = b_slot
 			end
 
-			local should_be_listed = (b_slot == target_slot)
+			local should_be_listed = (b_slot == target_slot) and vim.b[buf].fox_env_listed ~= false
 			if vim.bo[buf].buflisted ~= should_be_listed then
 				vim.bo[buf].buflisted = should_be_listed
 			end
@@ -1149,11 +917,6 @@ function M.switch_environment(target_slot, callback)
 		end)
 	end
 
-	-- 13. Async save index to disk (zero disk I/O on critical hot path)
-	vim.schedule(function()
-		M.save_index()
-	end)
-
 	pcall(function()
 		local ws = package.loaded["plugins.fox.tools.workspaces"] or _G.Workspaces
 		if ws and ws.update_badge then
@@ -1222,11 +985,6 @@ function M.close_environment(slot, callback)
 		end
 	end
 
-	-- 4. Delete session file
-	if env.session_file and path.is_file(env.session_file) then
-		pcall(os.remove, env.session_file)
-	end
-
 	-- 5. Remove slot
 	_G._fox_environments[slot] = nil
 	sync_internal_state()
@@ -1269,7 +1027,6 @@ function M.close_environment(slot, callback)
 		vim.cmd("redrawstatus")
 	end
 
-	M.save_index()
 	pcall(function()
 		local ws = package.loaded["plugins.fox.tools.workspaces"] or _G.Workspaces
 		if ws and ws.update_badge then
@@ -1299,7 +1056,6 @@ function M.rename_environment(slot, new_name, callback)
 			env.name = name
 			env.updated_at = os.time()
 			sync_internal_state()
-			M.save_index()
 			pcall(function()
 				local statusline = package.loaded["fox.ui.statusline"]
 				if statusline then
@@ -1318,72 +1074,6 @@ function M.rename_environment(slot, new_name, callback)
 	else
 		pcall(vim.ui.input, { prompt = "New Environment Name: ", default = env.name }, apply_rename)
 	end
-end
-
---- Saves all active environment snapshots and index to disk.
---- @param silent boolean|nil
-function M.save_all(silent)
-	ensure_current_slot_initialized()
-	local cur_env = M.get_active_environment()
-	if cur_env then
-		snapshot_and_persist_environment(cur_env)
-	end
-	M.save_index()
-	if not silent then
-		notify("All active environments saved!")
-	end
-end
-
---- Restores previously saved environments from index.
-function M.restore_all()
-	local index = M.load_index()
-	if not index.slots or vim.tbl_isempty(index.slots) then
-		notify("No saved environments found in index", vim.log.levels.WARN)
-		return
-	end
-
-	for slot_str, data in pairs(index.slots) do
-		local slot = tonumber(slot_str)
-		if slot and slot >= 1 and slot <= M.settings.max_slots then
-			_G._fox_environments[slot] = {
-				slot = slot,
-				id = data.id,
-				name = data.name,
-				cwd = data.cwd,
-				cwd_name = data.cwd_name,
-				created_at = data.created_at,
-				updated_at = data.updated_at,
-				session_file = data.session_file,
-				buffers = data.buffers or {},
-				last_buffer = data.last_buffer,
-				selected_terminal = data.selected_terminal,
-				terminal_open = data.terminal_open,
-				terminals = {},
-				neotree_open = data.neotree_open,
-				git_center_open = data.git_center_open,
-				conflict_resolver_open = data.conflict_resolver_open,
-				conflict_resolver_file = data.conflict_resolver_file,
-				log_diff_open = data.log_diff_open,
-				diff_mode_open = data.diff_mode_open,
-				diff_mode_state = data.diff_mode_state,
-			}
-		end
-	end
-
-	sync_internal_state()
-
-	local target = index.active_slot or 1
-	if _G._fox_environments[target] then
-		M.switch_environment(target)
-	else
-		for s = 1, M.settings.max_slots do
-			if _G._fox_environments[s] then
-				M.switch_environment(s)
-				break
-			end
-		end
-	end
-	notify("Restored saved environments session!")
 end
 
 -- ============================================================================
@@ -1640,7 +1330,6 @@ local function format_preview(entry)
 	table.insert(lines, "- **a**: Set / Reassign project directory (Recent Projects / Explorer)")
 	table.insert(lines, "- **r** / **<F2>**: Rename this environment")
 	table.insert(lines, "- **d** / **<Del>**: Close & delete this environment")
-	table.insert(lines, "- **s**: Save all environments to disk")
 	table.insert(lines, "- **w**: Export slot as a Workspace")
 	table.insert(lines, "- **1..9**: Quick switch to slot number")
 
@@ -1668,7 +1357,7 @@ function M.open_menu()
 		pickers
 			.new(
 				themes.get_dropdown({
-					prompt_title = " 🦊 Environments [Slots 1..9] (a: New | d: Close | r: Rename | s: Save | w: Workspace) ",
+					prompt_title = " 🦊 Environments [Slots 1..9] (a: New | d: Close | r: Rename | w: Workspace) ",
 					width = 0.85,
 					results_title = "Environment Slots",
 				}),
@@ -1784,14 +1473,6 @@ function M.open_menu()
 							end
 						end)
 
-						-- 's' / 'S' / '<C-s>' / '<C-S-s>': Save all environments
-						map_all({ { "i", "<C-s>" }, { "i", "<C-S-s>" }, { "n", "s" }, { "n", "S" } }, function()
-							actions.close(prompt_bufnr)
-							vim.schedule(function()
-								M.save_all()
-							end)
-						end)
-
 						-- 'w' / 'W' / '<C-w>': Export slot as a Workspace
 						map_all({ { "i", "<C-w>" }, { "n", "w" }, { "n", "W" } }, function()
 							local val = selected()
@@ -1892,13 +1573,6 @@ function M.setup()
 			end,
 			opts = { nargs = "*", desc = "Rename environment slot [slot] [name]" },
 		},
-		EnvironmentSave = {
-			fn = function()
-				M.save_all()
-			end,
-			opts = { desc = "Save all environments state" },
-		},
-		EnvironmentRestore = { fn = M.restore_all, opts = { desc = "Restore saved environments session" } },
 		EnvironmentSaveAsWorkspace = {
 			fn = function(opts)
 				local args = vim.split(opts.args, "%s+", { trimempty = true })
@@ -2019,12 +1693,11 @@ function M.setup()
 		end,
 	})
 
-	-- Autocmd on VimLeavePre to save active environments if > 1 environments are running
-	vim.api.nvim_create_autocmd("VimLeavePre", {
-		group = vim.api.nvim_create_augroup("FoxEnvironmentsAutoSaver", { clear = true }),
+	vim.api.nvim_create_autocmd("DirChanged", {
+		group = vim.api.nvim_create_augroup("FoxEnvironmentsDirectory", { clear = true }),
 		callback = function()
-			if M.has_multiple_environments() then
-				M.save_all(true)
+			if not vim.g._fox_environment_switching then
+				M.update_current_directory()
 			end
 		end,
 	})
@@ -2049,8 +1722,6 @@ return setmetatable({
 		"EnvironmentNew",
 		"EnvironmentClose",
 		"EnvironmentRename",
-		"EnvironmentSave",
-		"EnvironmentRestore",
 		"EnvironmentList",
 		"EnvironmentSaveAsWorkspace",
 		"EnvironmentLoadWorkspace",

@@ -984,6 +984,9 @@ function M.hide(state)
 		state.parameters_win, state.parameters_statement = nil, nil
 		if current ~= state.tab and valid(state.editor_tab, "tab") then
 			vim.api.nvim_set_current_tabpage(state.editor_tab)
+			if valid(state.editor_win, "win") and vim.api.nvim_win_get_tabpage(state.editor_win) == state.editor_tab then
+				vim.api.nvim_set_current_win(state.editor_win)
+			end
 		end
 	end
 	state.mode = "editor"
@@ -1008,6 +1011,7 @@ function M.show(view)
 	require("fox.query.tree").setup()
 	M.privacy_enter(state)
 	state.editor_tab = vim.api.nvim_get_current_tabpage()
+	state.editor_win = vim.api.nvim_get_current_win()
 	vim.cmd("tabnew")
 	state.tab, state.sql_win = vim.api.nvim_get_current_tabpage(), vim.api.nvim_get_current_win()
 	vim.t[state.tab].fox_query_root = state.root

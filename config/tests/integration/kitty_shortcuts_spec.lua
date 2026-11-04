@@ -83,10 +83,16 @@ for key in ('apostrophe', 'dead_acute'):
         actions = mappings.matching_key_actions(keymap.get(parse_shortcut('ctrl+' + shift + key), []))
         if %s:
             assert actions and actions[-1].definition == 'send_text all \\x1b[39;' + str(mod) + 'u', (key, actions)
+actions = mappings.matching_key_actions(keymap.get(parse_shortcut('ctrl+alt+r'), []))
+if %s:
+    assert actions and actions[-1].definition == 'send_text all \\x1b[114;7u', actions
+else:
+    assert not actions, actions
 unrelated = mappings.matching_key_actions(keymap[parse_shortcut('ctrl+shift+x')])
 assert unrelated[-1].definition == 'copy_to_clipboard', unrelated
 ]],
 			vim.json.encode(config),
+			enabled and "True" or "False",
 			enabled and "True" or "False",
 			enabled and "True" or "False",
 			enabled and "True" or "False"

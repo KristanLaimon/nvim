@@ -59,7 +59,7 @@ If you skip running `install.ps1` or `install.sh`, FoxVim handles missing extern
 
 | Missing CLI | Affected Feature | Graceful Fallback Behavior |
 | :--- | :--- | :--- |
-| **`ripgrep` (`rg`)** | Telescope Live Grep (`<C-f>`) | Live grep notifies that `rg` is missing. Standard buffer searches still work. |
+| **`ripgrep` (`rg`)** | Accelerates Project Search (`<C-f>`); Telescope grep | Project Search falls back to its built-in Lua scanner. Telescope grep requires `rg`. |
 | **`fd` / `fdfind`** | Fast file finding (`<C-/>`) | Telescope falls back to native Neovim file scanner. |
 | **`gcc` / `MinGW`** | Treesitter C compilation | Pre-compiled parsers load normally. Custom parser compilation notifies if a compiler is missing. |
 | **`chafa`** | Image viewer popup (`:ImageViewer`) | Displays a fallback warning modal prompting you to install `chafa` or open via OS (`<C-S-Enter>`). |
@@ -93,7 +93,7 @@ For manual installation or custom package managers, here is the complete tool ch
 |---|---|---|---|
 | **Neovim** (v0.12.4 / >= 0.10) | Core editor runtime (Current setup: `NVIM v0.12.4`) | `scoop install neovim` | `neovim` |
 | **Git** | Mason, Neogit, Lazy.nvim, Git Control Center | `scoop install git` | `git` |
-| **ripgrep** (`rg`) | Telescope live grep (`<C-f>`) | `scoop install ripgrep` | `ripgrep` |
+| **ripgrep** (`rg`) | Fast project search (`<C-f>`) and Telescope grep | `scoop install ripgrep` | `ripgrep` |
 | **fd** | Fast file finder (`<C-/>`) | `scoop install fd` | `fd-find` (or `fd`) |
 | **chafa** | Terminal pixel-art image previewer (`:ImageViewer`) | `scoop install chafa` | `chafa` |
 | **GCC / MinGW** | Treesitter parser compilation | `scoop install gcc` | `gcc` / `build-essential` |

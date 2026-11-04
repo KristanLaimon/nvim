@@ -8,14 +8,11 @@ local envs = require("plugins.fox.tools.environments")
 
 describe("plugins.fox.tools.environments", function()
 	local temp_dir
-	local orig_storage_dir
 	local orig_envs
 	local orig_active_slot
 
 	beforeEach(function()
 		temp_dir = vim.fn.tempname()
-		orig_storage_dir = envs.settings.storage_dir
-		envs.settings.storage_dir = temp_dir
 
 		orig_envs = vim.deepcopy(_G._fox_environments or {})
 		orig_active_slot = _G._fox_active_env_slot or 1
@@ -25,7 +22,6 @@ describe("plugins.fox.tools.environments", function()
 	end)
 
 	afterEach(function()
-		envs.settings.storage_dir = orig_storage_dir
 		_G._fox_environments = orig_envs
 		_G._fox_active_env_slot = orig_active_slot
 
@@ -130,63 +126,72 @@ describe("plugins.fox.tools.environments", function()
 		expect(vim.api.nvim_buf_is_valid(term_buf)).toBe(false)
 	end)
 
-	it("persists environments state and restores correctly", function()
-		local dir1 = vim.fn.stdpath("config")
-		envs.create_environment(1, dir1, "PersistedEnv", false)
-		envs.save_all(true)
+	it("keeps environment slots in RAM without creating storage", function()
+		envs.create_environment(1, vim.fn.stdpath("config"), "Memory", false)
+		envs.rename_environment(1, "Renamed")
+		expect(vim.fn.isdirectory(temp_dir)).toBe(0)
+		expect(envs.get_environment(1).session_file).toBe(nil)
+		expect(envs.save_index).toBe(nil)
+		expect(envs.restore_all).toBe(nil)
+	end)
 
-		-- Verify index file was written
-		local store = require("fox.core.store")
-		local index = store.load(temp_dir .. "/index.json", {})
-		expect(index.slots["1"] ~= nil).toBe(true)
-		expect(index.slots["1"].name).toBe("PersistedEnv")
-
-		-- Clear memory
-		_G._fox_environments = {}
-		expect(envs.get_environment(1)).toBe(nil)
-
-		-- Restore
-		envs.restore_all()
-		local restored = envs.get_environment(1)
-		expect(restored ~= nil).toBe(true)
-		expect(restored.name).toBe("PersistedEnv")
+	it("remembers a changed project when switching away and back", function()
+		local cwd = vim.fn.getcwd()
+		vim.fn.mkdir(temp_dir .. "/one", "p")
+		vim.fn.mkdir(temp_dir .. "/two", "p")
+		vim.fn.mkdir(temp_dir .. "/recent", "p")
+		local ok, err = pcall(function()
+			vim.api.nvim_set_current_dir(temp_dir .. "/one")
+			envs.create_environment(1, temp_dir .. "/one", nil, false)
+			envs.create_environment(2, temp_dir .. "/two", "Custom", false)
+			vim.api.nvim_set_current_dir(temp_dir .. "/recent")
+			envs.update_current_directory()
+			expect(envs.get_environment(1).cwd_name).toBe("recent")
+			expect(envs.get_environment(1).name).toBe("recent")
+			envs.switch_environment(2)
+			expect(envs.get_environment(2).name).toBe("Custom")
+			envs.switch_environment(1)
+			expect(require("fox.core.path").normalize(vim.fn.getcwd())).toBe(
+				require("fox.core.path").normalize(temp_dir .. "/recent")
+			)
+			expect(vim.fn.isdirectory(temp_dir .. "/recent/.foxnvim/environments")).toBe(0)
+		end)
+		vim.api.nvim_set_current_dir(cwd)
+		assert(ok, err)
 	end)
 
 	it("provides select_project_for_slot to configure environment slots", function()
 		expect(type(envs.select_project_for_slot)).toBe("function")
 	end)
 
-	it("snapshots and restores tool states (git center, diff dashboard, conflict resolver)", function()
-		local dir1 = vim.fn.stdpath("config")
-		local env = envs.create_environment(1, dir1, "ToolEnv", false)
-		env.git_center_open = true
-		env.log_diff_open = true
-		env.conflict_resolver_open = true
-		env.conflict_resolver_file = "test.txt"
-		env.diff_mode_open = true
-		env.terminal_open = true
+	it("keeps hidden preview buffers unlisted when returning to an environment", function()
+		local cwd = vim.fn.getcwd()
+		vim.fn.mkdir(temp_dir .. "/one", "p")
+		vim.fn.mkdir(temp_dir .. "/two", "p")
+		local hidden = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(hidden, temp_dir .. "/one/preview.txt")
+		vim.b[hidden].fox_env_slot = 1
+		local ok, err = pcall(function()
+			vim.api.nvim_set_current_dir(temp_dir .. "/one")
+			envs.create_environment(1, temp_dir .. "/one", nil, false)
+			envs.create_environment(2, temp_dir .. "/two", nil, false)
+			envs.switch_environment(2)
+			envs.switch_environment(1)
+			expect(vim.bo[hidden].buflisted).toBe(false)
+		end)
+		vim.api.nvim_buf_delete(hidden, { force = true })
+		vim.api.nvim_set_current_dir(cwd)
+		assert(ok, err)
+	end)
 
-		envs.save_index()
-
-		local store = require("fox.core.store")
-		local index = store.load(temp_dir .. "/index.json", {})
-		expect(index.slots["1"].git_center_open).toBe(true)
-		expect(index.slots["1"].log_diff_open).toBe(true)
-		expect(index.slots["1"].conflict_resolver_open).toBe(true)
-		expect(index.slots["1"].conflict_resolver_file).toBe("test.txt")
-		expect(index.slots["1"].diff_mode_open).toBe(true)
-		expect(index.slots["1"].terminal_open).toBe(true)
-
-		_G._fox_environments = {}
-		envs.restore_all()
-
-		local restored = envs.get_environment(1)
-		expect(restored ~= nil).toBe(true)
-		expect(restored.git_center_open).toBe(true)
-		expect(restored.log_diff_open).toBe(true)
-		expect(restored.conflict_resolver_open).toBe(true)
-		expect(restored.conflict_resolver_file).toBe("test.txt")
-		expect(restored.diff_mode_open).toBe(true)
-		expect(restored.terminal_open).toBe(true)
+	it("changes directory when assigning a new project to the active slot", function()
+		local cwd = vim.fn.getcwd()
+		vim.fn.mkdir(temp_dir, "p")
+		local ok, err = pcall(function()
+			envs.create_environment(1, temp_dir, nil, true)
+			expect(require("fox.core.path").equals(vim.fn.getcwd(), temp_dir)).toBe(true)
+		end)
+		vim.api.nvim_set_current_dir(cwd)
+		assert(ok, err)
 	end)
 end)

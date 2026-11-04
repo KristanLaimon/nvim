@@ -10,7 +10,7 @@ Choose one setup/undo pair for terminal shortcuts:
 
 From the Neovim config directory, run `bash config/scripts/setup-kitty.sh` for Kitty, or `bash config/scripts/unsetup-kitty.sh` to undo it. The Kitty pair requires Python 3. The Bash pair accepts a terminal name such as `foot` or `alacritty`; use `bash config/scripts/setup-bash.sh --check` to detect the current terminal without changing config.
 
-These scripts configure terminal shortcuts, not Bash or Fish profiles. Kitty setup enables Ctrl+Shift+Enter, Ctrl+Shift+P/A/Q/H/L and Ctrl+Shift+1..9 passthrough; rerun it to upgrade an existing setup. Ctrl+Shift+H/L then reach Neovim instead of opening Kitty scrollback or changing its layout. The Bash and PowerShell pairs configure a broader set of FoxVim shortcuts.
+These scripts configure terminal shortcuts, not Bash or Fish profiles. Kitty setup enables Ctrl+Alt+R (Project Replace), Ctrl+Shift+Enter, Ctrl+Shift+P/A/Q/H/L and Ctrl+Shift+1..9 passthrough; rerun it to upgrade an existing setup. Ctrl+Shift+H/L then reach Neovim instead of opening Kitty scrollback or changing its layout. The Bash and PowerShell pairs configure a broader set of FoxVim shortcuts.
 
 ## qutebrowser (Linux)
 
@@ -73,3 +73,5 @@ Other tools live separately:
 Kitty reserves Ctrl+Shift+Enter for a new window and Ctrl+Shift+P for a shortcut sequence. Run the Kitty setup to pass them to Neovim using its negotiated keyboard protocol. It overrides the Ctrl+Shift+P sequence prefix with `no_op`, so the command palette opens immediately without pressing Space or another key. Rerunning setup upgrades older FoxVim blocks; unsetup also recognizes those older blocks. When `kitty.conf` includes `user.conf` (as Ryoku does), setup writes the overrides there so system updates preserve them. Undo removes only the FoxVim block.
 
 On Windows, rerun `./config/scripts/setup-powershell.ps1` in PowerShell to forward Ctrl+Shift+Enter, Ctrl+Enter (run SQL), Ctrl+Space (completion), and Ctrl+Alt+O (Editor / Query cycle) from Windows Terminal. F3 also cycles Editor / Query directly. Restart Windows Terminal afterward. PowerShell itself does not control shortcuts while Neovim is running. `:OpenWithSystemApp`, `:FoxMode`, and `:CommandPalette` also work without terminal shortcut support.
+
+For project replace on Windows Terminal, run `./config/scripts/setup-powershell.ps1 -ShortcutsOnly`; this updates shortcut forwarding without changing terminal appearance or PSReadLine bindings. Ctrl+Alt+R forwards `ESC[114;7u` in both Windows Terminal and Kitty. Setup creates backups; rerunning upgrades older configurations, and the corresponding undo script removes the forwarding rule.

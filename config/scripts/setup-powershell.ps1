@@ -7,8 +7,10 @@ Hijackea atajos nativos de Windows Terminal (como switchToTab0..8)
 para que fluyan directamente hacia Neovim.
 #>
 
+param([switch]$ShortcutsOnly)
+
 Write-Host "1. Limpiando atajos de PSReadLine..." -ForegroundColor Cyan
-if (Get-Command Get-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
+if (-not $ShortcutsOnly -and (Get-Command Get-PSReadLineKeyHandler -ErrorAction SilentlyContinue)) {
     Get-PSReadLineKeyHandler | 
         Where-Object { 
             ($_.Key -match '^(Ctrl|Alt)' -and $_.Key -notmatch '(?i)^Ctrl\+(c|v|x|z|y|a|Backspace|Delete|LeftArrow|RightArrow)$') -or
@@ -37,6 +39,7 @@ if ($SettingsPaths.Count -eq 0) {
 # Array de atajos personalizados: [Código ASCII, Modificador, Combinación de teclas]
 # Modificador 5u = Ctrl | Modificador 6u = Ctrl + Shift | Modificador 7u = Ctrl + Alt
 $Atajos = @(
+    @{ Codigo = 114; Mod = "7u"; Tecla = "ctrl+alt+r"; Id = "FoxVim.ProjectReplace" }
     @{ Codigo = 111; Mod = "7u"; Tecla = "ctrl+alt+o" }
     @{ Codigo = 13; Mod = "5u"; Tecla = "ctrl+enter" }
     @{ Codigo = 32; Mod = "5u"; Tecla = "ctrl+space" }
@@ -72,7 +75,7 @@ for ($i = 65; $i -le 90; $i++) {
 
 foreach ($SettingsPath in $SettingsPaths) {
     Write-Host "`n   Procesando: $SettingsPath" -ForegroundColor Cyan
-    $BackupPath = "$SettingsPath.backup"
+    $BackupPath = "$SettingsPath.backup.$(Get-Date -Format yyyyMMddHHmmssfff)"
     Copy-Item -Path $SettingsPath -Destination $BackupPath -Force
     $Content = Get-Content -Path $SettingsPath -Raw
     $Payload = ""
@@ -87,10 +90,10 @@ foreach ($SettingsPath in $SettingsPaths) {
         $escapedKey = [regex]::Escape($tecla)
 
         # Current Windows Terminal stores shortcuts separately from actions.
-        # Bind the comment action there too; an old inline keys property can
+        # Bind explicit actions there too; an old inline keys property can
         # otherwise be shadowed by an existing keybindings entry.
-        if ($codigo -eq 39 -and $Content -match '"keybindings"\s*:\s*\[') {
-            $actionId = "FoxVim.Comment.$mod"
+        if (($codigo -eq 39 -or $atajo.Id) -and $Content -match '"keybindings"\s*:\s*\[') {
+            $actionId = if ($atajo.Id) { $atajo.Id } else { "FoxVim.Comment.$mod" }
             $escapedId = [regex]::Escape($actionId)
             $bindingPattern = '\{[^{}]*"keys"\s*:\s*"' + $escapedKey + '"[^{}]*\}\s*,?'
             $Content = [regex]::Replace($Content, $bindingPattern, '')
@@ -150,6 +153,7 @@ foreach ($SettingsPath in $SettingsPaths) {
     }
 
     # --- CONFIGURACION VISUAL ---
+    if (-not $ShortcutsOnly) {
     $OldContent = $Content
     $Content = $Content -replace '(?s)\s*"useAcrylic"\s*:\s*(true|false),?', ''
     $Content = $Content -replace '(?s)\s*"opacity"\s*:\s*\d+,?', ''
@@ -174,6 +178,7 @@ foreach ($SettingsPath in $SettingsPaths) {
             $Changed = $true
             Write-Host "   [+] Configuracion visual (Blur y Padding) inyectada." -ForegroundColor Yellow
         }
+    }
     }
 
     if ($Changed) {

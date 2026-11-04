@@ -165,3 +165,11 @@ Git Center implements an internal **Binary Blacklist & Safe Preview Handler**:
   - Renders clean fallback banners: `[ 📦 Binary File: <filename> - Preview & diff analysis disabled ]`.
   - Suppresses Tree-sitter parsing and line diff highlighting on binary files to ensure rock-solid stability.
 
+
+### Git Diff file preview tab
+
+Browsing files in Same Branch Diff Mode uses one temporary **[Diff]** buffer tab.
+Selecting another entry replaces that preview. Closing Diff Mode removes its
+temporary tab; previously open, edited, and pinned files stay open. The existing
+Git Diff sidebar, navigation, highlights, and two-branch comparison panes keep
+their behavior.

@@ -149,7 +149,8 @@ host terminal rather than the shell profile.
 | :--- | :---: | :--- |
 | `<C-k>` / `<C-K>` / `<C-/>` / `<C-_>` | n, i | Find files, respecting `.gitignore` |
 | `<C-A-k>` / `<C-S-/>` / `<C-?>` | n, i, v | Find files, ignoring `.gitignore` |
-| `<C-f>` | n, i | Live grep across the project |
+| `<C-f>` | n, i, v, t | Project search right sidebar; sections 1 Search, 2 Replace, 3 Files, 4 Results |
+| `<C-S-m>` / `<F9>` / `<C-A-r>` | n, i, v, t | Preview and replace text across project files; prefer Ctrl+Shift+M or F9 in Neovide |
 | `<C-S-f>` | n, i, v | Floating Desktop file explorer |
 | `<C-S-y>` | n, i | Browse folders and open one as the active project |
 | `<C-r>` | n | Recent projects modal |
@@ -204,3 +205,5 @@ host terminal rather than the shell profile.
 | `:NugetManager` | Nuget package manager for `.csproj` |
 | `:TailwindOrganize` / `:TailwindOrganizerToggle` | Organize Tailwind CSS classes |
 | `:FoxTypes` / `:TypeInjector` | Type injector menu |
+
+For **Ctrl+Alt+R** project replacement, rerun `./config/scripts/setup-powershell.ps1 -ShortcutsOnly` in Windows Terminal or `bash config/scripts/setup-kitty.sh` in Kitty. The scripts forward `ESC[114;7u`. Reopen the terminal and restart Neovim after updating. `-ShortcutsOnly` skips PowerShell line-editor and visual configuration changes.

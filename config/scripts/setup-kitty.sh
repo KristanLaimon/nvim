@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pass FoxVim shortcuts through Kitty without terminal interception.
+# Set up FoxVim shortcuts and editor-only Kitty padding.
 set -euo pipefail
 
 python3 - <<'PY'
@@ -33,10 +33,13 @@ comment_maps = ''.join(
 previous_comment_block = previous_navigation_block.replace('# <<< FOXVIM KITTY SHORTCUTS <<<', comment_maps + '# <<< FOXVIM KITTY SHORTCUTS <<<')
 replace_map = 'map ctrl+alt+r send_text all \\x1b[114;7u\n'
 block = previous_comment_block.replace('# <<< FOXVIM KITTY SHORTCUTS <<<', replace_map + '# <<< FOXVIM KITTY SHORTCUTS <<<')
+previous_replace_block = block
+# Permit spacing only, rather than unrestricted terminal remote control.
+block = block.replace('# <<< FOXVIM KITTY SHORTCUTS <<<', 'allow_remote_control password\nremote_control_password "" set-spacing\n# <<< FOXVIM KITTY SHORTCUTS <<<')
 if block in text:
     print('FoxVim Kitty shortcuts are already set up.')
 else:
-    updated = text.replace(previous_comment_block, '').replace(previous_navigation_block, '').replace(previous_letters_block, '').replace(prefix_block, '').replace(previous_block, '').replace(old_block, '').replace(legacy, '')
+    updated = text.replace(previous_replace_block, '').replace(previous_comment_block, '').replace(previous_navigation_block, '').replace(previous_letters_block, '').replace(prefix_block, '').replace(previous_block, '').replace(old_block, '').replace(legacy, '')
     if updated and not updated.endswith('\n'):
         updated += '\n'
     updated += block
@@ -47,6 +50,7 @@ else:
         print(f'Backup: {backup}')
     config.write_text(updated)
     print(f'Enabled Ctrl+Alt+R, Ctrl+apostrophe, Ctrl+Shift+apostrophe, Ctrl+Shift+Enter, Ctrl+Shift+P/A/Q/H/L and Ctrl+Shift+1..9 passthrough in {config}')
+    print('Enabled editor-only padding with spacing-only remote control.')
 PY
 
 if command -v pkill >/dev/null && pkill -USR1 -u "$(id -u)" -x kitty; then

@@ -42,7 +42,7 @@ These scripts configure terminal emulator shortcuts for FoxVim; they do not conf
 | `config/scripts/setup-bash.sh` / `config/scripts/unsetup-bash.sh` | Configure or undo shortcuts across supported terminals using Bash |
 | `config/scripts/setup-powershell.ps1` / `config/scripts/unsetup-powershell.ps1` | Windows Terminal shortcuts and PSReadLine key handlers |
 
-For Kitty shortcuts, run `bash config/scripts/setup-kitty.sh`. Dependency installers live separately in `config/scripts/dependencies/`. The additional PowerShell configurator for multiple terminal emulators is preserved in `config/scripts/extra/setup-terminals.ps1`. See [the scripts guide](../config/scripts/README.md) for the layout.
+For Kitty shortcuts and automatic removal of padding while FoxVim is running, run `bash config/scripts/setup-kitty.sh`, then restart Neovim. Shell padding is restored on exit or suspend. Dependency installers live separately in `config/scripts/dependencies/`. The additional PowerShell configurator for multiple terminal emulators is preserved in `config/scripts/extra/setup-terminals.ps1`. See [the scripts guide](../config/scripts/README.md) for the layout.
 
 ---
 

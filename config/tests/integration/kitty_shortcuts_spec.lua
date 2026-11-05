@@ -16,7 +16,7 @@ local previous = "# >>> FOXVIM KITTY SHORTCUTS >>>\n"
 	.. maps
 	.. "map ctrl+shift+enter\nmap ctrl+shift+p\n"
 	.. "# <<< FOXVIM KITTY SHORTCUTS <<<\n"
-local base = "font_size 12\nmap ctrl+shift+x copy_to_clipboard\n"
+local base = "font_size 12\nwindow_padding_width 14\nallow_remote_control no\nmap ctrl+shift+x copy_to_clipboard\n"
 
 local function write(path, text)
 	local file = assert(io.open(path, "wb"))
@@ -68,6 +68,14 @@ from kitty.options.utils import parse_shortcut
 errors = []
 config = load_config(%s, accumulate_bad_lines=errors)
 assert not errors, errors
+if %s:
+    assert config.allow_remote_control == 'password', config.allow_remote_control
+    assert config.remote_control_password.get('') == ('set-spacing',), config.remote_control_password
+    from kitty.remote_control import password_authorizer
+    authorizer = password_authorizer(config.remote_control_password[''])
+    assert authorizer.is_cmd_allowed({'cmd': 'set-spacing'}, None, False, {})
+    assert not authorizer.is_cmd_allowed({'cmd': 'get-text'}, None, False, {})
+assert config.window_padding_width.left == 14, config.window_padding_width
 mappings = Mappings.__new__(Mappings)
 mappings.get_active_window = lambda: None
 keymap = config.keyboard_modes[''].keymap
@@ -92,6 +100,7 @@ unrelated = mappings.matching_key_actions(keymap[parse_shortcut('ctrl+shift+x')]
 assert unrelated[-1].definition == 'copy_to_clipboard', unrelated
 ]],
 			vim.json.encode(config),
+			enabled and "True" or "False",
 			enabled and "True" or "False",
 			enabled and "True" or "False",
 			enabled and "True" or "False",

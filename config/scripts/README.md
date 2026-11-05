@@ -12,6 +12,8 @@ From the Neovim config directory, run `bash config/scripts/setup-kitty.sh` for K
 
 These scripts configure terminal shortcuts, not Bash or Fish profiles. Kitty setup enables Ctrl+Alt+R (Project Replace), Ctrl+Shift+Enter, Ctrl+Shift+P/A/Q/H/L and Ctrl+Shift+1..9 passthrough; rerun it to upgrade an existing setup. Ctrl+Shift+H/L then reach Neovim instead of opening Kitty scrollback or changing its layout. The Bash and PowerShell pairs configure a broader set of FoxVim shortcuts.
 
+Kitty setup also permits spacing-only remote control. FoxVim removes padding on all four sides while running and restores Kitty's configured padding on exit or suspend. Restart Neovim after setup. This applies to a direct Kitty TUI; Neovide, headless runs, tmux, screen and editors inside Neovim terminals are skipped. A forced kill cannot restore padding; `kitten @ set-spacing padding=default` restores it manually. Undo removes the permission along with the shortcuts.
+
 ## qutebrowser (Linux)
 
 Requires Bash and Python 3; works independently of the Linux distribution, desktop and terminal. From the Neovim config directory:

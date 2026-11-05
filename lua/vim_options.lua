@@ -35,6 +35,9 @@ require("fox.core.performance").setup()
 -- 6. Generic file creation template system per programming language
 require("fox.core.templates").setup()
 
+-- Remove Kitty padding while the editor owns the terminal.
+require("fox.core.kitty_padding").setup()
+
 -- ============================================================================
 -- CONFIGURATION
 -- ============================================================================

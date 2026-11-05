@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Remove only the FoxVim Kitty shortcut overrides.
+# Remove only the FoxVim Kitty shortcut and padding overrides.
 set -euo pipefail
 
 python3 - <<'PY'
@@ -33,7 +33,9 @@ comment_maps = ''.join(
 previous_comment_block = previous_navigation_block.replace('# <<< FOXVIM KITTY SHORTCUTS <<<', comment_maps + '# <<< FOXVIM KITTY SHORTCUTS <<<')
 replace_map = 'map ctrl+alt+r send_text all \\x1b[114;7u\n'
 block = previous_comment_block.replace('# <<< FOXVIM KITTY SHORTCUTS <<<', replace_map + '# <<< FOXVIM KITTY SHORTCUTS <<<')
-updated = text.replace(block, '').replace(previous_comment_block, '').replace(previous_navigation_block, '').replace(previous_letters_block, '').replace(prefix_block, '').replace(previous_block, '').replace(old_block, '').replace(legacy, '')
+previous_replace_block = block
+block = block.replace('# <<< FOXVIM KITTY SHORTCUTS <<<', 'allow_remote_control password\nremote_control_password "" set-spacing\n# <<< FOXVIM KITTY SHORTCUTS <<<')
+updated = text.replace(block, '').replace(previous_replace_block, '').replace(previous_comment_block, '').replace(previous_navigation_block, '').replace(previous_letters_block, '').replace(prefix_block, '').replace(previous_block, '').replace(old_block, '').replace(legacy, '')
 if updated == text:
     print('No FoxVim Kitty shortcut overrides found.')
 else:

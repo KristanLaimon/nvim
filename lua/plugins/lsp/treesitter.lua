@@ -57,7 +57,8 @@ return {
 			callback = function(args)
 				local buf = args.buf
 				local line_count = vim.api.nvim_buf_line_count(buf)
-				if line_count <= 3500 then
+				-- Bound parsing by bytes so ordinary files with many lines keep highlighting.
+				if vim.api.nvim_buf_get_offset(buf, line_count) <= 1024 * 1024 then
 					pcall(vim.treesitter.start, buf)
 				end
 

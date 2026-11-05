@@ -158,7 +158,7 @@ No son plugins externos ni specs independientes adicionales:
 
 - `fox_neotree_wrap`: spec desactivada; sus helpers se usan desde Neo-tree.
 
-- `lua/fox/ui/devicons.lua` y `lua/nvim-web-devicons.lua`: API local para los consumidores de iconos; resolución propia en `lua/fox/ui/icons.lua` con metadatos originales atribuidos en `icon_data.lua` (licencia MIT en `licenses/mini.icons.txt`).
+- `lua/fox/ui/devicons.lua` y `lua/nvim-web-devicons.lua`: API local para los consumidores de iconos; resolución propia en `lua/fox/ui/icons.lua` con metadatos originales atribuidos en `icon_data.lua` (licencia MIT en `config/licenses/mini.icons.txt`).
 
 - `lua/fox/langs/csharp/navigation.lua`: navegación OmniSharp y fuentes de metadata/generadas asíncronas.
 
@@ -171,6 +171,6 @@ No son plugins externos ni specs independientes adicionales:
 - `lua/plugins/fox/context_help.lua`: compatibilidad con la ruta anterior.
 - `lua/plugins/lsp/editorconfig.lua`: IntelliSense local integrado en la spec de Blink.
 - `lua/plugins/theme.lua`: spec dinámica de Omarchy; no está en los imports actuales.
-- `lua/fox/`, `config/colors/`, `syntax/`, `ftplugin/` y `config/snippets/`: bibliotecas, temas y recursos propios; no implican clones de plugins.
+- `lua/fox/`, `config/colors/`, `config/syntax/`, `config/indent/`, `config/after/` y `config/snippets/`: bibliotecas, temas y recursos propios; no implican clones de plugins.
 
 La instalación de formateadores ya la cubre `fox.core.installer` mediante `:LanguageManager`; Conform depende directamente de Mason para encontrar sus ejecutables en PATH. No se usa `mason-conform.nvim`.

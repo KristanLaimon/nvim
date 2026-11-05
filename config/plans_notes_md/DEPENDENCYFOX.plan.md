@@ -175,7 +175,7 @@ API de compatibilidad propia en fox.ui.devicons y lua/nvim-web-devicons.lua. Con
 
 ## Reemplazo 13: nvim-mini/mini.icons
 
-Resolución propia en fox.ui.icons con los metadatos originales de mini.icons en icon_data.lua (atribución y licencia MIT en licenses/mini.icons.txt). Conserva el catálogo completo, sufijos compuestos, filetypes, rutas Windows, overrides por lenguaje y colores. Corrección de paridad visual: 1.281 consultas comparadas con el plugin instalado sin diferencias; nueve pruebas unitarias de iconos/devicons y dos integraciones NestJS aprobadas.
+Resolución propia en fox.ui.icons con los metadatos originales de mini.icons en icon_data.lua (atribución y licencia MIT en config/licenses/mini.icons.txt). Conserva el catálogo completo, sufijos compuestos, filetypes, rutas Windows, overrides por lenguaje y colores. Corrección de paridad visual: 1.281 consultas comparadas con el plugin instalado sin diferencias; nueve pruebas unitarias de iconos/devicons y dos integraciones NestJS aprobadas.
 
 ## Reemplazo 14: brenoprata10/nvim-highlight-colors
 
@@ -231,7 +231,7 @@ Blame asíncrono propio en fox.git.inline_blame y parser compartido en fox.git.b
 
 ## Reemplazo 23: rafamadriz/friendly-snippets
 
-- Recursos JSON conservados localmente en `config/snippet_catalog/`: 143 archivos, 6.194 definiciones y 129 filetypes/aliases. Verificados byte por byte contra el commit bloqueado b4d01b0fdf3c9a549961c2f9ffe8dc09be166219; manifiesto con idénticas contribuciones y orden. Son datos upstream atribuidos, no código FOX reescrito; licencia MIT en `licenses/friendly-snippets.txt`, origen y actualización manual documentados junto al catálogo.
+- Recursos JSON conservados localmente en `config/snippet_catalog/`: 143 archivos, 6.194 definiciones y 129 filetypes/aliases. Verificados byte por byte contra el commit bloqueado b4d01b0fdf3c9a549961c2f9ffe8dc09be166219; manifiesto con idénticas contribuciones y orden. Son datos upstream atribuidos, no código FOX reescrito; licencia MIT en `config/licenses/friendly-snippets.txt`, origen y actualización manual documentados junto al catálogo.
 - Carga propia en `fox.lsp.snippets` sobre el motor de Blink/Neovim existente: mantiene variables, tabstops, mirrors y expansión nativa. Los prefijos personalizados sustituyen sugerencias del catálogo; schema y entradas inválidas no rompen el menú. Retirada la dependencia y el lockfile; desactivado el descubrimiento automático de friendly-snippets y retirado el parche global sobre Blink.
 - Snippet Manager conserva archivos y comandos. Guardar JSON, escribir desde el manager o ejecutar FoxSnippetReload rescanea también archivos nuevos sin reiniciar Blink. Las instalaciones mínimas no cambian; no se instalan bundles opcionales ni se eliminan carpetas de plugins instalados.
 - Dos pruebas unitarias y cinco integraciones reales aprobadas. Paridad con la carga nativa de Blink para los 129 filetypes/aliases; overrides, entradas inválidas, JSON inválido, archivos nuevos/eliminados, recarga del proveedor activo y expansión con tabstops reales verificados. Registro Lazy: 26 externos y 70 locales. No se ejecutó Windows/WSL aquí.

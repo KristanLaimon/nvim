@@ -52,7 +52,7 @@ t.describe("local snippet catalog", function()
 		end
 		t.expect(count).toBe(143)
 		t.expect(entries).toBe(6194)
-		t.expect(vim.fn.filereadable("licenses/friendly-snippets.txt")).toBe(1)
+		t.expect(vim.fn.filereadable("config/licenses/friendly-snippets.txt")).toBe(1)
 	end)
 	t.it("handles prefix arrays, missing prefixes, descriptions and metadata safely", function()
 		local result = snippets.normalize({

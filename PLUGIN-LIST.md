@@ -112,5 +112,5 @@ The `fox-<name>` labels below identify local implementations; the Lazy ID column
 
 Shared modules under `lua/fox/`, language modules under `lua/fox/langs/`, and compatibility entrypoints belong to these local specs; they are not additional external plugins. Examples include local snippet loading, LSP tooling and file operations, icon lookup, Git helpers, and package manager actions.
 
-Some local data catalogs retain upstream attribution and licenses: icons and bundled snippet definitions are resources, rather than newly authored FOX data. See `licenses/` and the catalog documentation.
+Some local data catalogs retain upstream attribution and licenses: icons and bundled snippet definitions are resources, rather than newly authored FOX data. See `config/licenses/` and the catalog documentation.
 

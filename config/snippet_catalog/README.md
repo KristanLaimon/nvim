@@ -5,7 +5,7 @@ This is an attributed resource snapshot of rafamadriz/friendly-snippets at
 Source: https://github.com/rafamadriz/friendly-snippets/tree/b4d01b0fdf3c9a549961c2f9ffe8dc09be166219
 
 Copyright (c) 2021 Rafael Madriz and contributors. The MIT license is preserved
-in `../../licenses/friendly-snippets.txt`. The JSON files are upstream snippet
+in `../licenses/friendly-snippets.txt`. The JSON files are upstream snippet
 resources, not newly authored FOX code. All 143 snippet files are kept unchanged;
 the manifest preserves every original language alias and contribution order.
 

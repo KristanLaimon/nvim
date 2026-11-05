@@ -1,5 +1,13 @@
 local t = require("fox.lib.foxnvim.test")
 t.describe("Blade editor integration", function()
+	t.it("discovers bundled runtime files under config", function()
+		local runtime = vim.fs.normalize(vim.fn.stdpath("config") .. "/config")
+		for _, path in ipairs({ "syntax/blade.vim", "indent/blade.vim", "after/queries/blade/injections.scm" }) do
+			local relative = path:gsub("^after/", "")
+			local files = vim.api.nvim_get_runtime_file(relative, true)
+			t.expect(vim.tbl_contains(vim.tbl_map(vim.fs.normalize, files), runtime .. "/" .. path)).toBe(true)
+		end
+	end)
 	t.it("loads local syntax/indent and formats a mixed template with =", function()
 		local file = vim.fn.tempname() .. ".blade.php"
 		vim.fn.writefile({ "<div>", "@if($ok)", "<p>{{ $value }}</p>", "@else", "<br>", "@endif", "</div>" }, file)

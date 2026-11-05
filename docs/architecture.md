@@ -25,9 +25,12 @@ nvim/
 │   ├── keymaps/              Global keybindings
 │   ├── fox/                  Core, languages, libraries, and features
 │   └── plugins/              Plugin specifications
-├── after/                    Filetype overrides
 ├── docs/                     Wiki and language guides
 ├── config/
+│   ├── after/                Treesitter query overrides
+│   ├── indent/               Local indentation scripts
+│   ├── syntax/               Local syntax scripts
+│   ├── licenses/             Third-party resource licenses
 │   ├── aliases/              Compiler shims
 │   ├── colors/               Local colorschemes
 │   ├── schemas/              JSON, TOML, and XML schemas

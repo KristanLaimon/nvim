@@ -13,7 +13,7 @@
 --   lua/fox/       Shared internal libraries (core, git, launch, lsp).
 --   lua/plugins/   One lazy.nvim spec per file, grouped by area.
 --   lua/fox/lib/foxnvim/   Lua libraries for Neovim.
---   config/        Assets, scripts, tools, plans, and tests.
+--   config/        Runtime files, assets, licenses, scripts, tools, plans, and tests.
 --   config/tests/  Unit specs (`nvim -l config/tests/run.lua`) and integration specs.
 --   docs/          Architecture and feature documentation.
 --
@@ -25,8 +25,9 @@ if vim.loader then
 	vim.loader.enable()
 end
 
--- Bundled colorschemes live under config/colors/.
+-- Bundled runtime files live under config/; overrides must stay last.
 vim.opt.runtimepath:append(vim.fn.stdpath("config") .. "/config")
+vim.opt.runtimepath:append(vim.fn.stdpath("config") .. "/config/after")
 
 vim.o.background = "dark"
 

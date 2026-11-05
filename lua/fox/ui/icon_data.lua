@@ -1,5 +1,5 @@
 -- Icon metadata from nvim-mini/mini.icons, commit f642e3ba8c12afbc8f32f6d77ef6597eac56786f.
--- Copyright (c) 2021 Evgeni Chasnovski. MIT license: licenses/mini.icons.txt.
+-- Copyright (c) 2021 Evgeni Chasnovski. MIT license: config/licenses/mini.icons.txt.
 -- Data only; resolution and rendering are implemented by FoxVim.
 return {
 	default = {

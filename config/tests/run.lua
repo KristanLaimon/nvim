@@ -44,6 +44,7 @@ local function bootstrap_paths(root)
 	}, ";")
 	vim.opt.runtimepath:prepend(root)
 	vim.opt.runtimepath:append(root .. "/config")
+	vim.opt.runtimepath:append(root .. "/config/after")
 end
 
 --- Discovers and loads every spec file matching `filter`.

@@ -4,7 +4,7 @@ The **FoxVim Snippet Manager** lets you create, edit, override, delete, and list
 
 The bundled defaults live in `config/snippet_catalog/`, an attributed snapshot of
 friendly-snippets (143 JSON files, 6,194 definitions, 129 language names and aliases).
-Its MIT license is in `licenses/friendly-snippets.txt`. These are retained upstream
+Its MIT license is in `config/licenses/friendly-snippets.txt`. These are retained upstream
 snippet resources; no external friendly-snippets plugin is cloned or loaded.
 
 `fox.lsp.snippets` loads the catalog through Blink's built-in snippet engine. Your

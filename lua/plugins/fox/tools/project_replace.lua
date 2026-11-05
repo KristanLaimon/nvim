@@ -488,7 +488,7 @@ return setmetatable({
 	dir = require("fox.core.lazyspec").for_module(),
 	cmd = { "ProjectSearch", "ProjectReplace", "ProjectSearchClose" },
 	keys = {
-		{ "<C-f>", "<Cmd>ProjectSearch<CR>", mode = { "n", "i", "x", "t" }, desc = "Project Search Sidebar" },
+		{ "<C-f>", "<Cmd>ProjectSearch<CR>", mode = { "n", "i", "x" }, desc = "Project Search Sidebar" },
 		{
 			"<C-S-m>",
 			open_shortcut,

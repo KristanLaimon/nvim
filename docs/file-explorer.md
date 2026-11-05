@@ -25,6 +25,7 @@ FOX Neovim includes native floating file explorers for Desktop, WSL, folder pick
    - When marked items are set to visible, they are rendered using a theme-derived color (`NeoTreeCustomHidden`, linked to active theme's `Comment` group).
 7. **Terminal from Neo-tree (`<C-;>`)**: Opens or toggles the selected multi-terminal slot. This intentionally replaces Neo-tree's default `clear_selection` action for that key.
 8. **Word wrap (`gw`, only while Neo-tree is focused)**: Toggle full names wrapping onto additional screen lines, with one visual blank line between entries. Also available as `:NeotreeToggleWordWrap` and **Toggle Word Wrap & Entry Spacing in Neo-tree (gw)** in the Command Palette. Disabled by default; applies to Neo-tree views for the current session, including reopened panels.
+9. **Cursor centering**: Enabled by default. When the tree exceeds the panel height, scrolling keeps the cursor vertically centered, except near the first and last entries. Short lists scroll normally. Use **Toggle Cursor Centering in Neo-tree (Global)** in the Command Palette or `:NeotreeToggleCursorCentering`. The preference is saved globally across projects and restarts in `stdpath("state")/neotree_center.json`. Uses native `scrolloff`, so wrapped names can affect the exact center; disabling restores the global scroll margin.
 
 ---
 

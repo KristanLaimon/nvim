@@ -479,6 +479,7 @@ return {
 			"NeotreeMove",
 			"NeotreeCancelMove",
 			"NeotreeToggleWordWrap",
+			"NeotreeToggleCursorCentering",
 		},
 		keys = (function()
 			local k = {}
@@ -508,8 +509,10 @@ return {
 			local neotree_hidden = require("plugins.fox.editor.neotree_hidden")
 			neotree_hidden.setup()
 			local neotree_wrap = require("plugins.fox.editor.neotree_wrap")
+			local neotree_center = require("plugins.fox.editor.neotree_center")
 
 			local user_cmds = {
+				NeotreeToggleCursorCentering = { neotree_center.toggle, "Toggle persistent Neo-tree cursor centering" },
 				NeotreeToggleWordWrap = { neotree_wrap.toggle, "Toggle Neo-tree word wrap and entry spacing" },
 				NeotreeCreateFile = {
 					function()
@@ -775,6 +778,7 @@ return {
 					},
 				},
 				event_handlers = {
+					{ event = "after_render", handler = neotree_center.apply },
 					{ event = "before_render", handler = neotree_wrap.prepare },
 					{ event = "after_render", handler = neotree_wrap.apply },
 					{

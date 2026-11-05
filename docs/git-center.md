@@ -85,6 +85,17 @@ The picker includes local and remote branches. If a local base branch is behind 
 
 ## File history
 
+In the current-branch graph (`l`), peach-colored **base: branchname** badges mark
+shared ancestor commits with other local and remote branches, even when those
+branches have advanced beyond that commit. Normal branch-tip badges keep their
+usual colors. The current branch and its upstream, symbolic remote aliases,
+and branches sharing only the current tip are excluded. Bases remain visible
+as older commits load; all-branches mode keeps the normal ref badges only.
+
+These are inferred merge bases, not recorded parent branches: later merges or
+rebases can change them. Deleted branches cannot be labeled, and remote names
+reflect the last fetch. Press `L` in the graph for the color legend.
+
 In Neo-tree, press `gH` on a file to open its commit history in the existing
 four-panel Log Diff dashboard. Directories are ignored. In Git Center, `h`
 opens the same file finder as `Ctrl+k`, rooted at the active repository or

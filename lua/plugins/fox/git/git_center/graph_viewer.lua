@@ -50,6 +50,7 @@ function M.setup_highlights()
 	vim.api.nvim_set_hl(0, "FoxGitKrakenBadgeRemote", { fg = "#11111b", bg = "#89b4fa", bold = true, default = true })
 	vim.api.nvim_set_hl(0, "FoxGitKrakenBadgeTag", { fg = "#11111b", bg = "#f9e2af", bold = true, default = true })
 	vim.api.nvim_set_hl(0, "FoxGitKrakenBadgeBranch", { fg = "#11111b", bg = "#cba6f7", bold = true, default = true })
+	vim.api.nvim_set_hl(0, "FoxGitKrakenBadgeBase", { fg = "#11111b", bg = "#fab387", italic = true, default = true })
 
 	-- Header / Mode badge
 	vim.api.nvim_set_hl(0, "FoxGitKrakenHeader", { fg = "#89dceb", bold = true, default = true })
@@ -225,6 +226,10 @@ function M.format_commit_line(parsed)
 		append(" " .. badge.text .. " ", badge.hl)
 		append(" ")
 	end
+	for _, name in ipairs(parsed.branch_bases or {}) do
+		append(" base: " .. name .. " ", "FoxGitKrakenBadgeBase")
+		append(" ")
+	end
 
 	-- Commit subject
 	if parsed.subject and parsed.subject ~= "" then
@@ -244,6 +249,43 @@ function M.format_commit_line(parsed)
 	return line_text, spans
 end
 
+--- Shared ancestors are inferred bases, not a record of branch creation.
+local function get_branch_bases(cwd)
+	local refs = queries.git_lines({
+		"for-each-ref",
+		"--format=%(refname)%1f%(refname:short)%1f%(objectname)%1f%(symref)%1f%(HEAD)%1f%(upstream)",
+		"refs/heads",
+		"refs/remotes",
+	}, cwd)
+	local head = queries.git_lines({ "rev-parse", "HEAD" }, cwd)[1]
+	local branches, current, upstream = {}, nil, nil
+	for _, line in ipairs(refs) do
+		local fields = vim.split(line, "\x1f", { plain = true })
+		if fields[5] == "*" then
+			current, upstream = fields[1], fields[6]
+		end
+		table.insert(branches, fields)
+	end
+
+	local bases, by_tip = {}, {}
+	for _, ref in ipairs(branches) do
+		if ref[1] ~= current and ref[1] ~= upstream and ref[3] ~= head and ref[4] == "" then
+			local tip = ref[3]
+			if not by_tip[tip] then
+				by_tip[tip] = queries.git_lines({ "merge-base", "--all", "HEAD", tip }, cwd)
+			end
+			for _, hash in ipairs(by_tip[tip]) do
+				-- Descendant branches share HEAD itself, rather than a base below it.
+				if hash ~= head then
+					bases[hash] = bases[hash] or {}
+					table.insert(bases[hash], ref[2])
+				end
+			end
+		end
+	end
+	return bases
+end
+
 --- Fetches commit graph lines from Git.
 --- @param limit integer Number of commits to request.
 --- @param cwd string Repository directory.
@@ -254,6 +296,7 @@ end
 ---   connector_mode?   "dim"|"hidden" Whether to insert the synthetic lane spacer rows.
 ---   current_branch?   string        Branch whose reachable commits stay bright.
 ---   highlight_current? boolean      Dim commits not reachable from current_branch (default true).
+---   branch_bases?      table        Cached inferred bases for pagination in current-branch mode.
 --- @return table result
 function M.fetch_commits(limit, cwd, mode, opts)
 	opts = opts or {}
@@ -281,6 +324,7 @@ function M.fetch_commits(limit, cwd, mode, opts)
 	end
 
 	local raw_lines = queries.git_lines(cmd, cwd)
+	local branch_bases = mode ~= "all" and (opts.branch_bases or get_branch_bases(cwd)) or nil
 
 	-- Commits reachable from the current branch; used to dim unrelated branches.
 	-- Fetching the same limit is enough: every current-branch commit in the top
@@ -305,6 +349,7 @@ function M.fetch_commits(limit, cwd, mode, opts)
 
 		if parsed.is_commit then
 			parsed.dim = current_set ~= nil and not current_set[parsed.full_hash]
+			parsed.branch_bases = branch_bases and branch_bases[parsed.full_hash] or nil
 		end
 
 		if parsed.is_commit and show_connectors and #rendered_lines > 0 then
@@ -345,6 +390,7 @@ function M.fetch_commits(limit, cwd, mode, opts)
 		commits = commits,
 		total_commits = #commits,
 		all_fetched = all_fetched,
+		branch_bases = branch_bases,
 	}
 end
 
@@ -403,6 +449,7 @@ function M.open(target_cwd, initial_mode)
 	local refs_filter = nil -- nil = every branch (--all); otherwise a list of refs
 	local order = "topo" -- "topo" | "date"
 	local connector_mode = "dim" -- "dim" | "hidden"
+	local branch_bases
 
 	local current_branch = (info.branch and info.branch ~= "") and info.branch
 		or (queries.git_lines({ "branch", "--show-current" }, active_cwd)[1] or "HEAD")
@@ -413,10 +460,12 @@ function M.open(target_cwd, initial_mode)
 			order = order,
 			connector_mode = connector_mode,
 			current_branch = current_branch,
+			branch_bases = branch_bases,
 		}
 	end
 
 	local initial_data = M.fetch_commits(current_limit, active_cwd, mode, fetch_opts())
+	branch_bases = initial_data.branch_bases
 	if #initial_data.lines == 0 then
 		config.notify("No commit history found in repository", vim.log.levels.INFO)
 		return
@@ -775,6 +824,7 @@ function M.open(target_cwd, initial_mode)
 	-- Full refresh: re-fetches from scratch respecting the current mode, order,
 	-- branch filter and connector setting.
 	local function reload()
+		branch_bases = nil
 		current_limit = 50
 		all_fetched = false
 		is_fetching = true
@@ -782,6 +832,7 @@ function M.open(target_cwd, initial_mode)
 
 		vim.schedule(function()
 			local result = M.fetch_commits(current_limit, active_cwd, mode, fetch_opts())
+			branch_bases = result.branch_bases
 			is_fetching = false
 			commits_data = result.commits
 			total_commits_count = result.total_commits
@@ -816,6 +867,7 @@ function M.open(target_cwd, initial_mode)
 			local ok, result = pcall(M.fetch_commits, current_limit, active_cwd, mode, fetch_opts())
 			is_fetching = false
 			if ok and result then
+				branch_bases = result.branch_bases
 				if result.total_commits <= #commits_data then
 					all_fetched = true
 				else
@@ -1069,6 +1121,7 @@ function M.open(target_cwd, initial_mode)
 		table.insert(lines, " ● commit node   │ lane   ╱╲ merge   ⬝ gap")
 		table.insert(lines, " 🌿 HEAD   ☁️ remote   🏷️ tag   🌲 branch")
 		table.insert(lines, "")
+		table.insert(lines, " base: name (peach) = shared ancestor with another branch, inferred")
 		table.insert(lines, " Press any key to dismiss")
 
 		local buf = ui.float({

@@ -154,6 +154,89 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		expect(#all_res.lines).toBeGreaterThan(0)
 	end)
 
+	it("renders inferred bases with a separate badge color and exact byte spans", function()
+		graph_viewer.setup_highlights()
+		local line, spans = graph_viewer.format_commit_line({
+			is_commit = true,
+			graph_raw = "* ",
+			hash = "abcdef1",
+			refs = " (main)",
+			branch_bases = { "main", "origin/main" },
+			subject = "shared ancestor",
+		})
+		expect(line).toContain("base: main")
+		expect(line).toContain("base: origin/main")
+		local badges = {}
+		for _, span in ipairs(spans) do
+			if span.hl_group == "FoxGitKrakenBadgeBase" then
+				table.insert(badges, line:sub(span.col_start + 1, span.col_end))
+			end
+		end
+		expect(badges).toEqual({ " base: main ", " base: origin/main " })
+		local base = vim.api.nvim_get_hl(0, { name = "FoxGitKrakenBadgeBase" })
+		local branch = vim.api.nvim_get_hl(0, { name = "FoxGitKrakenBadgeBranch" })
+		expect(base.bg == branch.bg).toBeFalsy()
+	end)
+
+	describe("inferred branch bases", function()
+		local repo
+		local function git(args)
+			local cmd = { "git", "-C", repo }
+			vim.list_extend(cmd, args)
+			local result = vim.system(cmd, { text = true }):wait()
+			assert(result.code == 0, result.stderr)
+			return vim.trim(result.stdout or "")
+		end
+
+		beforeEach(function()
+			repo = vim.fn.tempname() .. "_graph"
+			vim.fn.mkdir(repo, "p")
+			git({ "init", "-b", "main" })
+			git({ "config", "user.name", "Graph Test" })
+			git({ "config", "user.email", "graph@example.test" })
+			git({ "config", "commit.gpgsign", "false" })
+		end)
+
+		afterEach(function()
+			if repo then
+				vim.fn.delete(repo, "rf")
+			end
+		end)
+
+		it("labels moved local and remote branches at their base across pagination", function()
+			git({ "commit", "--allow-empty", "-m", "base" })
+			local base = git({ "rev-parse", "HEAD" })
+			git({ "branch", "feature" })
+			git({ "commit", "--allow-empty", "-m", "main advanced" })
+			git({ "update-ref", "refs/remotes/origin/main", "HEAD" })
+			git({ "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main" })
+			git({ "checkout", "feature" })
+			git({ "commit", "--allow-empty", "-m", "feature one" })
+			git({ "branch", "tracking" })
+			git({ "branch", "--set-upstream-to=tracking" })
+			git({ "commit", "--allow-empty", "-m", "feature two" })
+			git({ "branch", "alias" })
+			git({ "checkout", "-b", "child" })
+			git({ "commit", "--allow-empty", "-m", "child commit" })
+			git({ "checkout", "--orphan", "unrelated" })
+			git({ "commit", "--allow-empty", "-m", "unrelated root" })
+			git({ "checkout", "feature" })
+
+			local first = graph_viewer.fetch_commits(1, repo, "branch")
+			expect(first.commits[1].branch_bases).toBeNil()
+			expect(first.branch_bases[base]).toEqual({ "main", "origin/main" })
+			local full = graph_viewer.fetch_commits(20, repo, "branch", { branch_bases = first.branch_bases })
+			expect(full.total_commits).toBe(3)
+			expect(full.commits[2].branch_bases).toBeNil()
+			expect(full.commits[3].full_hash).toBe(base)
+			expect(full.commits[3].branch_bases).toEqual({ "main", "origin/main" })
+			local all = graph_viewer.fetch_commits(20, repo, "all")
+			for _, commit in ipairs(all.commits) do
+				expect(commit.branch_bases).toBeNil()
+			end
+		end)
+	end)
+
 	it("registers :GitGraph and :GitCenterGraph user commands", function()
 		git_center.setup()
 		local commands = vim.api.nvim_get_commands({})

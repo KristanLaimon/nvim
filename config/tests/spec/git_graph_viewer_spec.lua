@@ -119,8 +119,7 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		expect(line_text).toContain("🌿 main")
 		expect(line_text).toContain("☁️ main")
 		expect(line_text).toContain("feat: Neo-tree mover")
-		expect(line_text).toContain("👤 FoxDeveloper")
-		expect(line_text).toContain("🕒 25 hours ago")
+		expect(line_text).toContain("FoxDeveloper  25 hours ago  feat: Neo-tree mover")
 
 		-- Spans should contain lane color, SHA hl, and ref badge hl
 		expect(#spans).toBeGreaterThan(3)
@@ -139,6 +138,48 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		expect(has_lane_hl).toBeTruthy()
 		expect(has_sha_hl).toBeTruthy()
 		expect(has_head_hl).toBeTruthy()
+	end)
+
+	it("aligns log headers and Unicode metadata across graph lanes and ref badges", function()
+		local queries = require("plugins.fox.git.git_center.queries")
+		local original = queries.git_lines
+		queries.git_lines = function()
+			return {
+				"* abcdef1\x1f (HEAD -> main, origin/main)\x1fKristan Ruíz\x1f42 seconds ago\x1ffirst",
+				"|\\",
+				"| * abcdef2\x1f\x1f李\x1f2 days ago\x1fsecond",
+			}
+		end
+		local ok, result = pcall(graph_viewer.fetch_commits, 10, vim.fn.getcwd(), "all")
+		queries.git_lines = original
+		assert(ok, result)
+		expect(result.lines[1]).toContain("📌 Hash")
+		expect(result.lines[1]).toContain("👤 Author")
+		expect(result.lines[1]).toContain("🕒 Relative Date")
+		expect(result.lines[1]).toContain("💬 Subject")
+		expect(result.lines[2]).toContain("●")
+		expect(result.lines[3]).toContain("│╲")
+		expect(result.lines[4]).toContain("│ │")
+		expect(result.line_commits[2]).toBe("abcdef1")
+		expect(result.line_commits[5]).toBe("abcdef2")
+		local function column(row, value)
+			local start = assert(result.lines[row]:find(value, 1, true))
+			return vim.fn.strdisplaywidth(result.lines[row]:sub(1, start - 1))
+		end
+		for _, values in ipairs({
+			{ "📌 Hash", "abcdef1", "abcdef2" },
+			{ "👤 Author", "Kristan Ruíz", "李" },
+			{ "🕒 Relative Date", "42 seconds ago", "2 days ago" },
+			{ "💬 Subject", "first", "second" },
+		}) do
+			expect(column(1, values[1])).toBe(column(2, values[2]))
+			expect(column(1, values[1])).toBe(column(5, values[3]))
+		end
+		for row, spans in ipairs(result.spans) do
+			for _, span in ipairs(spans) do
+				expect(span.col_end <= #result.lines[row]).toBeTruthy()
+			end
+		end
 	end)
 
 	it("fetches commits for active repository in branch and all modes", function()
@@ -257,6 +298,7 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		expect(vim.api.nvim_win_get_config(config.graph_right_win).hide).toBeTruthy()
 		expect(vim.wo[config.graph_win].wrap).toBeFalsy()
 		local cursor = vim.api.nvim_win_get_cursor(config.graph_win)
+		expect(cursor[1]).toBe(2)
 		local function press(buf, key)
 			local map = vim.api.nvim_buf_call(buf, function()
 				return vim.fn.maparg(key, "n", false, true)

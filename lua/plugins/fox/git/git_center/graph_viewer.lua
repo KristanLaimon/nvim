@@ -162,11 +162,12 @@ end
 --- @param parsed table
 --- @return string line_text
 --- @return table[] spans
-function M.format_commit_line(parsed)
+function M.format_commit_line(parsed, widths)
 	local line_text = ""
 	local byte_len = 0
 	local spans = {}
 	local dim = parsed.dim == true
+	local display_width = 0
 
 	local function append(chunk, hl_group)
 		if not chunk or chunk == "" then
@@ -175,8 +176,13 @@ function M.format_commit_line(parsed)
 		local start_byte = byte_len
 		line_text = line_text .. chunk
 		byte_len = byte_len + #chunk
+		display_width = display_width + vim.fn.strdisplaywidth(chunk)
 		if hl_group then
-			table.insert(spans, { col_start = start_byte, col_end = byte_len, hl_group = hl_group })
+			table.insert(spans, {
+				col_start = start_byte,
+				col_end = byte_len,
+				hl_group = parsed.is_header and "FoxGitKrakenHeader" or hl_group,
+			})
 		end
 	end
 
@@ -213,36 +219,36 @@ function M.format_commit_line(parsed)
 		return line_text, spans
 	end
 
-	append(" ")
+	append(string.rep(" ", widths and math.max(1, widths.graph - #raw + 1) or 1))
 
 	-- Short commit hash
+	local hash_start = display_width
 	append(parsed.hash, dim and "FoxGitKrakenDim" or "FoxGitKrakenSha")
-	append(" ")
 
 	-- Ref badges
 	local badges = parse_refs(parsed.refs)
 	for _, badge in ipairs(badges) do
-		append(" " .. badge.text .. " ", badge.hl)
 		append(" ")
+		append(" " .. badge.text .. " ", badge.hl)
 	end
 	for _, name in ipairs(parsed.branch_bases or {}) do
-		append(" base: " .. name .. " ", "FoxGitKrakenBadgeBase")
 		append(" ")
+		append(" base: " .. name .. " ", "FoxGitKrakenBadgeBase")
 	end
 
-	-- Commit subject
+	append(string.rep(" ", widths and math.max(2, widths.hash - (display_width - hash_start) + 2) or 2))
+	local author = parsed.author or ""
+	append(author, dim and "FoxGitKrakenDim" or "FoxGitKrakenAuthor")
+	append(string.rep(" ", widths and math.max(2, widths.author - vim.fn.strdisplaywidth(author) + 2) or 2))
+	local date = parsed.date or ""
+	append(date, dim and "FoxGitKrakenDim" or "FoxGitKrakenDate")
+	append(string.rep(" ", widths and math.max(2, widths.date - vim.fn.strdisplaywidth(date) + 2) or 2))
+
+	-- Subject stays last so long messages never shift the metadata columns.
 	if parsed.subject and parsed.subject ~= "" then
 		append(parsed.subject, dim and "FoxGitKrakenDim" or "FoxGitKrakenSubject")
 	else
 		append("(no commit message)", "FoxGitKrakenDim")
-	end
-
-	-- Author & Relative date
-	if parsed.author and parsed.author ~= "" then
-		append("  👤 " .. parsed.author, dim and "FoxGitKrakenDim" or "FoxGitKrakenAuthor")
-	end
-	if parsed.date and parsed.date ~= "" then
-		append("  🕒 " .. parsed.date, dim and "FoxGitKrakenDim" or "FoxGitKrakenDate")
 	end
 
 	return line_text, spans
@@ -342,6 +348,13 @@ function M.fetch_commits(limit, cwd, mode, opts)
 	local all_spans = {}
 	local line_commits = {}
 	local commits = {}
+	local entries = {}
+	local widths = {
+		graph = 0,
+		hash = vim.fn.strdisplaywidth("📌 Hash"),
+		author = vim.fn.strdisplaywidth("👤 Author"),
+		date = vim.fn.strdisplaywidth("🕒 Relative Date"),
+	}
 
 	for _, raw_line in ipairs(raw_lines) do
 		local parsed = M.parse_raw_graph_line(raw_line)
@@ -349,13 +362,40 @@ function M.fetch_commits(limit, cwd, mode, opts)
 		if parsed.is_commit then
 			parsed.dim = current_set ~= nil and not current_set[parsed.full_hash]
 			parsed.branch_bases = branch_bases and branch_bases[parsed.full_hash] or nil
+			local hash_width = vim.fn.strdisplaywidth(parsed.hash)
+			for _, badge in ipairs(parse_refs(parsed.refs)) do
+				hash_width = hash_width + vim.fn.strdisplaywidth(badge.text) + 3
+			end
+			for _, name in ipairs(parsed.branch_bases or {}) do
+				hash_width = hash_width + vim.fn.strdisplaywidth(name) + 8
+			end
+			widths.hash = math.max(widths.hash, hash_width)
+			widths.author = math.max(widths.author, vim.fn.strdisplaywidth(parsed.author))
+			widths.date = math.max(widths.date, vim.fn.strdisplaywidth(parsed.date))
 		end
+		widths.graph = math.max(widths.graph, #(parsed.graph_raw or ""))
+		table.insert(entries, parsed)
+	end
 
-		if parsed.is_commit and show_connectors and #rendered_lines > 0 then
-			local gap_raw = parsed.graph_raw and parsed.graph_raw:gsub("%*", "│") or "│"
+	if #entries > 0 then
+		local header, spans = M.format_commit_line({
+			is_commit = true,
+			is_header = true,
+			hash = "📌 Hash",
+			author = "👤 Author",
+			date = "🕒 Relative Date",
+			subject = "💬 Subject",
+		}, widths)
+		table.insert(rendered_lines, header)
+		table.insert(all_spans, spans)
+	end
+
+	for _, parsed in ipairs(entries) do
+		if parsed.is_commit and show_connectors and #commits > 0 then
+			local gap_raw = parsed.graph_raw and parsed.graph_raw:gsub("%*", "|") or "|"
 			local gap_parsed = {
 				is_commit = false,
-				graph_raw = gap_raw ~= "" and gap_raw or "│",
+				graph_raw = gap_raw ~= "" and gap_raw or "|",
 				dim = true,
 			}
 			local gap_text, gap_spans = M.format_commit_line(gap_parsed)
@@ -366,7 +406,7 @@ function M.fetch_commits(limit, cwd, mode, opts)
 			end
 		end
 
-		local line_text, spans = M.format_commit_line(parsed)
+		local line_text, spans = M.format_commit_line(parsed, widths)
 
 		table.insert(rendered_lines, line_text)
 		table.insert(all_spans, spans)
@@ -580,6 +620,7 @@ function M.open(target_cwd, initial_mode)
 		title = format_title(false),
 		title_pos = "center",
 	})
+	vim.api.nvim_win_set_cursor(left_win, { 2, 0 })
 	vim.api.nvim_set_option_value("cursorline", true, { win = left_win })
 	vim.api.nvim_set_option_value("wrap", false, { win = left_win })
 	vim.api.nvim_set_option_value("linebreak", true, { win = left_win })
@@ -876,7 +917,7 @@ function M.open(target_cwd, initial_mode)
 			line_commits = result.line_commits
 			render_left_buffer()
 			if left_win and vim.api.nvim_win_is_valid(left_win) then
-				pcall(vim.api.nvim_win_set_cursor, left_win, { 1, 0 })
+				pcall(vim.api.nvim_win_set_cursor, left_win, { 2, 0 })
 			end
 			update_window_title(false)
 			update_commit_details(nil)
@@ -1003,7 +1044,7 @@ function M.open(target_cwd, initial_mode)
 		if not (left_win and vim.api.nvim_win_is_valid(left_win)) then
 			return
 		end
-		pcall(vim.api.nvim_win_set_cursor, left_win, { 1, 0 })
+		pcall(vim.api.nvim_win_set_cursor, left_win, { 2, 0 })
 	end
 
 	-- Toggle mode (Current Branch <-> All Branches)

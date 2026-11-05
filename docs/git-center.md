@@ -123,6 +123,10 @@ Layout commands are `:GitCenterPreview`, `:GitCenterExpand`, and
 
 ## File history
 
+The logs graph (`l`) uses aligned **📌 Hash**, **👤 Author**, **🕒 Relative Date**,
+and **💬 Subject** columns. Branch and tag badges stay beside the hash; colored
+commit dots, merge lanes, and vertical connector rows preserve the graph.
+
 In the current-branch graph (`l`), peach-colored **base: branchname** badges mark
 shared ancestor commits with other local and remote branches, even when those
 branches have advanced beyond that commit. Normal branch-tip badges keep their

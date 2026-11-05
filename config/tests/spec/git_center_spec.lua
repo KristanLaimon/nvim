@@ -19,6 +19,34 @@ describe("plugins.fox.git.git_center", function()
 		end
 	end)
 
+	it("opens a full-size foreground preview with Tab and hides it with Shift+Tab", function()
+		git_center.open_git_center()
+		local function press(buf, key)
+			local map = vim.api.nvim_buf_call(buf, function()
+				return vim.fn.maparg(key, "n", false, true)
+			end)
+			map.callback()
+		end
+		press(git_center.main_buf, "<Tab>")
+		expect(vim.api.nvim_get_current_win()).toBe(git_center.preview_win)
+		expect(vim.api.nvim_win_get_config(git_center.preview_win).hide).toBeFalsy()
+		local base = vim.api.nvim_win_get_config(git_center.main_win)
+		local popup = vim.api.nvim_win_get_config(git_center.preview_win)
+		expect(popup.width).toBe(base.width)
+		expect(popup.height).toBe(base.height)
+		expect(popup.row).toBe(base.row)
+		expect(popup.col).toBe(base.col)
+		expect(popup.zindex > base.zindex).toBeTruthy()
+		expect(base.hide).toBeFalsy()
+		press(git_center.preview_buf, "<Tab>")
+		expect(vim.api.nvim_get_current_win()).toBe(git_center.preview_win)
+		press(git_center.preview_buf, "<S-Tab>")
+		expect(vim.api.nvim_get_current_win()).toBe(git_center.main_win)
+		expect(vim.api.nvim_win_get_config(git_center.preview_win).hide).toBeTruthy()
+		git_center.update_preview(true)
+		expect(vim.api.nvim_win_get_config(git_center.preview_win).hide).toBeTruthy()
+	end)
+
 	it("exports public API methods and settings", function()
 		expect(type(git_center.open_git_center)).toBe("function")
 		expect(type(git_center.close_git_center)).toBe("function")
@@ -29,6 +57,65 @@ describe("plugins.fox.git.git_center", function()
 		expect(type(git_center.settings)).toBe("table")
 		expect(type(git_center.settings.keys)).toBe("table")
 		expect(type(git_center.settings.keys.open_tab)).toBe("table")
+	end)
+
+	it("exposes Git actions and layout controls as commands, palette entries and non-motion shortcuts", function()
+		git_center.setup()
+		local palette = require("plugins.fox.tools.command_palette")
+		for _, command in ipairs({
+			"GitFetch",
+			"GitPull",
+			"GitPullRebase",
+			"GitRebase",
+			"GitRebaseContinue",
+			"GitRebaseAbort",
+			"GitActions",
+			"GitCommitFiles",
+			"GitCenterPreview",
+			"GitCenterExpand",
+			"GitCenterMaximize",
+			"GitFileHistory",
+			"GitLogDiff",
+		}) do
+			local found = false
+			for _, entry in ipairs(palette.commands) do
+				if entry.cmd == command then
+					found = true
+				end
+			end
+			expect(found).toBeTruthy()
+		end
+		for _, command in ipairs({
+			"GitFetch",
+			"GitPull",
+			"GitPullRebase",
+			"GitRebase",
+			"GitRebaseContinue",
+			"GitRebaseAbort",
+			"GitActions",
+			"GitCommitFiles",
+			"GitCenterPreview",
+			"GitCenterExpand",
+			"GitCenterMaximize",
+		}) do
+			expect(vim.fn.exists(":" .. command)).toBe(2)
+			expect(git_center.cmd).toContain(command)
+		end
+		git_center.open_git_center()
+		for _, buf in ipairs({ git_center.main_buf, git_center.preview_buf }) do
+			for _, key in ipairs({ "<F2>", "<F3>", "<F4>", "<F6>", "<F7>", "<F8>" }) do
+				local map = vim.api.nvim_buf_call(buf, function()
+					return vim.fn.maparg(key, "n", false, true)
+				end)
+				expect(map.buffer).toBe(1)
+			end
+			for _, key in ipairs({ "h", "H" }) do
+				local map = vim.api.nvim_buf_call(buf, function()
+					return vim.fn.maparg(key, "n", false, true)
+				end)
+				expect(map.buffer == 1).toBeFalsy()
+			end
+		end
 	end)
 
 	it("includes Ctrl+Shift+X in stage_all key settings and spec", function()

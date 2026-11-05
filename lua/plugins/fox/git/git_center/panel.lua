@@ -86,6 +86,9 @@ function M.resize_split(delta)
 	})
 
 	config.current_left_ratio = new_ratio
+	if config.panel_layout then
+		config.panel_layout.apply()
+	end
 	if config.root_dir then
 		save_left_ratio(config.root_dir, config.current_left_ratio)
 	end
@@ -237,6 +240,7 @@ function M.close_git_center(opts)
 	end
 
 	config.refresh = nil
+	config.panel_layout = nil
 	config.update_preview = nil
 	local diff_win, prev_win, tab_win, main_win =
 		config.diff_modal_win, config.preview_win, config.tab_win, config.main_win
@@ -721,6 +725,8 @@ function M.open_git_center()
 		return false
 	end
 
+	local layout
+	local automatic_preview = true
 	local preview_timer = nil
 
 	local function update_preview(immediate)
@@ -739,6 +745,16 @@ function M.open_git_center()
 
 			local cur_target = get_active_target()
 			local item = current_item()
+			if layout and automatic_preview then
+				local desired = item and item.type == "branch" and "split" or "browse"
+				if layout.mode ~= desired then
+					layout.mode = desired
+					layout.apply()
+				end
+			end
+			if layout and layout.mode == "browse" then
+				return
+			end
 
 			if not item then
 				local cursor_row = (config.main_win and vim.api.nvim_win_is_valid(config.main_win))
@@ -1034,12 +1050,32 @@ function M.open_git_center()
 			vim.bo[main_buf].modifiable = false
 			pcall(vim.api.nvim_win_set_cursor, config.main_win, { math.min(cursor[1], #new_lines), cursor[2] })
 
-			render.render_tab_bar(math.floor(vim.o.columns * config.settings.width_ratio))
+			render.render_tab_bar(vim.api.nvim_win_get_width(config.tab_win) - 2)
 			config.diff_cache = {}
 			update_preview()
 		end)
 	end
 	config.refresh = refresh
+	layout = require("plugins.fox.git.git_center.layout").new(config.main_win, config.preview_win, {
+		mode = "browse",
+		tab = config.tab_win,
+		ratio = function()
+			return config.current_left_ratio or config.settings.left_ratio
+		end,
+		manual = function()
+			automatic_preview = false
+		end,
+		changed = function()
+			refresh()
+		end,
+	})
+	config.panel_layout = layout
+	layout.apply()
+	for _, buf in ipairs({ main_buf, preview_buf }) do
+		vim.keymap.set("n", "<F4>", function()
+			require("plugins.fox.git.git_center.actions").open(get_active_target().full_path)
+		end, { buffer = buf, silent = true })
+	end
 	refresh()
 
 	local function switch_tab(delta)
@@ -1193,6 +1229,14 @@ function M.open_git_center()
 	local ctrl_d = vim.api.nvim_replace_termcodes("<C-d>", true, false, true)
 	local ctrl_u = vim.api.nvim_replace_termcodes("<C-u>", true, false, true)
 
+	vim.keymap.set("n", "<Esc>", function()
+		if layout.mode == "details" then
+			layout.expand()
+		else
+			M.close_git_center({ keep_cached_view = false })
+		end
+	end, preview_opts)
+
 	local function scroll_preview(direction)
 		if not (config.preview_win and vim.api.nvim_win_is_valid(config.preview_win)) then
 			return
@@ -1220,12 +1264,18 @@ function M.open_git_center()
 	end
 
 	local function focus_left()
+		if layout.mode == "details" then
+			layout.expand()
+		end
 		if config.main_win and vim.api.nvim_win_is_valid(config.main_win) then
 			vim.api.nvim_set_current_win(config.main_win)
 		end
 	end
 
 	local function focus_right()
+		if layout.mode == "browse" then
+			layout.toggle_preview()
+		end
 		if config.preview_win and vim.api.nvim_win_is_valid(config.preview_win) then
 			vim.api.nvim_set_current_win(config.preview_win)
 		end
@@ -1248,6 +1298,14 @@ function M.open_git_center()
 	end
 
 	local function toggle_focus()
+		if layout.mode == "details" then
+			layout.expand()
+			return
+		end
+		if layout.mode == "browse" then
+			automatic_preview = false
+			layout.toggle_preview()
+		end
 		local target = vim.api.nvim_get_current_win() == config.main_win and config.preview_win or config.main_win
 		if target and vim.api.nvim_win_is_valid(target) then
 			vim.api.nvim_set_current_win(target)
@@ -1325,9 +1383,6 @@ function M.open_git_center()
 		vim.keymap.set({ "n", "v", "i" }, key, handle_main_shift_enter, preview_opts)
 	end
 
-	vim.keymap.set({ "n", "v", "i", "t" }, "<Tab>", toggle_focus, key_opts)
-	vim.keymap.set({ "n", "v", "i", "t" }, "<Tab>", toggle_focus, preview_opts)
-
 	local function is_toggle_key(key)
 		if not key then
 			return false
@@ -1368,7 +1423,7 @@ function M.open_git_center()
 			"  Navigation",
 			"  ─────────────────────────────────────",
 			"  1-5          Jump to section",
-			"  Tab          Toggle focus (panel ↔ preview)",
+			"  Tab/S-Tab    Open full-size details popup / Dismiss popup and focus left",
 			"  < / >        Resize split",
 			"  Ctrl+j/k     Scroll preview",
 			"  Alt+h/l      Switch submodule tab",
@@ -1394,7 +1449,9 @@ function M.open_git_center()
 			"  K            Checkout commit",
 			"  b            Branch manager",
 			"  l / L        Git Graph (current / all branches)",
-			"  H / h        Log Diff / Pick file history",
+			"  F2 / F3      Pick file history / Log Diff",
+			"  F4           Git actions (fetch, pull, rebase)",
+			"  F6/F7/F8     Toggle preview / Expand details / Maximize",
 			"  v / V        Diff mode / Toggle diff mode",
 			"  M            Merge conflict resolver",
 			"  z            Stash menu",
@@ -1548,14 +1605,16 @@ function M.open_git_center()
 		gv.open(get_active_target().full_path, "all")
 	end, key_opts)
 
-	vim.keymap.set("n", "H", function()
+	local function open_repository_history()
 		local active_cwd = get_active_target().full_path
 		M.close_git_center({ keep_cached_view = false })
 		vim.schedule(function()
 			local log_diff = require("plugins.fox.git.log_diff")
 			log_diff.open({ cwd = active_cwd })
 		end)
-	end, key_opts)
+	end
+	vim.keymap.set("n", "<F3>", open_repository_history, key_opts)
+	vim.keymap.set("n", "<F3>", open_repository_history, preview_opts)
 
 	local function pick_file_history()
 		local cwd = get_active_target().full_path
@@ -1564,8 +1623,8 @@ function M.open_git_center()
 			require("plugins.fox.git.log_diff").pick_file_history(cwd)
 		end)
 	end
-	vim.keymap.set("n", "h", pick_file_history, key_opts)
-	vim.keymap.set("n", "h", pick_file_history, preview_opts)
+	vim.keymap.set("n", "<F2>", pick_file_history, key_opts)
+	vim.keymap.set("n", "<F2>", pick_file_history, preview_opts)
 
 	local commit_fields = {
 		{ key = "c", field = "title", label = "Commit Title" },

@@ -51,8 +51,8 @@ The picker includes local and remote branches. If a local base branch is behind 
 | `<leader>gm` | Normal | Open 3-Way Merge Conflict Resolver from anywhere |
 | `b` | Normal | Open Branch Management Modal (Create, Delete, Switch, Rename, Dry-Run) |
 | `l` / `L` | Normal | Open GitKraken Commit Graph Viewer (`:GitGraph`, 2 modes: Current / `--all`, on-the-fly fetch) |
-| `H` | Normal | Open the Log Diff dashboard for the repository |
-| `h` | Normal | Pick a file with the Ctrl+k file finder and open its commit history in Log Diff |
+| `<F3>` | Normal | Open the Log Diff dashboard for the repository |
+| `<F2>` | Normal | Pick a file with the Ctrl+k file finder and open its commit history in Log Diff |
 | `t` | Normal | 🧪 Dry-Run Merge simulation (predict conflicts between branches without touching CWD) |
 | `T` | Normal | 🧪 Dry-Run Rebase simulation (predict conflicts between branches without touching CWD) |
 | `<CR>` (Commit Log) | Normal | Press Enter on file in "Files Changed" to jump directly to its diff |
@@ -67,7 +67,7 @@ The picker includes local and remote branches. If a local base branch is behind 
 | `m` | Normal | Edit Commit Description via `input_modal` |
 | `t` | Normal | Edit Optional Tag via `input_modal` |
 | `C` | Normal | Execute Commit & Tag |
-| `<Tab>` | Normal | Toggle focus between left control panel and right live preview |
+| `<Tab>` / `<S-Tab>` | Normal, Graph | Open full-size details popup / dismiss popup and focus left |
 | `<C-S-j>` / `<C-S-k>` | Normal | Scroll right live diff preview window |
 | `v` | Normal | Open Git Diff Mode Manager menu (Same branch, 2 branches, commits) |
 | `V` | Normal | Toggle Git Diff Mode (Same branch: Live working tree vs HEAD) |
@@ -83,6 +83,44 @@ The picker includes local and remote branches. If a local base branch is behind 
 
 ---
 
+## Preview layout and Git actions
+
+Git Graph (`l`/`L`) opens at full Git Center width with one unwrapped line per
+commit. Press **Space** to peek at changed files, their status, and added/deleted
+line counts. The popup loads asynchronously without patches and caches each
+commit's result. Space, Esc, or q dismisses it without losing your graph position.
+Enter opens the existing full Log Diff dashboard.
+Shift+Tab on the graph exits logs mode and returns to Git Center. In the details
+popup, Shift+Tab dismisses the popup first; press it again to leave logs.
+
+Normal Git Center opens with full-width browsing and automatically shows its
+branch-history sidebar when a branch is selected. F6 toggles the preview manually;
+that choice stays active until Git Center closes. Tab opens the details as a full-size popup in front of Git Center; Shift+Tab dismisses it and returns focus to the same selection.
+
+| Key | Action in normal Git Center and graph |
+| :--- | :--- |
+| `F2` / `F3` | File history picker / repository Log Diff (normal Git Center) |
+| `F4` | Git actions menu |
+| `F6` | Toggle sidebar preview |
+| `F7` | Expand details to the entire Git Center area; press again or Esc to return |
+| `F8` | Toggle maximized Git Center geometry |
+
+The former h/H history shortcuts are now F2/F3, preserving Vim's h/H motions.
+Graph's former f canvas shortcut is now F6, preserving the f motion.
+
+All new actions are also available in the Command Palette and as explicit commands:
+`:GitFetch`, `:GitPull`, `:GitPullRebase`, `:GitRebase [branch-or-ref]`,
+`:GitRebaseContinue`, `:GitRebaseAbort`, and `:GitActions`. Rebase without an argument
+opens a branch picker labelled with the current branch and the destination.
+Fetch and pull use the selected repository/submodule's configured remote/upstream.
+Pull respects Git's configured strategy; Pull with Rebase explicitly requests rebase.
+Operations run asynchronously and refresh open status/history views, including on
+failure so conflict state is visible. Continue/Abort are available through the
+same menu and palette when a rebase is interrupted. Errors retain Git's diagnostics.
+
+Layout commands are `:GitCenterPreview`, `:GitCenterExpand`, and
+`:GitCenterMaximize`; `:GitCommitFiles` peeks at the selected graph commit.
+
 ## File history
 
 In the current-branch graph (`l`), peach-colored **base: branchname** badges mark
@@ -97,7 +135,7 @@ rebases can change them. Deleted branches cannot be labeled, and remote names
 reflect the last fetch. Press `L` in the graph for the color legend.
 
 In Neo-tree, press `gH` on a file to open its commit history in the existing
-four-panel Log Diff dashboard. Directories are ignored. In Git Center, `h`
+four-panel Log Diff dashboard. Directories are ignored. In Git Center, `F2`
 opens the same file finder as `Ctrl+k`, rooted at the active repository or
 submodule. Select a file with Enter to open its history.
 

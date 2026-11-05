@@ -17,9 +17,10 @@ local is_mobile_or_proot = env.is_termux or env.is_proot or env.is_mobile or (vi
 --- Runs git synchronously in the active repository target.
 --- @param args string[] Arguments after `git`.
 --- @param cwd string|nil
+--- @param target? table Captured target when a picker outlives a repository-tab switch.
 --- @return string[] output
-function M.git_lines(args, cwd)
-	local target = config.get_active_target()
+function M.git_lines(args, cwd, target)
+	target = target or config.get_active_target()
 	cwd = cwd or (target and target.full_path) or vim.fn.getcwd()
 	if target and target.is_secondary and target.repo_alias then
 		local sec_ok, sec = pcall(require, "fox.git.secondary")
@@ -34,8 +35,9 @@ end
 --- @param args string[] Arguments after `git`.
 --- @param on_done function(ok, output)
 --- @param cwd string|nil
-function M.git_run(args, on_done, cwd)
-	local target = config.get_active_target()
+--- @param target? table Captured target when a picker outlives a repository-tab switch.
+function M.git_run(args, on_done, cwd, target)
+	target = target or config.get_active_target()
 	cwd = cwd or (target and target.full_path) or vim.fn.getcwd()
 	if target and target.is_secondary and target.repo_alias then
 		local sec_ok, sec = pcall(require, "fox.git.secondary")

@@ -18,7 +18,6 @@ local queries = require("plugins.fox.git.git_center.queries")
 local z_index = require("fox.core.z_index")
 
 local M = {}
-local canvas_mode = false
 
 M.ns_graph = vim.api.nvim_create_namespace("FoxGitKrakenGraphSpans")
 
@@ -426,7 +425,40 @@ end
 --- Opens the full-screen GitKraken-style Commit Graph Viewer.
 --- @param target_cwd string|nil Repository directory.
 --- @param initial_mode? "branch"|"all" Defaults to "branch".
+function M.format_file_peek(output)
+	local lines, statuses = {}, {}
+	for _, line in ipairs(vim.split(output, "\n", { trimempty = true })) do
+		local status, path = line:match("^:%S+ %S+ %S+ %S+ ([A-Z]%d*)\t(.+)$")
+		if status then
+			statuses[path:gsub("\t", " => ")] = status
+		else
+			local added, removed, file = line:match("^(%d+)%s+(%d+)\t(.+)$")
+			if not file then
+				file = line:match("^%-\t%-\t(.+)$")
+			end
+			if file then
+				-- Git abbreviates renames as dir/{old => new}/file in numstat.
+				local old = file:gsub("{([^{}]-) => [^{}]-}", "%1")
+				local new = file:gsub("{[^{}]- => ([^{}]-)}", "%1")
+				local key = old ~= new and (old .. " => " .. new) or file
+				table.insert(
+					lines,
+					string.format(
+						" [%s]  %s  %s",
+						statuses[key] or "M",
+						added and ("+" .. added .. " -" .. removed) or "binary",
+						file
+					)
+				)
+			end
+		end
+	end
+	return #lines > 0 and lines or { "No changed files." }
+end
+
 function M.open(target_cwd, initial_mode)
+	local canvas_mode = false
+	local layout
 	local prev_win = vim.api.nvim_get_current_win()
 	local active_cwd = target_cwd
 		or (config.get_active_target() and config.get_active_target().full_path)
@@ -549,7 +581,7 @@ function M.open(target_cwd, initial_mode)
 		title_pos = "center",
 	})
 	vim.api.nvim_set_option_value("cursorline", true, { win = left_win })
-	vim.api.nvim_set_option_value("wrap", true, { win = left_win })
+	vim.api.nvim_set_option_value("wrap", false, { win = left_win })
 	vim.api.nvim_set_option_value("linebreak", true, { win = left_win })
 	vim.api.nvim_set_option_value("breakindent", true, { win = left_win })
 
@@ -568,7 +600,7 @@ function M.open(target_cwd, initial_mode)
 		style = "minimal",
 		border = "rounded",
 		zindex = graph_z,
-		title = " 👁️ Commit Details & Side-by-Side Diff │ [Tab]: Focus │ [Enter]: Full Diff ",
+		title = " 👁️ Commit Details & Side-by-Side Diff │ [Tab]: Open | [S-Tab]: Hide │ [Enter]: Full Diff ",
 		title_pos = "center",
 	})
 	vim.api.nvim_set_option_value("wrap", false, { win = right_win })
@@ -593,7 +625,7 @@ function M.open(target_cwd, initial_mode)
 		end
 		if canvas_mode then
 			vim.api.nvim_win_set_config(left_win, {
-				title = " 📊 Git Graph — Canvas Mode (f: split, ?: help) ",
+				title = format_title(loading) .. " [F6: preview | Space: files]",
 				title_pos = "center",
 			})
 		else
@@ -635,6 +667,7 @@ function M.open(target_cwd, initial_mode)
 			config.cached_view_data = {}
 		end
 
+		config.graph_layout, config.graph_refresh, config.graph_peek = nil, nil, nil
 		config.graph_win, config.graph_buf = nil, nil
 		config.graph_right_win, config.graph_right_buf = nil, nil
 
@@ -764,7 +797,8 @@ function M.open(target_cwd, initial_mode)
 		else
 			raw_diff = queries.git_lines({ "show", "--format=", "--color=never", commit.full_hash }, active_cwd)
 		end
-		local combined_diff_lines, l_kinds, r_kinds, col_w = diff.format_side_by_side_single(raw_diff, false, right_w)
+		local combined_diff_lines, l_kinds, r_kinds, col_w =
+			diff.format_side_by_side_single(raw_diff, false, vim.api.nvim_win_get_width(right_win))
 
 		local content = {}
 		table.insert(content, string.format(" 📌 Commit:      %s (%s)  [y: copy SHA]", commit.full_hash, commit.hash))
@@ -1138,40 +1172,6 @@ function M.open(target_cwd, initial_mode)
 		end
 	end
 
-	-- Canvas Mode Toggle
-	local function toggle_canvas_mode()
-		canvas_mode = not canvas_mode
-		if canvas_mode then
-			-- Close right pane
-			if right_win and vim.api.nvim_win_is_valid(right_win) then
-				ui.close(right_win)
-				config.graph_right_win = nil
-			end
-			-- Resize left pane to full width
-			if left_win and vim.api.nvim_win_is_valid(left_win) then
-				local total_w = math.floor(vim.o.columns * config.settings.width_ratio)
-				local canvas_col = math.floor((vim.o.columns - total_w) / 2)
-				vim.api.nvim_win_set_config(left_win, {
-					width = total_w - 2,
-					col = canvas_col,
-				})
-				-- Update title
-				vim.api.nvim_win_set_config(left_win, {
-					title = " 📊 Git Graph — Canvas Mode (f: split, ?: help) ",
-				})
-				-- Enable mouse scrolling
-				vim.wo[left_win].scrolloff = 0
-				vim.wo[left_win].mousescroll = "ver:3,hor:0"
-			end
-		else
-			-- Re-open right pane and restore split
-			local cwd = active_cwd
-			local current_mode = mode
-			close_viewer(false)
-			M.open(cwd, current_mode)
-		end
-	end
-
 	-- Split resizing
 	local function resize_split(delta)
 		if is_closed or not (left_win and vim.api.nvim_win_is_valid(left_win)) then
@@ -1183,38 +1183,7 @@ function M.open(target_cwd, initial_mode)
 		config.current_left_ratio = tonumber(string.format("%.3f", new_r))
 		config.save_left_ratio(config.root_dir or active_cwd, config.current_left_ratio)
 
-		local total_w = math.floor(vim.o.columns * config.settings.width_ratio)
-		local total_h = math.floor(vim.o.lines * config.settings.height_ratio)
-		local start_r = math.floor((vim.o.lines - total_h) / 2)
-		local start_c = math.floor((vim.o.columns - total_w) / 2)
-
-		left_w = math.floor(total_w * config.current_left_ratio)
-		right_w = total_w - left_w - 2
-
-		vim.api.nvim_win_set_config(left_win, {
-			relative = "editor",
-			width = left_w,
-			height = total_h,
-			row = start_r,
-			col = start_c,
-		})
-		vim.api.nvim_win_set_config(right_win, {
-			relative = "editor",
-			width = right_w,
-			height = total_h,
-			row = start_r,
-			col = start_c + left_w + 2,
-		})
-
-		update_commit_details(current_target_file)
-	end
-
-	-- Focus toggling
-	local function toggle_focus()
-		local target = vim.api.nvim_get_current_win() == left_win and right_win or left_win
-		if target and vim.api.nvim_win_is_valid(target) then
-			vim.api.nvim_set_current_win(target)
-		end
+		layout.apply()
 	end
 
 	-- Actions: Copy SHA, Checkout, Full Diff
@@ -1279,12 +1248,18 @@ function M.open(target_cwd, initial_mode)
 	end
 
 	local function focus_left()
+		if layout.mode == "details" then
+			layout.expand()
+		end
 		if left_win and vim.api.nvim_win_is_valid(left_win) then
 			vim.api.nvim_set_current_win(left_win)
 		end
 	end
 
 	local function focus_right()
+		if layout.mode == "browse" then
+			layout.toggle_preview()
+		end
 		if right_win and vim.api.nvim_win_is_valid(right_win) then
 			vim.api.nvim_set_current_win(right_win)
 		end
@@ -1322,7 +1297,9 @@ function M.open(target_cwd, initial_mode)
 		local help_lines = {
 			" 📊 GitKraken Commit Graph Shortcuts",
 			" ──────────────────────────────────────────────────────────",
-			"  [f]            Toggle Canvas Mode (fullscreen graph)",
+			"  [F6/F7/F8]     Toggle preview / Expand details / Maximize",
+			"  [Space]        Peek changed files (Esc closes)",
+			"  [F4]           Git actions (fetch, pull, rebase)",
 			"  [a]            Toggle Mode (🌿 Current Branch <-> 🌐 --all)",
 			"  [b]            Branch Filter (choose which branches to show)",
 			"  [L]            Colour Legend (branch -> colour)",
@@ -1334,7 +1311,7 @@ function M.open(target_cwd, initial_mode)
 			"  [G / gg]       Jump to Bottom (Fetch all) / Jump to Top",
 			"  [<C-h> / <C-l>] Focus Left Graph / Right Details pane",
 			"  [<C-k> / <C-j>] Scroll Details preview Up / Down",
-			"  [Tab]          Toggle focus between Graph Tree & Details pane",
+			"  [Tab/S-Tab]    Open details / Dismiss details; Shift+Tab on graph exits logs",
 			"  [<CR> / Enter] Open Git Log Diff 4-Panel Dashboard",
 			"  [y]            Yank commit SHA to clipboard",
 			"  [K]            Checkout selected commit",
@@ -1445,41 +1422,7 @@ function M.open(target_cwd, initial_mode)
 	end
 
 	-- Focus & Details navigation
-	vim.keymap.set({ "n", "v" }, "<Tab>", toggle_focus, opts)
-	vim.keymap.set({ "n", "v" }, "<Tab>", toggle_focus, right_opts)
-	vim.keymap.set("n", "<CR>", function()
-		if canvas_mode then
-			-- Show commit details in a floating popup
-			local row = vim.api.nvim_win_get_cursor(left_win)[1]
-			local hash = line_commits[row]
-			if not hash then
-				local commit = get_commit_at_row(row)
-				if commit then
-					hash = commit.full_hash
-				end
-			end
-			if hash then
-				local details = queries.git_lines(
-					{ "show", "--stat", "--format=Author: %an <%ae>%nDate:   %cr%n%n%s%n%n%b", hash },
-					active_cwd
-				)
-				local detail_buf, detail_win = ui.float({
-					lines = details,
-					width = 0.6,
-					height = math.min(#details + 2, 30),
-					title = string.format(" Commit %s ", hash:sub(1, 7)),
-					border = "rounded",
-					relative = "editor",
-					zindex = graph_z + 10,
-				})
-				if detail_win and vim.api.nvim_win_is_valid(detail_win) then
-					ui.close_on_keys(detail_buf, detail_win, { "q", "<Esc>", "<CR>" })
-				end
-			end
-			return
-		end
-		open_log_diff_dashboard()
-	end, opts)
+	vim.keymap.set("n", "<CR>", open_log_diff_dashboard, opts)
 	vim.keymap.set("n", "<CR>", function()
 		local cursor_line = vim.api.nvim_win_get_cursor(right_win)[1]
 		local line_text = vim.api.nvim_buf_get_lines(right_buf, cursor_line - 1, cursor_line, false)[1] or ""
@@ -1494,9 +1437,6 @@ function M.open(target_cwd, initial_mode)
 		end
 		open_log_diff_dashboard()
 	end, right_opts)
-
-	-- Canvas Mode
-	vim.keymap.set("n", "f", toggle_canvas_mode, opts)
 
 	-- Actions
 	vim.keymap.set("n", "y", yank_sha, opts)
@@ -1544,8 +1484,102 @@ function M.open(target_cwd, initial_mode)
 		end, right_opts)
 	end
 
-	-- Initial commit details preview
-	update_commit_details(nil)
+	local peek_cache = {}
+	local peek_win
+	local function peek_files()
+		if peek_win and vim.api.nvim_win_is_valid(peek_win) then
+			ui.close(peek_win)
+			return
+		end
+		local row = vim.api.nvim_win_get_cursor(left_win)[1]
+		local hash = line_commits[row]
+		if not hash then
+			local commit = get_commit_at_row(row)
+			hash = commit and commit.full_hash
+		end
+		if not hash then
+			return
+		end
+		local lines = peek_cache[hash] or { "Loading changed files..." }
+		local buf
+		buf, peek_win = ui.float({
+			lines = lines,
+			width = 0.9,
+			height = 0.7,
+			title = " Changed files: " .. hash:sub(1, 7) .. " (Space/Esc: close) ",
+			zindex = graph_z + 20,
+			close_on_keys = { "<Space>", "<Esc>", "q" },
+		})
+		vim.wo[peek_win].wrap = false
+		if peek_cache[hash] then
+			return
+		end
+		-- No patches or file contents: one asynchronous query, then cache by immutable SHA.
+		queries.git_run(
+			{ "show", "--format=", "--root", "--first-parent", "--find-renames", "--raw", "--numstat", hash, "--" },
+			function(ok, output)
+				local result = ok and M.format_file_peek(output) or vim.split(output, "\n", { trimempty = true })
+				if not ok then
+					table.insert(result, 1, "Could not load changed files:")
+				end
+				if ok then
+					peek_cache[hash] = result
+				end
+				if not is_closed and vim.api.nvim_buf_is_valid(buf) then
+					vim.bo[buf].modifiable = true
+					vim.api.nvim_buf_set_lines(buf, 0, -1, false, result)
+					vim.bo[buf].modifiable = false
+				end
+			end,
+			active_cwd
+		)
+	end
+	config.graph_peek = peek_files
+	vim.keymap.set("n", "<Space>", peek_files, opts)
+	for _, map_opts in ipairs({ opts, right_opts }) do
+		vim.keymap.set("n", "<F4>", function()
+			require("plugins.fox.git.git_center.actions").open(active_cwd)
+		end, map_opts)
+	end
+	layout = require("plugins.fox.git.git_center.layout").new(left_win, right_win, {
+		mode = "browse",
+		ratio = function()
+			return config.current_left_ratio or ratio
+		end,
+		changed = function()
+			canvas_mode = layout.mode == "browse"
+			update_window_title(false)
+			update_commit_details(current_target_file)
+		end,
+	})
+	config.graph_layout = layout
+	vim.keymap.set({ "n", "v", "i", "t" }, "<S-Tab>", function()
+		close_viewer(false)
+	end, opts)
+	config.graph_refresh = function()
+		if not is_closed then
+			commit_cache = {}
+			reload()
+		end
+	end
+	local function leave_details()
+		if layout.mode == "details" then
+			layout.expand()
+		else
+			close_viewer(false)
+		end
+	end
+	for _, key in ipairs({ "<Esc>", "q" }) do
+		vim.keymap.set("n", key, leave_details, right_opts)
+	end
+	vim.api.nvim_create_autocmd("WinClosed", {
+		pattern = tostring(left_win),
+		once = true,
+		callback = function()
+			ui.close(peek_win)
+		end,
+	})
+	layout.apply()
 end
 
 return M

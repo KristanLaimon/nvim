@@ -55,6 +55,37 @@ function M.setup()
 	end
 	M._did_setup = true
 
+	local actions = require("plugins.fox.git.git_center.actions")
+	for _, entry in ipairs(actions.commands) do
+		vim.api.nvim_create_user_command(entry.command, function(opts)
+			actions.run(entry.command, nil, opts.args ~= "" and opts.args or nil)
+		end, { nargs = entry.command == "GitRebase" and "?" or 0, desc = entry.label })
+	end
+	vim.api.nvim_create_user_command("GitActions", function()
+		actions.open()
+	end, { desc = "Git actions for active repository" })
+	for command, method in pairs({
+		GitCenterPreview = "toggle_preview",
+		GitCenterExpand = "expand",
+		GitCenterMaximize = "maximize",
+	}) do
+		vim.api.nvim_create_user_command(command, function()
+			local layout = config.graph_layout or config.panel_layout
+			if layout then
+				layout[method]()
+			else
+				config.notify("Open Git Center first")
+			end
+		end, { desc = command })
+	end
+	vim.api.nvim_create_user_command("GitCommitFiles", function()
+		if config.graph_peek then
+			config.graph_peek()
+		else
+			config.notify("Open Git Graph and select a commit first")
+		end
+	end, { desc = "Peek at selected commit's changed files" })
+
 	pcall(vim.api.nvim_create_user_command, "GitCenter", function()
 		M.toggle_git_center()
 	end, { desc = "Toggle Git Control Center" })
@@ -248,6 +279,18 @@ return setmetatable({
 	name = "fox_git_center",
 	dir = require("fox.core.lazyspec").for_module(),
 	cmd = {
+		"GitFetch",
+		"GitPull",
+		"GitPullRebase",
+		"GitRebase",
+		"GitRebaseContinue",
+		"GitRebaseAbort",
+		"GitActions",
+		"GitCenterPreview",
+		"GitCenterExpand",
+		"GitCenterMaximize",
+		"GitCommitFiles",
+		"GitCenterToggle",
 		"GitCenter",
 		"GitCenterStage",
 		"GitCenterCommit",

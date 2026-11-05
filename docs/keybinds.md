@@ -188,6 +188,13 @@ host terminal rather than the shell profile.
 | `t` / `T` | Git Center | 🧪 Dry-Run Merge / Rebase simulator (predict conflicts without touching CWD) |
 | `b` | Git Center | Open Branch Manager modal |
 | `l` / `L` | Git Center | GitKraken-style commit graph viewer (current / all branches) |
+| `<Space>` | Git Graph | Peek changed files in selected commit; Space/Esc closes |
+| `<F2>` / `<F3>` | Git Center | File history picker / repository Log Diff (formerly h/H) |
+| `<F4>` | Git Center / Graph | Fetch, pull, rebase, continue/abort actions menu |
+| `<F6>` | Git Center / Graph | Toggle sidebar preview |
+| `<Tab>` / `<S-Tab>` | Git Center / Graph | Open full-size details popup / dismiss popup and focus left |
+| `<F7>` | Git Center / Graph | Expand details; F7/Esc returns |
+| `<F8>` | Git Center / Graph | Toggle maximized layout |
 | `v` / `V` | Git Center | Open / Toggle Git Diff Mode |
 | `C` | Git Center | Commit (and tag) |
 | `P` | Git Center | Push (with remote branch selector) |

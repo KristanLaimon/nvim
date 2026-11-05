@@ -244,7 +244,7 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		expect(commands.GitCenterGraph).toBeDefined()
 	end)
 
-	it("opens GitKraken Graph Viewer modal dual panes cleanly", function()
+	it("opens a full-width graph and preserves selection through split and expanded details", function()
 		graph_viewer.open()
 
 		expect(config.graph_win).toBeDefined()
@@ -254,6 +254,43 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 
 		expect(vim.api.nvim_win_is_valid(config.graph_win)).toBeTruthy()
 		expect(vim.api.nvim_win_is_valid(config.graph_right_win)).toBeTruthy()
+		expect(vim.api.nvim_win_get_config(config.graph_right_win).hide).toBeTruthy()
+		expect(vim.wo[config.graph_win].wrap).toBeFalsy()
+		local cursor = vim.api.nvim_win_get_cursor(config.graph_win)
+		local function press(buf, key)
+			local map = vim.api.nvim_buf_call(buf, function()
+				return vim.fn.maparg(key, "n", false, true)
+			end)
+			map.callback()
+		end
+		press(config.graph_buf, "<Tab>")
+		expect(vim.api.nvim_get_current_win()).toBe(config.graph_right_win)
+		local base = vim.api.nvim_win_get_config(config.graph_win)
+		local popup = vim.api.nvim_win_get_config(config.graph_right_win)
+		expect(popup.width).toBe(base.width)
+		expect(popup.height).toBe(base.height)
+		expect(popup.row).toBe(base.row)
+		expect(popup.col).toBe(base.col)
+		expect(popup.zindex > base.zindex).toBeTruthy()
+		press(config.graph_right_buf, "<Tab>")
+		expect(vim.api.nvim_get_current_win()).toBe(config.graph_right_win)
+		press(config.graph_right_buf, "<S-Tab>")
+		expect(vim.api.nvim_win_get_config(config.graph_right_win).hide).toBeTruthy()
+		expect(vim.api.nvim_get_current_win()).toBe(config.graph_win)
+		press(config.graph_buf, "<Tab>")
+		expect(vim.api.nvim_win_get_config(config.graph_right_win).hide).toBeFalsy()
+		config.graph_layout.hide_preview()
+		config.graph_layout.toggle_preview()
+		config.graph_layout.expand()
+		expect(vim.api.nvim_get_current_win()).toBe(config.graph_right_win)
+		expect(vim.api.nvim_win_get_config(config.graph_win).hide).toBeFalsy()
+		local esc = vim.api.nvim_buf_call(config.graph_right_buf, function()
+			return vim.fn.maparg("<Esc>", "n", false, true)
+		end)
+		esc.callback()
+		expect(vim.api.nvim_get_current_win()).toBe(config.graph_win)
+		expect(vim.api.nvim_win_get_cursor(config.graph_win)).toEqual(cursor)
+		expect(vim.api.nvim_win_get_config(config.graph_win).hide).toBeFalsy()
 
 		-- Verify title contains GitKraken Graph and Mode
 		local win_cfg = vim.api.nvim_win_get_config(config.graph_win)
@@ -268,5 +305,67 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		-- Close using q
 		pcall(vim.api.nvim_win_close, config.graph_win, true)
 		pcall(vim.api.nvim_win_close, config.graph_right_win, true)
+	end)
+
+	it("returns to Git Center with Shift+Tab from the graph after dismissing details", function()
+		git_center.open_git_center()
+		graph_viewer.open()
+		local function press(buf, key)
+			local map = vim.api.nvim_buf_call(buf, function()
+				return vim.fn.maparg(key, "n", false, true)
+			end)
+			map.callback()
+		end
+		press(config.graph_buf, "<Tab>")
+		press(config.graph_right_buf, "<S-Tab>")
+		expect(vim.api.nvim_win_is_valid(config.graph_win)).toBeTruthy()
+		press(config.graph_buf, "<S-Tab>")
+		expect(config.graph_win).toBeNil()
+		expect(config.graph_right_win).toBeNil()
+		expect(vim.api.nvim_get_current_win()).toBe(config.main_win)
+	end)
+
+	it("formats changed-file status and counts, including binary files and renames", function()
+		local output = table.concat({
+			":100644 100644 abc def M\tfile.lua",
+			":100644 000000 abc 000 D\told.lua",
+			":100644 100644 abc def R100\tdir/old.lua\tdir/new.lua",
+			":000000 100644 000 def A\timage.png",
+			"3\t2\tfile.lua",
+			"0\t4\told.lua",
+			"0\t0\tdir/{old.lua => new.lua}",
+			"-\t-\timage.png",
+		}, "\n")
+		local lines = graph_viewer.format_file_peek(output)
+		expect(lines[1]).toContain("[M]  +3 -2  file.lua")
+		expect(lines[2]).toContain("[D]  +0 -4  old.lua")
+		expect(lines[3]).toContain("[R100]")
+		expect(lines[4]).toContain("[A]  binary  image.png")
+	end)
+
+	it("peeks files asynchronously and reuses the cached result without loading patches", function()
+		graph_viewer.open()
+		local queries = require("plugins.fox.git.git_center.queries")
+		local original = queries.git_run
+		local calls = 0
+		queries.git_run = function(args, done)
+			calls = calls + 1
+			expect(args).toContain("--numstat")
+			expect(args).toContain("--raw")
+			done(true, ":000000 100644 000 abc A\tnew.lua\n1\t0\tnew.lua")
+		end
+		local ok, err = pcall(function()
+			config.graph_peek()
+			local peek = vim.api.nvim_get_current_win()
+			expect(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(peek), 0, -1, false)[1]).toContain("new.lua")
+			vim.api.nvim_win_close(peek, true)
+			config.graph_peek()
+			expect(calls).toBe(1)
+			vim.api.nvim_win_close(vim.api.nvim_get_current_win(), true)
+		end)
+		queries.git_run = original
+		if not ok then
+			error(err)
+		end
 	end)
 end)

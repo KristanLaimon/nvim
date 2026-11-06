@@ -17,6 +17,12 @@ This guide explains how the VSCode-style Command Palette works and how to modify
 - **Shortcut:** `<Ctrl+Shift+P>` or `<Ctrl+Shift+p>` from any Neovim mode (Normal, Insert, Visual, Terminal).
 - **Vim Command:** `:CommandPalette`
 
+Search for **Restart LSP for Current File** to refresh the language servers attached
+to the active file, or run `:FoxLspRestart` directly. Other files sharing those
+servers briefly lose LSP features while they restart. On older Neovim versions,
+the fallback restarts all clients with the same server names. If no server is
+attached, the command reports that instead.
+
 ---
 
 ## 🧩 Architecture & Structure

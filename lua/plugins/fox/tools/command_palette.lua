@@ -283,6 +283,7 @@ M.commands = {
 		category = "LSP",
 	},
 	{ name = "🩺 LSP Info (Active Clients & Interpreter Paths)", cmd = "LspInfo", category = "LSP" },
+	{ name = "🔄 Restart LSP for Current File", cmd = "FoxLspRestart", category = "LSP" },
 	{ name = "💉 Modular Type Injector (Lua & TS/JS)", cmd = "TypeInjector", category = "LSP" },
 	{ name = "🚫 Add .foxnvim Ignore to .gitignore", cmd = "FoxGitignoreGenerated", category = "LSP" },
 	{

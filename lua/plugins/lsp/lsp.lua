@@ -145,7 +145,7 @@ return {
 	{
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufReadPost", "BufNewFile", "FileType" },
-		cmd = { "LspInfo", "LspInstall", "LspStart" },
+		cmd = { "LspInfo", "LspInstall", "LspStart", "FoxLspRestart" },
 		dependencies = {
 			"williamboman/mason.nvim",
 			"b0o/schemastore.nvim",
@@ -310,6 +310,10 @@ return {
 					end
 				end,
 			})
+
+			vim.api.nvim_create_user_command("FoxLspRestart", function()
+				require("fox.lsp.restart").restart()
+			end, { desc = "Restart LSP clients attached to the current file" })
 
 			-- :LspInfo -- show active LSP clients for the current buffer in a float
 			vim.api.nvim_create_user_command("LspInfo", function()

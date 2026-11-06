@@ -42,7 +42,8 @@ local created_dirs = {}
 --- @return string dir Absolute path to this module's marker directory.
 function M.for_module()
 	local source = debug.getinfo(2, "S").source:sub(2)
-	local mod_name = vim.fn.fnamemodify(source, ":t:r")
+	-- Keep the module path: editor/wakatime and fox/tools/wakatime are distinct specs.
+	local mod_name = (source:match("[/\\]lua[/\\](.*)%.lua$") or vim.fn.fnamemodify(source, ":t:r")):gsub("\\", "/")
 	local dir = M.specs_root .. "/" .. mod_name
 	if not created_dirs[mod_name] then
 		created_dirs[mod_name] = true

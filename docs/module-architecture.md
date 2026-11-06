@@ -64,12 +64,13 @@ lazy.nvim indexes **local** specs by their `dir` (`lua/lazy/core/meta.lua`, `sel
 
 Every module in `lua/plugins/fox/` used to declare the same `dir`, so all but one were silently dropped — no error, no warning, just `setup()` never running. The visible symptom was breakpoints being neither saved nor restored; the cause had nothing to do with breakpoints.
 
-`lua/fox/core/lazyspec.lua` hands each spec its own real, empty directory, named after the calling file:
+`lua/fox/core/lazyspec.lua` hands each spec its own real, empty directory, named after its full module path under `lua/`. This keeps equal filenames in different directories distinct:
 
 ```lua
 function M.for_module()
   local source = debug.getinfo(2, "S").source:sub(2)
-  local dir = vim.fn.stdpath("data") .. "/fox-specs/" .. vim.fn.fnamemodify(source, ":t:r")
+  local module = (source:match("[/\\]lua[/\\](.*)%.lua$") or vim.fn.fnamemodify(source, ":t:r")):gsub("\\", "/")
+  local dir = vim.fn.stdpath("data") .. "/fox-specs/" .. module
   if vim.fn.isdirectory(dir) == 0 then
     vim.fn.mkdir(dir, "p")
   end

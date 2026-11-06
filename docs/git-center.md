@@ -85,8 +85,11 @@ The picker includes local and remote branches. If a local base branch is behind 
 
 ## Preview layout and Git actions
 
-Git Graph (`l`/`L`) opens at full Git Center width with one unwrapped line per
-commit. Press **Space** to peek at changed files, their status, and added/deleted
+Git Graph (`l`/`L`) opens at full Git Center width with word wrap so long commit messages and branch names
+remain readable. Each commit uses **Hash → Author → Subject → Branches / Tags**;
+long branch badges no longer shift the author or message columns. Dates remain
+available in commit details. `$` and `0` move to the end and start of the complete
+commit line. Press **Space** to peek at changed files, their status, and added/deleted
 line counts. The popup loads asynchronously without patches and caches each
 commit's result. Space, Esc, or q dismisses it without losing your graph position.
 Enter opens the existing full Log Diff dashboard.
@@ -123,9 +126,26 @@ Layout commands are `:GitCenterPreview`, `:GitCenterExpand`, and
 
 ## File history
 
-The logs graph (`l`) uses aligned **📌 Hash**, **👤 Author**, **🕒 Relative Date**,
-and **💬 Subject** columns. Branch and tag badges stay beside the hash; colored
+The logs graph (`l`) uses aligned **📌 Hash**, **👤 Author**, and **💬 Subject**
+columns, followed by branch and tag badges; colored
 commit dots, merge lanes, and vertical connector rows preserve the graph.
+
+The graph title shows `[b]: Select branches`, `[a]: Mode`, and `[?]: Help`.
+The bottom border lists files (`Space`), full diff (`Enter`), details (`Tab`), and
+Git actions (`F4`). Press `?` for all shortcuts, including:
+
+| Key | Action in logs graph |
+| :--- | :--- |
+| `b` | Select branches to display (Space toggles, `s` applies) |
+| `a` | Switch between current branch and all branches |
+| `L` | Show color legend |
+| `t` | Toggle topological/date order |
+| `m` | Show/hide lane spacer rows |
+| `y` | Copy selected commit SHA |
+| `K` | Checkout selected commit |
+| `D` | Open full-screen file diff |
+| `r` / `F5` | Refresh graph |
+| `q` / `Esc` / `Shift+Tab` | Return to Git Center |
 
 In the current-branch graph (`l`), peach-colored **base: branchname** badges mark
 shared ancestor commits with other local and remote branches, even when those

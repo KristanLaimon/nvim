@@ -119,7 +119,7 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		expect(line_text).toContain("🌿 main")
 		expect(line_text).toContain("☁️ main")
 		expect(line_text).toContain("feat: Neo-tree mover")
-		expect(line_text).toContain("FoxDeveloper  25 hours ago  feat: Neo-tree mover")
+		expect(line_text).toContain("87a6e94  FoxDeveloper  feat: Neo-tree mover")
 
 		-- Spans should contain lane color, SHA hl, and ref badge hl
 		expect(#spans).toBeGreaterThan(3)
@@ -133,6 +133,7 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 				has_sha_hl = true
 			elseif s.hl_group == "FoxGitKrakenBadgeHead" then
 				has_head_hl = true
+				expect(line_text:sub(s.col_start + 1, s.col_end)).toBe(" 🌿 main ")
 			end
 		end
 		expect(has_lane_hl).toBeTruthy()
@@ -145,7 +146,7 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		local original = queries.git_lines
 		queries.git_lines = function()
 			return {
-				"* abcdef1\x1f (HEAD -> main, origin/main)\x1fKristan Ruíz\x1f42 seconds ago\x1ffirst",
+				"* abcdef1\x1f (HEAD -> feature/very-long-branch-name-that-must-not-shift-the-message, origin/main)\x1fKristan Ruíz\x1f42 seconds ago\x1ffirst",
 				"|\\",
 				"| * abcdef2\x1f\x1f李\x1f2 days ago\x1fsecond",
 			}
@@ -155,7 +156,7 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		assert(ok, result)
 		expect(result.lines[1]).toContain("📌 Hash")
 		expect(result.lines[1]).toContain("👤 Author")
-		expect(result.lines[1]).toContain("🕒 Relative Date")
+		expect(result.lines[1]).toContain("🌿 Branches / Tags")
 		expect(result.lines[1]).toContain("💬 Subject")
 		expect(result.lines[2]).toContain("●")
 		expect(result.lines[3]).toContain("│╲")
@@ -169,12 +170,13 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		for _, values in ipairs({
 			{ "📌 Hash", "abcdef1", "abcdef2" },
 			{ "👤 Author", "Kristan Ruíz", "李" },
-			{ "🕒 Relative Date", "42 seconds ago", "2 days ago" },
 			{ "💬 Subject", "first", "second" },
 		}) do
 			expect(column(1, values[1])).toBe(column(2, values[2]))
 			expect(column(1, values[1])).toBe(column(5, values[3]))
 		end
+		local branch_start = assert(result.lines[2]:find("🌿 feature/", 1, true))
+		expect(branch_start > assert(result.lines[2]:find("first", 1, true))).toBeTruthy()
 		for row, spans in ipairs(result.spans) do
 			for _, span in ipairs(spans) do
 				expect(span.col_end <= #result.lines[row]).toBeTruthy()
@@ -244,6 +246,23 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 			end
 		end)
 
+		it("keeps the end of a long wrapped commit visible with the dollar motion", function()
+			git({ "commit", "--allow-empty", "-m", string.rep("long message ñ ", 30) })
+			git({ "branch", "feature/" .. string.rep("long-branch-", 10) })
+			graph_viewer.open(repo)
+			local win = config.graph_win
+			local line = vim.api.nvim_buf_get_lines(config.graph_buf, 1, 2, false)[1]
+			expect(vim.fn.strdisplaywidth(line) > vim.api.nvim_win_get_width(win)).toBeTruthy()
+			vim.cmd("normal! $")
+			vim.api.nvim_exec_autocmds("CursorMoved", { buffer = config.graph_buf })
+			vim.wait(20)
+			vim.cmd("redraw")
+			expect(vim.api.nvim_win_get_cursor(win)[2]).toBe(#line - 1)
+			local position = vim.fn.screenpos(win, 2, #line)
+			expect(position.row > 0).toBeTruthy()
+			expect(position.col > 0).toBeTruthy()
+		end)
+
 		it("labels moved local and remote branches at their base across pagination", function()
 			git({ "commit", "--allow-empty", "-m", "base" })
 			local base = git({ "rev-parse", "HEAD" })
@@ -296,7 +315,8 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		expect(vim.api.nvim_win_is_valid(config.graph_win)).toBeTruthy()
 		expect(vim.api.nvim_win_is_valid(config.graph_right_win)).toBeTruthy()
 		expect(vim.api.nvim_win_get_config(config.graph_right_win).hide).toBeTruthy()
-		expect(vim.wo[config.graph_win].wrap).toBeFalsy()
+		expect(vim.wo[config.graph_win].wrap).toBeTruthy()
+		expect(vim.wo[config.graph_win].linebreak).toBeTruthy()
 		local cursor = vim.api.nvim_win_get_cursor(config.graph_win)
 		expect(cursor[1]).toBe(2)
 		local function press(buf, key)
@@ -339,6 +359,11 @@ describe("plugins.fox.git.git_center.graph_viewer", function()
 		local title_str = type(win_cfg.title) == "string" and win_cfg.title
 			or (type(win_cfg.title) == "table" and win_cfg.title[1] and win_cfg.title[1][1] or "")
 		expect(title_str).toContain("GitKraken Graph")
+		expect(title_str).toContain("[b]: Select branches")
+		expect(title_str).toContain("[?]: Help")
+		local footer = win_cfg.footer[1][1]
+		expect(footer).toContain("[Space]: Files")
+		expect(footer).toContain("[Enter]: Diff")
 
 		-- Buffer should be unmodifiable nofile
 		expect(vim.bo[config.graph_buf].buftype).toBe("nofile")

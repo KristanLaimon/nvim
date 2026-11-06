@@ -225,6 +225,18 @@ function M.format_commit_line(parsed, widths)
 	local hash_start = display_width
 	append(parsed.hash, dim and "FoxGitKrakenDim" or "FoxGitKrakenSha")
 
+	append(string.rep(" ", widths and math.max(2, widths.hash - (display_width - hash_start) + 2) or 2))
+	local author = parsed.author or ""
+	append(author, dim and "FoxGitKrakenDim" or "FoxGitKrakenAuthor")
+	append(string.rep(" ", widths and math.max(2, widths.author - vim.fn.strdisplaywidth(author) + 2) or 2))
+
+	-- Keep branch names after the message so long refs cannot push it out of view.
+	if parsed.subject and parsed.subject ~= "" then
+		append(parsed.subject, dim and "FoxGitKrakenDim" or "FoxGitKrakenSubject")
+	else
+		append("(no commit message)", "FoxGitKrakenDim")
+	end
+
 	-- Ref badges
 	local badges = parse_refs(parsed.refs)
 	for _, badge in ipairs(badges) do
@@ -236,19 +248,8 @@ function M.format_commit_line(parsed, widths)
 		append(" base: " .. name .. " ", "FoxGitKrakenBadgeBase")
 	end
 
-	append(string.rep(" ", widths and math.max(2, widths.hash - (display_width - hash_start) + 2) or 2))
-	local author = parsed.author or ""
-	append(author, dim and "FoxGitKrakenDim" or "FoxGitKrakenAuthor")
-	append(string.rep(" ", widths and math.max(2, widths.author - vim.fn.strdisplaywidth(author) + 2) or 2))
-	local date = parsed.date or ""
-	append(date, dim and "FoxGitKrakenDim" or "FoxGitKrakenDate")
-	append(string.rep(" ", widths and math.max(2, widths.date - vim.fn.strdisplaywidth(date) + 2) or 2))
-
-	-- Subject stays last so long messages never shift the metadata columns.
-	if parsed.subject and parsed.subject ~= "" then
-		append(parsed.subject, dim and "FoxGitKrakenDim" or "FoxGitKrakenSubject")
-	else
-		append("(no commit message)", "FoxGitKrakenDim")
+	if parsed.is_header then
+		append("  🌿 Branches / Tags", "FoxGitKrakenHeader")
 	end
 
 	return line_text, spans
@@ -353,7 +354,6 @@ function M.fetch_commits(limit, cwd, mode, opts)
 		graph = 0,
 		hash = vim.fn.strdisplaywidth("📌 Hash"),
 		author = vim.fn.strdisplaywidth("👤 Author"),
-		date = vim.fn.strdisplaywidth("🕒 Relative Date"),
 	}
 
 	for _, raw_line in ipairs(raw_lines) do
@@ -362,16 +362,8 @@ function M.fetch_commits(limit, cwd, mode, opts)
 		if parsed.is_commit then
 			parsed.dim = current_set ~= nil and not current_set[parsed.full_hash]
 			parsed.branch_bases = branch_bases and branch_bases[parsed.full_hash] or nil
-			local hash_width = vim.fn.strdisplaywidth(parsed.hash)
-			for _, badge in ipairs(parse_refs(parsed.refs)) do
-				hash_width = hash_width + vim.fn.strdisplaywidth(badge.text) + 3
-			end
-			for _, name in ipairs(parsed.branch_bases or {}) do
-				hash_width = hash_width + vim.fn.strdisplaywidth(name) + 8
-			end
-			widths.hash = math.max(widths.hash, hash_width)
+			widths.hash = math.max(widths.hash, vim.fn.strdisplaywidth(parsed.hash))
 			widths.author = math.max(widths.author, vim.fn.strdisplaywidth(parsed.author))
-			widths.date = math.max(widths.date, vim.fn.strdisplaywidth(parsed.date))
 		end
 		widths.graph = math.max(widths.graph, #(parsed.graph_raw or ""))
 		table.insert(entries, parsed)
@@ -383,7 +375,6 @@ function M.fetch_commits(limit, cwd, mode, opts)
 			is_header = true,
 			hash = "📌 Hash",
 			author = "👤 Author",
-			date = "🕒 Relative Date",
 			subject = "💬 Subject",
 		}, widths)
 		table.insert(rendered_lines, header)
@@ -582,30 +573,24 @@ function M.open(target_cwd, initial_mode)
 		end
 	end
 
-	local function format_title(loading)
+	local graph_title = " 📊 GitKraken Graph | [b]: Select branches | [a]: Mode | [?]: Help "
+	local function format_status(loading)
 		local mode_str
 		if mode == "all" then
 			if refs_filter and #refs_filter > 0 then
-				mode_str = string.format("🎯 %d branch(es) [b: Edit Filter]", #refs_filter)
+				mode_str = string.format("🎯 %d branch(es)", #refs_filter)
 			else
-				mode_str = "🌐 All Branches (--all) [a: Switch to Current]"
+				mode_str = "🌐 All Branches (--all)"
 			end
 		else
-			mode_str = string.format("🌿 Current Branch (%s) [a: Switch to --all]", current_branch)
+			mode_str = string.format("🌿 Current Branch (%s)", current_branch)
 		end
 		local count_str = all_fetched and string.format("(All %d commits)", total_commits_count)
 			or string.format("(%d commits)", total_commits_count)
 		local order_str = order == "topo" and "topo" or "date"
 		local conn_str = connector_mode == "hidden" and "no-gaps" or "gaps"
 		local load_str = loading and " ⏳ Loading..." or ""
-		return string.format(
-			" 📊 GitKraken Graph │ Mode: %s │ %s │ %s/%s%s ",
-			mode_str,
-			count_str,
-			order_str,
-			conn_str,
-			load_str
-		)
+		return string.format(" Mode: %s │ %s │ %s/%s%s ", mode_str, count_str, order_str, conn_str, load_str)
 	end
 
 	local left_win = vim.api.nvim_open_win(left_buf, true, {
@@ -617,12 +602,14 @@ function M.open(target_cwd, initial_mode)
 		style = "minimal",
 		border = "rounded",
 		zindex = graph_z,
-		title = format_title(false),
+		title = graph_title,
+		footer = " [Space]: Files | [Enter]: Diff | [Tab]: Details | [F4]: Git actions ",
+		footer_pos = "left",
 		title_pos = "center",
 	})
 	vim.api.nvim_win_set_cursor(left_win, { 2, 0 })
 	vim.api.nvim_set_option_value("cursorline", true, { win = left_win })
-	vim.api.nvim_set_option_value("wrap", false, { win = left_win })
+	vim.api.nvim_set_option_value("wrap", true, { win = left_win })
 	vim.api.nvim_set_option_value("linebreak", true, { win = left_win })
 	vim.api.nvim_set_option_value("breakindent", true, { win = left_win })
 
@@ -660,21 +647,11 @@ function M.open(target_cwd, initial_mode)
 
 	local is_closed = false
 
-	local function update_window_title(loading)
+	local function update_window_status(loading)
 		if is_closed or not (left_win and vim.api.nvim_win_is_valid(left_win)) then
 			return
 		end
-		if canvas_mode then
-			vim.api.nvim_win_set_config(left_win, {
-				title = format_title(loading) .. " [F6: preview | Space: files]",
-				title_pos = "center",
-			})
-		else
-			vim.api.nvim_win_set_config(left_win, {
-				title = format_title(loading),
-				title_pos = "center",
-			})
-		end
+		vim.wo[left_win].winbar = format_status(loading):gsub("%%", "%%%%")
 	end
 
 	local function render_left_buffer()
@@ -903,7 +880,7 @@ function M.open(target_cwd, initial_mode)
 		current_limit = 50
 		all_fetched = false
 		is_fetching = true
-		update_window_title(true)
+		update_window_status(true)
 
 		vim.schedule(function()
 			local result = M.fetch_commits(current_limit, active_cwd, mode, fetch_opts())
@@ -919,7 +896,7 @@ function M.open(target_cwd, initial_mode)
 			if left_win and vim.api.nvim_win_is_valid(left_win) then
 				pcall(vim.api.nvim_win_set_cursor, left_win, { 2, 0 })
 			end
-			update_window_title(false)
+			update_window_status(false)
 			update_commit_details(nil)
 		end)
 	end
@@ -936,7 +913,7 @@ function M.open(target_cwd, initial_mode)
 
 		is_fetching = true
 		current_limit = current_limit + batch_size
-		update_window_title(true)
+		update_window_status(true)
 
 		vim.schedule(function()
 			local ok, result = pcall(M.fetch_commits, current_limit, active_cwd, mode, fetch_opts())
@@ -956,7 +933,7 @@ function M.open(target_cwd, initial_mode)
 				end
 			end
 
-			update_window_title(false)
+			update_window_status(false)
 
 			if target_row and left_win and vim.api.nvim_win_is_valid(left_win) then
 				local max_r = vim.api.nvim_buf_line_count(left_buf)
@@ -1342,7 +1319,8 @@ function M.open(target_cwd, initial_mode)
 			"  [Space]        Peek changed files (Esc closes)",
 			"  [F4]           Git actions (fetch, pull, rebase)",
 			"  [a]            Toggle Mode (🌿 Current Branch <-> 🌐 --all)",
-			"  [b]            Branch Filter (choose which branches to show)",
+			"  [b]            Select branches (choose which branches to show)",
+			"  [$ / 0]        End / start of the full wrapped commit line",
 			"  [L]            Colour Legend (branch -> colour)",
 			"  [t]            Toggle Commit Order (--topo-order <-> --date-order)",
 			"  [m]            Toggle Lane Spacers (dimmed <-> hidden)",
@@ -1589,7 +1567,7 @@ function M.open(target_cwd, initial_mode)
 		end,
 		changed = function()
 			canvas_mode = layout.mode == "browse"
-			update_window_title(false)
+			update_window_status(false)
 			update_commit_details(current_target_file)
 		end,
 	})

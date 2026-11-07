@@ -3,16 +3,27 @@ local queries = require("plugins.fox.git.git_center.queries")
 local M = {}
 
 M.commands = {
-	{ command = "GitFetch", label = "Fetch", args = { "fetch" } },
-	{ command = "GitPull", label = "Pull (configured strategy)", args = { "-c", "core.editor=true", "pull" } },
-	{ command = "GitPullRebase", label = "Pull with Rebase", args = { "-c", "core.editor=true", "pull", "--rebase" } },
-	{ command = "GitRebase", label = "Rebase Current Branch onto..." },
+	{ command = "GitFetch", key = "F", label = "Fetch", args = { "fetch" } },
+	{
+		command = "GitPull",
+		key = "gp",
+		label = "Pull (configured strategy)",
+		args = { "-c", "core.editor=true", "pull" },
+	},
+	{
+		command = "GitPullRebase",
+		key = "gP",
+		label = "Pull with Rebase",
+		args = { "-c", "core.editor=true", "pull", "--rebase" },
+	},
+	{ command = "GitRebase", key = "gr", label = "Rebase Current Branch onto..." },
 	{
 		command = "GitRebaseContinue",
+		key = "gc",
 		label = "Continue Rebase",
 		args = { "-c", "core.editor=true", "rebase", "--continue" },
 	},
-	{ command = "GitRebaseAbort", label = "Abort Rebase", args = { "rebase", "--abort" } },
+	{ command = "GitRebaseAbort", key = "ga", label = "Abort Rebase", args = { "rebase", "--abort" } },
 }
 
 function M.run(command, cwd, upstream, target)

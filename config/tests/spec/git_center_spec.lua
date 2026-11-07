@@ -118,6 +118,43 @@ describe("plugins.fox.git.git_center", function()
 		end
 	end)
 
+	it("shows repository shortcuts in Commit and runs them against the currently selected repository", function()
+		local actions = require("plugins.fox.git.git_center.actions")
+		local config = require("plugins.fox.git.git_center.config")
+		git_center.open_git_center()
+		local lines = vim.api.nvim_buf_get_lines(git_center.main_buf, 0, -1, false)
+		local content = table.concat(lines, "\n")
+		local commit_section = content:match(" 1 Commit(.-) 2 Staged")
+		assert(commit_section, "Missing Commit section")
+		local original_run = actions.run
+		local original_submodules, original_idx = config.submodules, config.active_submodule_idx
+		local target = { full_path = "selected-repository" }
+		local calls = {}
+		actions.run = function(command, cwd, upstream, active_target)
+			calls[#calls + 1] = { command, cwd, upstream, active_target }
+		end
+		config.submodules, config.active_submodule_idx = { config.get_active_target(), target }, 2
+		local ok, err = pcall(function()
+			for _, action in ipairs(actions.commands) do
+				expect(commit_section).toContain("[" .. action.key .. "] " .. action.label)
+				for _, buf in ipairs({ git_center.main_buf, git_center.preview_buf }) do
+					local map = vim.api.nvim_buf_call(buf, function()
+						return vim.fn.maparg(action.key, "n", false, true)
+					end)
+					expect(map.buffer).toBe(1)
+					map.callback()
+					local call = calls[#calls]
+					expect(call[1]).toBe(action.command)
+					expect(call[2]).toBe(target.full_path)
+					expect(call[4]).toBe(target)
+				end
+			end
+		end)
+		actions.run = original_run
+		config.submodules, config.active_submodule_idx = original_submodules, original_idx
+		assert(ok, err)
+	end)
+
 	it("includes Ctrl+Shift+X in stage_all key settings and spec", function()
 		expect(git_center.settings.keys.stage_all).toContain("<C-S-x>")
 		expect(git_center.settings.keys.stage_all).toContain("<C-S-X>")

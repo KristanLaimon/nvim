@@ -63,6 +63,11 @@ The picker includes local and remote branches. If a local base branch is behind 
 | `r` | Normal | Discard changes / Restore selected file (with confirmation) |
 | `R` | Normal | Discard changes / Restore entire section (with confirmation) |
 | `P` | Normal | Push to remote (with confirmation and remote branch selector) |
+| `F` | Normal | Fetch |
+| `gp` | Normal | Pull using the configured strategy |
+| `gP` | Normal | Pull with rebase |
+| `gr` | Normal | Rebase current branch onto a selected branch/ref |
+| `gc` / `ga` | Normal | Continue / Abort rebase |
 | `c` | Normal | Edit Commit Title via `input_modal` |
 | `m` | Normal | Edit Commit Description via `input_modal` |
 | `t` | Normal | Edit Optional Tag via `input_modal` |
@@ -80,6 +85,10 @@ The picker includes local and remote branches. If a local base branch is behind 
 | `i` / `I` (Diff Sidebar) | Normal | Import & 3-way merge diff files from a compatible FOX `.zip` archive (with automatic conflict markers `<<<<<<<` / `>>>>>>>` when conflicts occur) |
 | `h` / `<Esc>` (Diff Sidebar) | Normal | Return focus to code editor |
 | `<F5>` / `<C-r>` | Normal | Refresh Git status |
+
+Fetch, pull, and rebase shortcuts are shown below Commit/Push in section 1 and
+work from the main panel and preview for the selected repository. The `F4`
+Git actions menu remains available.
 
 ---
 

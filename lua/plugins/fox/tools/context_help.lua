@@ -57,6 +57,8 @@ M.settings = {
 				"Tab: Toggle focus between panel and preview",
 				"s/S : Stage File / Stage All  |  u/U : Unstage File / Unstage All",
 				"c : Edit Commit Title         |  C : Execute Commit & Tag",
+				"F: Fetch | gp: Pull (configured strategy) | gP: Pull with rebase",
+				"gr: Rebase onto... | gc: Continue rebase | ga: Abort rebase",
 				"l / L: GitKraken Graph Viewer (Current / All branches)",
 				"t / T: 🧪 Simulate Merge / Rebase (Dry-Run Conflict Check)",
 				"z : Stash Menu (Save / Pop / Apply / Drop)",

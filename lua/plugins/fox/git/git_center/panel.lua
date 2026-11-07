@@ -1075,6 +1075,13 @@ function M.open_git_center()
 		vim.keymap.set("n", "<F4>", function()
 			require("plugins.fox.git.git_center.actions").open(get_active_target().full_path)
 		end, { buffer = buf, silent = true })
+		local actions = require("plugins.fox.git.git_center.actions")
+		for _, action in ipairs(actions.commands) do
+			vim.keymap.set("n", action.key, function()
+				local target = get_active_target()
+				actions.run(action.command, target.full_path, nil, target)
+			end, { buffer = buf, silent = true, desc = action.label })
+		end
 	end
 	refresh()
 
@@ -1437,6 +1444,11 @@ function M.open_git_center()
 			"  t            Edit tag",
 			"  C            Execute commit & tag",
 			"  P            Push to remote",
+			"  F            Fetch",
+			"  gp           Pull (configured strategy)",
+			"  gP           Pull with rebase",
+			"  gr           Rebase current branch onto...",
+			"  gc / ga      Continue / Abort rebase",
 			"",
 			"  Actions",
 			"  ─────────────────────────────────────",

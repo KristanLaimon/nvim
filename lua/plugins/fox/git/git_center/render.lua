@@ -612,6 +612,10 @@ function M.build_panel_content(info, width)
 
 	local r_exec = add("   🚀 [C] Execute Commit & Tag  │  [P] Push Remote") - 1
 	highlight_brackets(r_exec, lines[r_exec + 1])
+	for _, action in ipairs(require("plugins.fox.git.git_center.actions").commands) do
+		local row = add("   [" .. action.key .. "] " .. action.label) - 1
+		highlight_brackets(row, lines[row + 1])
+	end
 	separator("─")
 
 	section_lines[2] = add(string.format(" 2 Staged (%d)", #info.staged))

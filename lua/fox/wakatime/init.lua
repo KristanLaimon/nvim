@@ -124,21 +124,45 @@ function M.sync_ai()
 		return
 	end
 	syncing = true
-	local ok = pcall(vim.system, {
-		cli,
-		"--sync-ai-activity",
-		"--sync-offline-activity",
-		"0",
-		"--timeout",
-		"30",
-	}, { text = true, detach = true, timeout = 45000 }, function(result)
+	local options = { text = true, detach = vim.fn.has("win32") == 0, timeout = 45000 }
+	local function delivered(result)
 		syncing = false
 		if result.code ~= 0 then
 			vim.schedule(function()
 				warn("AI sync failed (exit " .. result.code .. "); check the WakaTime CLI log.")
 			end)
 		end
-	end)
+	end
+	local ok = pcall(
+		vim.system,
+		{
+			cli,
+			"--sync-ai-activity",
+			"--timeout",
+			"30",
+		},
+		options,
+		function(result)
+			if result.code ~= 0 then
+				delivered(result)
+				return
+			end
+			-- AI parsing only queues events; combining both CLI flags skips parsing.
+			local sent = pcall(vim.system, {
+				cli,
+				"--sync-offline-activity",
+				"0",
+				"--timeout",
+				"30",
+			}, options, delivered)
+			if not sent then
+				syncing = false
+				vim.schedule(function()
+					warn("could not start AI activity delivery.")
+				end)
+			end
+		end
+	)
 	if not ok then
 		syncing = false
 		warn("could not start AI synchronization.")
@@ -193,7 +217,8 @@ function M.heartbeat(write, force)
 	if changes ~= 0 then
 		vim.list_extend(args, { "--human-line-changes", tostring(changes) })
 	end
-	local ok = pcall(vim.system, args, { text = true, detach = true }, function(result)
+	-- Detached Windows processes can open visible consoles for their child commands.
+	local ok = pcall(vim.system, args, { text = true, detach = vim.fn.has("win32") == 0 }, function(result)
 		if result.code == 103 or result.code == 104 then
 			vim.schedule(function()
 				warn("check ~/.wakatime.cfg and :WakaTimeApiKey (CLI exit " .. result.code .. ").")
@@ -210,6 +235,9 @@ end
 
 function M.setup(opts)
 	ai_enabled = opts ~= nil and opts.sync_ai == true
+	vim.api.nvim_create_user_command("WakaTimeInstall", function()
+		require("fox.wakatime.install").run()
+	end, { desc = "Install the official WakaTime CLI" })
 	vim.api.nvim_create_user_command("WakaTimeApiKey", M.set_api_key, { desc = "Set WakaTime tracking API key" })
 	local group = vim.api.nvim_create_augroup("FoxWakaTime", { clear = true })
 	vim.on_key(function(_, typed)

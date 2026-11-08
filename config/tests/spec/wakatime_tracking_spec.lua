@@ -12,7 +12,8 @@ t.describe("WakaTime local tracking", function()
 			return "fake-wakatime-cli"
 		end
 		local calls = {}
-		vim.system = function(args)
+		vim.system = function(args, opts)
+			t.expect(opts.detach).toBe(vim.fn.has("win32") == 0)
 			table.insert(calls, args)
 		end
 		local ok, err = pcall(function()
@@ -95,7 +96,8 @@ t.describe("WakaTime local tracking", function()
 		end
 		local saved_system = vim.system
 		local calls, complete = {}, nil
-		vim.system = function(args, _, callback)
+		vim.system = function(args, opts, callback)
+			t.expect(opts.detach).toBe(vim.fn.has("win32") == 0)
 			table.insert(calls, args)
 			complete = callback
 		end
@@ -105,13 +107,52 @@ t.describe("WakaTime local tracking", function()
 			t.expect(#calls).toBe(1)
 			local args = table.concat(calls[1], " ")
 			t.expect(args:find("--sync-ai-activity", 1, true) ~= nil).toBe(true)
-			t.expect(args:find("--sync-offline-activity 0", 1, true) ~= nil).toBe(true)
+			t.expect(args:find("--sync-offline-activity", 1, true)).toBe(nil)
 			t.expect(args:find("--entity", 1, true)).toBe(nil)
 			complete({ code = 0 })
 			tracker.sync_ai()
 			t.expect(#calls).toBe(2)
+			local delivery = table.concat(calls[2], " ")
+			t.expect(delivery:find("--sync-offline-activity 0", 1, true) ~= nil).toBe(true)
+			t.expect(delivery:find("--sync-ai-activity", 1, true)).toBe(nil)
+			complete({ code = 0 })
+			tracker.sync_ai()
+			t.expect(#calls).toBe(3)
 		end)
 		vim.system = saved_system
+		assert(ok, err)
+	end)
+
+	t.it("retries failed parsing and delivery without overlapping syncs", function()
+		local tracker = dofile(vim.fn.stdpath("config") .. "/lua/fox/wakatime/init.lua")
+		tracker.cli = function()
+			return "fake-wakatime-cli"
+		end
+		local saved_system, saved_notify = vim.system, vim.notify
+		local calls, complete, warnings = {}, nil, 0
+		vim.system = function(args, _, callback)
+			table.insert(calls, args)
+			complete = callback
+		end
+		vim.notify = function()
+			warnings = warnings + 1
+		end
+		local ok, err = pcall(function()
+			tracker.sync_ai()
+			complete({ code = 1 })
+			t.expect(#calls).toBe(1)
+			tracker.sync_ai()
+			t.expect(#calls).toBe(2)
+			complete({ code = 0 })
+			t.expect(#calls).toBe(3)
+			complete({ code = 102 })
+			tracker.sync_ai()
+			t.expect(#calls).toBe(4)
+			t.expect(vim.wait(1000, function()
+				return warnings == 2
+			end, 10)).toBe(true)
+		end)
+		vim.system, vim.notify = saved_system, saved_notify
 		assert(ok, err)
 	end)
 

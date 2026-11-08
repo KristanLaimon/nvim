@@ -288,8 +288,12 @@ connecting; restarting Neovim alone can reuse the existing server's identity.
 FoxVim's local Lua tracker (`lua/fox/wakatime/init.lua`) loads at startup.
 It requires [wakatime-cli](https://github.com/wakatime/wakatime-cli) on PATH or
 an existing `$WAKATIME_HOME/.wakatime/wakatime-cli` (`~/.wakatime/wakatime-cli`
-by default). Install and update the CLI separately; the editor does not download
-executables. Set the tracking key with `:WakaTimeApiKey` in the Command Palette,
+by default). To install it from Neovim, choose **WakaTime: Install CLI** in the
+Command Palette or run `:WakaTimeInstall` (requires Python 3 on PATH). It downloads
+the latest official release, verifies its SHA-256 checksum, and installs it in
+WakaTime's user folder without administrator access. An existing CLI is kept;
+nothing downloads automatically at startup. Set the tracking key with
+`:WakaTimeApiKey` in the Command Palette,
 or use `WAKATIME_API_KEY`. The key prompt is masked and saves the key with owner-only
 permissions, preserving other configuration entries.
 
@@ -313,9 +317,11 @@ a terminal buffer is focused, without marking terminal keystrokes as manual code
 The CLI owns transcript parsing, deduplication, offline delivery, and model
 attribution. Claude Code, Codex, Antigravity CLI (`agy`), and OpenCode require
 compatible transcripts discoverable by the installed CLI. No extra Neovim plugin
-is needed. Enable this data export explicitly with
-`require("fox.wakatime").setup({ sync_ai = true })` in the local plugin spec;
-it is disabled by default, including implicit AI parsing on editor heartbeats.
+is needed. AI sync is enabled in this installation's local plugin spec with
+`require("fox.wakatime").setup({ sync_ai = true })`. Remove that option to disable
+transcript export, including implicit AI parsing on editor heartbeats. Each sync
+parses AI activity first, then sends the offline queue in a separate CLI call;
+combining those command flags would skip AI parsing.
 
 Existing dashboard history is unaffected. Restart Neovim after replacing the
 upstream plugin to avoid running both trackers in the same session.

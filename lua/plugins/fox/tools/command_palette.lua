@@ -101,6 +101,7 @@ M.commands = {
 	-- { name = "WakaTime: Coding Stats (ASCII Charts)", cmd = "WakaTimeStats", category = "Tools" },
 	{ name = "WakaTime: Set Stats OAuth Token (Session)", cmd = "WakaTimeStatsToken", category = "Tools" },
 	{ name = "WakaTime: Set Tracking API Key", cmd = "WakaTimeApiKey", category = "Tools" },
+	{ name = "WakaTime: Install CLI", cmd = "WakaTimeInstall", category = "Tools" },
 	{ name = "Cycle Editor / Query View (F3)", cmd = "FoxModeToggle", category = "Query" },
 	-- { name = "Query: Standard View", cmd = "FoxQueryView standard", category = "Query" },
 	-- { name = "Query: Visual SQL Diagram", cmd = "FoxQueryView visual", category = "Query" },

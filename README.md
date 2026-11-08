@@ -4,7 +4,7 @@
   <a href="https://github.com/KristanLaimon/nvim/stargazers"><img src="https://img.shields.io/github/stars/KristanLaimon/nvim?style=flat-square" alt="GitHub Stars"></a>
 </p>
 
-> My personal neovim configuration for fox coders with IDE features, many QOL and batteries-included for common coding workflows.
+> My personal neovim configuration with IDE features, many QOL and batteries-included for common coding workflows.
 
 ---
 

@@ -68,9 +68,9 @@ return {
 				},
 				default_format_opts = {
 					lsp_format = "fallback",
-					-- biome mangles Astro and Svelte components; let their own LSP do it.
+					-- Svelte keeps its language-server formatting fallback.
 					filter = function(client)
-						return not (client.name == "biome" and vim.tbl_contains({ "astro", "svelte" }, vim.bo.filetype))
+						return not (client.name == "biome" and vim.bo.filetype == "svelte")
 					end,
 				},
 			}

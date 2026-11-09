@@ -384,23 +384,11 @@ M.formatters_by_ft = {
 }
 
 --- conform.nvim per-formatter overrides. prettier/prettierd only run when the
---- project actually asks for them (a Prettier config file exists) -- except for
---- Astro, whose plugin must be passed explicitly, so prettier always runs there.
+--- project actually asks for them (a Prettier config file exists).
 M.conform_formatters = {
 	prettier = {
 		condition = function(_, ctx)
-			return ctx.filetype == "astro" or M.has_prettier_config(ctx.filename)
-		end,
-		args = function(_, ctx)
-			local args = { "--stdin-filepath", "$FILENAME" }
-			if ctx.filetype == "astro" then
-				vim.list_extend(args, { "--plugin", "prettier-plugin-astro" })
-				local config = vim.fs.find({ ".prettierrc.astro.json" }, { path = ctx.filename, upward = true })[1]
-				if config then
-					vim.list_extend(args, { "--config", config })
-				end
-			end
-			return args
+			return M.has_prettier_config(ctx.filename)
 		end,
 	},
 	prettierd = {

@@ -73,17 +73,20 @@ function M.workflow_status()
 			end
 		end
 	end
+	local agentic = package.loaded["fox.agentic"]
+	local ai_active = agentic and agentic.active()
+	local selected = ai_active and "Agentic" or active and "Query" or "Editor"
 	local normal, dim = "%#StatusLine#", "%#FoxWorkflowInactive#"
+	local labels = {}
+	for _, name in ipairs({ "Editor", "Query", "Agentic" }) do
+		labels[#labels + 1] = (name == selected and normal or dim) .. name
+	end
 	return normal
 		.. "["
-		.. (active and dim or normal)
-		.. "Editor"
-		.. normal
-		.. " | "
-		.. (active and normal or dim)
-		.. "Query"
+		.. table.concat(labels, normal .. " | ")
 		.. normal
 		.. "]"
+		.. (agentic and agentic.subeditor_active() and " SubEditor [F2 Return]" or "")
 end
 
 --- Formats editor mode into NvChad style pill string.

@@ -22,7 +22,8 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 | `gy` | n | Copy current file relative path to clipboard (`:CopyRelativePath`) |
 | `gS` | n, SQL buffers only | Toggle project SQL syntax checking (`:FoxQuerySyntaxCheck`), off by default |
 | `<F1>` / `:FoxHelp` / `:Cheatsheet` | n, i, v, t | Open Help Menu & Runtime Cheatsheet Manager |
-| `<F2>` | n | Rename symbol, file on disk, or Neo-tree item |
+| `<F2>` | n, i, v, t | Toggle Agentic Mode for the selected terminal; return from Agentic inspection |
+| `:FoxRename` | Ex / palette | Rename symbol, file on disk, or Neo-tree item |
 | `<F3>` | n, i, v, t | Cycle Editor / Query directly |
 | `<C-Enter>` / `<F5>` | n, i (Query SQL) | Run statement at cursor; execution is manual by default |
 | `<S-F3>` | n, i, v (Query) | Toggle half-width live diagram |
@@ -189,7 +190,7 @@ host terminal rather than the shell profile.
 | `b` | Git Center | Open Branch Manager modal |
 | `l` / `L` | Git Center | GitKraken-style commit graph viewer (current / all branches) |
 | `<Space>` | Git Graph | Peek changed files in selected commit; Space/Esc closes |
-| `<F2>` / `<F3>` | Git Center | File history picker / repository Log Diff (formerly h/H) |
+| `<F2>` / `<F3>` | Git Center | Agentic Mode / repository Log Diff; use `:GitFileHistory` for file history |
 | `<F4>` | Git Center / Graph | Fetch, pull, rebase, continue/abort actions menu |
 | `<F6>` | Git Center / Graph | Toggle sidebar preview |
 | `<Tab>` / `<S-Tab>` | Git Center / Graph | Open full-size details popup / dismiss popup and focus left |

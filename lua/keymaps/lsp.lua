@@ -7,7 +7,7 @@
 --   <C-j>            Signature / parameter help
 --   <C-.>            Code actions, in a dropdown at the caret
 --   <A-j> / <A-k>    Go to definition (jump back with <C-o>)
---   <F2>             Rename: LSP symbol, neo-tree entry, or the file on disk
+--   :FoxRename       Rename: LSP symbol, neo-tree entry, or the file on disk
 --   [d / ]d          Previous / next diagnostic (built-in Neovim)
 --   gl               Diagnostic under the cursor (built-in Neovim)
 --
@@ -32,7 +32,6 @@ M.settings = {
 		code_action = "<C-.>",
 		goto_definition = { "<A-k>", "<M-k>", "<A-j>", "<M-j>" },
 		show_usages = { "<A-S-k>", "<A-S-K>", "<M-S-k>", "<M-S-K>" },
-		rename = "<F2>",
 		diagnostic_float = "gK",
 		diagnostic_prev = nil,
 		diagnostic_next = nil,
@@ -366,9 +365,9 @@ local function rename_symbol(old_name)
 	})
 end
 
---- F2 means "rename this", and what "this" is depends on where you are:
+--- Contextual rename depends on where you are:
 --- a neo-tree entry, a symbol with LSP rename support, or the file itself.
-vim.keymap.set("n", M.settings.keys.rename, function()
+vim.api.nvim_create_user_command("FoxRename", function()
 	if vim.bo.filetype == "neo-tree" then
 		vim.api.nvim_feedkeys("r", "m", false)
 		return
@@ -390,6 +389,6 @@ vim.keymap.set("n", M.settings.keys.rename, function()
 		return
 	end
 	rename_file(path)
-end, opts("Rename symbol or file"))
+end, { desc = "Rename symbol or file" })
 
 return M

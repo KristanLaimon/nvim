@@ -130,3 +130,7 @@ Command executions are automatically saved to global persistent storage using `f
   - Unvisited commands retain their original relative declaration order below recent commands.
   - History is stored globally across Neovim sessions.
 
+
+## Agentic actions
+
+The **Agentic** category provides the F2 dashboard toggle, Start Codex in New Terminal, Bind Current Terminal to Session, Return to Dashboard, Refresh / Reconnect, Detach Observer, and Help. Contextual rename is available as **Rename Symbol or File** (`:FoxRename`). See [Agentic Mode](agentic-mode.md).

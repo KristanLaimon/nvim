@@ -679,6 +679,10 @@ function M.switch_environment(target_slot, callback)
 	-- 2. Fast in-memory snapshot of current environment (0 disk I/O, 0 deepcopy)
 	ensure_current_slot_initialized()
 	local cur_env = _G._fox_environments[cur_slot]
+	local agentic = package.loaded["fox.agentic"]
+	if agentic then
+		agentic.suspend()(false)
+	end
 	local query = package.loaded["fox.query"]
 	if query then
 		local state = query.states[require("fox.query.storage").root(vim.fn.getcwd())]
@@ -1328,7 +1332,7 @@ local function format_preview(entry)
 	table.insert(lines, "### ⌨️ Available Actions:")
 	table.insert(lines, "- **<CR>** / **Enter**: Switch to this slot")
 	table.insert(lines, "- **a**: Set / Reassign project directory (Recent Projects / Explorer)")
-	table.insert(lines, "- **r** / **<F2>**: Rename this environment")
+	table.insert(lines, "- **r**: Rename this environment | **F2**: Agentic Mode")
 	table.insert(lines, "- **d** / **<Del>**: Close & delete this environment")
 	table.insert(lines, "- **w**: Export slot as a Workspace")
 	table.insert(lines, "- **1..9**: Quick switch to slot number")
@@ -1462,8 +1466,8 @@ function M.open_menu()
 							end
 						end)
 
-						-- 'r' / 'R' / '<C-r>' / '<F2>': Rename environment
-						map_all({ { "i", "<C-r>" }, { "n", "r" }, { "n", "R" }, { "n", "<F2>" } }, function()
+						-- 'r' / 'R' / '<C-r>': Rename environment
+						map_all({ { "i", "<C-r>" }, { "n", "r" }, { "n", "R" } }, function()
 							local val = selected()
 							if val and val.env then
 								actions.close(prompt_bufnr)

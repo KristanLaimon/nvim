@@ -487,6 +487,8 @@ end
 --- @return string|nil err
 --- @return boolean neotree_was_open Whether neo-tree should reopen on load.
 local function save_session_file(session_path, ws_name)
+	local agentic = package.loaded["fox.agentic"]
+	local restore_agentic = agentic and agentic.suspend()
 	local query = package.loaded["fox.query"]
 	local restore_query = query and query.suspend()
 	vim.opt.sessionoptions = M.settings.session_options
@@ -504,6 +506,9 @@ local function save_session_file(session_path, ws_name)
 	local ok, err = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(session_path))
 	if restore_query then
 		restore_query()
+	end
+	if restore_agentic then
+		restore_agentic()
 	end
 
 	if ok and ws_name and ws_name ~= "" then
@@ -745,6 +750,10 @@ function M.load_workspace(ws_or_identifier)
 	-- Staying inside the same project keeps its terminals and task outputs alive;
 	-- switching projects clears them, because they belong to the old root.
 	local is_same_project = path.equals(vim.fn.getcwd(), target.cwd or vim.fn.getcwd())
+	local agentic = package.loaded["fox.agentic"]
+	if agentic then
+		agentic.suspend()(false)
+	end
 	if query then
 		local restore_query = query.suspend()
 		restore_query(false)
@@ -1584,7 +1593,7 @@ function M.select_workspace(initial_show_all)
 							end
 						end)
 
-						map_all({ { "i", "<C-r>" }, { "n", "r" }, { "n", "R" }, { "n", "<F2>" } }, function()
+						map_all({ { "i", "<C-r>" }, { "n", "r" }, { "n", "R" } }, function()
 							local value = selected()
 							if value then
 								actions.close(prompt_bufnr)

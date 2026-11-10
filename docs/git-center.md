@@ -52,7 +52,7 @@ The picker includes local and remote branches. If a local base branch is behind 
 | `b` | Normal | Open Branch Management Modal (Create, Delete, Switch, Rename, Dry-Run) |
 | `l` / `L` | Normal | Open GitKraken Commit Graph Viewer (`:GitGraph`, 2 modes: Current / `--all`, on-the-fly fetch) |
 | `<F3>` | Normal | Open the Log Diff dashboard for the repository |
-| `<F2>` | Normal | Pick a file with the Ctrl+k file finder and open its commit history in Log Diff |
+| `<F2>` | Normal | Open Agentic Mode; use `:GitFileHistory` or the palette to pick file history |
 | `t` | Normal | 🧪 Dry-Run Merge simulation (predict conflicts between branches without touching CWD) |
 | `T` | Normal | 🧪 Dry-Run Rebase simulation (predict conflicts between branches without touching CWD) |
 | `<CR>` (Commit Log) | Normal | Press Enter on file in "Files Changed" to jump directly to its diff |
@@ -111,13 +111,13 @@ that choice stays active until Git Center closes. Tab opens the details as a ful
 
 | Key | Action in normal Git Center and graph |
 | :--- | :--- |
-| `F2` / `F3` | File history picker / repository Log Diff (normal Git Center) |
+| `F2` / `F3` | Agentic Mode / repository Log Diff (normal Git Center) |
 | `F4` | Git actions menu |
 | `F6` | Toggle sidebar preview |
 | `F7` | Expand details to the entire Git Center area; press again or Esc to return |
 | `F8` | Toggle maximized Git Center geometry |
 
-The former h/H history shortcuts are now F2/F3, preserving Vim's h/H motions.
+File history is available through `:GitFileHistory`; F3 opens repository history, preserving Vim's h/H motions. F2 switches to Agentic Mode.
 Graph's former f canvas shortcut is now F6, preserving the f motion.
 
 All new actions are also available in the Command Palette and as explicit commands:
@@ -168,9 +168,9 @@ rebases can change them. Deleted branches cannot be labeled, and remote names
 reflect the last fetch. Press `L` in the graph for the color legend.
 
 In Neo-tree, press `gH` on a file to open its commit history in the existing
-four-panel Log Diff dashboard. Directories are ignored. In Git Center, `F2`
-opens the same file finder as `Ctrl+k`, rooted at the active repository or
-submodule. Select a file with Enter to open its history.
+four-panel Log Diff dashboard. Directories are ignored. `:GitFileHistory`
+opens the file finder rooted at the active repository or submodule.
+Select a file with Enter to open its history. F2 opens Agentic Mode.
 
 The Command Palette also provides **Git File History (Select File)**.
 Use `:GitFileHistory` to pick a file, or `:GitFileHistory path/to/file` directly.

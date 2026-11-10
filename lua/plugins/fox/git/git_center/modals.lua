@@ -925,7 +925,7 @@ end
 --- @param target_cwd string|nil Repository directory to view diffs for.
 --- @param commit_hash string|nil Optional commit hash for viewing past commit diffs.
 --- @param initial_index integer|nil Optional initial file index to display.
-function M.open_diff_modal(target_file, target_type, target_cwd, commit_hash, initial_index)
+function M.open_diff_modal(target_file, target_type, target_cwd, commit_hash, initial_index, origin)
 	local prev_win = vim.api.nvim_get_current_win()
 	local orig_cwd = vim.fn.getcwd()
 	local active_cwd = target_cwd or (get_active_target() and get_active_target().full_path) or orig_cwd
@@ -978,7 +978,7 @@ function M.open_diff_modal(target_file, target_type, target_cwd, commit_hash, in
 
 	local index = initial_index and math.max(1, math.min(#files, initial_index)) or 1
 	for idx, item in ipairs(files) do
-		if target_file and (item.file == target_file or item.file:match(target_file .. "$")) then
+		if target_file and item.file == target_file and (hash or not target_type or item.type == target_type) then
 			index = idx
 			break
 		end
@@ -1202,6 +1202,11 @@ function M.open_diff_modal(target_file, target_type, target_cwd, commit_hash, in
 
 	for _, b in ipairs({ left_buf, right_buf }) do
 		local opts = { buffer = b, noremap = true, silent = true, nowait = true }
+		if origin and origin.agentic then
+			vim.keymap.set({ "n", "v", "i" }, "<F2>", function()
+				close_modal(false)
+			end, opts)
+		end
 		for _, key in ipairs(config.settings.keys.modal_close) do
 			local tk = is_toggle_key(key)
 			vim.keymap.set({ "n", "v", "i", "t" }, key, function()

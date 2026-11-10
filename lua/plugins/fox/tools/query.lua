@@ -49,6 +49,10 @@ return {
 			vim.api.nvim_create_user_command(name, callback, opts or {})
 		end
 		command("FoxModeToggle", function()
+			local agentic = package.loaded["fox.agentic"]
+			if agentic and agentic.active() then
+				agentic.hide()
+			end
 			local state = query.state()
 			if state.mode == "query" and state.tab == vim.api.nvim_get_current_tabpage() then
 				query.hide()
@@ -58,21 +62,27 @@ return {
 		end)
 		command("FoxMode", function(args)
 			local function choose(mode)
+				local agentic = package.loaded["fox.agentic"]
+				if mode ~= "agentic" and agentic and agentic.active() then
+					agentic.hide()
+				end
 				if mode == "editor" then
 					query.hide()
 				elseif mode == "query" then
 					query.show()
+				elseif mode == "agentic" then
+					vim.cmd("FoxAgenticOpen")
 				end
 			end
 			if args.args ~= "" then
 				choose(args.args)
 			else
-				query.select({ "editor", "query" }, { prompt = "Project view (FoxAI is not implemented)" }, choose)
+				query.select({ "editor", "query", "agentic" }, { prompt = "Project view" }, choose)
 			end
 		end, {
 			nargs = "?",
 			complete = function()
-				return { "editor", "query" }
+				return { "editor", "query", "agentic" }
 			end,
 		})
 		command("FoxQueryView", function(args)

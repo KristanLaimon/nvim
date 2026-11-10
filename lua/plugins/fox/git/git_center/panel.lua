@@ -1461,7 +1461,7 @@ function M.open_git_center()
 			"  K            Checkout commit",
 			"  b            Branch manager",
 			"  l / L        Git Graph (current / all branches)",
-			"  F2 / F3      Pick file history / Log Diff",
+			"  F2 Agentic / F3 Log Diff | :GitFileHistory Pick file history",
 			"  F4           Git actions (fetch, pull, rebase)",
 			"  F6/F7/F8     Toggle preview / Expand details / Maximize",
 			"  v / V        Diff mode / Toggle diff mode",
@@ -1628,15 +1628,8 @@ function M.open_git_center()
 	vim.keymap.set("n", "<F3>", open_repository_history, key_opts)
 	vim.keymap.set("n", "<F3>", open_repository_history, preview_opts)
 
-	local function pick_file_history()
-		local cwd = get_active_target().full_path
-		M.close_git_center({ keep_cached_view = false })
-		vim.schedule(function()
-			require("plugins.fox.git.log_diff").pick_file_history(cwd)
-		end)
-	end
-	vim.keymap.set("n", "<F2>", pick_file_history, key_opts)
-	vim.keymap.set("n", "<F2>", pick_file_history, preview_opts)
+	vim.keymap.set("n", "<F2>", "<Cmd>FoxAgenticToggle<CR>", key_opts)
+	vim.keymap.set("n", "<F2>", "<Cmd>FoxAgenticToggle<CR>", preview_opts)
 
 	local commit_fields = {
 		{ key = "c", field = "title", label = "Commit Title" },

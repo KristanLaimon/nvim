@@ -129,3 +129,7 @@ Local dependency replacements also include:
 | `fox.git.inline_blame` | Async inline authorship and the `:GitBlame*` commands |
 
 All local Lazy specs use separate directories so each configuration runs independently. Completed replacements and their validation are tracked in [the dependency plan](../config/plans_notes_md/DEPENDENCYFOX.plan.md).
+
+## Agentic Mode
+
+`plugins.fox.tools.agentic` registers the Codex dashboard and F2 routing. Core state/UI live in `lua/fox/agentic/`; Codex protocol handling lives in `lua/fox/agentic/providers/codex.lua`. See [Agentic Mode](agentic-mode.md) for terminal bindings and telemetry limits.

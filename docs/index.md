@@ -155,3 +155,7 @@ If you have just installed or launched FoxVim for the first time, follow these s
 3. **First-Class Debugging**: Pre-configured DAP adapters for JS/TS, Bun, Python, Go, C#, PHP, C/C++, and Rust with persistent breakpoints and REPL integration.
 4. **Unified Floating UI**: Input popups, file pickers, git controls, and terminals share a cohesive rounded design system managed by a centralized [Z-Index Manager](z-index.md).
 5. **Multi-Layout Support**: Built-in compatibility for US Standard, US-International, Latam, and European keyboards.
+
+## Agentic Mode
+
+[Agentic Mode (Codex)](agentic-mode.md) — F2 opens per-terminal Codex activity, observed file reads/edits, usage, and Git review. Rename remains available through `:FoxRename` and the palette.

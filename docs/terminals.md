@@ -62,3 +62,7 @@ executable when copying this config to another Unix system. Native Windows and
 WSL sessions launched from Windows Neovim are not configured by this integration.
 Shell startup files that replace `PATH` must preserve `config/scripts/terminal-bin` for
 the wrapper to be used. Absolute calls to a different Fastfetch binary bypass it.
+
+## Agentic sessions
+
+Plain `codex` in a new local Bash/PowerShell terminal starts [Agentic Mode](agentic-mode.md) observation in the background, with an exact session binding owned by that terminal buffer. F2 opens the collected activity for the current terminal, or the selected slot when focus is in the editor. `:FoxAgenticCodex` also starts a tracked session in an unused slot. Terminals already open before this integration require recreation or the existing manual-binding fallback. F4 retains its existing terminal behavior.

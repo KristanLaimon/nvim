@@ -405,7 +405,7 @@ local function terminal_open_cmd()
 	local ok, wsl = pcall(require, "plugins.fox.tools.wsl")
 	local wsl_cmd = ok and wsl.shell_command_for_cwd(vim.fn.getcwd()) or nil
 	if wsl_cmd then
-		return "terminal " .. wsl_cmd
+		return "terminal " .. wsl_cmd, true
 	end
 	-- Kitty starts the user's interactive shell; use the same initialization
 	-- inside Neovim while keeping Bash for POSIX tool/task commands.
@@ -439,12 +439,35 @@ local function fill_window(t, n, win)
 		end
 	end
 
-	vim.cmd(terminal_open_cmd())
+	local command, remote_shell = terminal_open_cmd()
+	local background = require("fox.agentic.background")
+	local environment, token
+	if not remote_shell then
+		local prepared, env, identity = pcall(background.prepare)
+		if prepared then
+			environment, token = env, identity
+		end
+	end
+	local saved = {}
+	for key, value in pairs(environment or {}) do
+		saved[key] = vim.env[key] or false
+		vim.env[key] = value
+	end
+	local opened, open_error = pcall(vim.cmd, command)
+	for key, value in pairs(saved) do
+		vim.env[key] = value or nil
+	end
+	if not opened then
+		error(open_error)
+	end
 	t.buf = vim.api.nvim_get_current_buf()
 	vim.bo[t.buf].buflisted = false
 	vim.b[t.buf].fox_term_num = n
 	vim.b[t.buf].fox_is_multi_term = true
 	vim.b[t.buf].fox_env_slot = _G._fox_active_env_slot or 1
+	vim.b[t.buf].fox_term_root = cwd
+	vim.b[t.buf].fox_agentic_automatic = token ~= nil
+	background.register(token, { buf = t.buf, slot = n, job = vim.b[t.buf].terminal_job_id, root = cwd })
 end
 
 -- ============================================================================
@@ -542,6 +565,53 @@ end
 --- @return integer n
 function M.get_selected_terminal()
 	return _G._fox_selected_terminal or 1
+end
+
+--- A binding belongs to a terminal buffer/job, never merely its reusable slot number.
+function M.agentic_context()
+	sync_terminals()
+	local buf = vim.api.nvim_get_current_buf()
+	local slot = vim.b[buf].fox_term_num
+	if not slot then
+		slot = M.get_selected_terminal()
+		buf = terminals[slot] and terminals[slot].buf
+	end
+	if not is_valid_buf(buf) then
+		return nil
+	end
+	return {
+		buf = buf,
+		slot = slot,
+		job = vim.b[buf].terminal_job_id,
+		root = vim.b[buf].fox_term_root or vim.fn.getcwd(),
+		session = vim.b[buf].fox_agentic_session,
+		automatic = vim.b[buf].fox_agentic_automatic == true,
+	}
+end
+
+--- Opens a new Codex TUI without replacing a shell or process already in use.
+function M.launch_codex(session_id)
+	if type(session_id) ~= "string" or not session_id:match("^[%w_-]+$") then
+		return nil, "Invalid Codex session ID"
+	end
+	sync_terminals()
+	local slot
+	for number = 1, M.settings.count do
+		if not terminals[number] or not is_valid_buf(terminals[number].buf) then
+			slot = number
+			break
+		end
+	end
+	if not slot then
+		return nil, "All terminal slots are in use; close one before starting Codex"
+	end
+	M.open_terminal(slot)
+	local context = M.agentic_context()
+	vim.b[context.buf].fox_agentic_session = session_id
+	context.session = session_id
+	require("fox.agentic").observe(context)
+	vim.fn.chansend(context.job, "codex resume " .. session_id .. "\r")
+	return context
 end
 
 local function close_git_center()

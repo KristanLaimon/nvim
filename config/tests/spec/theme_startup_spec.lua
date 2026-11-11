@@ -2,6 +2,24 @@ local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
 
 describe("local theme startup", function()
+	it("keeps VS Code Dark 2026 and Dark Modern palettes distinct", function()
+		local original = vim.g.colors_name or "default"
+		local ok, err = pcall(function()
+			for _, palette in ipairs({
+				{ name = "vscode-dark", background = 0x121314, keyword = 0xFF7B72, func = 0xD2A8FF },
+				{ name = "vscode-dark-modern", background = 0x1F1F1F, keyword = 0x569CD6, func = 0xDCDCAA },
+			}) do
+				vim.cmd.colorscheme(palette.name)
+				expect(vim.g.colors_name).toBe(palette.name)
+				expect(vim.api.nvim_get_hl(0, { name = "Normal" }).bg).toBe(palette.background)
+				expect(vim.api.nvim_get_hl(0, { name = "Keyword" }).fg).toBe(palette.keyword)
+				expect(vim.api.nvim_get_hl(0, { name = "Function" }).fg).toBe(palette.func)
+			end
+		end)
+		vim.cmd.colorscheme(original)
+		assert(ok, err)
+	end)
+
 	it("loads the saved theme eagerly without an upstream theme plugin", function()
 		local names = { "plugins.fox.ui.ryoku_theme", "plugins.fox.ui.omarchy_theme", "plugins.fox.ui.theme_picker" }
 		local saved, restored = {}, false

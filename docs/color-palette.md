@@ -29,6 +29,8 @@ FoxVim ships with a set of complete, hand-crafted themes matching the `foxnvim` 
 Global themes are saved in the Neovim config directory under `.foxnvim/theme.json`. Project overrides are read exclusively from `<project>/.foxnvim/theme.json` (`{"theme":"nord"}`). They load on startup and when switching projects; projects without an override use the global default. Choosing a global theme updates the default; existing project overrides remain saved. Delete the project file to return permanently to the global default.
 
 - **Available Themes:**
+  - `vscode-dark` (VS Code Dark 2026)
+  - `vscode-dark-modern` (VS Code Dark Modern, with Dark+ syntax colors)
   - `foxnvim` (Hayase Nagatoro Dark — Default)
   - `foxnvim-light` (Hayase Nagatoro Light)
   - `onedar` (NvChad OneDark in FoxVim format)

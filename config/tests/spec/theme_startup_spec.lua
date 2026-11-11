@@ -20,6 +20,22 @@ describe("local theme startup", function()
 		assert(ok, err)
 	end)
 
+	it("loads One Dark Pro Night Flat with flat panels and One Dark syntax", function()
+		local original = vim.g.colors_name or "default"
+		local ok, err = pcall(function()
+			vim.cmd.colorscheme("one-dark-pro-night-flat")
+			expect(vim.g.colors_name).toBe("one-dark-pro-night-flat")
+			for _, group in ipairs({ "Normal", "StatusLine", "TabLineFill", "NeoTreeNormal" }) do
+				expect(vim.api.nvim_get_hl(0, { name = group }).bg).toBe(0x16191D)
+			end
+			expect(vim.api.nvim_get_hl(0, { name = "Keyword" }).fg).toBe(0xC678DD)
+			expect(vim.api.nvim_get_hl(0, { name = "Function" }).fg).toBe(0x61AFEF)
+			expect(vim.api.nvim_get_hl(0, { name = "String" }).fg).toBe(0x98C379)
+		end)
+		vim.cmd.colorscheme(original)
+		assert(ok, err)
+	end)
+
 	it("loads the saved theme eagerly without an upstream theme plugin", function()
 		local names = { "plugins.fox.ui.ryoku_theme", "plugins.fox.ui.omarchy_theme", "plugins.fox.ui.theme_picker" }
 		local saved, restored = {}, false

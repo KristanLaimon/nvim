@@ -34,6 +34,7 @@ Global themes are saved in the Neovim config directory under `.foxnvim/theme.jso
   - `foxnvim` (Hayase Nagatoro Dark — Default)
   - `foxnvim-light` (Hayase Nagatoro Light)
   - `onedar` (NvChad OneDark in FoxVim format)
+  - `one-dark-pro-night-flat` (One Dark Pro Night Flat; [official palette](https://github.com/Binaryify/OneDark-Pro/blob/master/themes/OneDark-Pro-night-flat.json))
   - `catppuccin` (NvChad Catppuccin Mocha in FoxVim format)
   - `nord` (NvChad Nord in FoxVim format)
   - `kanagawa` (Omarchy Kanagawa)

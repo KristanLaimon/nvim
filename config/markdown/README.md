@@ -12,11 +12,12 @@ Its embedded third-party license notices are preserved; Mermaid's MIT license
 is in `../licenses/mermaid.txt` (https://github.com/mermaid-js/mermaid/blob/develop/LICENSE).
 No plugin, Node runtime, npm packages, CDN or CLI is needed to serve this file.
 
-`markdown.css` is the unmodified GitHub-like stylesheet from the same plugin
+`markdown.css` is based on the GitHub-like stylesheet from the same plugin
 commit (`app/_static/markdown.css`), originally from
 https://github.com/iamcco/markdown.css. Its MIT license is preserved in
-`../licenses/markdown-preview-style.txt`. It is a browser asset, not a dependency
-on the former server or plugin.
+`../licenses/markdown-preview-style.txt`. The scrolling table layout is scoped
+to Markdown pipe tables so HTML tables use native sizing. The stylesheet is a
+browser asset with no dependency on the former server or plugin.
 
 `mona-sans.woff2` and `mona-sans-italic.woff2` are GitHub's unmodified Mona Sans
 variable fonts (`MonaSansVF[opsz,wght].woff2` and

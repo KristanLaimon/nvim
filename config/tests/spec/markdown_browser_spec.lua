@@ -149,6 +149,17 @@ t.describe("Native Markdown renderer", function()
 			"<video",
 			'controls=""',
 			"<strong>inline HTML</strong>",
+			'width="15%"',
+			'width="85%"',
+			'width="100%"',
+			'height="auto"',
+			'valign="middle"',
+			'style="--PreviewGap: 12px; display: grid; grid-template-columns: 1fr 2fr; gap: var(--PreviewGap)"',
+			'style="padding: calc(var(--PreviewGap) / 2)"',
+			'alt="Made by Human"',
+			"&nbsp;&nbsp;",
+			"A&nbsp;B",
+			"<code>&amp;nbsp;</code>",
 			"Markdown after HTML",
 		}) do
 			t.expect(html).toContain(expected)
@@ -157,23 +168,22 @@ t.describe("Native Markdown renderer", function()
 		t.expect(html).not_.toContain("</img>")
 		t.expect(html).toContain("&lt;img src=&quot;literal.png&quot;")
 	end)
-	t.it("sanitizes HTML URLs, attributes, styles and quoted tag boundaries", function()
+	t.it("sanitizes active HTML while preserving quoted inline CSS", function()
 		local html = render.render({
 			'<p align="center" onclick="alert(1)">',
 			'<img src="jav&#x61;script:alert(1)" onerror="alert(1)">',
 			'<a href=" javascript:alert(1)">unsafe</a>',
-			'<span style="display:block;background:url(https://evil.example);position:fixed;font-size:1.25rem">safe</span>',
+			[[<span style="font-family: 'A;B'; --Label: '`x`\!'; font-size: 1.25rem">safe</span>]],
 			'<img src="https://example.com/image?a=1&amp;b=2" alt="one > two"/>',
 			'<iframe src="https://evil.example"></iframe><script>alert(1)</script>',
 			"</p>",
+			[[Inline <span style="font-family: 'A;B'; --Label: '`x`\!'">safe</span> and `<img width="100%">`.]],
 		})
 		for _, forbidden in ipairs({
 			"onclick=",
 			"onerror=",
 			'href="javascript:',
 			'src="javascript:',
-			"background:",
-			"position:",
 			"<iframe",
 			"<script",
 		}) do
@@ -181,7 +191,9 @@ t.describe("Native Markdown renderer", function()
 		end
 		t.expect(html).toContain('src="https://example.com/image?a=1&amp;b=2"')
 		t.expect(html).toContain('alt="one &gt; two"')
-		t.expect(html).toContain('style="display:block;font-size:1.25rem"')
+		t.expect(html).toContain([[style="font-family: &#39;A;B&#39;; --Label: &#39;`x`\!&#39;; font-size: 1.25rem"]])
+		t.expect(html).toContain([[style="font-family: &#39;A;B&#39;; --Label: &#39;`x`\!&#39;"]])
+		t.expect(html).toContain("<code>&lt;img width=&quot;100%&quot;&gt;</code>")
 	end)
 end)
 
@@ -267,9 +279,16 @@ t.describe("Native Markdown HTTP preview", function()
 		vim.fn.mkdir(directory .. "/docs", "p")
 		vim.fn.writefile({ "inside" }, directory .. "/docs/image.png")
 		vim.fn.writefile({ "secret" }, directory .. "/outside.png")
+		vim.fn.writefile({ '<svg xmlns="http://www.w3.org/2000/svg"/>' }, directory .. "/docs/image.svg")
+		vim.fn.writefile({ '<svg xmlns="http://www.w3.org/2000/svg"/>' }, directory .. "/outside.svg")
 		local ok, err = pcall(function()
 			vim.api.nvim_buf_set_name(source, directory .. "/docs/preview.md")
 			t.expect(get(url .. "image.png")).toContain("inside")
+			local svg = get(url .. "image.svg")
+			t.expect(svg).toContain("Content-Type: image/svg+xml")
+			t.expect(svg).toContain("Content-Security-Policy: sandbox; default-src 'none'")
+			t.expect(svg).toContain("<svg")
+			t.expect(get(url .. "%2e%2e/outside.svg")).toContain("HTTP/1.1 404")
 			t.expect(get(url .. "%2e%2e/outside.png")).toContain("HTTP/1.1 404")
 			t.expect(get(url .. "image.png", { "Host: localhost" })).toContain("HTTP/1.1 403")
 		end)

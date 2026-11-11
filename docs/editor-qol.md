@@ -31,10 +31,12 @@ automatic URL/email links, fenced code and HTML `<details>` sections. These can
 be mixed with Mermaid blocks in the same document. Quotes, dashes and ellipses
 stay literal. The focused Lua renderer is not a complete CommonMark engine:
 nested lists, reference links, syntax highlighting and math extensions are not
-implemented. Mixed HTML supports centered paragraphs, images and linked badges,
-line breaks, strong/emphasis, spans, details and videos with controls. Attributes
-are sanitized: handlers/scripts/iframes are blocked; inline styles are limited
-to display, font size and text alignment. Remote videos use the browser's media
+implemented. Mixed HTML supports layout elements, tables, images, linked badges,
+details and videos with controls. Supported elements retain inline CSS for the
+browser to apply, including Grid, Flexbox, custom properties and `calc()`.
+HTML tables and images also support legacy attributes such as `align`, `valign`,
+`width` and `height`. The preview filters active HTML such as scripts, event
+handlers and iframes. Remote videos use the browser's media
 support; their availability and codecs depend on the URL and browser.
 Legacy `g:mkdp_preview_options` settings from the former renderer are not used.
 
@@ -44,8 +46,8 @@ The preview URL is also printed in `:messages`. If the handler fails, FoxVim
 reports the error with that URL so you can open it manually. Explicit
 `g:mkdp_browser` and `g:mkdp_browserfunc` overrides are respected.
 The server binds only to `127.0.0.1` on a random port with a random URL token.
-Relative raster images inside the document directory are served (up to 10 MiB);
-parent directories and SVG/HTML files are not exposed. Moving the editor cursor
+Relative raster and SVG images inside the document directory are served (up to
+10 MiB). SVGs load with a sandboxed policy. Moving the editor cursor
 centers the corresponding source line in the browser, without taking keyboard
 focus from Neovim. Closed details open when the cursor enters their content.
 Source mappings cover paragraph/code lines, headings, list items and table rows;

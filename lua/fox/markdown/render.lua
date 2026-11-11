@@ -12,22 +12,16 @@ local function inline(text)
 		return "\1" .. #saved .. "\2"
 	end
 	text = text:gsub("[%z\1\2]", "")
-	text = text:gsub("(`+)(.-)%1", function(_, code)
-		return hold("<code>" .. M.escape(code) .. "</code>")
-	end)
-	text = text:gsub("\\([%p])", function(char)
-		return hold(M.escape(char))
-	end)
 	text = markup.protect(text, hold)
 	text = text:gsub("(!?)%[([^%]]*)%]%(([^%s%)]+)%)", function(image, label, url)
 		url = markup.url(url, image == "!")
 		if not url then
-			return hold(M.escape(label))
+			return hold(markup.escape_text(label))
 		end
 		if image == "!" then
 			return hold('<img alt="' .. M.escape(label) .. '" src="' .. M.escape(url) .. '">')
 		end
-		return hold('<a href="' .. M.escape(url) .. '">' .. M.escape(label) .. "</a>")
+		return hold('<a href="' .. M.escape(url) .. '">' .. markup.escape_text(label) .. "</a>")
 	end)
 	text = text:gsub("<?(https?://[^%s<>]+)>?", function(url)
 		local clean, tail = url:match("^(.-)([.,;!?:]*)$")
@@ -36,7 +30,7 @@ local function inline(text)
 	text = text:gsub("<?([%w._%%+-]+@[%w.-]+%.[%a]+)>?", function(email)
 		return hold('<a href="mailto:' .. M.escape(email) .. '">' .. M.escape(email) .. "</a>")
 	end)
-	text = M.escape(text)
+	text = markup.escape_text(text)
 	for _, rule in ipairs({
 		{ "%*%*(.-)%*%*", "strong" },
 		{ "__(.-)__", "strong" },
@@ -122,6 +116,10 @@ function M.render(lines)
 	while i <= #lines do
 		local line = lines[i]
 		local marker, lang = line:match("^%s*([`~]+)%s*([%w_-]*)%s*$")
+		local html_block, block_end
+		if not fence then
+			html_block, block_end = markup.render_block(lines, i)
+		end
 		if fence then
 			if marker and marker:sub(1, 1) == fence.char and #marker >= fence.size and lang == "" then
 				close_code(i)
@@ -132,15 +130,11 @@ function M.render(lines)
 			flush()
 			close_list()
 			fence = { char = marker:sub(1, 1), size = #marker, lang = lang, first = i }
-		elseif markup.block(line) then
+		elseif html_block then
 			flush()
 			close_list()
-			local name, first, block = markup.block(line), i, { line }
-			while not lines[i]:lower():find("</" .. name .. "%s*>") and i < #lines do
-				i = i + 1
-				block[#block + 1] = lines[i]
-			end
-			emit(markup.render(table.concat(block, "\n"), first))
+			emit(html_block)
+			i = block_end
 		elseif table_separator(lines[i + 1]) and line:find("|", 1, true) then
 			flush()
 			close_list()

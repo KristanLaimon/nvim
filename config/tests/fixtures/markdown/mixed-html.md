@@ -14,9 +14,42 @@
 
 <video src="https://github.com/user-attachments/assets/ace791d2-96a6-4b3f-830b-345afa86391f"></video>
 
+<table width="90%" align="center">
+
+  <tr>
+
+    <td width="15%" valign="middle">
+
+      <img width="100%" height="auto" alt="profile" src="./.github/kitty_support.png" />
+
+    </td>
+
+    <td width="85%" align="right" valign="middle">
+
+      <h2>Wouldn't it be nice to draw while we zoom in?</h2>
+
+    </td>
+
+  </tr>
+
+</table>
+
+<div
+  style="--PreviewGap: 12px; display: grid; grid-template-columns: 1fr 2fr; gap: var(--PreviewGap)">
+  <div style="color: rebeccapurple">First</div>
+
+  <div style="padding: calc(var(--PreviewGap) / 2)">Second</div>
+</div>
+
+---
+
+<a href="https://madebyhuman.iamjarl.com"><img src="https://madebyhuman.iamjarl.com/badges/made-white.svg" alt="Made by Human" width="80"></a>
+
+<p align="right"><a href="https://example.com/">Project card</a>&nbsp;&nbsp;<img src="./config/tests/fixtures/markdown/illustration.svg" alt="Local SVG" width="40" align="middle"></p>
+
 # Markdown after HTML
 
-Normal **Markdown** with <strong>inline HTML</strong> and <em>emphasis</em>.
+Normal **Markdown** with <strong>inline HTML</strong> and <em>emphasis</em>. A&nbsp;B and `&nbsp;`.
 
 ```html
 <img src="literal.png" onerror="this is code, not an HTML element">

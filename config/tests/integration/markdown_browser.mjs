@@ -234,6 +234,55 @@ try {
   const { fonts } = await cdp('CSS.getPlatformFontsForNode', { nodeId: fontNode });
   assert.ok(fonts.some(font => font.isCustomFont && font.familyName.includes('Mona Sans')), JSON.stringify(fonts));
   console.log('PASS: mixed README HTML, local image, video controls and the actual bundled Mona Sans font');
+
+  await until(() => evaluate('document.querySelector(\'img[alt="profile"]\')?.naturalWidth > 0'));
+  const layout = await evaluate(`(() => {
+    const image = document.querySelector('img[alt="profile"]');
+    const cell = image.closest('td');
+    const headingCell = cell.nextElementSibling;
+    const table = cell.closest('table');
+    const grid = table.nextElementSibling;
+    const article = table.closest('article');
+    const tableBounds = table.getBoundingClientRect();
+    const articleBounds = article.getBoundingClientRect();
+    const articleStyle = getComputedStyle(article);
+    const articleWidth = article.clientWidth - parseFloat(articleStyle.paddingLeft) - parseFloat(articleStyle.paddingRight);
+    const cellStyle = getComputedStyle(cell);
+    const cellWidth = cell.clientWidth - parseFloat(cellStyle.paddingLeft) - parseFloat(cellStyle.paddingRight);
+    return {
+      display: getComputedStyle(table).display,
+      tableRatio: tableBounds.width / articleWidth,
+      centerOffset: (tableBounds.left + tableBounds.width / 2) - (articleBounds.left + articleBounds.width / 2),
+      columnRatio: cell.getBoundingClientRect().width / tableBounds.width,
+      imageFillsCell: Math.abs(image.width - cellWidth) < 1,
+      imageKeepsAspectRatio: Math.abs(image.height - image.width * image.naturalHeight / image.naturalWidth) < 1,
+      verticalAlignment: cellStyle.verticalAlign,
+      headingAlignment: getComputedStyle(headingCell).textAlign,
+      grid: getComputedStyle(grid).display,
+      gap: getComputedStyle(grid).gap,
+      items: [...grid.children].map(child => child.textContent),
+      secondPadding: getComputedStyle(grid.lastElementChild).paddingTop,
+      badgeWidth: document.querySelector('a img[alt="Made by Human"]').getAttribute('width'),
+    };
+  })()`);
+  assert.equal(layout.display, 'table');
+  assert.ok(Math.abs(layout.tableRatio - 0.9) < 0.01, JSON.stringify(layout));
+  assert.ok(Math.abs(layout.centerOffset) < 1, JSON.stringify(layout));
+  assert.ok(Math.abs(layout.columnRatio - 0.15) < 0.01, JSON.stringify(layout));
+  assert.equal(layout.imageFillsCell, true);
+  assert.equal(layout.imageKeepsAspectRatio, true);
+  assert.equal(layout.verticalAlignment, 'middle');
+  assert.match(layout.headingAlignment, /^(?:-webkit-)?right$/);
+  assert.equal(layout.grid, 'grid');
+  assert.equal(layout.gap, '12px');
+  assert.deepEqual(layout.items, ['First', 'Second']);
+  assert.equal(layout.secondPadding, '6px');
+  assert.equal(layout.badgeWidth, '80');
+  console.log('PASS: HTML table alignment, percentage image sizing, badge width and native inline CSS');
+  await until(() => evaluate('document.querySelector(\'img[alt="Local SVG"]\')?.naturalWidth === 40'));
+  assert.equal(await evaluate(`document.querySelector('img[alt="Local SVG"]').previousSibling.textContent`), '\u00a0\u00a0');
+  assert.ok(await evaluate(`document.querySelector('article').textContent.includes('A\u00a0B')`));
+  console.log('PASS: relative SVG images load and HTML character references render as spaces');
   lua(`(function() vim.cmd('bdelete!'); return true end)()`);
   await until(() => evaluate('document.querySelector("#status").textContent.includes("reconnect")'));
   await assert.rejects(fetch(url));

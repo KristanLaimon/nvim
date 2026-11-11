@@ -60,10 +60,10 @@
   border-radius: 0 0 3px 3px;
 }
 .markdown-body > *:first-child {
-  margin-top: 0 !important;
+  margin-top: 0;
 }
 .markdown-body > *:last-child {
-  margin-bottom: 0 !important;
+  margin-bottom: 0;
 }
 .markdown-body .table-of-contents ol {
   list-style: none;
@@ -189,10 +189,12 @@
   color: var(--color-text-tertiary);
   border-left: 4px solid var(--color-markdown-blockquote-border);
 }
-.markdown-body table {
+.markdown-body table:not([data-source-line]) {
   display: block;
   width: 100%;
   overflow: auto;
+}
+.markdown-body table {
   word-break: normal;
   word-break: keep-all;
   border-collapse: collapse;
@@ -209,6 +211,8 @@
 .markdown-body table td {
   padding: 6px 13px;
   border: 1px solid var(--color-markdown-table-border);
+}
+.markdown-body table:not([data-source-line]) :is(th, td) {
   vertical-align: top;
 }
 .markdown-body kbd {

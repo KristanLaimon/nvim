@@ -367,38 +367,29 @@ end
 -- TERMINAL POOL MANAGEMENT
 -- ============================================================================
 
---- Closes any visible terminal window to prevent orphaned splits during environment transitions.
-local function dismiss_visible_terminals()
-	if _G.TerminalManager and _G.TerminalManager.toggle_selected_terminal then
-		for _, win in ipairs(vim.api.nvim_list_wins()) do
-			if vim.api.nvim_win_is_valid(win) then
-				local buf = vim.api.nvim_win_get_buf(win)
-				if vim.api.nvim_buf_is_valid(buf) and (vim.bo[buf].buftype == "terminal" or vim.b[buf].fox_is_multi_term) then
-					pcall(vim.api.nvim_win_close, win, true)
-				end
-			end
-		end
-	end
-end
-
---- True when an environment-owned terminal is currently visible.
-local function is_terminal_open()
+local function terminal_windows(slot, include_tasks)
+	local windows = {}
 	for _, win in ipairs(vim.api.nvim_list_wins()) do
-		if vim.api.nvim_win_is_valid(win) then
-			local buf = vim.api.nvim_win_get_buf(win)
-			if vim.api.nvim_buf_is_valid(buf) and (vim.bo[buf].buftype == "terminal" or vim.b[buf].fox_is_multi_term) then
-				return true
-			end
+		local buf = vim.api.nvim_win_get_buf(win)
+		local owner = vim.b[buf].fox_env_slot
+		if
+			(owner == nil or owner == slot)
+			and (include_tasks or not vim.b[buf].fox_is_task)
+			and (vim.bo[buf].buftype == "terminal" or vim.b[buf].fox_is_multi_term)
+		then
+			windows[#windows + 1] = win
 		end
 	end
-	return false
+	return windows
 end
 
 --- Swaps global multi-terminal pool `_G._fox_terminals` in place with shallow clone.
 --- Avoids heavy deepcopies and GC pressure.
 --- @param target_pool table|nil
 local function swap_terminal_pool(target_pool)
-	dismiss_visible_terminals()
+	for _, win in ipairs(terminal_windows(M.get_active_slot(), true)) do
+		pcall(vim.api.nvim_win_close, win, true)
+	end
 	_G._fox_terminals = _G._fox_terminals or {}
 
 	for k in pairs(_G._fox_terminals) do
@@ -488,8 +479,9 @@ end
 --- tearing down any UI. This is a fast, zero-I/O snapshot used during hot
 --- environment switches. Environment state never writes to disk.
 --- @param env table|nil
+--- @param terminal_pending boolean|nil
 --- @return boolean ok
-local function snapshot_active_environment(env)
+local function snapshot_active_environment(env, terminal_pending)
 	env = env or M.get_active_environment()
 	if not env then
 		return false
@@ -510,7 +502,7 @@ local function snapshot_active_environment(env)
 
 	-- Save the selected terminal slot so each environment has independent terminal selection
 	env.selected_terminal = _G._fox_selected_terminal or 1
-	env.terminal_open = is_terminal_open()
+	env.terminal_open = terminal_pending or #terminal_windows(env.slot) > 0
 
 	-- Capture state in memory (0 disk I/O, 0 UI teardown, shallow terminal copy)
 	env.updated_at = os.time()
@@ -672,6 +664,7 @@ function M.switch_environment(target_slot, callback)
 	end
 
 	-- 1. Engage switching lock to suppress all cascading DirChanged events in other plugins
+	local previous_restore = M._restore_token
 	local restore_token = {}
 	M._restore_token = restore_token
 	vim.g._fox_environment_switching = true
@@ -688,7 +681,7 @@ function M.switch_environment(target_slot, callback)
 		end
 	end
 	if cur_env then
-		snapshot_active_environment(cur_env)
+		snapshot_active_environment(cur_env, previous_restore and previous_restore.terminal_env == cur_env)
 	end
 
 	-- 3. Close open git center / diff panels (fast in-memory window close)
@@ -831,9 +824,7 @@ function M.switch_environment(target_slot, callback)
 	end
 
 	-- 8. Restore selected terminal slot
-	if target_env.selected_terminal then
-		_G._fox_selected_terminal = target_env.selected_terminal
-	end
+	_G._fox_selected_terminal = target_env.selected_terminal or 1
 	local restore_win, restore_buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
 	local function schedule_restore(fn)
 		vim.schedule(function()
@@ -849,8 +840,22 @@ function M.switch_environment(target_slot, callback)
 		end)
 	end
 	if target_env.terminal_open and _G.TerminalManager and _G.TerminalManager.open_terminal then
-		schedule_restore(function()
-			_G.TerminalManager.open_terminal(target_env.selected_terminal)
+		restore_token.terminal_env = target_env
+		vim.schedule(function()
+			if M._restore_token ~= restore_token or M.get_active_slot() ~= target_slot then
+				return
+			end
+			restore_token.terminal_env = nil
+			if #terminal_windows(target_slot) > 0 or not vim.api.nvim_win_is_valid(restore_win) then
+				return
+			end
+			if vim.api.nvim_get_current_win() == restore_win and vim.api.nvim_get_current_buf() == restore_buf then
+				_G.TerminalManager.open_terminal(target_env.selected_terminal)
+			else
+				vim.api.nvim_win_call(restore_win, function()
+					_G.TerminalManager.open_terminal(target_env.selected_terminal, false)
+				end)
+			end
 		end)
 	end
 

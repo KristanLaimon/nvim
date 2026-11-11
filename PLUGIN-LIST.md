@@ -1,6 +1,6 @@
 # Plugin List
 
-Active inventory from Lazy: **21 external dependencies** and **71 local plugin specs**. Installed leftovers from replaced plugins are excluded.
+This inventory lists **20 external dependencies** and **71 local plugin specs** from Lazy. Installed leftovers from replaced plugins are excluded.
 
 ## External — dependencies
 
@@ -12,7 +12,6 @@ These repositories are still downloaded and managed by Lazy. Transitive dependen
 | [folke/lazy.nvim](https://github.com/folke/lazy.nvim) | `lazy.nvim` |
 | [folke/snacks.nvim](https://github.com/folke/snacks.nvim) | `snacks.nvim` |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim) | `gitsigns.nvim` |
-| [MeanderingProgrammer/render-markdown.nvim](https://github.com/MeanderingProgrammer/render-markdown.nvim) | `render-markdown.nvim` |
 | [mfussenegger/nvim-dap](https://github.com/mfussenegger/nvim-dap) | `nvim-dap` |
 | [MunifTanjim/nui.nvim](https://github.com/MunifTanjim/nui.nvim) | `nui.nvim` |
 | [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit) | `neogit` |

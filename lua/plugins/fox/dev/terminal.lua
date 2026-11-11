@@ -584,8 +584,11 @@ end
 
 --- Opens terminal `n`, creating the dock pane or floating window when there is none.
 --- @param n integer|nil Slot number. Defaults to the selected terminal.
-function M.open_terminal(n)
-	close_git_center()
+--- @param interactive boolean|nil Enter terminal mode and close Git Center unless false.
+function M.open_terminal(n, interactive)
+	if interactive ~= false then
+		close_git_center()
+	end
 	sync_terminals()
 
 	n = n or _G._fox_selected_terminal or 1
@@ -599,37 +602,26 @@ function M.open_terminal(n)
 		code_win = current
 	end
 
-	-- Already on screen: just focus it.
-	if is_valid_win(t.win) then
-		vim.api.nvim_set_current_win(t.win)
-		vim.cmd("startinsert")
-		return
-	end
-
-	-- Another terminal is on screen: take over its pane.
-	if is_valid_win(active_win) then
-		t.win = active_win
-		vim.api.nvim_set_current_win(t.win)
-		fill_window(t, n, t.win)
-		if is_floating_win(t.win) then
+	if not is_valid_win(t.win) then
+		if is_valid_win(active_win) then
+			t.win = active_win
+			fill_window(t, n, t.win)
 			update_float_title(t.win, n)
+		else
+			local layout = get_terminal_layout()
+			if layout == "float" or layout == "bottom_float" then
+				t.win = open_floating_window(t, n, layout)
+			else
+				t.win = dock.open({ prefer = "terminal", height = get_terminal_height() })
+				fill_window(t, n, t.win)
+				dock.style(t.win)
+			end
 		end
-		vim.api.nvim_set_current_win(t.win)
-		vim.cmd("startinsert")
-		return
-	end
-
-	local layout = get_terminal_layout()
-	if layout == "float" or layout == "bottom_float" then
-		t.win = open_floating_window(t, n, layout)
-	else
-		t.win = dock.open({ prefer = "terminal", height = get_terminal_height() })
-		vim.api.nvim_set_current_win(t.win)
-		fill_window(t, n, t.win)
-		dock.style(t.win)
 	end
 	vim.api.nvim_set_current_win(t.win)
-	vim.cmd("startinsert")
+	if interactive ~= false then
+		vim.cmd("startinsert")
+	end
 end
 
 --- Hides the visible pane without stopping any terminal job.

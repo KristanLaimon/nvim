@@ -20,7 +20,17 @@ function M.stop()
 	pages, clients = {}, {}
 end
 
-local mime = { png = "image/png", jpg = "image/jpeg", jpeg = "image/jpeg", gif = "image/gif", webp = "image/webp" }
+local mime = {
+	png = "image/png",
+	jpg = "image/jpeg",
+	jpeg = "image/jpeg",
+	gif = "image/gif",
+	webp = "image/webp",
+	svg = "image/svg+xml",
+}
+local preview_csp =
+	"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; media-src 'self' https: http:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'"
+local svg_csp = "sandbox; default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"
 
 local function read_file(path)
 	local file = io.open(path, "rb")
@@ -78,7 +88,7 @@ local function response(target)
 		local data = read_file(assets .. file[1])
 		return data and 200 or 404, data or "Resource missing", file[2]
 	end
-	-- Only raster images inside the current document directory are exposed.
+	-- Only image files inside the current document directory are exposed.
 	local decoded = resource:gsub("%%(%x%x)", function(hex)
 		return string.char(tonumber(hex, 16))
 	end)
@@ -147,6 +157,7 @@ local function accept(err)
 					status, body, content_type = 500, "Preview could not be rendered", "text/plain"
 				end
 			end
+			local csp = content_type == mime.svg and svg_csp or preview_csp
 			client:write(
 				"HTTP/1.1 "
 					.. status
@@ -154,7 +165,9 @@ local function accept(err)
 					.. content_type
 					.. "; charset=utf-8\r\nContent-Length: "
 					.. #body
-					.. "\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; media-src 'self' https: http:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'\r\n\r\n"
+					.. "\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: "
+					.. csp
+					.. "\r\n\r\n"
 					.. body,
 				finish
 			)

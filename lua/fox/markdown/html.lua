@@ -1,18 +1,31 @@
 local M = {}
 
 local tags = {}
+local blocks = {}
 for name in
-	("p div span strong em b i s del code pre br hr img a video source details summary ul ol li table thead tbody tr th td h1 h2 h3 h4 h5 h6 blockquote"):gmatch(
+	("article aside blockquote div dl figure footer h1 h2 h3 h4 h5 h6 header nav ol p pre section table ul video"):gmatch(
+		"%S+"
+	)
+do
+	blocks[name] = true
+	tags[name] = true
+end
+for name in
+	("a b br caption code col colgroup dd del details dt em figcaption hr i img kbd li mark picture s samp small source span strong sub summary sup tbody td tfoot th thead tr u var wbr"):gmatch(
 		"%S+"
 	)
 do
 	tags[name] = true
 end
-local void = { img = true, br = true, hr = true, source = true }
-local blocks = { p = true, div = true, video = true, table = true, pre = true, ul = true, ol = true, blockquote = true }
+local void = { br = true, col = true, hr = true, img = true, source = true, wbr = true }
 
 local function escape(text)
 	return (text:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"):gsub("'", "&#39;"))
+end
+
+function M.escape_text(text)
+	-- The browser decodes character references as text without reinterpreting them as tags.
+	return (escape(text):gsub("&amp;(#?[%w]+;)", "&%1"))
 end
 
 local function decode(text)
@@ -41,41 +54,22 @@ function M.url(text, media)
 	return text
 end
 
-local function style(text)
-	local values = {}
-	for declaration in text:gmatch("[^;]+") do
-		local key, value = declaration:match("^%s*([%a-]+)%s*:%s*(.-)%s*$")
-		if key and value then
-			key, value = key:lower(), value:lower()
-			local size, unit = value:match("^(%d*%.?%d+)([%a%%]+)$")
-			if
-				(key == "display" and vim.tbl_contains({ "block", "inline", "inline-block" }, value))
-				or (key == "text-align" and vim.tbl_contains({ "left", "center", "right", "justify" }, value))
-				or (
-					key == "font-size"
-					and size
-					and tonumber(size) > 0
-					and tonumber(size) <= 96
-					and vim.tbl_contains({ "px", "em", "rem", "%" }, unit)
-				)
-			then
-				values[#values + 1] = key .. ":" .. value
-			end
-		end
-	end
-	return #values > 0 and table.concat(values, ";") or nil
-end
+local dimensions = { col = true, colgroup = true, img = true, table = true, td = true, th = true, video = true }
+local table_cells = { td = true, th = true }
+local table_rows = { tr = true, tbody = true, tfoot = true, thead = true }
 
 local function attribute(tag, name, value)
 	value = decode(value)
-	if name == "title" or (tag == "img" and name == "alt") then
+	if name == "style" or name == "title" or (tag == "img" and name == "alt") then
 		return value
-	elseif name == "align" and vim.tbl_contains({ "left", "right", "center", "justify" }, value:lower()) then
-		return value:lower()
-	elseif (name == "width" or name == "height") and (tag == "img" or tag == "video") and value:match("^%d+$") then
-		return value
-	elseif name == "style" then
-		return style(value)
+	elseif name == "align" or (name == "valign" and (table_cells[tag] or table_rows[tag])) then
+		return vim.trim(value):lower()
+	elseif (name == "width" or name == "height") and dimensions[tag] then
+		return vim.trim(value):lower()
+	elseif table_cells[tag] and (name == "colspan" or name == "rowspan") then
+		return value:match("^%d+$")
+	elseif (tag == "col" or tag == "colgroup") and name == "span" then
+		return value:match("^%d+$")
 	elseif
 		(name == "href" and tag == "a")
 		or (name == "src" and (tag == "img" or tag == "video" or tag == "source"))
@@ -165,43 +159,35 @@ end
 function M.protect(text, hold)
 	local output, start = {}, 1
 	while start <= #text do
-		local first = text:find("<", start, true)
+		local first = text:find("[<`\\]", start)
 		if not first then
 			break
 		end
-		local last = ending(text, first)
-		if not last then
-			break
-		end
 		output[#output + 1] = text:sub(start, first - 1)
-		local sanitized = tag(text:sub(first, last))
-		output[#output + 1] = sanitized and hold(sanitized) or text:sub(first, last)
-		start = last + 1
+		local marker = text:sub(first, first)
+		local last, sanitized
+		if marker == "<" and text:find("^</?%a", first) then
+			last = ending(text, first)
+			sanitized = last and tag(text:sub(first, last))
+		elseif marker == "`" then
+			local _, finish, _, code = text:find("^(`+)(.-)%1", first)
+			last, sanitized = finish, code and ("<code>" .. escape(code) .. "</code>")
+		elseif marker == "\\" and text:sub(first + 1, first + 1):match("%p") then
+			last, sanitized = first + 1, escape(text:sub(first + 1, first + 1))
+		end
+		output[#output + 1] = sanitized and hold(sanitized) or marker
+		start = (sanitized and last or first) + 1
 	end
 	output[#output + 1] = text:sub(start)
 	return table.concat(output)
 end
 
-function M.block(line)
-	local first = line:find("^%s*<")
-	if not first then
-		return nil
-	end
-	local start = line:find("<", 1, true)
-	local last = ending(line, start)
-	if not last then
-		return nil
-	end
-	local sanitized, name, closing = tag(line:sub(start, last))
-	return sanitized and not closing and blocks[name] and name or nil
-end
-
-function M.render(text, first_line)
+local function render(text, first_line)
 	local output, start, line = {}, 1, first_line
 	local function plain(value)
 		for content, newline in value:gmatch("([^\n]*)(\n?)") do
 			if content:match("%S") then
-				output[#output + 1] = '<span data-source-line="' .. line .. '">' .. escape(decode(content)) .. "</span>"
+				output[#output + 1] = '<span data-source-line="' .. line .. '">' .. M.escape_text(content) .. "</span>"
 			else
 				output[#output + 1] = content
 			end
@@ -212,7 +198,7 @@ function M.render(text, first_line)
 		end
 	end
 	while start <= #text do
-		local first = text:find("<", start, true)
+		local first = text:find("</?%a", start)
 		if not first then
 			break
 		end
@@ -237,6 +223,45 @@ function M.render(text, first_line)
 	end
 	plain(text:sub(start))
 	return table.concat(output)
+end
+
+function M.render_block(lines, first_line)
+	local name, boundary = lines[first_line]:match("^%s*<([%a][%w]*)(.?)")
+	name = name and name:lower()
+	if not blocks[name] or (boundary ~= "" and not boundary:match("[%s>/]")) then
+		return nil
+	end
+	local depth, pending = 0, nil
+	for i = first_line, #lines do
+		local text = pending and (pending .. "\n" .. lines[i]) or lines[i]
+		local start = 1
+		pending = nil
+		while true do
+			local first = text:find("</?%a", start)
+			if not first then
+				break
+			end
+			local last = ending(text, first)
+			if not last then
+				pending = text:sub(first)
+				break
+			end
+			local _, tag_name, closing = tag(text:sub(first, last))
+			if depth == 0 and (tag_name ~= name or closing) then
+				return nil
+			end
+			if tag_name == name then
+				depth = depth + (closing and -1 or 1)
+				if depth == 0 then
+					return render(table.concat(lines, "\n", first_line, i), first_line), i
+				end
+			end
+			start = last + 1
+		end
+	end
+	if depth > 0 then
+		return render(table.concat(lines, "\n", first_line), first_line), #lines
+	end
 end
 
 return M

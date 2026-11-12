@@ -14,50 +14,13 @@ Language Support:
   <img width="80%" height="auto" alt="image" src="https://github.com/user-attachments/assets/7b90ca21-dc22-4455-ad09-c131d7c823d0" />
 </p>
 
-Pending to write more here...
 
+> 🦊 **Neovim Version:** Tested and compatible with >= **v0.12.4**.
 
 ---
-# Old README.md
-
-<img width="40%" height="auto" src="./.github/kitty_support.png"></img>
-<em>Native support for Kitty terminal, arch-linux (omarchy & ryoku)</em>
-
-<video src="https://github.com/user-attachments/assets/ace791d2-96a6-4b3f-830b-345afa86391f"></video>
-
-This is intended for my own usage, but wanted to share as a public repo in case someone founds this config useful. You can fork-it, clone it, break it, do as you please.
-Expect to found highly opinionated keybinds, custom plugins and more. For fox coders! 🦊
-
-### This is for fullstack coding and AI friendly. From react/typescript/next.js to backends in PHP/Laravel, C# ASP.NET or Golang proyects.
-
-# Main Features
-
-<img  alt="Untitled-2026-09-13-2242" src="https://github.com/user-attachments/assets/2de88b62-7bcd-4851-9bbb-016d62820f69" />
-
-# Other features
-- Project environments with isolated buffers, layouts, LSPs, and terminal pools.
-- Nine persistent integrated terminals, task output slots, dev-server control, and launch profiles.
-- LSP, formatting, completion, Tree-sitter, DAP, language bundles, and a minimal fresh-install toolchain.
-- File and project navigation, Git Center, conflict resolution, secondary Git accounts, and diff tools.
-- Command Palette, dashboard, interactive wiki, offline documentation, snippets, templates, and VS Code settings support.
-- Persistent breakpoints, workspace sessions, TODO sidebar, Tailwind organization, type injection, image previews, and Omarchy palette sync.
-
-Open the Command Palette with `<C-S-p>` or `:CommandPalette` to discover actions. The [documentation index](docs/index.md) links to the full feature guides.
-
-
-
-<video src="https://github.com/user-attachments/assets/625c16aa-9ea5-4896-8821-a6766d1080ce"></video>
-<video src="https://github.com/user-attachments/assets/48f49970-2bd7-40a7-a8f3-1116a5d80e2a"></video>
-
-
-
-
-
-
 
 ## Environment and terminal compatibility
 
-> 🦊 **Neovim Version:** Currently running on **NVIM v0.12.4** (requires Neovim >= 0.10).
 > 
 | Environment | FoxVim support |
 |---|---|
@@ -70,32 +33,6 @@ Open the Command Palette with `<C-S-p>` or `:CommandPalette` to discover actions
 | **macOS, Fedora, Alpine** | `brew`, `dnf`, and `apk` setup paths are included. |
 
 The shell-keybinding setup supports **Windows Terminal, Kitty, Foot, WezTerm, Alacritty, Ghostty, and Termux**. Inside Neovim, each environment has nine independent terminals; a WSL filesystem path automatically selects a WSL shell. See [installation](docs/installation.md), [terminals](docs/terminals.md), and [environments](docs/environments.md).
-
-## Plugin inventory
-
-FoxVim has **71 local plugin specs** across [`lua/plugins/`](lua/plugins) and **21 external plugins**, including lazy.nvim, pinned in [`lazy-lock.json`](lazy-lock.json). Local modules are part of this repository; lazy.nvim installs and manages the external packages on first launch.
-
-### Hand-crafted FoxVim plugins
-
-| Area | Modules |
-|---|---|
-| Developer workflow | Bun DAP, DAP Breakpoints, Dev Server, FoxNvim Completion, Launch Completion, Launch Profiles, Tasks, Terminal |
-| Editing | Package Info, Auto Pairs, Buffer Cleaner, Caps Lock, Folding, Hover Links, Line Endings, Neo-tree Hidden Files, Neo-tree Mover, Smart Check, Tailwind Organizer |
-| Git | Conflict Resolver, Diff Mode, Git Accounts, Git Center, Secondary Git |
-| Tools | Command Palette, .NET Creator, Environments, File Explorer, Installer, LSP References, Notes, NuGet Manager, TODO Sidebar, Type Injector, Lua Type Injector, TypeScript Type Injector, Usages Picker, Workspaces, WSL Bridge |
-| UI | Colorscheme Preview, Font, Help Modal, Input Modal, Omarchy Theme Sync, Pinned Tabs, Statusline Picker, Theme Picker, Wiki Modal |
-
-### External plugins
-
-| Area | Packages pinned in `lazy-lock.json` |
-|---|---|
-| UI and themes | native FOX tabline, statusline and notifications, `render-markdown.nvim` |
-| Navigation and Git | `diffview.nvim`, `gitsigns.nvim`, `neo-tree.nvim`, `neogit`, `nui.nvim`, `plenary.nvim`, `snacks.nvim`, `telescope-file-browser.nvim`, `telescope.nvim` |
-| LSP and editing | `blink.cmp`, `conform.nvim`, local snippet catalog, `mason.nvim`, `nvim-lspconfig`, `nvim-treesitter`, `schemastore.nvim` |
-| Debugging | `baleia.nvim`, `nvim-dap`, `nvim-dap-ui`, `nvim-nio` |
-| Language and extras | `cord.nvim`, `lazy.nvim` |
-
-See [PLUGIN-LIST.md](PLUGIN-LIST.md) for external dependencies and local `fox-<name>` implementations. For loading modes and dependency relationships, see the [detailed inventory](config/plans_notes_md/PLUGINS-LIST.md).
 
 ---
 
@@ -115,14 +52,6 @@ The start screen. One letter per entry:
 
 Return to the dashboard from anywhere with `<leader>wm`; closing the last open buffer also lands here.
 
----
-
-## ⚡ Quick Setup
-
-After cloning into `%LOCALAPPDATA%\nvim` (Windows) or `~/.config/nvim` (Linux, WSL, Termux, or macOS):
-
-- **Windows (PowerShell)**: `powershell -ExecutionPolicy Bypass -File .\scripts\dependencies\install.ps1`
-- **Linux / WSL / Termux / Git Bash**: `./config/scripts/dependencies/install.sh`
 
 ---
 

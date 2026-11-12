@@ -9,6 +9,9 @@ project marker (or the attached LSP root); opening a file does not change it.
 The existing `nvim-data/project_nvim/project_history` file is reused unchanged in
 format. History updates replace it atomically and do not check whether WSL paths
 are reachable. Favorites and the separate WSL recent list retain their own stores.
+The picker shows favorites first, then other projects from newest to oldest, from
+top to bottom. Search filters this order. Legacy WSL entries absent from the shared
+history appear last within their group because their relative opening dates are unknown.
 
 The **Workspaces Manager** allows saving, loading, restoring, and switching full project session states in Neovim.
 

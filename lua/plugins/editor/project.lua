@@ -159,8 +159,7 @@ return {
 		-- Project list
 		-- ------------------------------------------------------------------
 
-		--- Every known project, WSL list first, then local history, with
-		--- duplicates removed.
+		--- Newest first, with older WSL-only entries appended without stat calls.
 		--- @return string[] paths
 		local function collect_projects()
 			local wsl = wsl_module()
@@ -174,14 +173,15 @@ return {
 				end
 			end
 
+			local recent = history.list()
+			for index = #recent, 1, -1 do
+				add(recent[index])
+			end
 			if wsl and wsl.get_recent_projects then
 				-- `false`: do not stat, which would boot WSL just to draw a list.
 				for _, project in ipairs(wsl.get_recent_projects(false)) do
 					add(project)
 				end
-			end
-			for _, project in ipairs(history.list()) do
-				add(project)
 			end
 
 			return projects
@@ -363,6 +363,15 @@ return {
 			local actions = require("telescope.actions")
 			local action_state = require("telescope.actions.state")
 			local themes = require("telescope.themes")
+			local sorter = conf.generic_sorter({})
+			local fuzzy_score = sorter.scoring_function
+			-- Filter fuzzy matches while preserving favorite and recency priority.
+			sorter.scoring_function = function(self, prompt, line, entry, ...)
+				if prompt ~= "" and fuzzy_score(self, prompt, line, entry, ...) < 0 then
+					return -1
+				end
+				return entry.index
+			end
 
 			local prompt_title = opts.prompt_title
 				or " 📁 Recent Projects | [e] File Explorer | [f] Favorite | [r] Rename | [d] Delete "
@@ -375,17 +384,18 @@ return {
 						width = settings.picker.width,
 						layout_config = settings.picker,
 						results_title = results_title,
+						sorting_strategy = "ascending",
 						finder = finders.new_table({
 							results = build_entries(),
 							entry_maker = function(entry)
 								return {
 									value = entry,
 									display = entry.icon .. "  " .. entry.path .. (entry.is_favorite and " ⭐ [Favorite]" or ""),
-									ordinal = (entry.is_favorite and "0_" or "1_") .. entry.path,
+									ordinal = entry.path,
 								}
 							end,
 						}),
-						sorter = conf.generic_sorter({}),
+						sorter = sorter,
 						attach_mappings = function(prompt_bufnr, map)
 							--- Selected entry, or nil.
 							local function selected()

@@ -41,6 +41,7 @@ M.files_namespace = vim.api.nvim_create_namespace("fox_git_diff_mode_files")
 M.state = {
 	is_active = false,
 	mode = "same_branch", -- "same_branch" | "between_branches"
+	rendering = "classic", -- "classic" | "side_by_side"
 	commits_behind = 0, -- 0 for worktree vs HEAD, or N >= 1 for HEAD~N
 	include_worktree = true, -- true to include staged & unstaged changes
 	base_ref = "HEAD",
@@ -313,7 +314,7 @@ local function is_valid_editor_win(win)
 	if win == M.state.dual_left_win then
 		return false
 	end
-	if M.state.mode == "between_branches" and win == M.state.dual_right_win then
+	if win == M.state.dual_right_win then
 		return true
 	end
 	-- Reject floating windows
@@ -600,7 +601,8 @@ function M.ensure_blame_between(file_path)
 	end
 
 	if M.state.dual_right_win and vim.api.nvim_win_is_valid(M.state.dual_right_win) and M.state.dual_right_buf then
-		local authors = blame.query(file_path, M.state.target_ref, M.state.cwd)
+		local target = M.state.target_ref ~= "WORKTREE" and M.state.target_ref or nil
+		local authors = blame.query(file_path, target, M.state.cwd)
 		install_blame_column(
 			M.state.dual_right_win,
 			M.state.dual_right_buf,
@@ -620,7 +622,7 @@ function M.toggle_blame()
 		return
 	end
 
-	if M.state.mode == "between_branches" and M.state.active_file then
+	if M.state.dual_right_win and M.state.active_file then
 		M.ensure_blame_between(M.state.active_file)
 	elseif M.state.active_file then
 		local win = M.state.editor_win
@@ -829,11 +831,7 @@ function M.jump_next_modification(target_win)
 	if not (win and vim.api.nvim_win_is_valid(win)) then
 		local cur_win = vim.api.nvim_get_current_win()
 		if cur_win == M.state.file_list_win then
-			if
-				M.state.mode == "between_branches"
-				and M.state.dual_right_win
-				and vim.api.nvim_win_is_valid(M.state.dual_right_win)
-			then
+			if M.state.dual_right_win and vim.api.nvim_win_is_valid(M.state.dual_right_win) then
 				win = M.state.dual_right_win
 			else
 				win = get_valid_editor_win()
@@ -868,11 +866,7 @@ function M.jump_next_modification(target_win)
 		pcall(vim.cmd, "normal! zz")
 	end)
 
-	if
-		M.state.mode == "between_branches"
-		and M.state.dual_left_win
-		and vim.api.nvim_win_is_valid(M.state.dual_left_win)
-	then
+	if M.state.dual_left_win and vim.api.nvim_win_is_valid(M.state.dual_left_win) then
 		pcall(vim.api.nvim_win_set_cursor, M.state.dual_left_win, { target_row, 0 })
 		vim.api.nvim_win_call(M.state.dual_left_win, function()
 			pcall(vim.cmd, "normal! zz")
@@ -903,11 +897,7 @@ function M.jump_prev_modification(target_win)
 	if not (win and vim.api.nvim_win_is_valid(win)) then
 		local cur_win = vim.api.nvim_get_current_win()
 		if cur_win == M.state.file_list_win then
-			if
-				M.state.mode == "between_branches"
-				and M.state.dual_right_win
-				and vim.api.nvim_win_is_valid(M.state.dual_right_win)
-			then
+			if M.state.dual_right_win and vim.api.nvim_win_is_valid(M.state.dual_right_win) then
 				win = M.state.dual_right_win
 			else
 				win = get_valid_editor_win()
@@ -943,11 +933,7 @@ function M.jump_prev_modification(target_win)
 		pcall(vim.cmd, "normal! zz")
 	end)
 
-	if
-		M.state.mode == "between_branches"
-		and M.state.dual_left_win
-		and vim.api.nvim_win_is_valid(M.state.dual_left_win)
-	then
+	if M.state.dual_left_win and vim.api.nvim_win_is_valid(M.state.dual_left_win) then
 		pcall(vim.api.nvim_win_set_cursor, M.state.dual_left_win, { target_row, 0 })
 		vim.api.nvim_win_call(M.state.dual_left_win, function()
 			pcall(vim.cmd, "normal! zz")
@@ -1290,7 +1276,8 @@ render_file_list = function()
 	table.insert(lines, " [Enter/Space]: Select | [h/Esc]: Code")
 	table.insert(lines, " [c]: Range | [e]: Export | [i]: Import")
 	table.insert(lines, " [B]: Toggle Blame Author Column")
-	table.insert(lines, " [q]: Close")
+	table.insert(lines, " [s]: Classic / Before | After")
+	table.insert(lines, " [q]: Back to Diff Mode Manager")
 
 	vim.bo[M.state.file_list_buf].modifiable = true
 	vim.api.nvim_buf_set_lines(M.state.file_list_buf, 0, -1, false, lines)
@@ -1644,7 +1631,10 @@ function M.open_file_list_window(files, selected_idx)
 	vim.keymap.set("n", "q", function()
 		M.focus_editor()
 		M.close()
+		M.open()
 	end, opts)
+
+	vim.keymap.set("n", "s", M.toggle_rendering, opts)
 
 	vim.keymap.set("n", "c", function()
 		M.open_config_dialog()
@@ -1734,7 +1724,7 @@ end
 --- Focuses the main code editor window
 --- @return integer|nil
 function M.focus_editor()
-	if M.state.mode == "between_branches" then
+	if M.state.dual_right_win then
 		if M.state.dual_right_win and vim.api.nvim_win_is_valid(M.state.dual_right_win) then
 			pcall(vim.api.nvim_set_current_win, M.state.dual_right_win)
 			return M.state.dual_right_win
@@ -1749,10 +1739,32 @@ function M.focus_editor()
 	return nil
 end
 
+--- Switches rendering while retaining the selected comparison and file.
+function M.toggle_rendering()
+	if not M.state.is_active then
+		return
+	end
+	local rendering = M.state.rendering == "side_by_side" and "classic" or "side_by_side"
+	local selected, active = M.state.selected_file_idx, M.state.active_file
+	local opts = { cwd = M.state.cwd, base_ref = M.state.base_ref, target_ref = M.state.target_ref }
+	M.close({ keep_state = true })
+	M.state.rendering = rendering
+	M.start_same_branch(opts)
+	if active then
+		M.state.selected_file_idx = selected
+		M.open_file_same_branch(active, { keep_focus = true })
+	end
+	M.focus_file_list()
+	render_file_list()
+end
+
 --- Opens a file in Same Branch Diff Mode (single code window)
 --- @param file_path string
 --- @param opts? { keep_focus?: boolean }
 function M.open_file_same_branch(file_path, opts)
+	if M.state.rendering == "side_by_side" then
+		return M.open_file_between_branches(file_path, opts)
+	end
 	opts = opts or {}
 	if diff.is_binary_file(file_path) then
 		notify(string.format("Binary file cannot be opened in text diff mode: %s", file_path), vim.log.levels.WARN)
@@ -1894,7 +1906,7 @@ function M.start_same_branch(opts)
 		group = M._augroup,
 		callback = function(args)
 			local win = vim.api.nvim_get_current_win()
-			if not is_valid_editor_win(win) or vim.bo[args.buf].buftype ~= "" then
+			if M.state.rendering == "side_by_side" or not is_valid_editor_win(win) or vim.bo[args.buf].buftype ~= "" then
 				return
 			end
 			if M.is_open() and M.state.mode == "same_branch" and M.state.cwd then
@@ -1985,6 +1997,7 @@ function M.open_file_between_branches(file_path, opts)
 		or not (M.state.dual_right_win and vim.api.nvim_win_is_valid(M.state.dual_right_win))
 	then
 		M.state.dual_left_win = editor_win
+		M.state.dual_previous_winbar = vim.wo[editor_win].winbar
 		local right_buf = vim.api.nvim_create_buf(false, true)
 		local right_win = vim.api.nvim_open_win(right_buf, false, {
 			win = editor_win,
@@ -1995,6 +2008,8 @@ function M.open_file_between_branches(file_path, opts)
 	end
 
 	M.balance_dual_windows()
+	vim.wo[M.state.dual_left_win].winbar = " Before: " .. file_path:gsub("%%", "%%%%")
+	vim.wo[M.state.dual_right_win].winbar = " After: " .. file_path:gsub("%%", "%%%%")
 
 	-- Create scratch buffers
 	local left_buf = M.state.dual_left_buf
@@ -2025,9 +2040,21 @@ function M.open_file_between_branches(file_path, opts)
 	end
 
 	-- Compute side-by-side diff
-	local raw_diff = git.lines({ "diff", "-U0", "--no-ext-diff", base_b, target_b, "--", file_path }, cwd)
+	local args = { "diff", "-U0", "--no-ext-diff", base_b }
+	if target_b ~= "WORKTREE" then
+		table.insert(args, target_b)
+	end
+	vim.list_extend(args, { "--", file_path })
+	local raw_diff = git.lines(args, cwd)
+	local untracked = false
+	if #raw_diff == 0 and target_b == "WORKTREE" then
+		untracked = #git.lines({ "ls-files", "--others", "--exclude-standard", "--", file_path }, cwd) > 0
+		if untracked then
+			raw_diff = vim.fn.readfile(path_util.join(cwd, file_path))
+		end
+	end
 	local l_lines, left_kinds, r_lines, right_kinds, left_linenos, right_linenos =
-		diff.format_side_by_side_dual(raw_diff, false, file_path)
+		diff.format_side_by_side_dual(raw_diff, untracked, file_path)
 	M.state.blame_left_linenos = left_linenos
 	M.state.blame_right_linenos = right_linenos
 
@@ -2096,6 +2123,7 @@ function M.start_between_branches(branch1, branch2, cwd)
 
 	M.state.cwd = cwd
 	M.state.mode = "between_branches"
+	M.state.rendering = "side_by_side"
 	require("fox.core.preview_tab").close(M.state.preview_tab)
 	M.state.preview_tab = nil
 	M.state.is_active = true
@@ -2151,6 +2179,7 @@ function M.close(opts)
 			M.state.current_mod_idx = 0
 			M.state.active_file = nil
 			M.state.current_modifications = {}
+			M.state.rendering = "classic"
 		end
 
 		-- Delete live diff autocmd group
@@ -2199,6 +2228,7 @@ function M.close(opts)
 			local right_buf_to_wipe = M.state.dual_right_buf
 
 			if M.state.dual_left_win and vim.api.nvim_win_is_valid(M.state.dual_left_win) then
+				vim.wo[M.state.dual_left_win].winbar = M.state.dual_previous_winbar or ""
 				pcall(vim.api.nvim_set_option_value, "scrollbind", false, { win = M.state.dual_left_win })
 				pcall(vim.api.nvim_set_option_value, "cursorbind", false, { win = M.state.dual_left_win })
 				if M.state.prev_buf and vim.api.nvim_buf_is_valid(M.state.prev_buf) then
@@ -2227,6 +2257,7 @@ function M.close(opts)
 
 			M.state.dual_left_win, M.state.dual_left_buf = nil, nil
 			M.state.dual_right_win, M.state.dual_right_buf = nil, nil
+			M.state.dual_previous_winbar = nil
 		end
 
 		if target_win and vim.api.nvim_win_is_valid(target_win) then
@@ -2752,6 +2783,8 @@ function M.open()
 				end
 			end)
 		end
+	end, function()
+		require("plugins.fox.git.git_center.panel").open_git_center()
 	end)
 end
 
@@ -3604,6 +3637,10 @@ function M.setup()
 		M.toggle_blame()
 	end, { desc = "Toggle the blame author column in Git Diff Mode" })
 
+	pcall(vim.api.nvim_create_user_command, "GitDiffRendering", function()
+		M.toggle_rendering()
+	end, { desc = "Toggle Classic and Before | After Git diff rendering" })
+
 	pcall(vim.api.nvim_create_user_command, "GitEnhancedMode", function()
 		M.toggle_enhanced_mode()
 	end, { desc = "Toggle Git Enhanced Mode (per-line authors in every file)" })
@@ -3646,6 +3683,7 @@ return setmetatable({
 		"GitDiffToggle",
 		"GitDiffClose",
 		"GitDiffBlame",
+		"GitDiffRendering",
 		"GitEnhancedMode",
 		"GitEnhancedModeOn",
 		"GitEnhancedModeOff",

@@ -752,7 +752,7 @@ function M.open_git_center()
 					layout.apply()
 				end
 			end
-			if layout and layout.mode == "browse" then
+			if layout and layout.mode == "browse" and not immediate then
 				return
 			end
 
@@ -1064,6 +1064,9 @@ function M.open_git_center()
 		end,
 		manual = function()
 			automatic_preview = false
+		end,
+		before_show = function()
+			update_preview(true)
 		end,
 		changed = function()
 			refresh()
@@ -1461,7 +1464,7 @@ function M.open_git_center()
 			"  K            Checkout commit",
 			"  b            Branch manager",
 			"  l / L        Git Graph (current / all branches)",
-			"  F2 / F3      Pick file history / Log Diff",
+			"  F2 / F3 / H  File history / Log Diff / Log Diff",
 			"  F4           Git actions (fetch, pull, rebase)",
 			"  F6/F7/F8     Toggle preview / Expand details / Maximize",
 			"  v / V        Diff mode / Toggle diff mode",
@@ -1627,6 +1630,8 @@ function M.open_git_center()
 	end
 	vim.keymap.set("n", "<F3>", open_repository_history, key_opts)
 	vim.keymap.set("n", "<F3>", open_repository_history, preview_opts)
+	vim.keymap.set("n", "H", open_repository_history, key_opts)
+	vim.keymap.set("n", "H", open_repository_history, preview_opts)
 
 	local function pick_file_history()
 		local cwd = get_active_target().full_path

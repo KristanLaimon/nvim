@@ -51,7 +51,7 @@ The picker includes local and remote branches. If a local base branch is behind 
 | `<leader>gm` | Normal | Open 3-Way Merge Conflict Resolver from anywhere |
 | `b` | Normal | Open Branch Management Modal (Create, Delete, Switch, Rename, Dry-Run) |
 | `l` / `L` | Normal | Open GitKraken Commit Graph Viewer (`:GitGraph`, 2 modes: Current / `--all`, on-the-fly fetch) |
-| `<F3>` | Normal | Open the Log Diff dashboard for the repository |
+| `H` / `<F3>` | Normal | Open the Log Diff dashboard for the repository |
 | `<F2>` | Normal | Pick a file with the Ctrl+k file finder and open its commit history in Log Diff |
 | `t` | Normal | 🧪 Dry-Run Merge simulation (predict conflicts between branches without touching CWD) |
 | `T` | Normal | 🧪 Dry-Run Rebase simulation (predict conflicts between branches without touching CWD) |
@@ -117,8 +117,12 @@ that choice stays active until Git Center closes. Tab opens the details as a ful
 | `F7` | Expand details to the entire Git Center area; press again or Esc to return |
 | `F8` | Toggle maximized Git Center geometry |
 
-The former h/H history shortcuts are now F2/F3, preserving Vim's h/H motions.
+`H` and `F3` open repository Log Diff; `F2` opens file history. `h` keeps its Vim motion.
 Graph's former f canvas shortcut is now F6, preserving the f motion.
+
+In the Diff Mode sidebar, press `s` (or run `:GitDiffRendering`) to toggle Classic
+and **Before | After** rendering while keeping the same comparison and selected
+file. Press `q` to return to Diff Mode Manager, then `q` again to return to Git Center.
 
 All new actions are also available in the Command Palette and as explicit commands:
 `:GitFetch`, `:GitPull`, `:GitPullRebase`, `:GitRebase [branch-or-ref]`,

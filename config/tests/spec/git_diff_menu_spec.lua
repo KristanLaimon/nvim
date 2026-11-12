@@ -6,6 +6,27 @@ local function press(key)
 end
 
 t.describe("Git Diff card menu", function()
+	t.it("returns from the manager to Git Center with q", function()
+		local panel = require("plugins.fox.git.git_center.panel")
+		local original, returned = panel.open_git_center, false
+		local win
+		local ok, err = pcall(function()
+			panel.open_git_center = function()
+				returned = true
+			end
+			local _
+			_, win = diff.open()
+			press("q")
+			t.expect(returned).toBe(true)
+			t.expect(vim.api.nvim_win_is_valid(win)).toBe(false)
+		end)
+		panel.open_git_center = original
+		if win and vim.api.nvim_win_is_valid(win) then
+			vim.api.nvim_win_close(win, true)
+		end
+		assert(ok, err)
+	end)
+
 	t.it("selects with numbers, confirms with Enter and adapts to a narrow viewport", function()
 		local columns, lines = vim.o.columns, vim.o.lines
 		local original, called = diff.open_config_dialog, nil

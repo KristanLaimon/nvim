@@ -59,6 +59,41 @@ describe("plugins.fox.git.git_center", function()
 		expect(type(git_center.settings.keys.open_tab)).toBe("table")
 	end)
 
+	it("renders the selected file before unhiding the compact preview", function()
+		local queries = require("plugins.fox.git.git_center.queries")
+		local config = require("plugins.fox.git.git_center.config")
+		local original_diff, original_config = queries.raw_diff_for, vim.api.nvim_win_set_config
+		local ok, err = pcall(function()
+			queries.raw_diff_for = function(file)
+				return { file .. " content" }, true
+			end
+			git_center.open_git_center()
+			config.line_map[1] = { file = "first.lua", type = "untracked" }
+			config.line_map[2] = { file = "second.lua", type = "untracked" }
+			local expected
+			vim.api.nvim_win_set_config = function(win, opts)
+				if win == config.preview_win and opts.hide == false then
+					local content = table.concat(vim.api.nvim_buf_get_lines(config.preview_buf, 0, -1, false), "\n")
+					expect(content).toContain(expected)
+				end
+				return original_config(win, opts)
+			end
+			local function press(buf, key)
+				vim.api.nvim_buf_call(buf, function()
+					vim.fn.maparg(key, "n", false, true).callback()
+				end)
+			end
+			for index, file in ipairs({ "first.lua", "second.lua" }) do
+				expected = file .. " content"
+				vim.api.nvim_win_set_cursor(config.main_win, { index, 0 })
+				press(config.main_buf, "<Tab>")
+				press(config.preview_buf, "<S-Tab>")
+			end
+		end)
+		queries.raw_diff_for, vim.api.nvim_win_set_config = original_diff, original_config
+		assert(ok, err)
+	end)
+
 	it("exposes Git actions and layout controls as commands, palette entries and non-motion shortcuts", function()
 		git_center.setup()
 		local palette = require("plugins.fox.tools.command_palette")
@@ -103,13 +138,13 @@ describe("plugins.fox.git.git_center", function()
 		end
 		git_center.open_git_center()
 		for _, buf in ipairs({ git_center.main_buf, git_center.preview_buf }) do
-			for _, key in ipairs({ "<F2>", "<F3>", "<F4>", "<F6>", "<F7>", "<F8>" }) do
+			for _, key in ipairs({ "H", "<F2>", "<F3>", "<F4>", "<F6>", "<F7>", "<F8>" }) do
 				local map = vim.api.nvim_buf_call(buf, function()
 					return vim.fn.maparg(key, "n", false, true)
 				end)
 				expect(map.buffer).toBe(1)
 			end
-			for _, key in ipairs({ "h", "H" }) do
+			for _, key in ipairs({ "h" }) do
 				local map = vim.api.nvim_buf_call(buf, function()
 					return vim.fn.maparg(key, "n", false, true)
 				end)

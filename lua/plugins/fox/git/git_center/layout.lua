@@ -21,6 +21,9 @@ function M.new(left, right, opts)
 		local right_width = view.mode == "split" and math.max(1, width - left_width - 2) or width
 		local current = vim.api.nvim_get_current_win()
 		local target = view.mode == "details" and right or left
+		if view.mode ~= "browse" and opts.before_show then
+			opts.before_show()
+		end
 		-- Unhide the destination before moving focus out of the pane being hidden.
 		vim.api.nvim_win_set_config(target, { hide = false })
 		if (view.mode == "details" and current == left) or (view.mode == "browse" and current == right) then

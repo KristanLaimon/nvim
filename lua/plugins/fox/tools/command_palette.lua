@@ -247,6 +247,7 @@ M.commands = {
 	{ name = "Git File History (F2)", cmd = "GitFileHistory", category = "Git" },
 	{ name = "Git Repository History (F3)", cmd = "GitLogDiff", category = "Git" },
 	-- { name = "⚡ Git Diff Mode Manager (Same Branch / Between Branches)", cmd = "GitDiffMode", category = "Git" },
+	{ name = "Git Diff: Toggle Classic / Before | After", cmd = "GitDiffRendering", category = "Git" },
 	-- { name = "🔍 Git Diff Mode: Same Branch (HEAD vs HEAD~N)", cmd = "GitDiffSameBranch", category = "Git" },
 	-- { name = "🌿 Git Diff Mode: Between 2 Branches (Side-by-Side)", cmd = "GitDiffBetweenBranches", category = "Git" },
 	-- { name = "⚡ Toggle Git Diff Mode (Same Branch)", cmd = "GitDiffToggle", category = "Git" },

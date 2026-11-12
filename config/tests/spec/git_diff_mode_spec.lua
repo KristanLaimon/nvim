@@ -8,6 +8,7 @@ local diff_mode = require("plugins.fox.git.diff_mode")
 
 describe("plugins.fox.git.diff_mode", function()
 	local config_dir = vim.fn.stdpath("config")
+	local temporary_repo
 
 	beforeEach(function()
 		pcall(vim.api.nvim_set_current_dir, config_dir)
@@ -21,6 +22,10 @@ describe("plugins.fox.git.diff_mode", function()
 			diff_mode.close()
 		end
 		pcall(vim.api.nvim_set_current_dir, config_dir)
+		if temporary_repo then
+			vim.fn.delete(temporary_repo, "rf")
+			temporary_repo = nil
+		end
 	end)
 
 	it("sanitizes commits_behind values to non-negative integers >= 0", function()
@@ -281,7 +286,7 @@ describe("plugins.fox.git.diff_mode", function()
 		expect(diff_mode.state.file_list_win).toBeNil()
 	end)
 
-	it("closes diff mode completely when pressing 'q' in the sidebar", function()
+	it("returns to the manager when pressing 'q' in the sidebar", function()
 		diff_mode.start_same_branch()
 		expect(diff_mode.is_open()).toBeTruthy()
 		local sb_win = diff_mode.state.file_list_win
@@ -298,6 +303,60 @@ describe("plugins.fox.git.diff_mode", function()
 		expect(diff_mode.is_open()).toBeFalsy()
 		expect(diff_mode.state.is_active).toBeFalsy()
 		expect(diff_mode.state.file_list_win).toBeNil()
+		expect(vim.bo.filetype).toBe("fox_git_diff_menu")
+		vim.api.nvim_win_close(vim.api.nvim_get_current_win(), true)
+	end)
+
+	it("toggles sidebar rendering without changing the comparison or selected file", function()
+		temporary_repo = vim.fn.tempname()
+		vim.fn.mkdir(temporary_repo, "p")
+		local function git(args)
+			local result = vim.system(vim.list_extend({ "git" }, args), { cwd = temporary_repo, text = true }):wait()
+			assert(result.code == 0, result.stderr)
+		end
+		git({ "init" })
+		vim.fn.writefile({ "old content" }, temporary_repo .. "/tracked.lua")
+		git({ "add", "." })
+		git({ "-c", "user.name=Fox Test", "-c", "user.email=test@example.com", "commit", "-m", "baseline" })
+		vim.fn.writefile({ "new content" }, temporary_repo .. "/tracked.lua")
+		vim.fn.writefile({ "untracked content" }, temporary_repo .. "/untracked.lua")
+		diff_mode.start_same_branch({ cwd = temporary_repo, commits_behind = 0 })
+		local base, target = diff_mode.state.base_ref, diff_mode.state.target_ref
+		local file = "tracked.lua"
+		for index, item in ipairs(diff_mode.state.files) do
+			if item.file == file then
+				diff_mode.state.selected_file_idx = index
+			end
+		end
+		local selected = diff_mode.state.selected_file_idx
+		diff_mode.open_file_same_branch(file)
+		local function toggle()
+			vim.api.nvim_buf_call(diff_mode.state.file_list_buf, function()
+				vim.fn.maparg("s", "n", false, true).callback()
+			end)
+		end
+		toggle()
+		expect(diff_mode.state.rendering).toBe("side_by_side")
+		expect(diff_mode.state.base_ref).toBe(base)
+		expect(diff_mode.state.target_ref).toBe(target)
+		expect(diff_mode.state.selected_file_idx).toBe(selected)
+		expect(diff_mode.state.active_file).toBe(file)
+		local before = table.concat(vim.api.nvim_buf_get_lines(diff_mode.state.dual_left_buf, 0, -1, false), "\n")
+		local after = table.concat(vim.api.nvim_buf_get_lines(diff_mode.state.dual_right_buf, 0, -1, false), "\n")
+		expect(vim.wo[diff_mode.state.dual_left_win].winbar).toContain("Before")
+		expect(vim.wo[diff_mode.state.dual_right_win].winbar).toContain("After")
+		expect(before).toContain("old content")
+		expect(after).toContain("new content")
+		diff_mode.open_file_same_branch("untracked.lua")
+		after = table.concat(vim.api.nvim_buf_get_lines(diff_mode.state.dual_right_buf, 0, -1, false), "\n")
+		expect(after).toContain("untracked content")
+		diff_mode.open_file_same_branch(file)
+		toggle()
+		expect(diff_mode.state.rendering).toBe("classic")
+		expect(diff_mode.state.dual_right_win).toBeNil()
+		expect(diff_mode.state.active_file).toBe(file)
+		expect(diff_mode.state.base_ref).toBe(base)
+		expect(diff_mode.state.target_ref).toBe(target)
 	end)
 
 	it("closes diff mode completely when closing sidebar via :FoxQ / :q", function()
@@ -315,7 +374,7 @@ describe("plugins.fox.git.diff_mode", function()
 		expect(diff_mode.state.file_list_win).toBeNil()
 	end)
 
-	it("closes between branches dual diff mode completely when pressing 'q' in sidebar", function()
+	it("returns from between branches to the manager when pressing 'q' in sidebar", function()
 		diff_mode.start_between_branches("HEAD~1", "HEAD")
 		expect(diff_mode.is_open()).toBeTruthy()
 		local sb_win = diff_mode.state.file_list_win
@@ -334,6 +393,8 @@ describe("plugins.fox.git.diff_mode", function()
 		expect(diff_mode.state.file_list_win).toBeNil()
 		expect(diff_mode.state.dual_left_win).toBeNil()
 		expect(diff_mode.state.dual_right_win).toBeNil()
+		expect(vim.bo.filetype).toBe("fox_git_diff_menu")
+		vim.api.nvim_win_close(vim.api.nvim_get_current_win(), true)
 	end)
 
 	it("completely clears diff extmark highlights and virtual lines from all open buffers when closing", function()

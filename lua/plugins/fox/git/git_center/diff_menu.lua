@@ -1,7 +1,7 @@
 local M = {}
 local ns = vim.api.nvim_create_namespace("fox_git_diff_menu")
 
-function M.open(title, cards, confirm)
+function M.open(title, cards, confirm, back)
 	local selected, regions = 1, {}
 	local buf, win = require("fox.core.ui").float({ title = " " .. title .. " ", width = 1, height = 1 })
 	vim.bo[buf].filetype = "fox_git_diff_menu"
@@ -88,7 +88,12 @@ function M.open(title, cards, confirm)
 		confirm(selected)
 	end)
 	for _, key in ipairs({ "q", "<Esc>", "<C-c>" }) do
-		map(key, close)
+		map(key, function()
+			close()
+			if key == "q" and back then
+				back()
+			end
+		end)
 	end
 	vim.api.nvim_create_autocmd("VimResized", {
 		group = vim.api.nvim_create_augroup("FoxGitDiffMenu" .. buf, { clear = true }),

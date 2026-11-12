@@ -2,10 +2,17 @@ local t = require("fox.lib.foxnvim.test")
 
 t.describe("dashboard initial startup", function()
 	local function startup(args, check)
-		local command = { vim.v.progpath, "--headless", "-i", "NONE" }
+		local command = { vim.v.progpath, "--headless", "-u", "NONE", "-i", "NONE" }
 		vim.list_extend(command, args)
-		vim.list_extend(command, { "-c", "lua " .. check, "-c", "qa!" })
+		local root = vim.fn.stdpath("config")
+		local setup = string.format(
+			"vim.opt.rtp:prepend(%q); package.path = %q .. package.path; require('plugins.ui.dashboard').config()",
+			root,
+			root .. "/lua/?.lua;" .. root .. "/lua/?/init.lua;"
+		)
+		vim.list_extend(command, { "--cmd", "lua " .. setup, "-c", "lua " .. check, "-c", "qa!" })
 		local result = vim.system(command, { text = true, timeout = 15000 }):wait()
+		assert(result, "Dashboard startup process did not return a result")
 		assert(result.code == 0, (result.stdout or "") .. (result.stderr or ""))
 	end
 

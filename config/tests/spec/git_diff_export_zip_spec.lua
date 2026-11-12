@@ -377,24 +377,12 @@ describe("plugins.fox.git.diff_mode.export_zip", function()
 		expect(content:match("line3_incoming") ~= nil).toBeTruthy()
 	end)
 
-	it("registers GitDiffExportZip and GitDiffImportZip user commands and palette entries", function()
+	it("registers ZIP export and import commands for lazy loading and command-line use", function()
 		diff_mode.setup()
-		expect(vim.fn.exists(":GitDiffExportZip")).toBe(2)
-		expect(vim.fn.exists(":GitDiffImportZip")).toBe(2)
-
-		local cp = require("plugins.fox.tools.command_palette")
-		local has_export = false
-		local has_import = false
-		for _, cmd in ipairs(cp.commands) do
-			if cmd.cmd == "GitDiffExportZip" then
-				has_export = true
-			end
-			if cmd.cmd == "GitDiffImportZip" then
-				has_import = true
-			end
+		for _, command in ipairs({ "GitDiffExportZip", "GitDiffImportZip" }) do
+			expect(vim.fn.exists(":" .. command)).toBe(2)
+			expect(diff_mode.cmd).toContain(command)
 		end
-		expect(has_export).toBeTruthy()
-		expect(has_import).toBeTruthy()
 	end)
 
 	it("binds export and import shortcuts in diff sidebar window", function()

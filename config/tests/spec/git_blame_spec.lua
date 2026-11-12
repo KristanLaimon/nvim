@@ -4,7 +4,6 @@
 
 local t = require("fox.lib.foxnvim.test")
 local describe, it, expect = t.describe, t.it, t.expect
-local cp = require("plugins.fox.tools.command_palette")
 local git_blame_spec = require("plugins.editor.git_blame")
 
 describe("plugins.editor.git_blame", function()
@@ -27,19 +26,11 @@ describe("plugins.editor.git_blame", function()
 		expect(git_blame_spec.cmd).toContain("GitBlameOpenFileURL")
 	end)
 
-	it("includes Git Blame commands in Command Palette", function()
-		local found_toggle = false
-		local found_open_url = false
-		for _, cmd in ipairs(cp.commands) do
-			if cmd.cmd == "GitBlameToggle" and cmd.category == "Git" then
-				found_toggle = true
-			end
-			if cmd.cmd == "GitBlameOpenCommitURL" and cmd.category == "Git" then
-				found_open_url = true
-			end
+	it("registers the advertised Git Blame commands when configured", function()
+		git_blame_spec.config(nil, git_blame_spec.opts)
+		for _, command in ipairs(git_blame_spec.cmd) do
+			expect(vim.fn.exists(":" .. command)).toBe(2)
 		end
-		expect(found_toggle).toBe(true)
-		expect(found_open_url).toBe(true)
 	end)
 
 	it("config sets up GitBlame highlight group with italic styling", function()

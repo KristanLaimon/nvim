@@ -39,6 +39,7 @@ t.describe("WakaTime local tracking", function()
 	end)
 
 	t.it("counts typed additions and deletions but excludes external edits", function()
+		vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "nx", false)
 		local tracker = dofile(vim.fn.stdpath("config") .. "/lua/fox/wakatime/init.lua")
 		local saved_system = vim.system
 		local original = vim.api.nvim_get_current_buf()

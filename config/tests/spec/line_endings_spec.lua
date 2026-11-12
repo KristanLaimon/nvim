@@ -31,6 +31,17 @@ local function make_tmp_files()
 end
 
 describe("plugins.fox.editor.line_endings", function()
+	local did_setup
+	t.beforeEach(function()
+		did_setup = line_endings._did_setup
+	end)
+	t.afterEach(function()
+		if not did_setup and line_endings._did_setup then
+			vim.api.nvim_del_augroup_by_name("FoxLineEndings")
+			line_endings._did_setup = did_setup
+		end
+	end)
+
 	it("registers the line endings user commands", function()
 		line_endings.setup()
 		local cmds = vim.api.nvim_get_commands({})

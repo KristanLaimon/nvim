@@ -13,6 +13,14 @@ keys are `c` to add, `C` to copy annotations, `da` to delete, `U` to manage sess
 and `q` / `r` for the previous / next annotation. These keys are listed beneath
 the sidebar shortcuts; sidebar keys retain their own actions.
 
+`C` copies **every annotation in the active session across all files**, including
+files that are not open. The export includes the session name and total count.
+`U` opens a centered menu showing the active session and annotation count. It
+offers new/load sessions, clearing the current session, deleting one saved
+session, and deleting all saved sessions and annotations. Delete actions require
+confirmation. Deleting all sessions starts a fresh empty session; other project
+configuration remains intact.
+
 The annotation input shows its type, line number, and controls in the border.
 Use `Tab` / `Shift-Tab` to change type, `Enter` to save, `Ctrl-J` for a newline,
 and `Esc` to cancel.

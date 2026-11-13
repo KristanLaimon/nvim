@@ -176,7 +176,11 @@ end
 --- Creates a new empty session with a timestamp-based name
 --- @param cwd string
 function M.new_session(cwd)
-	local timestamp = tostring(os.time())
+	local previous = tonumber((M.active_session or ""):match("^session_(%d+)$")) or 0
+	local timestamp = math.max(os.time(), previous + 1)
+	while vim.fn.filereadable(session_file_path("session_" .. timestamp, cwd)) == 1 do
+		timestamp = timestamp + 1
+	end
 	M.active_session = "session_" .. timestamp
 	M.annotations = {}
 	M.session_name = random_session_name()
@@ -241,7 +245,7 @@ end
 
 --- Lists all session files in the review directory
 --- @param cwd string
---- @return table<{id:string, created:integer, annotation_count:integer}>
+--- @return table<{id:string, name:string, created:integer, annotation_count:integer}>
 function M.list_sessions(cwd)
 	local rdir = review_dir(cwd)
 	local result = {}
@@ -264,6 +268,7 @@ function M.list_sessions(cwd)
 		-- Try to read the session to get metadata
 		local count = 0
 		local created = 0
+		local name = id
 		if vim.fn.filereadable(fpath) == 1 then
 			local lines = vim.fn.readfile(fpath)
 			if lines and #lines > 0 then
@@ -272,11 +277,12 @@ function M.list_sessions(cwd)
 				if parse_ok and data then
 					count = data.annotations and #data.annotations or 0
 					created = data.created or 0
+					name = data.session_name or id
 				end
 			end
 		end
 
-		table.insert(result, { id = id, created = created, annotation_count = count })
+		table.insert(result, { id = id, name = name, created = created, annotation_count = count })
 		::continue::
 	end
 
@@ -295,98 +301,129 @@ end
 function M.wipe_session(session_id, cwd)
 	local fpath = session_file_path(session_id, cwd)
 	if vim.fn.filereadable(fpath) == 1 then
-		os.remove(fpath)
-		return true
+		return os.remove(fpath) ~= nil
 	end
 	return false
 end
 
---- Opens a floating menu to manage sessions (load, create new, wipe)
+local function session_select(title, choices, callback)
+	local lines = {}
+	for _, choice in ipairs(choices) do
+		lines[#lines + 1] = "  " .. choice.label
+	end
+	lines[#lines + 1] = ""
+	lines[#lines + 1] = "  Enter: select   j/k: move   Esc: cancel"
+	local parent_z = vim.api.nvim_win_get_config(0).zindex or 0
+	local buf, win = require("fox.core.ui").float({
+		title = " " .. title .. " ",
+		lines = lines,
+		width = math.max(1, math.min(86, vim.o.columns - 4)),
+		height = math.max(1, math.min(#lines, vim.o.lines - 6)),
+		filetype = "foxreviewsessions",
+		zindex = math.max(200, parent_z + 10),
+		close_on_keys = { "q", "<Esc>" },
+	})
+	vim.wo[win].cursorline = true
+	vim.wo[win].wrap = true
+	vim.wo[win].winblend = 0
+	vim.cmd("stopinsert")
+	vim.api.nvim_win_set_cursor(win, { 1, 0 })
+	local function select_choice()
+		local choice = choices[vim.api.nvim_win_get_cursor(win)[1]]
+		if choice then
+			vim.api.nvim_win_close(win, true)
+			callback(choice)
+		end
+	end
+	for _, key in ipairs({ "<CR>", "<Space>" }) do
+		vim.keymap.set("n", key, select_choice, { buffer = buf, silent = true, nowait = true })
+	end
+end
+
+local function refresh_session_buffers()
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.api.nvim_buf_is_loaded(buf) and vim.b[buf].fox_review_file then
+			M.render_annotations(buf, vim.b[buf].fox_review_file)
+		end
+	end
+end
+
+--- Opens a readable session menu with explicitly scoped delete actions.
 --- @param cwd string
 function M.session_menu(cwd)
+	if not M.active_session then
+		M.ensure_session(cwd)
+	end
 	local sessions = M.list_sessions(cwd)
-
-	local choices = {}
-	for _, s in ipairs(sessions) do
-		local time_str = ""
-		if s.created > 0 then
-			time_str = " (" .. os.date("%Y-%m-%d %H:%M", s.created) .. ")"
-		end
-		table.insert(choices, {
-			label = "Load " .. s.id .. time_str .. " (" .. s.annotation_count .. " notes)",
-			value = "load:" .. s.id,
-		})
-		-- Add wipe option after each session
-		table.insert(choices, {
-			label = "   🗑 Wipe " .. s.id,
-			value = "wipe:" .. s.id,
-		})
-	end
-
-	table.insert(choices, {
-		label = "Create New Session",
-		value = "new",
-	})
-
-	if #choices == 0 then
-		table.insert(choices, {
-			label = "Create New Session",
-			value = "new",
-		})
-	end
-
-	vim.ui.select(choices, {
-		prompt = "📝 Review Sessions",
-		format_item = function(item)
-			return item.label
-		end,
-	}, function(choice)
-		if not choice then
-			return
-		end
-
-		if choice.value == "new" then
-			M.new_session(cwd)
-			vim.notify("New review session created: " .. M.active_session, vim.log.levels.INFO, {
-				title = "Git Review",
-			})
-		elseif choice.value:startswith("load:") then
-			local session_id = choice.value:sub(6)
-			if M.load_session(session_id, cwd) then
-				M.cleanup_stale_annotations(cwd)
-				vim.notify("Loaded session: " .. session_id, vim.log.levels.INFO, {
-					title = "Git Review",
-				})
-				-- Re-render annotations in current buffer
-				M._on_session_loaded()
-			else
-				vim.notify("Failed to load session: " .. session_id, vim.log.levels.WARN, {
-					title = "Git Review",
-				})
+	local function confirm(title, action)
+		session_select(title, { { label = "Cancel" }, { label = "Delete", confirmed = true } }, function(choice)
+			if choice.confirmed then
+				action()
+				refresh_session_buffers()
 			end
-		elseif choice.value:startswith("wipe:") then
-			local session_id = choice.value:sub(6)
-			vim.ui.select({ "Yes, delete", "Cancel" }, {
-				prompt = "Confirm wipe: " .. session_id,
-			}, function(confirm)
-				if confirm == "Yes, delete" then
-					if M.wipe_session(session_id, cwd) then
-						-- If wiping the active session, reset state
-						if M.active_session == session_id then
-							M.annotations = {}
-							M.active_session = nil
-							M.session_name = nil
-							M.session_id = nil
-						end
-						vim.notify("Deleted session: " .. session_id, vim.log.levels.INFO, {
-							title = "Git Review",
-						})
-					else
-						vim.notify("Session not found: " .. session_id, vim.log.levels.WARN, {
-							title = "Git Review",
-						})
+		end)
+	end
+	local function choose_session(deleting)
+		local choices = {}
+		for _, session in ipairs(sessions) do
+			choices[#choices + 1] = {
+				label = string.format(
+					"%s%s  |  %d annotations  |  %s",
+					session.id == M.active_session and "* " or "  ",
+					session.name,
+					session.annotation_count,
+					os.date("%Y-%m-%d %H:%M", session.created)
+				),
+				id = session.id,
+			}
+		end
+		session_select(deleting and "Delete a saved session" or "Load a session (* active)", choices, function(choice)
+			if deleting then
+				confirm("Delete selected session?", function()
+					if not M.wipe_session(choice.id, cwd) then
+						vim.notify("Could not delete session", vim.log.levels.ERROR, { title = "Git Review" })
+						return
+					end
+					if choice.id == M.active_session then
+						M.new_session(cwd)
+					end
+				end)
+			elseif M.load_session(choice.id, cwd) then
+				M.cleanup_stale_annotations(cwd)
+				save_active_pointer(cwd)
+				refresh_session_buffers()
+			else
+				vim.notify("Could not load session", vim.log.levels.ERROR, { title = "Git Review" })
+			end
+		end)
+	end
+	local actions = {
+		{ label = "Create a new session", action = "new" },
+		{ label = "Load a saved session", action = "load" },
+		{ label = "Clear all annotations in the current session", action = "clear" },
+		{ label = "Delete a saved session", action = "delete" },
+		{ label = "Delete ALL saved sessions and annotations", action = "delete_all" },
+	}
+	session_select(string.format("%s | %d annotations", M.session_name, #M.annotations), actions, function(choice)
+		if choice.action == "new" then
+			M.new_session(cwd)
+			refresh_session_buffers()
+		elseif choice.action == "load" or choice.action == "delete" then
+			choose_session(choice.action == "delete")
+		elseif choice.action == "clear" then
+			confirm("Clear all annotations in the current session?", function()
+				M.annotations = {}
+				M.save_session(cwd)
+			end)
+		elseif choice.action == "delete_all" then
+			confirm(string.format("Delete ALL %d saved sessions and annotations?", #sessions), function()
+				for _, session in ipairs(sessions) do
+					if not M.wipe_session(session.id, cwd) then
+						vim.notify("Could not delete session: " .. session.name, vim.log.levels.ERROR, { title = "Git Review" })
+						return
 					end
 				end
+				M.new_session(cwd)
 			end)
 		end
 	end)
@@ -955,6 +992,7 @@ function M.export_to_clipboard(cwd, extra_header)
 	local session_uuid = M.session_id or "no-id"
 
 	table.insert(lines, "## Session: " .. session_label .. " | " .. session_uuid)
+	table.insert(lines, "Annotations: " .. #M.annotations .. " (all files in this session)")
 	table.insert(lines, "")
 	table.insert(lines, "I reviewed your code and have the following comments. Please address them.")
 
@@ -1016,7 +1054,7 @@ function M.export_to_clipboard(cwd, extra_header)
 	vim.fn.setreg("*", markdown)
 
 	vim.notify(
-		"Exported " .. #M.annotations .. " annotations to clipboard",
+		"Copied all " .. #M.annotations .. " annotations from session: " .. session_label,
 		vim.log.levels.INFO,
 		{ title = "Git Review" }
 	)

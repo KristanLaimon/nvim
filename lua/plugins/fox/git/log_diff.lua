@@ -997,7 +997,7 @@ function M.show_help()
 		"  r / <F5>        Refresh commit history & diffs from Git",
 		"  q / <Esc>       Close Dashboard & return to previous workspace",
 		"  In code panels (Normal mode):",
-		"  c / C           Add annotation / Copy annotations",
+		"  c / C           Add annotation / Copy whole session",
 		"  da / U          Delete annotation / Manage sessions",
 		"  q / r           Previous / Next annotation",
 		" ──────────────────────────────────────────────────────────",

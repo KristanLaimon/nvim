@@ -4,6 +4,16 @@ local review = getmetatable(wrapper).__index
 
 t.describe("Git review input and virtual annotations", function()
 	local root, tab
+	local function choose(label)
+		for index, line in ipairs(vim.api.nvim_buf_get_lines(0, 0, -1, false)) do
+			if line:find(label, 1, true) then
+				vim.api.nvim_win_set_cursor(0, { index, 0 })
+				vim.fn.maparg("<CR>", "n", false, true).callback()
+				return
+			end
+		end
+		error("Missing session menu option: " .. label)
+	end
 	t.beforeEach(function()
 		root = vim.fs.normalize(vim.fn.tempname())
 		vim.fn.mkdir(root, "p")
@@ -128,5 +138,95 @@ t.describe("Git review input and virtual annotations", function()
 			end
 			t.expect(table.concat(reconstructed):gsub(" ", "")).toBe(review.annotations[index].text:gsub(" ", ""))
 		end
+	end)
+
+	t.it("creates distinct sessions without overwriting annotations and restores the selected session", function()
+		vim.fn.writefile({ "source" }, root .. "/sample.lua")
+		local buf = vim.api.nvim_create_buf(false, true)
+		vim.api.nvim_set_current_buf(buf)
+		review.session_name = "First Session"
+		review.annotations = { { file = "sample.lua", line = 1, type = "NOTE", text = "first session note" } }
+		review.save_session(root)
+		local first = review.active_session
+		review.render_annotations(buf, "sample.lua")
+		review.session_menu(root)
+		t.expect(vim.bo.filetype).toBe("foxreviewsessions")
+		t.expect(vim.api.nvim_win_get_config(0).relative).toBe("editor")
+		choose("Create a new session")
+		t.expect(review.active_session ~= first).toBe(true)
+		t.expect(#review.list_sessions(root)).toBe(2)
+		t.expect(#vim.api.nvim_buf_get_extmarks(buf, review.namespace, 0, -1, {})).toBe(0)
+		review.session_menu(root)
+		choose("Load a saved session")
+		choose("First Session")
+		t.expect(review.active_session).toBe(first)
+		t.expect(review.annotations[1].text).toBe("first session note")
+		t.expect(#vim.api.nvim_buf_get_extmarks(buf, review.namespace, 0, -1, {})).toBe(1)
+		review.annotations = {}
+		review.active_session = nil
+		review.ensure_session(root)
+		t.expect(review.active_session).toBe(first)
+		t.expect(review.annotations[1].text).toBe("first session note")
+	end)
+
+	t.it("clears the current session only after confirmation and removes its ghost boxes", function()
+		local buf = vim.api.nvim_create_buf(false, true)
+		vim.api.nvim_set_current_buf(buf)
+		review.annotations = { { file = "sample.lua", line = 1, type = "NOTE", text = "clear me" } }
+		review.save_session(root)
+		local session = review.active_session
+		review.render_annotations(buf, "sample.lua")
+		review.session_menu(root)
+		choose("Clear all annotations")
+		choose("Cancel")
+		t.expect(#review.annotations).toBe(1)
+		review.session_menu(root)
+		choose("Clear all annotations")
+		choose("Delete")
+		t.expect(review.active_session).toBe(session)
+		t.expect(#review.annotations).toBe(0)
+		t.expect(#vim.api.nvim_buf_get_extmarks(buf, review.namespace, 0, -1, {})).toBe(0)
+		t.expect(review.load_session(session, root)).toBe(true)
+		t.expect(#review.annotations).toBe(0)
+	end)
+
+	t.it("deletes all saved sessions only after confirmation and starts empty without touching other config", function()
+		review.annotations = { { file = "sample.lua", line = 1, type = "ISSUE", text = "old note" } }
+		review.save_session(root)
+		review.new_session(root)
+		local old_uuid = review.session_id
+		vim.fn.writefile({ "keep" }, root .. "/.foxnvim/tasks.json")
+		vim.fn.writefile({ "keep" }, root .. "/.foxnvim/review/README.txt")
+		review.session_menu(root)
+		choose("Delete ALL saved sessions")
+		choose("Cancel")
+		t.expect(#review.list_sessions(root)).toBe(2)
+		review.session_menu(root)
+		choose("Delete ALL saved sessions")
+		choose("Delete")
+		t.expect(#review.list_sessions(root)).toBe(1)
+		t.expect(#review.annotations).toBe(0)
+		t.expect(review.session_id ~= old_uuid).toBe(true)
+		t.expect(vim.fn.readfile(root .. "/.foxnvim/tasks.json")).toEqual({ "keep" })
+		t.expect(vim.fn.readfile(root .. "/.foxnvim/review/README.txt")).toEqual({ "keep" })
+		review.ensure_session(root)
+		t.expect(#review.annotations).toBe(0)
+	end)
+
+	t.it("deletes a selected active session and immediately renders a fresh one", function()
+		local first = review.active_session
+		review.new_session(root)
+		review.session_name = "Session to delete"
+		review.annotations = { { file = "sample.lua", line = 1, type = "NOTE", text = "delete me" } }
+		review.save_session(root)
+		local deleted = review.active_session
+		review.session_menu(root)
+		choose("Delete a saved session")
+		choose("Session to delete")
+		choose("Delete")
+		t.expect(vim.fn.filereadable(root .. "/.foxnvim/review/" .. deleted .. ".json")).toBe(0)
+		t.expect(vim.fn.filereadable(root .. "/.foxnvim/review/" .. first .. ".json")).toBe(1)
+		t.expect(#review.annotations).toBe(0)
+		t.expect(review.active_session ~= deleted).toBe(true)
 	end)
 end)

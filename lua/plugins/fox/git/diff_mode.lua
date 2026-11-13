@@ -1280,7 +1280,7 @@ render_file_list = function()
 	table.insert(lines, " [s]: Classic / Before | After")
 	table.insert(lines, " [q]: Back to Diff Mode Manager")
 	table.insert(lines, " Annotations (in code panels):")
-	table.insert(lines, " [c]: Add | [C]: Copy annotations")
+	table.insert(lines, " [c]: Add | [C]: Copy whole session")
 	table.insert(lines, " [da]: Delete | [U]: Sessions")
 	table.insert(lines, " [q/r]: Previous/Next annotation")
 

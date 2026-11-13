@@ -31,6 +31,7 @@ local ui = lazy_req("fox.core.ui")
 local path_util = lazy_req("fox.core.path")
 local project = lazy_req("fox.core.project")
 local z_index = lazy_req("fox.core.z_index")
+local review = lazy_req("plugins.fox.git.review")
 
 local M = {}
 
@@ -1815,6 +1816,34 @@ function M.open_file_same_branch(file_path, opts)
 
 	M.ensure_blame_same_branch(vim.api.nvim_get_current_win(), cur_buf, file_path)
 
+	-- Render review annotations
+	review.render_annotations(cur_buf, file_path)
+
+	-- Review annotation keymaps (same_branch editor window)
+	local cur_win = vim.api.nvim_get_current_win()
+	local editor_buf = vim.api.nvim_win_get_buf(cur_win)
+	local r_opts = { buffer = editor_buf, noremap = true, silent = true, nowait = true }
+	vim.keymap.set("n", "c", function()
+		local line = vim.api.nvim_win_get_cursor(0)[1]
+		review.add_annotation(file_path, line, M.state.cwd)
+	end, r_opts)
+	vim.keymap.set("n", "C", function()
+		review.export_to_clipboard(M.state.cwd)
+	end, r_opts)
+	vim.keymap.set("n", "U", function()
+		review.session_menu(M.state.cwd)
+	end, r_opts)
+	vim.keymap.set("n", "da", function()
+		local line = vim.api.nvim_win_get_cursor(0)[1]
+		review.delete_annotation(file_path, line, M.state.cwd)
+	end, r_opts)
+	vim.keymap.set("n", "q", function()
+		review.jump_prev_annotation(file_path)
+	end, r_opts)
+	vim.keymap.set("n", "r", function()
+		review.jump_next_annotation(file_path)
+	end, r_opts)
+
 	if stay_in_sidebar and M.state.file_list_win and vim.api.nvim_win_is_valid(M.state.file_list_win) then
 		pcall(vim.api.nvim_set_current_win, M.state.file_list_win)
 	end
@@ -1854,6 +1883,10 @@ function M.start_same_branch(opts)
 	M.state.cwd = cwd
 	M.state.mode = "same_branch"
 	M.state.is_active = true
+
+	-- Initialize review annotation system
+	review.ensure_session(cwd)
+	review.cleanup_stale_annotations(cwd)
 
 	if opts.commits_behind ~= nil then
 		M.state.commits_behind = M.sanitize_commits_behind(opts.commits_behind)
@@ -2087,6 +2120,10 @@ function M.open_file_between_branches(file_path, opts)
 	M.state.current_modifications = mods
 	M.state.current_mod_idx = #mods > 0 and 1 or 0
 
+	-- Render review annotations on both panels
+	review.render_annotations(left_buf, file_path)
+	review.render_annotations(right_buf, file_path)
+
 	-- Set buffer-local keymaps for dual code panels
 	for _, buf in ipairs({ left_buf, right_buf }) do
 		-- J / K: jump to next / previous diff hunk
@@ -2095,6 +2132,27 @@ function M.open_file_between_branches(file_path, opts)
 		end, { buffer = buf, noremap = true, silent = true, nowait = true })
 		vim.keymap.set("n", "K", function()
 			M.jump_prev_modification()
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+		-- Review annotation keymaps (between_branches dual panels)
+		vim.keymap.set("n", "c", function()
+			local line = vim.api.nvim_win_get_cursor(0)[1]
+			review.add_annotation(file_path, line, M.state.cwd)
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+		vim.keymap.set("n", "C", function()
+			review.export_to_clipboard(M.state.cwd)
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+		vim.keymap.set("n", "U", function()
+			review.session_menu(M.state.cwd)
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+		vim.keymap.set("n", "da", function()
+			local line = vim.api.nvim_win_get_cursor(0)[1]
+			review.delete_annotation(file_path, line, M.state.cwd)
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+		vim.keymap.set("n", "q", function()
+			review.jump_prev_annotation(file_path)
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+		vim.keymap.set("n", "r", function()
+			review.jump_next_annotation(file_path)
 		end, { buffer = buf, noremap = true, silent = true, nowait = true })
 		-- H / L: navigate to previous / next changed file in sidebar
 		vim.keymap.set("n", "H", function()
@@ -2158,6 +2216,10 @@ function M.start_between_branches(branch1, branch2, cwd)
 	M.state.base_ref = branch1
 	M.state.target_ref = branch2
 
+	-- Initialize review annotation system
+	review.ensure_session(cwd)
+	review.cleanup_stale_annotations(cwd)
+
 	local current = vim.api.nvim_get_current_win()
 	if is_valid_editor_win(current) then
 		M.state.editor_win = current
@@ -2218,6 +2280,19 @@ function M.close(opts)
 
 		-- Clear diff highlights & extmarks from ALL open buffers in Neovim
 		M.clear_all_diff_highlights()
+
+		-- Clear review annotation extmarks from all buffers
+		if M.state.highlighted_bufs then
+			for bufnr, _ in pairs(M.state.highlighted_bufs) do
+				review.clear_buffer(bufnr)
+			end
+		end
+		if M.state.dual_left_buf then
+			review.clear_buffer(M.state.dual_left_buf)
+		end
+		if M.state.dual_right_buf then
+			review.clear_buffer(M.state.dual_right_buf)
+		end
 
 		-- Tear down blame author columns (diff-mode only surface)
 		M.close_blame()
@@ -3699,6 +3774,14 @@ function M.setup()
 		nargs = "?",
 		complete = "file",
 	})
+
+	pcall(vim.api.nvim_create_user_command, "GitReviewExport", function()
+		if M.state.cwd then
+			review.export_to_clipboard(M.state.cwd)
+		else
+			vim.notify("Git Diff Mode is not active", vim.log.levels.WARN, { title = "Git Review" })
+		end
+	end, { desc = "Export Git review annotations to clipboard as Markdown" })
 end
 
 return setmetatable({
@@ -3717,6 +3800,7 @@ return setmetatable({
 		"GitEnhancedModeOff",
 		"GitDiffExportZip",
 		"GitDiffImportZip",
+		"GitReviewExport",
 	},
 	keys = {
 		{ "<F8>", mode = { "n", "i", "v", "t" }, desc = "Toggle Git Enhanced Mode (per-line authors)" },

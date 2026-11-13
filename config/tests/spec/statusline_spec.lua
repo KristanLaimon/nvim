@@ -62,6 +62,72 @@ describe("plugins.fox.ui.statusline_picker", function()
 		end
 	end)
 
+	it("highlights Review mode for all git-related filetypes", function()
+		local buf = vim.api.nvim_get_current_buf()
+		local saved_ft = vim.bo[buf].filetype
+		local saved = package.loaded["fox.query"]
+		local ok, err = pcall(function()
+			package.loaded["fox.query"] = nil
+			local git_filetypes = {
+				"fox_diff_sidebar",
+				"fox_git_diff_menu",
+				"neogitcommitselectview",
+				"neogitcommitview",
+				"neogitconsole",
+				"neogitdiffview",
+				"neogitgitcommandhistory",
+				"neogitlogview",
+				"neogitpopup",
+				"neogitrebasetodo",
+				"neogitreflogview",
+				"neogitrefsview",
+				"neogitstatus",
+			}
+			for _, ft in ipairs(git_filetypes) do
+				vim.bo[buf].filetype = ft
+				local st = statusline.workflow_status()
+				expect(st, "Review should be active for filetype: " .. ft).toContain("%#StatusLine#Review")
+			end
+			vim.bo[buf].filetype = "lua"
+			local normal_st = statusline.workflow_status()
+			expect(normal_st).toContain("%#FoxWorkflowInactive#Review")
+		end)
+		package.loaded["fox.query"] = saved
+		vim.bo[buf].filetype = saved_ft
+		if not ok then
+			error(err)
+		end
+	end)
+
+	it("highlights Review mode when log_diff or diff_mode is open", function()
+		local buf = vim.api.nvim_get_current_buf()
+		local saved_ft = vim.bo[buf].filetype
+		local saved = package.loaded["fox.query"]
+		local ok, err = pcall(function()
+			package.loaded["fox.query"] = nil
+			vim.bo[buf].filetype = "lua"
+			local log_diff = require("plugins.fox.git.log_diff")
+			local diff_mode = require("plugins.fox.git.diff_mode")
+			local orig_log_open = log_diff.is_open()
+			local orig_diff_open = diff_mode.is_open()
+			expect(statusline.workflow_status()).toContain("%#FoxWorkflowInactive#Review")
+			log_diff.state.is_open = true
+			log_diff.state.files_win = vim.api.nvim_get_current_win()
+			local log_status = statusline.workflow_status()
+			expect(log_status).toContain("%#StatusLine#Review")
+			log_diff.state.is_open = orig_log_open
+			diff_mode.state.is_active = true
+			local diff_status = statusline.workflow_status()
+			expect(diff_status).toContain("%#StatusLine#Review")
+			diff_mode.state.is_active = orig_diff_open
+		end)
+		vim.bo[buf].filetype = saved_ft
+		package.loaded["fox.query"] = saved
+		if not ok then
+			error(err)
+		end
+	end)
+
 	it("formats modes into NvChad icon pills", function()
 		expect(statusline.format_mode("NORMAL")).toBe(" NORMAL")
 		expect(statusline.format_mode("INSERT")).toBe("󰏫 INSERT")

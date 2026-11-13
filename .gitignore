@@ -6,6 +6,7 @@ config/tests/lua/output_tests
 json_out
 output_test
 output_tests
+.junie
 
 .foxnvim/
 .commandcode/
@@ -18,3 +19,10 @@ config/tools/repos/**/vendor/
 config/tools/foxquery/licenses/
 config/tools/repos/**/dist/
 config/tools/repos/**/*.test
+
+
+# Test Artifacts
+a.rs
+b.rs
+real.rs
+src/main.rs

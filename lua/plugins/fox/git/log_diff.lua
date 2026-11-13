@@ -36,6 +36,7 @@ local ui = lazy_req("fox.core.ui")
 local project = lazy_req("fox.core.project")
 local store = lazy_req("fox.core.store")
 local path_util = lazy_req("fox.core.path")
+local review = lazy_req("plugins.fox.git.review")
 
 local M = {}
 
@@ -711,6 +712,10 @@ function M.render_diff_panes()
 			title_pos = "center",
 		})
 	end
+
+	-- Render review annotations on both panels
+	review.render_annotations(before_buf, file_item.filepath)
+	review.render_annotations(after_buf, file_item.filepath)
 end
 
 --- Selects a commit by index or hash and refreshes files and diffs.
@@ -1020,6 +1025,14 @@ function M.close()
 	end
 	M.state.is_open = false
 
+	-- Clear review annotation extmarks before closing buffers
+	if M.state.before_buf then
+		review.clear_buffer(M.state.before_buf)
+	end
+	if M.state.after_buf then
+		review.clear_buffer(M.state.after_buf)
+	end
+
 	local tab = M.state.tab
 	local prev_win = M.state.prev_win
 	local prev_tab = M.state.prev_tab
@@ -1106,6 +1119,10 @@ function M.open(opts)
 	end
 
 	M.setup_highlights()
+
+	-- Initialize review annotation system
+	review.ensure_session(target_cwd)
+	review.cleanup_stale_annotations(target_cwd)
 
 	-- Load per-project and global session persistence
 	local saved_session = M.load_session(target_cwd) or {}
@@ -1361,6 +1378,37 @@ function M.open(opts)
 		end
 	end, f_opts)
 
+	-- Review annotation keymaps on before_buf and after_buf
+	for _, buf in ipairs({ before_buf, after_buf }) do
+		local rb_opts = { buffer = buf, noremap = true, silent = true, nowait = true }
+		vim.keymap.set("n", "c", function()
+			local line = vim.api.nvim_win_get_cursor(0)[1]
+			local fp = M.state.active_file or ""
+			review.add_annotation(fp, line, M.state.cwd)
+		end, rb_opts)
+		vim.keymap.set("n", "C", function()
+			local commit = M.state.commits[M.state.active_commit_idx]
+			local extra = commit and "Commit: " .. commit.hash or nil
+			review.export_to_clipboard(M.state.cwd, extra)
+		end, rb_opts)
+		vim.keymap.set("n", "U", function()
+			review.session_menu(M.state.cwd)
+		end, rb_opts)
+		vim.keymap.set("n", "da", function()
+			local line = vim.api.nvim_win_get_cursor(0)[1]
+			local fp = M.state.active_file or ""
+			review.delete_annotation(fp, line, M.state.cwd)
+		end, rb_opts)
+		vim.keymap.set("n", "q", function()
+			local fp = M.state.active_file or ""
+			review.jump_prev_annotation(fp)
+		end, rb_opts)
+		vim.keymap.set("n", "r", function()
+			local fp = M.state.active_file or ""
+			review.jump_next_annotation(fp)
+		end, rb_opts)
+	end
+
 	-- Commit Logs List specific keys
 	-- In logs pane: j/k and Up/Down directly step through commits chronologically and auto-center
 	vim.keymap.set("n", "j", M.next_older_commit, l_opts)
@@ -1487,6 +1535,7 @@ return setmetatable({
 		"GitCenterLogDiff",
 		"FoxGitLogDiff",
 		"GitFileHistory",
+		"GitLogReviewExport",
 	},
 	config = function()
 		vim.api.nvim_create_user_command("GitFileHistory", function(opts)
@@ -1516,5 +1565,15 @@ return setmetatable({
 			local mode = args[2] ~= "" and args[2] or nil
 			M.open({ commit = commit, mode = mode })
 		end, { nargs = "*", desc = "Open Git Log Diff 4-Panel Dashboard" })
+
+		pcall(vim.api.nvim_create_user_command, "GitLogReviewExport", function()
+			if M.state.cwd then
+				local commit = M.state.commits[M.state.active_commit_idx]
+				local extra = commit and "Commit: " .. commit.hash or nil
+				review.export_to_clipboard(M.state.cwd, extra)
+			else
+				vim.notify("Git Log Diff is not active", vim.log.levels.WARN, { title = "Git Review" })
+			end
+		end, { desc = "Export Git Log Diff review annotations to clipboard as Markdown" })
 	end,
 }, { __index = M })

@@ -74,7 +74,36 @@ function M.workflow_status()
 		end
 	end
 	local ft = vim.bo.filetype
-	local review_active = ft == "diff" or ft == "git"
+	local review_filetypes = {
+		["diff"] = true,
+		["git"] = true,
+		["fox_diff_sidebar"] = true,
+		["fox_git_diff_menu"] = true,
+		["neogitcommitselectview"] = true,
+		["neogitcommitview"] = true,
+		["neogitconsole"] = true,
+		["neogitdiffview"] = true,
+		["neogitgitcommandhistory"] = true,
+		["neogitlogview"] = true,
+		["neogitpopup"] = true,
+		["neogitrebasetodo"] = true,
+		["neogitreflogview"] = true,
+		["neogitrefsview"] = true,
+		["neogitstatus"] = true,
+	}
+	local review_active = review_filetypes[ft] or false
+	if not review_active then
+		local ok_log_diff, log_diff = pcall(require, "plugins.fox.git.log_diff")
+		if ok_log_diff and log_diff.is_open and log_diff.is_open() then
+			review_active = true
+		end
+	end
+	if not review_active then
+		local ok_diff_mode, diff_mode = pcall(require, "plugins.fox.git.diff_mode")
+		if ok_diff_mode and diff_mode.is_open and diff_mode.is_open() then
+			review_active = true
+		end
+	end
 	local normal, dim = "%#StatusLine#", "%#FoxWorkflowInactive#"
 	return normal
 		.. "["

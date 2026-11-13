@@ -146,6 +146,12 @@ function _G.Smart_Close_Buffer(target_buf, force)
 	if not vim.api.nvim_buf_is_valid(target_buf) then
 		return
 	end
+	if not force and vim.bo[target_buf].buftype == "" and vim.bo[target_buf].modified then
+		require("fox.ui.unsaved_changes").confirm(target_buf, function()
+			_G.Smart_Close_Buffer(target_buf, true)
+		end)
+		return
+	end
 	local query = package.loaded["fox.query"]
 	if query and vim.b[target_buf].fox_query_root then
 		query.close_buffer(target_buf, force)

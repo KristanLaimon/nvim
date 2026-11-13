@@ -420,3 +420,35 @@ If any changed, refresh with `r`. Writes preserve line endings, encoding, final
 newlines, and buffer undo history. Save hooks are bypassed so formatters cannot
 change the previewed replacement. Multi-file writes are not transactional; a
 write failure reports how many files were already saved.
+
+## Optional plain editing
+
+Run `:FoxToggleVimMotions` or choose **Editor: Toggle Vim Motions / Plain Editing
+(VS Code style)** in the Command Palette. The default remains Vim editing.
+The toggle takes effect immediately and persists globally in
+`stdpath('data')/fox_plain_editing.json` (`nvim-data` on Windows), across projects
+and restarts.
+
+Plain editing automatically enters Insert mode in editable file windows. Escape
+dismisses completion without switching to Vim motions. Use arrows to navigate,
+Shift+arrows or the mouse to select, and type to replace a selection. Ctrl+A
+selects all; Ctrl+C/X/V copy, cut and paste selected text. Existing save and
+undo/redo shortcuts remain available. Run the same command to restore Vim editing.
+Terminals, read-only buffers, special panels and floating windows keep their
+normal interaction. This changes file editing, not Neovim's underlying modal UI.
+Dashboard buttons also support a single left click, including when plain editing
+is enabled. Clicking empty space does not activate a button.
+The last dashboard entry, **Vim motions: ON/OFF**, toggles the same persistent
+preference with a click or `v` and updates its label immediately.
+
+While plain editing is enabled, pausing the mouse over a symbol for 400 ms shows
+its LSP documentation without moving the caret or leaving Insert mode. Ctrl+click
+follows a link or goes to the symbol's definition. These code features require an
+attached language server that supports hover and definition requests; terminal
+mouse reporting must reach Neovim.
+
+Closing a modified file from the tab bar, Ctrl+W or `:FoxBd` first opens a clickable
+**Save / Don't Save / Cancel** dialog. Cancel is selected by default. A failed or
+cancelled save keeps the file open; untitled files ask for a destination. This
+protection applies to Vim editing too. Explicit force-close commands still discard
+changes without prompting.

@@ -67,11 +67,12 @@ return {
 			return vim.o.columns or 80
 		end
 
+		local get_dashboard_height
 		--- Returns an ASCII banner adapted to the current dashboard window width & environment.
 		--- @param target_width integer|nil
 		local function get_responsive_header(target_width)
 			local width = target_width or get_dashboard_width()
-			if width < 55 or env.is_mobile then
+			if width < 55 or env.is_mobile or get_dashboard_height() < 30 then
 				return {
 					[[        F O X N V I M        ]],
 					[[ "Foxes can be coders too!"]],
@@ -110,10 +111,8 @@ return {
 			end
 		end
 
-		dashboard.section.header.val = get_responsive_header()
-
 		--- Determines the visible height of the dashboard window.
-		local function get_dashboard_height()
+		get_dashboard_height = function()
 			for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 				if vim.api.nvim_win_is_valid(win) then
 					local cfg = vim.api.nvim_win_get_config(win)
@@ -128,6 +127,7 @@ return {
 			end
 			return vim.o.lines or 24
 		end
+		dashboard.section.header.val = get_responsive_header()
 
 		--- Calculates top padding lines so the dashboard content is centered vertically in the window.
 		local function get_vertical_padding()
@@ -222,6 +222,13 @@ return {
 		if ok_wsl and wsl.available() then
 			table.insert(dashboard.section.buttons.val, settings.wsl_button_position, make_button(settings.wsl_button))
 		end
+		table.insert(
+			dashboard.section.buttons.val,
+			dashboard.button("v", function()
+				return require("fox.core.plain_editing").enabled and "Vim motions: OFF (click to enable)"
+					or "Vim motions: ON (click to disable)"
+			end, ":FoxToggleVimMotions<CR>")
+		)
 
 		dashboard.section.footer.val = "⚡ FOX Neovim (" .. env.label .. ")"
 

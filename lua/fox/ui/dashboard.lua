@@ -59,14 +59,26 @@ function M.draw()
 	end
 	add("")
 	add("")
+	local spacing = sections.buttons.opts.spacing or 1
+	local count = #sections.buttons.val
+	if #lines + count + math.max(0, count - 1) * spacing + 2 > vim.api.nvim_win_get_height(win) then
+		spacing = 0
+	end
 	for i, button in ipairs(sections.buttons.val) do
-		local gap = math.max(0, math.min(50, width) - vim.fn.strdisplaywidth(button.label .. button.key))
-		local text = button.label .. string.rep(" ", gap) .. button.key
+		local label = value(button.label)
+		local gap = math.max(0, math.min(50, width) - vim.fn.strdisplaywidth(label .. button.key))
+		local text = label .. string.rep(" ", gap) .. button.key
 		local pad = add(text)
 		highlights[#highlights + 1] = { #lines - 1, pad + #text - #button.key, "Keyword", pad + #text }
-		rows[#rows + 1] = { line = #lines, column = pad + 3, button = button }
+		rows[#rows + 1] = {
+			line = #lines,
+			column = pad + 3,
+			first_column = pad + 1,
+			last_column = pad + vim.fn.strdisplaywidth(text),
+			button = button,
+		}
 		if i < #sections.buttons.val then
-			for _ = 1, sections.buttons.opts.spacing or 1 do
+			for _ = 1, spacing do
 				add("")
 			end
 		end
@@ -124,13 +136,35 @@ function M.start()
 				end
 			end
 		end, { buffer = state.buf })
+		local function click_button(key)
+			local mouse = vim.fn.getmousepos()
+			if mouse.winid == 0 or vim.api.nvim_win_get_buf(mouse.winid) ~= state.buf then
+				-- Buffer-local mouse maps also receive clicks aimed at other windows.
+				vim.api.nvim_feedkeys(vim.keycode(key), "n", false)
+				return
+			end
+			for index, entry in ipairs(state.rows or {}) do
+				if mouse.line == entry.line and mouse.column >= entry.first_column and mouse.column <= entry.last_column then
+					state.selected = index
+					vim.api.nvim_set_current_win(mouse.winid)
+					execute(entry.button)
+					return
+				end
+			end
+		end
+		for _, key in ipairs({ "<LeftMouse>", "<2-LeftMouse>", "<3-LeftMouse>", "<4-LeftMouse>" }) do
+			vim.keymap.set("n", key, function()
+				click_button(key)
+			end, { buffer = state.buf, desc = "Click dashboard button" })
+		end
 		for _, button in ipairs(state.opts.sections.buttons.val) do
 			vim.keymap.set("n", button.key, function()
 				execute(button)
-			end, { buffer = state.buf, desc = button.label })
+			end, { buffer = state.buf, desc = value(button.label) })
 		end
 	end
 	state.selected = 1
+	vim.cmd.stopinsert()
 	vim.api.nvim_win_set_buf(0, state.buf)
 	M.draw()
 	vim.api.nvim_exec_autocmds("User", { pattern = "AlphaReady", modeline = false })

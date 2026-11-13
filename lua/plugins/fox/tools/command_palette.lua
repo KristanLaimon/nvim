@@ -96,6 +96,7 @@ M.settings = {
 --- Everything the palette offers, in display order. EDIT THIS LIST.
 --- @type table[]
 M.commands = {
+	{ name = "Toggle Vim Motions / Plain Editing (VS Code style)", cmd = "FoxToggleVimMotions", category = "Editor" },
 	{ name = "Project Search Sidebar", cmd = "ProjectSearch", category = "Search" },
 	{ name = "Project-wide Replace Preview", cmd = "ProjectReplace", category = "Search" },
 	-- { name = "WakaTime: Coding Stats (ASCII Charts)", cmd = "WakaTimeStats", category = "Tools" },

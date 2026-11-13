@@ -210,10 +210,17 @@ M.goto_definition = goto_definition
 --- Handles Shift + Left Click: moves cursor to mouse position and follows link (if on a link) or jumps to definition.
 local function goto_definition_at_mouse()
 	local mouse_pos = vim.fn.getmousepos()
-	if mouse_pos and mouse_pos.winid > 0 and vim.api.nvim_win_is_valid(mouse_pos.winid) then
-		vim.api.nvim_set_current_win(mouse_pos.winid)
-		pcall(vim.api.nvim_win_set_cursor, mouse_pos.winid, { mouse_pos.line, math.max(0, mouse_pos.column - 1) })
+	if
+		not mouse_pos
+		or mouse_pos.winid == 0
+		or not vim.api.nvim_win_is_valid(mouse_pos.winid)
+		or mouse_pos.line < 1
+		or mouse_pos.column < 1
+	then
+		return
 	end
+	vim.api.nvim_set_current_win(mouse_pos.winid)
+	pcall(vim.api.nvim_win_set_cursor, mouse_pos.winid, { mouse_pos.line, math.max(0, mouse_pos.column - 1) })
 
 	local ok, hover_links = pcall(require, "plugins.fox.editor.hover_links")
 	if ok and hover_links.follow_link_at_cursor then

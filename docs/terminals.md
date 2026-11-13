@@ -26,6 +26,7 @@ Clicking terminal content enters terminal input mode, including when the termina
 - `<Ctrl + Up>`: Stretch terminal bigger (stretching upwards from top edge in bottom float / docked split; centered expansion in center float)
 - `<Ctrl + Down>`: Shrink terminal smaller (anchored at bottom edge in bottom float / docked split; centered shrink in center float)
 - `<C-w>` (inside terminal): Standard Neovim window navigation prefix
+- `:TerminalKillCurrent`: Stop and remove only the visible terminal; hidden slots keep running. Also available as **Kill Current Terminal** in the Command Palette. Does nothing when no terminal is open.
 - `:TerminalToggle`: Toggle show/hide for selected terminal
 - `:TerminalToggleLayout`: Toggle between Docked Split and Floating Overlay
 - `:TerminalLayout [dock|float|bottom_float]`: Set or switch terminal layout mode

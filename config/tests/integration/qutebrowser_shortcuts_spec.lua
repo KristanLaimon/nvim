@@ -1,7 +1,7 @@
 local t = require("fox.lib.foxnvim.test")
 local root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h:h:h")
 
-if vim.fn.executable("bash") == 0 or vim.fn.executable("python3") == 0 then
+if vim.fn.has("win32") == 0 and (vim.fn.executable("bash") == 0 or vim.fn.executable("python3") == 0) then
 	print("Skipping qutebrowser script tests: Bash and Python 3 are required.")
 	return
 end
@@ -42,7 +42,7 @@ t.describe("qutebrowser setup and undo", function()
 		assert((result.code ~= 0) == (fails == true), (result.stdout or "") .. (result.stderr or ""))
 	end
 
-	t.it("sets up a fresh config once and removes it on undo", function()
+	t.it.os("linux", "sets up a fresh config once and removes it on undo", function()
 		run("unsetup")
 		run("setup")
 		local installed = read(config)
@@ -55,7 +55,7 @@ t.describe("qutebrowser setup and undo", function()
 		run("unsetup")
 	end)
 
-	t.it("preserves existing settings, later edits, autoconfig and backups", function()
+	t.it.os("linux", "preserves existing settings, later edits, autoconfig and backups", function()
 		local original = "config.load_autoconfig(False)\nc.tabs.position = 'left'"
 		write(config, original)
 		write(temporary .. "/qutebrowser/autoconfig.yml", "existing autoconfig")
@@ -70,7 +70,7 @@ t.describe("qutebrowser setup and undo", function()
 		assert(read(temporary .. "/qutebrowser/autoconfig.yml") == "existing autoconfig")
 	end)
 
-	t.it("refuses to modify incomplete managed blocks", function()
+	t.it.os("linux", "refuses to modify incomplete managed blocks", function()
 		local broken = "\n# >>> FOXVIM QUTEBROWSER >>>\n# missing end\n"
 		write(config, broken)
 		run("setup", true)
@@ -78,13 +78,13 @@ t.describe("qutebrowser setup and undo", function()
 		assert(read(config) == broken)
 	end)
 
-	t.it("refuses to append to invalid Python", function()
+	t.it.os("linux", "refuses to append to invalid Python", function()
 		write(config, "this is not valid Python !!!")
 		run("setup", true)
 		assert(read(config) == "this is not valid Python !!!")
 	end)
 
-	t.it("separates tab/history navigation and preserves native DevTools shortcuts", function()
+	t.it.os("linux", "separates tab/history navigation and preserves native DevTools shortcuts", function()
 		run("setup")
 		local check = [[
 import sys

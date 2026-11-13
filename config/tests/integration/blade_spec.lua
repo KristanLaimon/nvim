@@ -19,6 +19,8 @@ t.describe("Blade editor integration", function()
 		vim.cmd("normal! gg=G")
 		t.expect(vim.api.nvim_buf_get_lines(b, 0, -1, false))
 			.toEqual({ "<div>", "  @if($ok)", "    <p>{{ $value }}</p>", "  @else", "    <br>", "  @endif", "</div>" })
+		-- An installed Tree-sitter parser disables regex syntax; stopping it must restore the fallback.
+		vim.treesitter.stop(b)
 		t.expect(vim.b.current_syntax).toBe("blade")
 		vim.api.nvim_buf_delete(b, { force = true })
 		vim.fn.delete(file)

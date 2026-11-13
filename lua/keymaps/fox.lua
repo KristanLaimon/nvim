@@ -66,7 +66,7 @@ M.settings = {
 		toggle_last_output_no_terminal = {},
 		--- Prefix for per-slot task output toggles; the slot number is appended.
 		task_slot_prefix = "<C-",
-		explorer = { "<C-/>", "<C-_>" },
+		explorer = { "<C-/>", "<C-_>", "<C-S-f>" },
 		wsl_explorer = nil,
 		--- Run the current Lua script.
 		run_script = { "<C-,>", "<C-comma>" },

@@ -434,22 +434,30 @@ end
 --- it("should calculate total", function()
 ---     expect(10 + 20).toBe(30)
 --- end)
-function M.test(test_name, test_fn)
+function M.test(test_name, test_fn, options)
 	if not state.current_suite then
 		M.describe("Default Test Suite", function()
-			M.test(test_name, test_fn)
+			M.test(test_name, test_fn, options)
 		end)
 		return
 	end
 	table.insert(state.current_suite.tests, {
 		name = test_name,
 		fn = test_fn,
+		os = options and options.os,
 	})
 end
 
 --- Alias for `test()`.
 M.it = setmetatable({
 	skip = function() end,
+	os = function(os_name, test_name, test_fn)
+		assert(
+			os_name == "windows" or os_name == "linux" or os_name == "macos",
+			"Unsupported test OS: " .. tostring(os_name)
+		)
+		M.test(test_name, test_fn, { os = os_name })
+	end,
 }, {
 	__call = function(_, ...)
 		return M.test(...)
@@ -577,6 +585,8 @@ function M.run(options)
 	init_utf8()
 	local total_passed = 0
 	local total_failed = 0
+	local total_os_dependent = 0
+	local current_os = vim.fn.has("win32") == 1 and "windows" or vim.fn.has("macunix") == 1 and "macos" or "linux"
 	local get_time = function()
 		if vim and vim.uv and vim.uv.hrtime then
 			return vim.uv.hrtime() / 1e6
@@ -636,48 +646,77 @@ function M.run(options)
 		if not only_failure then
 			report(string.format("\n %s %s", icon_suite, suite.name))
 		end
-		for _, fn in ipairs(suite.before_all) do
-			pcall(fn)
+		local runnable = false
+		for _, test in ipairs(suite.tests) do
+			runnable = runnable or not test.os or test.os == current_os
+		end
+		if runnable then
+			for _, fn in ipairs(suite.before_all) do
+				pcall(fn)
+			end
 		end
 		for _, test in ipairs(suite.tests) do
-			local t_start = get_time()
-			local _, outcome, output = execute(function()
-				for _, fn in ipairs(suite.before_each) do
-					pcall(fn)
-				end
-				local ok, err = pcall(test.fn)
-				for _, fn in ipairs(suite.after_each) do
-					pcall(fn)
-				end
-				return { ok = ok, err = err }
-			end)
-			local elapsed = math.floor(get_time() - t_start)
-			if outcome.ok then
-				total_passed = total_passed + 1
-				if not only_failure then
-					report(string.format("   %s %s (%dms)", icon_pass, test.name, elapsed))
-				end
+			if test.os and test.os ~= current_os then
+				total_os_dependent = total_os_dependent + 1
+				report(
+					string.format(
+						"Not-Tests OS-Dependent: %s / %s (requires %s; running %s)",
+						suite.name,
+						test.name,
+						test.os,
+						current_os
+					)
+				)
 			else
-				total_failed = total_failed + 1
-				if only_failure and not reported then
-					report(string.format("\n %s %s", icon_suite, suite.name))
-					reported = true
-				end
-				report(string.format("   %s %s (%dms)", icon_fail, test.name, elapsed))
-				report("      Error: " .. tostring(outcome.err))
-				for _, arguments in ipairs(output) do
-					report(unpack(arguments, 1, arguments.n))
+				local t_start = get_time()
+				local _, outcome, output = execute(function()
+					for _, fn in ipairs(suite.before_each) do
+						pcall(fn)
+					end
+					local ok, err = pcall(test.fn)
+					for _, fn in ipairs(suite.after_each) do
+						pcall(fn)
+					end
+					return { ok = ok, err = err }
+				end)
+				local elapsed = math.floor(get_time() - t_start)
+				if outcome.ok then
+					total_passed = total_passed + 1
+					if not only_failure then
+						report(string.format("   %s %s (%dms)", icon_pass, test.name, elapsed))
+					end
+				else
+					total_failed = total_failed + 1
+					if only_failure and not reported then
+						report(string.format("\n %s %s", icon_suite, suite.name))
+						reported = true
+					end
+					report(string.format("   %s %s (%dms)", icon_fail, test.name, elapsed))
+					report("      Error: " .. tostring(outcome.err))
+					for _, arguments in ipairs(output) do
+						report(unpack(arguments, 1, arguments.n))
+					end
 				end
 			end
 		end
-		for _, fn in ipairs(suite.after_all) do
-			pcall(fn)
+		if runnable then
+			for _, fn in ipairs(suite.after_all) do
+				pcall(fn)
+			end
 		end
 	end
 
 	local total_time = math.floor(get_time() - start_time)
 	report("\n==========================================")
-	report(string.format(" Test Results: %d Passed, %d Failed (%dms)", total_passed, total_failed, total_time))
+	report(
+		string.format(
+			" Test Results: %d Passed, %d Failed, %d Not-Tests OS-Dependent (%dms)",
+			total_passed,
+			total_failed,
+			total_os_dependent,
+			total_time
+		)
+	)
 	report("==========================================\n")
 
 	-- Reset state for subsequent test runs
@@ -688,7 +727,7 @@ function M.run(options)
 		error("Test suite failed with " .. total_failed .. " error(s).")
 	end
 
-	return { passed = total_passed, failed = total_failed, duration = total_time }
+	return { passed = total_passed, failed = total_failed, os_dependent = total_os_dependent, duration = total_time }
 end
 
 -- Make the module table directly callable: test(...) -> test.test(...) / M.test(...)

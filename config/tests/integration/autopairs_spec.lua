@@ -79,7 +79,7 @@ t.describe("native pairs through real insert mappings and Blink", function()
 	end)
 
 	t.it("accepts a real Blink snippet with Enter without retyping its brackets", function()
-		local channel = vim.fn.jobstart({ "nvim", "--embed", "--headless", "-u", "NONE" }, { rpc = true })
+		local channel = vim.fn.jobstart({ vim.v.progpath, "--embed", "--headless", "-i", "NONE" }, { rpc = true })
 		local function call(method, ...)
 			local ok, value = pcall(vim.rpcrequest, channel, method, ...)
 			if not ok then
@@ -92,7 +92,6 @@ t.describe("native pairs through real insert mappings and Blink", function()
 		end
 		local ok, err = xpcall(function()
 			call("nvim_ui_attach", 100, 35, { rgb = true })
-			lua("vim.o.loadplugins = true; dofile(" .. string.format("%q", vim.fn.stdpath("config") .. "/init.lua") .. ")")
 			lua([[vim.cmd.enew(); vim.bo.filetype='lua']])
 			call("nvim_input", "i(")
 			t.expect(vim.wait(3000, function()

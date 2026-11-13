@@ -242,4 +242,38 @@ describe("plugins.fox.editor.neotree_mover", function()
 		expect(vim.fn.filereadable(dest_dir .. "/Button.tsx") == 1).toBe(true)
 		expect(vim.fn.isdirectory(source_dir) == 0).toBe(true)
 	end)
+	it("moves all selected siblings, ignoring duplicate nodes", function()
+		local first = { path = test_root .. "/src/components/Button.tsx", type = "file" }
+		local second = { path = test_root .. "/src/components/Card.tsx", type = "file" }
+		mover.handle_move(first, nil, { first, second, first })
+		mover.handle_move({ path = test_root .. "/docs", type = "directory" })
+		for _, name in ipairs({ "Button.tsx", "Card.tsx" }) do
+			expect(vim.fn.filereadable(test_root .. "/docs/" .. name)).toBe(1)
+			expect(vim.fn.filereadable(test_root .. "/src/components/" .. name)).toBe(0)
+		end
+		expect(mover.is_holding()).toBe(false)
+	end)
+
+	it("moves a selected parent with its descendants only once", function()
+		local parent = { path = test_root .. "/src/components", type = "directory" }
+		local child = { path = parent.path .. "/Button.tsx", type = "file" }
+		mover.handle_move(child, nil, { child, parent })
+		mover.handle_move({ path = test_root .. "/docs", type = "directory" })
+		expect(vim.fn.filereadable(test_root .. "/docs/components/Button.tsx")).toBe(1)
+		expect(vim.fn.filereadable(test_root .. "/docs/Button.tsx")).toBe(0)
+		expect(vim.fn.isdirectory(parent.path)).toBe(0)
+	end)
+
+	it("checks all destinations before moving any selected item", function()
+		vim.fn.writefile({ "existing" }, test_root .. "/docs/Card.tsx")
+		local first = { path = test_root .. "/src/components/Button.tsx", type = "file" }
+		local second = { path = test_root .. "/src/components/Card.tsx", type = "file" }
+		mover.handle_move(first, nil, { first, second })
+		mover.handle_move({ path = test_root .. "/docs", type = "directory" })
+		expect(vim.fn.filereadable(first.path)).toBe(1)
+		expect(vim.fn.filereadable(second.path)).toBe(1)
+		expect(vim.fn.filereadable(test_root .. "/docs/Button.tsx")).toBe(0)
+		expect(vim.fn.readfile(test_root .. "/docs/Card.tsx")[1]).toBe("existing")
+		expect(mover.is_holding()).toBe(false)
+	end)
 end)

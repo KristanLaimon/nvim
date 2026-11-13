@@ -84,4 +84,49 @@ t.describe("terminal return focus", function()
 		vim.api.nvim_set_current_win(original)
 		assert(ok, err)
 	end)
+	t.it("kills only the visible terminal job and leaves hidden slots running", function()
+		local original = vim.api.nvim_get_current_win()
+		local original_buf = vim.api.nvim_get_current_buf()
+		local selected = terminal.get_selected_terminal()
+		local buffers, jobs = {}, {}
+		local ok, err = pcall(function()
+			for i, slot in ipairs({ 8, 9 }) do
+				local buf = vim.api.nvim_create_buf(false, true)
+				buffers[i] = buf
+				vim.api.nvim_set_current_buf(buf)
+				vim.b[buf].fox_is_multi_term = true
+				vim.b[buf].fox_term_num = slot
+				vim.b[buf].fox_env_slot = _G._fox_active_env_slot or 1
+				jobs[i] = vim.fn.jobstart({ vim.v.progpath, "--headless", "-u", "NONE", "-c", "sleep 60" }, { term = true })
+				assert(jobs[i] > 0, "terminal job failed to start")
+			end
+			vim.api.nvim_set_current_buf(original_buf)
+			terminal.open_terminal(9, false)
+			local pane = vim.api.nvim_get_current_win()
+			-- Palette actions can execute with focus in an editor window.
+			vim.api.nvim_set_current_win(original)
+			terminal.kill_current_terminal()
+			t.expect(vim.api.nvim_buf_is_valid(buffers[2])).toBe(false)
+			t.expect(vim.api.nvim_win_is_valid(pane)).toBe(false)
+			t.expect(vim.wait(2000, function()
+				return vim.fn.jobwait({ jobs[2] }, 0)[1] ~= -1
+			end)).toBe(true)
+			t.expect(vim.api.nvim_buf_is_valid(buffers[1])).toBe(true)
+			t.expect(vim.fn.jobwait({ jobs[1] }, 0)[1]).toBe(-1)
+			terminal.kill_current_terminal()
+			t.expect(vim.fn.jobwait({ jobs[1] }, 0)[1]).toBe(-1)
+		end)
+		for _, job in ipairs(jobs) do
+			pcall(vim.fn.jobstop, job)
+		end
+		for _, buf in ipairs(buffers) do
+			if vim.api.nvim_buf_is_valid(buf) then
+				vim.api.nvim_buf_delete(buf, { force = true })
+			end
+		end
+		_G._fox_selected_terminal = selected
+		vim.api.nvim_set_current_win(original)
+		vim.api.nvim_set_current_buf(original_buf)
+		assert(ok, err)
+	end)
 end)

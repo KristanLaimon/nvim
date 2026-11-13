@@ -12,6 +12,7 @@ FOX Neovim includes native floating file explorers for Desktop, WSL, folder pick
 2. **WSL Explorer (`:TelescopeFileBrowserWSL`)**: Native WSL distribution filesystem explorer.
 3. **Neo-tree Move ("En la mano" Workflow) (`m`)**:
    - Press `m` on any file or folder to pick it up ("En la mano"). A persistent toast notification appears showing the held item.
+   - To move several entries, select their rows in Visual mode (`V`, then move the cursor) and press `m` to pick up the whole range. Selected folders include their children automatically. Destination conflicts cancel the entire selection before anything moves.
    - Navigate to the destination directory (or any file inside it) in Neo-tree and press `m` again to move it.
    - If `m` is pressed in the same directory or on the same item, the move is cancelled and a warning notifies you that it was already in the same place.
    - Press `<Esc>` at any time while holding an item to cancel the move.

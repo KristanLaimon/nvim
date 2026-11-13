@@ -640,6 +640,27 @@ function M.hide_terminal()
 	end
 end
 
+--- Stops and removes only the visible terminal, leaving hidden slots running.
+function M.kill_current_terminal()
+	local current = vim.api.nvim_get_current_win()
+	local win = is_term_win(current) and current or get_active_terminal_win()
+	if not win then
+		vim.notify("No terminal is open.", vim.log.levels.INFO, { title = "Terminal" })
+		return
+	end
+	local buf = vim.api.nvim_win_get_buf(win)
+	pcall(vim.cmd, "stopinsert")
+	vim.api.nvim_buf_delete(buf, { force = true })
+	if vim.api.nvim_win_is_valid(win) then
+		pcall(vim.api.nvim_win_close, win, true)
+	end
+	for _, term in pairs(terminals) do
+		if term.buf == buf then
+			term.buf, term.win = nil, nil
+		end
+	end
+end
+
 --- Hides the terminal when focused, shows or creates it otherwise.
 function M.toggle_selected_terminal()
 	sync_terminals()
@@ -868,6 +889,10 @@ function M.setup()
 		M.toggle_selected_terminal()
 	end, { desc = "Toggle selected terminal window" })
 
+	vim.api.nvim_create_user_command("TerminalKillCurrent", function()
+		M.kill_current_terminal()
+	end, { desc = "Kill only the currently open terminal" })
+
 	vim.api.nvim_create_user_command("TerminalToggleLayout", function()
 		M.toggle_layout()
 	end, { desc = "Toggle terminal layout between Docked Split and Floating Overlay" })
@@ -1045,6 +1070,7 @@ return setmetatable({
 	event = { "TermOpen" },
 	cmd = {
 		"TerminalToggle",
+		"TerminalKillCurrent",
 		"TerminalSelect",
 		"TerminalToggleLayout",
 		"TerminalLayout",

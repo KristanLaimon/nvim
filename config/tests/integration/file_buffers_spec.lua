@@ -2,7 +2,7 @@ local t = require("fox.lib.foxnvim.test")
 require("lazy").load({ plugins = { "neo-tree.nvim" } })
 t.describe("Neo-tree native buffer operations", function()
 	t.it("moves a real file while retaining its dirty buffer and undo", function()
-		local dir = vim.fn.tempname()
+		local dir = vim.fs.normalize(vim.fn.tempname())
 		vim.fn.mkdir(dir, "p")
 		local old, new = dir .. "/old.lua", dir .. "/new.lua"
 		vim.fn.writefile({ "original" }, old)

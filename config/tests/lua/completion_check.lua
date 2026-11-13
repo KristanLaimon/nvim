@@ -88,11 +88,14 @@ local ok, err = pcall(function()
 	}, 10000, module_buf)
 	local found = false
 	for _, location in ipairs(response and response.result or {}) do
-		if location.uri == vim.uri_from_bufnr(buf) and location.range.start.line == 2 then
+		if
+			require("fox.core.path").equals(vim.uri_to_fname(location.uri), vim.api.nvim_buf_get_name(buf))
+			and location.range.start.line == 2
+		then
 			found = true
 		end
 	end
-	assert(found, "SayHello reference in main.lua was not found")
+	assert(found, "SayHello reference in main.lua was not found: " .. vim.inspect(response))
 	print("PASS: SayHello reference in main.lua")
 end)
 if client then

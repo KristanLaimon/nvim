@@ -336,30 +336,30 @@ M.commands = {
 	-- },
 	-- { name = "📦 Install BladeNav Artisan Command", cmd = "BladeNavInstallArtisanCommand", category = "PHP / Laravel" },
 	--
-	-- { name = "Packages: Show available versions", cmd = "PackageInfoShow", category = "JavaScript / TypeScript" },
-	-- {
-	-- 	name = "Packages: Refresh versions (ignore cache)",
-	-- 	cmd = "PackageInfoShowForce",
-	-- 	category = "JavaScript / TypeScript",
-	-- },
-	-- { name = "Packages: Hide versions", cmd = "PackageInfoHide", category = "JavaScript / TypeScript" },
-	-- { name = "Packages: Toggle versions", cmd = "PackageInfoToggle", category = "JavaScript / TypeScript" },
-	-- {
-	-- 	name = "Packages: Update dependency on this line",
-	-- 	cmd = "PackageInfoUpdate",
-	-- 	category = "JavaScript / TypeScript",
-	-- },
-	-- {
-	-- 	name = "Packages: Remove dependency on this line",
-	-- 	cmd = "PackageInfoDelete",
-	-- 	category = "JavaScript / TypeScript",
-	-- },
-	-- { name = "Packages: Install a dependency", cmd = "PackageInfoInstall", category = "JavaScript / TypeScript" },
-	-- {
-	-- 	name = "Packages: Choose dependency version",
-	-- 	cmd = "PackageInfoChangeVersion",
-	-- 	category = "JavaScript / TypeScript",
-	-- },
+	{ name = "Packages: Show available versions", cmd = "PackageInfoShow", category = "JavaScript / TypeScript" },
+	{
+		name = "Packages: Refresh versions (ignore cache)",
+		cmd = "PackageInfoShowForce",
+		category = "JavaScript / TypeScript",
+	},
+	{ name = "Packages: Hide versions", cmd = "PackageInfoHide", category = "JavaScript / TypeScript" },
+	{ name = "Packages: Toggle versions", cmd = "PackageInfoToggle", category = "JavaScript / TypeScript" },
+	{
+		name = "Packages: Update dependency on this line",
+		cmd = "PackageInfoUpdate",
+		category = "JavaScript / TypeScript",
+	},
+	{
+		name = "Packages: Remove dependency on this line",
+		cmd = "PackageInfoDelete",
+		category = "JavaScript / TypeScript",
+	},
+	{ name = "Packages: Install a dependency", cmd = "PackageInfoInstall", category = "JavaScript / TypeScript" },
+	{
+		name = "Packages: Choose dependency version",
+		cmd = "PackageInfoChangeVersion",
+		category = "JavaScript / TypeScript",
+	},
 
 	-- --------------------------------------------------------------------------
 	-- 🐍 Python Environment & Interpreter
@@ -503,6 +503,7 @@ M.commands = {
 		end,
 		category = "Terminal",
 	},
+	{ name = "Kill Current Terminal", cmd = "TerminalKillCurrent", category = "Terminal" },
 	{ name = "🖥️ Stretch Terminal Bigger (<Ctrl+Up>)", cmd = "TerminalIncreaseHeight", category = "Terminal" },
 	{ name = "🖥️ Shrink Terminal Smaller (<Ctrl+Down>)", cmd = "TerminalDecreaseHeight", category = "Terminal" },
 

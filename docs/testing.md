@@ -28,6 +28,23 @@ errors, and the final totals and exit
 status remain unchanged. Omit the flag when verbose output is useful. The flag
 also works with `run_me.lua --tests` or `--all`.
 
+After adding or modifying code, run the complete suites after the final change
+and fix failures at their root cause. Focused runs are for iteration; do not
+weaken assertions or bypass failures to finish with a passing result.
+
+Register OS-specific cases with `t.it.os("linux", name, fn)` or
+`t.it.os("windows", name, fn)` (`"macos"` is also supported). On another OS,
+the runner skips the case and its hooks and reports **Not-Tests OS-Dependent**.
+These cases count as neither passed nor failed, and remain visible with
+`--only-failure`. Tests for the current OS still run normally.
+
+The editor integration runner starts each spec in a fresh Neovim process after
+startup completes. This isolates cwd, buffer, keymap and lazy-loading fixtures
+between specs. Each spec has a two-minute timeout; crashes and timeouts fail
+the run.
+On Windows, the runner requires Python (standard library only) to isolate process
+handles and capture output without inherited pipes holding the run open.
+
 `:FoxTest` and `run_me.lua` launch the unit suite in a clean Neovim process so
 test mocks cannot interfere with the editor's plugins or active language servers.
 

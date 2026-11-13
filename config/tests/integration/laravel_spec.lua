@@ -1,7 +1,7 @@
 local t = require("fox.lib.foxnvim.test")
 t.describe("Local Laravel editor integration", function()
 	t.it("navigates with local gf and supplies Blink completions without blade-nav", function()
-		local root = vim.fn.tempname()
+		local root = vim.fs.normalize(vim.fn.tempname())
 		vim.fn.mkdir(root .. "/resources/views", "p")
 		vim.fn.writefile({}, root .. "/artisan")
 		vim.fn.writefile({ "{}" }, root .. "/composer.json")

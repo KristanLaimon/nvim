@@ -138,6 +138,20 @@ Detailed setup, Ex commands, DAP debug profiles, and plugin integrations for eac
 
 ## 🧪 5. Headless Quality Checks (CI / CLI)
 
+Whenever adding or modifying code in this repository, AI assistants MUST finish
+with all tests applicable to the current OS green and report OS exclusions
+separately. Run the complete test suites after the final code change,
+including integration tests; focused runs are only for iteration and do not
+replace the final full runs. Fix failures at their root cause, including existing
+bugs exposed by the full suites. Do not weaken assertions, skip or disable tests,
+hide failures, or add test-only workarounds merely to obtain a passing result.
+Tests that require another operating system MUST be skipped on the current OS
+and reported separately as **Not-Tests OS-Dependent**, counting as neither passed
+(green) nor failed. Apply this in both directions (Linux on Windows and Windows
+on Linux); retain and run those tests on their supported OS.
+If an environment or dependency prevents a suite from running, report the exact
+blocker and do not claim the work is fully verified or all tests are green.
+
 AI assistants MUST use `--only-failure` by default for test runs, including filtered
 runs. This keeps failed cases, their captured diagnostics, and final totals
 without printing hundreds of passing tests. Use verbose output only when a

@@ -12,9 +12,20 @@ t.describe("Test runner failure-only output", function()
 package.path = %q .. '/lua/?.lua;' .. package.path
 local t = require('fox.lib.foxnvim.test')
 local _, options = t.parse_args(arg)
+local foreign_hooks = 0
 t.describe('passing suite', function()
- t.it('passing case', function() print('passing diagnostic'); vim.notify('passing notification'); vim.api.nvim_echo({{'passing echo'}},false,{}) end)
+ t.it.os(vim.fn.has('win32') == 1 and 'windows' or vim.fn.has('macunix') == 1 and 'macos' or 'linux', 'passing case', function() print('passing diagnostic'); vim.notify('passing notification'); vim.api.nvim_echo({{'passing echo'}},false,{}) end)
 end)
+if vim.env.FOX_REPORTER_OS == '1' then
+ local other_os = vim.fn.has('win32') == 1 and 'linux' or 'windows'
+ t.describe('foreign OS suite', function()
+  t.beforeAll(function() foreign_hooks = foreign_hooks + 1 end)
+  t.beforeEach(function() foreign_hooks = foreign_hooks + 1 end)
+  t.it.os(other_os, 'foreign OS case', function() error('foreign case must not run') end)
+  t.afterEach(function() foreign_hooks = foreign_hooks + 1 end)
+  t.afterAll(function() foreign_hooks = foreign_hooks + 1 end)
+ end)
+end
 if vim.env.FOX_REPORTER_FAIL == '1' then
  t.describe('failing suite', function()
   t.beforeEach(function() print('failure setup diagnostic') end)
@@ -22,7 +33,10 @@ if vim.env.FOX_REPORTER_FAIL == '1' then
  end)
 end
 local old_print, old_notify, old_echo = print, vim.notify, vim.api.nvim_echo
-local ok = pcall(t.run, options)
+local ok, result = pcall(t.run, options)
+if vim.env.FOX_REPORTER_OS == '1' then
+ assert(ok and result.passed == 1 and result.failed == 0 and result.os_dependent == 1 and foreign_hooks == 0)
+end
 assert(print == old_print and vim.notify == old_notify and vim.api.nvim_echo == old_echo)
 os.exit(ok and 0 or 1)
 ]],
@@ -37,10 +51,18 @@ os.exit(ok and 0 or 1)
 	t.afterEach(function()
 		vim.fn.delete(fixture)
 	end)
-	local function run(args, fail)
+	local function run(args, fail, os_dependent)
 		local cmd = { vim.v.progpath, "-l", fixture }
 		vim.list_extend(cmd, args or {})
-		local result = vim.system(cmd, { text = true, env = { FOX_REPORTER_FAIL = fail and "1" or "0" } }):wait(10000)
+		local result = vim
+			.system(cmd, {
+				text = true,
+				env = {
+					FOX_REPORTER_FAIL = fail and "1" or "0",
+					FOX_REPORTER_OS = os_dependent and "1" or "0",
+				},
+			})
+			:wait(10000)
 		return result.code, (result.stdout or "") .. (result.stderr or "")
 	end
 	t.it("hides passing cases, passing suites and passing diagnostics but retains totals", function()
@@ -72,6 +94,16 @@ os.exit(ok and 0 or 1)
 		t.expect(output).toContain("passing case")
 		t.expect(output).toContain("passing diagnostic")
 	end)
+	t.it("reports foreign OS cases separately without running them or counting them as passing", function()
+		for _, args in ipairs({ {}, { "--only-failure" } }) do
+			local code, output = run(args, false, true)
+			t.expect(code).toBe(0)
+			t.expect(output).toContain("1 Passed, 0 Failed, 1 Not-Tests OS-Dependent")
+			t.expect(output).toContain("Not-Tests OS-Dependent: foreign OS suite / foreign OS case")
+			t.expect(output:find("must not run", 1, true)).toBe(nil)
+		end
+	end)
+
 	t.it("accepts a filename filter before or after the flag", function()
 		for _, args in ipairs({
 			{ "tasks", "--only-failure" },

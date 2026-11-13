@@ -1,10 +1,7 @@
 local t = require("fox.lib.foxnvim.test")
 
 t.describe("Windows folder shell associations", function()
-	t.it("opens a literal folder through Neo-tree and the project-root command in real Explorer", function()
-		if vim.fn.has("win32") ~= 1 then
-			return
-		end
+	t.it.os("windows", "opens a literal folder through Neo-tree and the project-root command in real Explorer", function()
 		require("lazy").load({ plugins = { "neo-tree.nvim", "image_viewer" } })
 		local dir = vim.fn.tempname() .. " folder & quote' %"
 		vim.fn.mkdir(dir, "p")

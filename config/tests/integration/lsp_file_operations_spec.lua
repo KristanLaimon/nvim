@@ -2,7 +2,7 @@ local t = require("fox.lib.foxnvim.test")
 require("lazy").load({ plugins = { "neo-tree.nvim" } })
 t.describe("LSP file operation transport", function()
 	t.it("applies a willRename edit and sends didRename over stdio", function()
-		local dir = vim.fn.tempname()
+		local dir = vim.fs.normalize(vim.fn.tempname())
 		vim.fn.mkdir(dir, "p")
 		local old, new, log = dir .. "/a.ts", dir .. "/b.ts", dir .. "/notifications.json"
 		vim.fn.writefile({ "old value" }, old)

@@ -2,7 +2,7 @@
 local t = require("fox.lib.foxnvim.test")
 local root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h:h:h")
 
-if vim.fn.executable("kitty") == 0 or vim.fn.executable("bash") == 0 then
+if vim.fn.has("win32") == 0 and (vim.fn.executable("kitty") == 0 or vim.fn.executable("bash") == 0) then
 	print("Skipping Kitty shortcut integration tests: Kitty and Bash are required.")
 	return
 end
@@ -119,7 +119,7 @@ assert unrelated[-1].definition == 'copy_to_clipboard', unrelated
 		environments = "# >>> FOXVIM KITTY ENVIRONMENTS >>>\n" .. maps .. "# <<< FOXVIM KITTY ENVIRONMENTS <<<\n",
 		legacy = "# Pass environment shortcuts through to Neovim instead of focusing Kitty windows.\n" .. maps,
 	}) do
-		t.it("upgrades the " .. name .. " block and preserves other settings on undo", function()
+		t.it.os("linux", "upgrades the " .. name .. " block and preserves other settings on undo", function()
 			write(config, base .. block)
 			run_script("setup-kitty.sh")
 			local configured = read(config)
@@ -135,14 +135,14 @@ assert unrelated[-1].definition == 'copy_to_clipboard', unrelated
 		end)
 	end
 
-	t.it("also removes the previous shortcut block on undo", function()
+	t.it.os("linux", "also removes the previous shortcut block on undo", function()
 		write(config, base .. previous)
 		run_script("unsetup-kitty.sh")
 		t.expect(read(config)).toBe(base)
 		assert_passthrough(false)
 	end)
 
-	t.it("updates the user include without changing the main config", function()
+	t.it.os("linux", "updates the user include without changing the main config", function()
 		write(config, "include user.conf\n")
 		local user = temporary .. "/kitty/user.conf"
 		write(user, base)

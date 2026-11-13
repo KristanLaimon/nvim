@@ -660,6 +660,11 @@ return {
 						require("plugins.fox.editor.neotree_mover").handle_move(node, state)
 					end,
 
+					move_item_visual = function(state, selected_nodes)
+						local node = state and state.tree and state.tree:get_node()
+						require("plugins.fox.editor.neotree_mover").handle_move(node, state, selected_nodes)
+					end,
+
 					cancel_move = function(state)
 						local mover = require("plugins.fox.editor.neotree_mover")
 						if mover.is_holding() then

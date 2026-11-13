@@ -1,8 +1,7 @@
 local t = require("fox.lib.foxnvim.test")
 t.describe("Caps Lock sysfs through polling and native notifications", function()
-	t.it("warns after the default delay, once per activation, and resets on off/focus loss", function()
-		local linux, shared = require("fox.core.os.linux"), require("fox.core.os.shared")
-		assert(shared.is_linux, "This integration checks the Linux keyboard backend")
+	t.it.os("linux", "warns after the default delay, once per activation, and resets on off/focus loss", function()
+		local linux = require("fox.core.os.linux")
 		local root, old_root = vim.fn.tempname(), linux.led_root
 		vim.fn.mkdir(root .. "/input1::capslock", "p")
 		local path = root .. "/input1::capslock/brightness"

@@ -23,6 +23,7 @@
 local M = {}
 
 M.held_item = nil
+M.held_items = nil
 M.toast_record = nil
 M.toast_id = "neotree_mover_toast"
 
@@ -179,6 +180,7 @@ function M.cancel()
 	end
 
 	M.held_item = nil
+	M.held_items = nil
 	M.dismiss_toast("Movimiento cancelado.", vim.log.levels.INFO)
 	return true
 end
@@ -187,130 +189,109 @@ end
 function M.reset()
 	if M.is_holding() then
 		M.held_item = nil
+		M.held_items = nil
 		M.dismiss_toast(nil)
 	end
 end
 
---- Executes the move action triggered by 'm' in Neo-tree.
---- If not holding: picks up the node under cursor "En la mano".
---- If already holding: moves the held item to the selected target directory.
+--- Picks up a node or visual selection, or drops held items at the target.
 --- @param node table|nil
 --- @param state table|nil
-function M.handle_move(node, state)
-	-- First press: Pick up item
+--- @param selected_nodes table[]|nil
+function M.handle_move(node, state, selected_nodes)
 	if not M.is_holding() then
-		if not node or not node.path or node.path == "" then
-			vim.notify("⚠️ No hay ningún archivo o carpeta seleccionada para mover.", vim.log.levels.WARN, {
-				title = "Neo-tree",
-			})
+		local items, seen = {}, {}
+		for _, selected in ipairs(selected_nodes or { node }) do
+			if selected.path and selected.path ~= "" and (selected.type == "file" or selected.type == "directory") then
+				local path = M.normalize_path(selected.path)
+				if not seen[path] then
+					seen[path] = true
+					table.insert(items, {
+						path = path,
+						name = selected.name or vim.fn.fnamemodify(path, ":t"),
+						type = selected.type,
+						is_dir = selected.type == "directory" or vim.fn.isdirectory(path) == 1,
+						parent = M.normalize_path(vim.fn.fnamemodify(path, ":h")),
+					})
+				end
+			end
+		end
+		-- Expanded folders already carry their selected descendants with them.
+		items = vim.tbl_filter(function(item)
+			for _, parent in ipairs(items) do
+				if parent.is_dir and item.path:sub(1, #parent.path + 1) == parent.path .. "/" then
+					return false
+				end
+			end
+			return true
+		end, items)
+		if #items == 0 then
+			vim.notify("No files or folders selected to move.", vim.log.levels.WARN, { title = "Neo-tree" })
 			return
 		end
-
-		local norm_path = M.normalize_path(node.path)
-		local is_dir = (node.type == "directory" or vim.fn.isdirectory(norm_path) == 1)
-		local name = node.name or vim.fn.fnamemodify(norm_path, ":t")
-		local parent = M.normalize_path(vim.fn.fnamemodify(norm_path, ":h"))
-
-		M.held_item = {
-			path = norm_path,
-			name = name,
-			type = node.type or (is_dir and "directory" or "file"),
-			is_dir = is_dir,
-			parent = parent,
-		}
-
-		M.show_persistent_toast(M.held_item)
+		M.held_items, M.held_item = items, items[1]
+		M.show_persistent_toast(#items == 1 and items[1] or { name = string.format("%d items", #items) })
 		return
 	end
 
-	-- Second press: Drop / move item
-	local held = M.held_item
+	local items = M.held_items
 	local target_dir = M.resolve_target_dir(node, state)
-	local orig_parent = held.parent
-	local orig_path = held.path
-	local dest_path = M.normalize_path(target_dir .. "/" .. held.name)
-
-	-- Check 1: Same directory / same place
-	if target_dir == orig_parent or dest_path == orig_path then
-		M.held_item = nil
-		M.dismiss_toast(
-			string.format("⚠️ '%s' ya estaba en donde mismo. Movimiento cancelado.", held.name),
-			vim.log.levels.WARN
-		)
-		return
-	end
-
-	-- Check 2: Moving a directory into itself or one of its descendants
-	if held.is_dir and (target_dir == orig_path or target_dir:sub(1, #orig_path + 1) == orig_path .. "/") then
-		M.held_item = nil
-		M.dismiss_toast(
-			string.format("⚠️ No puedes mover la carpeta '%s' dentro de sí misma. Movimiento cancelado.", held.name),
-			vim.log.levels.WARN
-		)
-		return
-	end
-
-	-- Check 3: Collision with existing file or folder in target directory
 	local uv = vim.uv or vim.loop
-	if uv.fs_stat(dest_path) ~= nil then
-		M.held_item = nil
-		M.dismiss_toast(
-			string.format("❌ Ya existe un elemento llamado '%s' en el destino. Movimiento cancelado.", held.name),
-			vim.log.levels.ERROR
-		)
-		return
+	local destinations = {}
+	-- Validate the entire selection before moving anything.
+	for _, held in ipairs(items) do
+		local dest_path = M.normalize_path(target_dir .. "/" .. held.name)
+		local err
+		if target_dir == held.parent or dest_path == held.path then
+			err = string.format("'%s' is already in this directory. Move cancelled.", held.name)
+		elseif held.is_dir and (target_dir == held.path or target_dir:sub(1, #held.path + 1) == held.path .. "/") then
+			err = string.format("Cannot move '%s' into itself. Move cancelled.", held.name)
+		elseif destinations[dest_path] or uv.fs_stat(dest_path) ~= nil then
+			err = string.format("An item named '%s' already exists at the destination. Move cancelled.", held.name)
+		end
+		if err then
+			M.held_item, M.held_items = nil, nil
+			M.dismiss_toast(err, vim.log.levels.WARN)
+			return
+		end
+		destinations[dest_path] = true
 	end
 
-	-- Ensure target directory exists
 	if vim.fn.isdirectory(target_dir) == 0 then
 		vim.fn.mkdir(target_dir, "p")
 	end
 
-	-- Check 4: Perform filesystem move
-	local ok, err = os.rename(orig_path, dest_path)
-	if not ok then
-		local uv_ok, uv_err = uv.fs_rename(orig_path, dest_path)
-		if uv_ok then
-			ok = true
-			err = nil
-		else
-			err = uv_err or err
+	local moved = 0
+	local failure
+	for _, held in ipairs(items) do
+		local dest_path = M.normalize_path(target_dir .. "/" .. held.name)
+		local ok, err = os.rename(held.path, dest_path)
+		if not ok then
+			ok, err = uv.fs_rename(held.path, dest_path)
 		end
-	end
-
-	if ok then
-		-- Fire neo-tree FILE_MOVED event for LSP file operations
+		if not ok then
+			failure = string.format("Moved %d of %d items. Error moving '%s': %s", moved, #items, held.name, tostring(err))
+			break
+		end
+		moved = moved + 1
 		local ok_ev, events = pcall(require, "neo-tree.events")
 		if ok_ev and events and events.FILE_MOVED then
-			pcall(events.fire_event, events.FILE_MOVED, {
-				source = orig_path,
-				destination = dest_path,
-			})
+			pcall(events.fire_event, events.FILE_MOVED, { source = held.path, destination = dest_path })
 		end
-
-		-- Update open buffers and bufferline tabs
 		local ok_br, buffer_rename = pcall(require, "fox.core.buffer_rename")
 		if ok_br and buffer_rename and buffer_rename.update_buffers_path then
-			pcall(buffer_rename.update_buffers_path, orig_path, dest_path)
+			pcall(buffer_rename.update_buffers_path, held.path, dest_path)
 		end
-
-		M.held_item = nil
-
-		-- Refresh Neo-tree filesystem
-		pcall(function()
-			require("neo-tree.sources.manager").refresh("filesystem")
-		end)
-
-		local display_target = vim.fn.fnamemodify(target_dir, ":~:.")
-		if display_target == "" or display_target == "." then
-			display_target = target_dir
-		end
-
-		M.dismiss_toast(string.format("🚚 Movido: '%s' ➜ %s", held.name, display_target), vim.log.levels.INFO)
-	else
-		M.held_item = nil
-		M.dismiss_toast(string.format("❌ Error al mover '%s': %s", held.name, tostring(err)), vim.log.levels.ERROR)
 	end
+
+	M.held_item, M.held_items = nil, nil
+	pcall(function()
+		require("neo-tree.sources.manager").refresh("filesystem")
+	end)
+	M.dismiss_toast(
+		failure or string.format("Moved %d item(s) to %s", moved, target_dir),
+		failure and vim.log.levels.ERROR or vim.log.levels.INFO
+	)
 end
 
 --- Helper for Ex command / Command Palette invocation.

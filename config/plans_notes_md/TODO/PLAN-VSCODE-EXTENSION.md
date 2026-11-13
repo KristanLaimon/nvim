@@ -291,7 +291,7 @@ Exit: reproducible installation and demonstrated workflow coverage. Publishing i
 
 ## 10. Validation strategy
 
-Test ported behavior at its actual boundary: real temporary Git repositories for staging, renames, hooks, conflicts and submodules; fixture project files for detection/translation; temporary files and dirty documents for edits; actual extension-host commands/views for focus and lifecycle. Reuse relevant cases from `config/tests/` as specifications.
+Test ported behavior at its actual boundary: real temporary Git repositories for staging, renames, hooks, conflicts and submodules; fixture project files for detection/translation; temporary files and dirty documents for edits; actual extension-host commands/views for focus and lifecycle. Reuse relevant cases from `tests/` as specifications.
 
 Add targeted unit tests for parsers/translators and meaningful extension-host integration tests. Keyboard automation or repeatable manual scripts must cover list navigation, input fields, Escape, return focus and terminal routing; pure unit tests cannot establish mouse-free usability. Record native/provider-specific gaps alongside the scenario.
 

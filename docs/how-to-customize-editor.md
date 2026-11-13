@@ -31,7 +31,7 @@ find and change almost anything without needing to ask for help:
 
 If the change touches logic (not just a setting value), skim
 [Testing](testing.md#🔧-i-edited-a-plugin-file--do-i-need-a-test) — most
-features have a matching `config/tests/spec/<feature>_spec.lua` you can run in under a
+features have a matching `tests/spec/<feature>_spec.lua` you can run in under a
 second while you iterate.
 
 ---

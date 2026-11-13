@@ -100,7 +100,7 @@ knows nothing about this configuration.
 
 **Layer 2 — Shared libraries (`lua/fox/`).** Pure Lua. No keymaps, no autocmds,
 no user commands, no global state. Everything here is unit-testable without
-starting a plugin, which is exactly why the tests in `config/tests/spec/` are fast.
+starting a plugin, which is exactly why the tests in `tests/spec/` are fast.
 
 **Layer 3 — Features (`lua/plugins/`).** Each file returns a lazy.nvim spec.
 This is where UI, keymaps, commands and state live. FOX features may use
@@ -290,7 +290,7 @@ Global state (caches, not settings) lives under `stdpath("data")`:
 | Add a language to run/debug | `lua/fox/launch/runtimes.lua` + `lua/plugins/fox/debuggers/` | See [adding-language.md](adding-language.md). |
 | Add an editor option | `lua/vim_options.lua` | The `settings` table at the top. |
 | Change a feature's behaviour | That module's `M.settings` block | Always the first thing in the file. |
-| Add a test | `config/tests/spec/` or `config/tests/integration/` | See [testing.md](testing.md). |
+| Add a test | `tests/spec/` or `tests/integration/` | See [testing.md](testing.md). |
 
 ---
 
@@ -340,9 +340,9 @@ Rules that are load-bearing rather than cosmetic:
 
 ```mermaid
 graph LR
-    SYNTAX["config/tests/syntax_check.lua<br/>parses every Lua file"]
-    UNIT["config/tests/run.lua<br/>config/tests/spec/*_spec.lua"]
-    INTEG["config/tests/integration/run.lua<br/>*_spec.lua with plugins"]
+    SYNTAX["tests/syntax_check.lua<br/>parses every Lua file"]
+    UNIT["tests/run.lua<br/>tests/spec/*_spec.lua"]
+    INTEG["tests/integration/run.lua<br/>*_spec.lua with plugins"]
     FOXNVIM["lua/fox/lib/foxnvim/tests/<br/>library suite"]
 
     SYNTAX --> UNIT --> INTEG
@@ -350,9 +350,9 @@ graph LR
 ```
 
 ```sh
-nvim -l config/tests/syntax_check.lua                 # nothing is broken
-nvim -l config/tests/run.lua                          # unit specs (fast, no plugins)
-nvim --headless -S config/tests/integration/run.lua   # with the real editor
+nvim -l tests/syntax_check.lua                 # nothing is broken
+nvim -l tests/run.lua                          # unit specs (fast, no plugins)
+nvim --headless -S tests/integration/run.lua   # with the real editor
 ```
 
 Details, and how to write a spec, in [testing.md](testing.md).

@@ -547,7 +547,7 @@ Panel-local keys should be familiar: arrows or `h/j/k/l`, Enter to inspect, `/` 
 | `lua/plugins/fox/editor/buffer_cleaner.lua`, bufferline | Preserve ownership, unsaved edits, close behavior, and visible tabs. |
 | `lua/plugins/lsp/lsp.lua`, `blink_sources.lua` | Reuse completion; keep SQL-specific configuration in its language module. |
 | `lua/fox/langs/` | SQL tooling in `sql/init.lua`, registered in `langs/init.lua`, optional LanguageManager bundle. |
-| `config/tests/`, `docs/` | Focused behavior/integration checks and dedicated SQL/query-mode docs during implementation. |
+| `tests/`, `docs/` | Focused behavior/integration checks and dedicated SQL/query-mode docs during implementation. |
 
 Suggested ownership: domain/session/cache logic under `lua/fox/query/`, thin FOX plugin entry following current grouping, language-tooling settings in `lua/fox/langs/sql/init.lua`. Create modules only when responsibilities justify them. Never scatter SQL language settings across aggregators.
 

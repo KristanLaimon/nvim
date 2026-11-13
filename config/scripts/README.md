@@ -60,7 +60,7 @@ Optional real-engine regression check (requires qutebrowser and its Qt dependenc
 
 ```bash
 QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= QT_STYLE_OVERRIDE=Fusion QT_IM_MODULE= \
-  python3 config/tests/integration/qutebrowser_devtools_check.py --only-failure
+  python3 tests/integration/qutebrowser_devtools_check.py --only-failure
 ```
 
 ## Other tools

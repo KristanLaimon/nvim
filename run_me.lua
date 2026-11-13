@@ -30,7 +30,7 @@ local test_options = {}
 
 local function run_tests()
 	console.log("[run_me] Running Test Suite...")
-	local runner = dofile(root .. "/config/tests/run.lua")
+	local runner = dofile(root .. "/tests/run.lua")
 	local code = runner.run(root, nil, test_options)
 	if code ~= 0 then
 		print(cli.colorize("[run_me] Tests failed (exit " .. code .. ").", cli.colors.red))
@@ -40,7 +40,7 @@ end
 
 local function run_syntax()
 	console.log("[run_me] Running Syntax Check...")
-	local result = vim.system({ vim.v.progpath, "-l", root .. "/config/tests/syntax_check.lua" }, { text = true }):wait()
+	local result = vim.system({ vim.v.progpath, "-l", root .. "/tests/syntax_check.lua" }, { text = true }):wait()
 	print((result.stdout or "") .. (result.stderr or ""))
 	local code = result.code
 	if code ~= 0 then
@@ -133,8 +133,8 @@ end
 
 local function show_menu()
 	local options = {
-		"Run Test Suite (config/tests/run.lua)",
-		"Run Syntax Check (config/tests/syntax_check.lua)",
+		"Run Test Suite (tests/run.lua)",
+		"Run Syntax Check (tests/syntax_check.lua)",
 		"Run Setup Dependencies (install.ps1 / install.sh)",
 		"Setup Windows Terminal Keymaps (setup-powershell.ps1)",
 		"Unsetup Windows Terminal Keymaps (unsetup-powershell.ps1)",

@@ -78,9 +78,9 @@ Start here if you are reading the code:
 ## 🧪 Tests
 
 ```sh
-nvim -l config/tests/syntax_check.lua                 # every Lua file still parses
-nvim -l config/tests/run.lua                          # unit specs (fast, no plugins)
-nvim --headless -S config/tests/integration/run.lua   # with the real editor loaded
+nvim -l tests/syntax_check.lua                 # every Lua file still parses
+nvim -l tests/run.lua                          # unit specs (fast, no plugins)
+nvim --headless -S tests/integration/run.lua   # with the real editor loaded
 ```
 
 Support assets, scripts, tests, and bundled tools live under `config/`. Plans and notes are in

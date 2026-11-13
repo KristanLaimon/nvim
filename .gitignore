@@ -1,8 +1,8 @@
 test.sh
 test.ps1
-config/tests/lua/json_out
-config/tests/lua/output_test
-config/tests/lua/output_tests
+tests/lua/json_out
+tests/lua/output_test
+tests/lua/output_tests
 json_out
 output_test
 output_tests

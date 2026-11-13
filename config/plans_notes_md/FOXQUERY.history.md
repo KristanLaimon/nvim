@@ -73,11 +73,11 @@ Integration:
 
 Tests:
 
-- `config/tests/spec/query_spec.lua` — lexer/scopes, roles, joins, diagrams, project storage/validation.
-- `config/tests/spec/query_ui_spec.lua` — layouts, direct mode cycling, shortcuts/navigation, session exclusion, real SQLite worker, JOIN insertion, compact mode.
-- `config/tests/spec/query_usability_spec.lua` — completion/ambiguity/current statement, UML alignment, SQLite profile picker, shared explorer navigation/callback.
-- `config/tests/spec/query_live_spec.lua` — SELECT debounce/guard/parameters, real SQLite execution/restore/failure badges, connection CRUD, key delivery aliases, both layouts, dim columns/FK candidates.
-- `config/tests/spec/statusline_spec.lua` — workflow label/highlights/current-tab handling and presence in all statusline themes.
+- `tests/spec/query_spec.lua` — lexer/scopes, roles, joins, diagrams, project storage/validation.
+- `tests/spec/query_ui_spec.lua` — layouts, direct mode cycling, shortcuts/navigation, session exclusion, real SQLite worker, JOIN insertion, compact mode.
+- `tests/spec/query_usability_spec.lua` — completion/ambiguity/current statement, UML alignment, SQLite profile picker, shared explorer navigation/callback.
+- `tests/spec/query_live_spec.lua` — SELECT debounce/guard/parameters, real SQLite execution/restore/failure badges, connection CRUD, key delivery aliases, both layouts, dim columns/FK candidates.
+- `tests/spec/statusline_spec.lua` — workflow label/highlights/current-tab handling and presence in all statusline themes.
 - `config/tools/repos/foxquery/driver_test.go` — disposable SQLite/binding/read-only/caps/cancellation/transport tests.
 
 Docs/design:
@@ -100,8 +100,8 @@ Earlier authorized production check used the application account, not root: veri
 Useful commands from repository root:
 
 ```text
-nvim --headless -u NONE -i NONE -l config/tests/run.lua query
-nvim --headless -u NONE -i NONE -l config/tests/run.lua
+nvim --headless -u NONE -i NONE -l tests/run.lua query
+nvim --headless -u NONE -i NONE -l tests/run.lua
 cd config/tools/repos/foxquery && go test -mod=vendor ./...
 ```
 

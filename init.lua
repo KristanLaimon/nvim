@@ -13,8 +13,8 @@
 --   lua/fox/       Shared internal libraries (core, git, launch, lsp).
 --   lua/plugins/   One lazy.nvim spec per file, grouped by area.
 --   lua/fox/lib/foxnvim/   Lua libraries for Neovim.
---   config/        Runtime files, assets, licenses, scripts, tools, plans, and tests.
---   config/tests/  Unit specs (`nvim -l config/tests/run.lua`) and integration specs.
+--   config/        Runtime files, assets, licenses, scripts, tools, and plans.
+--   tests/         Unit specs (`nvim -l tests/run.lua`) and integration specs.
 --   docs/          Architecture and feature documentation.
 --
 -- See docs/architecture.md for the full picture.
@@ -51,10 +51,10 @@ vim.api.nvim_create_user_command("ReloadConfig", function()
 end, {})
 
 -- Run the test suite from inside the editor. The same specs run headlessly with
--- `nvim -l config/tests/run.lua`; see config/tests/run.lua for the runner itself.
+-- `nvim -l tests/run.lua`; see tests/run.lua for the runner itself.
 vim.api.nvim_create_user_command("FoxTest", function(command)
 	local root = vim.fn.stdpath("config")
-	local runner = dofile(root .. "/config/tests/run.lua")
+	local runner = dofile(root .. "/tests/run.lua")
 	local filter, options = runner.parse_args(vim.split(command.args, "%s+", { trimempty = true }))
 	runner.run(root, filter, options)
 end, { nargs = "*", desc = "Run FOX tests with an optional spec filter and --only-failure" })

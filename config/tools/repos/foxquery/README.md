@@ -43,7 +43,7 @@ After the first build, run backend tests without rebuilding everything:
 go test -mod=vendor ./...
 ```
 
-`config/tests/query/fixture.db` is a committed SQLite test fixture. To regenerate it
+`tests/query/fixture.db` is a committed SQLite test fixture. To regenerate it
 after changing `fixture()` in `driver_test.go`, set `FOXQUERY_FIXTURE` to that
 file's absolute path and run `go test -mod=vendor -run TestExportLuaFixture`.
 Production code has no database creation or write operation.

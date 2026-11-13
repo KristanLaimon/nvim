@@ -171,7 +171,7 @@ Linux validation against local MariaDB 10.11.19 passed through Neovim and the bu
 Run from the configuration root:
 
 ```text
-nvim --headless -u NONE -i NONE -l config/tests/run.lua query --only-failure
+nvim --headless -u NONE -i NONE -l tests/run.lua query --only-failure
 ```
 
 Run from `config/tools/repos/foxquery/`:

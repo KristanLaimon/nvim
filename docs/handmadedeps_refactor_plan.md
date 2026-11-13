@@ -126,7 +126,7 @@ These external plugins will be **removed from `lazy.nvim`** and replaced with pu
 ### Automated Tests
 1. Execute the full Neovim unit test suite after each component is added:
    ```powershell
-   nvim -l config/tests/run.lua
+   nvim -l tests/run.lua
    ```
 2. Verify all **402+ tests pass with 0 failures**.
 

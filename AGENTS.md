@@ -158,9 +158,9 @@ without printing hundreds of passing tests. Use verbose output only when a
 specific investigation needs it. Prefer focused tests while iterating:
 
 ```bash
-nvim -l config/tests/run.lua --only-failure
-nvim -l config/tests/run.lua tasks --only-failure
-nvim --headless -S config/tests/integration/run.lua -- kitty_shortcuts --only-failure
+nvim -l tests/run.lua --only-failure
+nvim -l tests/run.lua tasks --only-failure
+nvim --headless -S tests/integration/run.lua -- kitty_shortcuts --only-failure
 ```
 
 Run all quality gates from the command line without opening the UI:

@@ -97,7 +97,7 @@ If you have just installed or launched FoxVim for the first time, follow these s
 | 🧬 [**Managing Lua Type Schemas**](how-to-manage-lua-type-schemas.md) | Create/update/delete/register a [Type Injector](type-injector.md) Lua schema by hand, no picker needed |
 | 🧬 [**Managing TypeScript Type Schemas**](how-to-manage-typescript-type-schemas.md) | Same, for TypeScript/JS — fetching real `.d.ts` files straight from the npm registry, no `npm install` |
 | 📶 [**Dynamic Z-Index Manager**](z-index.md) | Centralized Z-index stack manager (`fox.core.z_index`) for floating windows |
-| 🧪 [**Testing Suite**](testing.md) | Running unit & integration tests (`:FoxTest`, `config/tests/run.lua`) |
+| 🧪 [**Testing Suite**](testing.md) | Running unit & integration tests (`:FoxTest`, `tests/run.lua`) |
 
 ---
 

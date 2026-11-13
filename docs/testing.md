@@ -12,12 +12,12 @@ typo in a plugin file is invisible until then.
 
 | Command | What it checks | Speed |
 | :--- | :--- | :--- |
-| `nvim -l config/tests/syntax_check.lua` | Every `.lua` file parses | instant |
-| `nvim -l config/tests/run.lua --only-failure` | Full Lua suite, including worker and local HTTP checks | about 1–2 minutes |
-| `nvim -l config/tests/run.lua tasks --only-failure` | Only specs whose name contains "tasks" | ~1s |
-| `nvim --headless -S config/tests/integration/run.lua -- --only-failure` | Specs that need the real editor | a few seconds |
-| `node config/tests/integration/markdown_browser.mjs` | GFM and Mermaid rendering and live updates in Chromium | a few seconds |
-| `nvim --headless -S config/tests/integration/run.lua -- kitty_shortcuts --only-failure` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
+| `nvim -l tests/syntax_check.lua` | Every `.lua` file parses | instant |
+| `nvim -l tests/run.lua --only-failure` | Full Lua suite, including worker and local HTTP checks | about 1–2 minutes |
+| `nvim -l tests/run.lua tasks --only-failure` | Only specs whose name contains "tasks" | ~1s |
+| `nvim --headless -S tests/integration/run.lua -- --only-failure` | Specs that need the real editor | a few seconds |
+| `node tests/integration/markdown_browser.mjs` | GFM and Mermaid rendering and live updates in Chromium | a few seconds |
+| `nvim --headless -S tests/integration/run.lua -- kitty_shortcuts --only-failure` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
 | `:FoxTest --only-failure` | Full Lua suite in a separate headless process | about 1–2 minutes |
 | `:FoxTest git --only-failure` | Filtered, from inside the editor | ~1s |
 
@@ -58,7 +58,7 @@ validation.
 The browser test runs from the config root and requires Node 22+, Chromium/Edge,
 and `nvim`. It uses the local FOX Markdown preview and starts an isolated
 browser profile and a local preview server, checks
-[`config/tests/fixtures/markdown/gfm.md`](../config/tests/fixtures/markdown/gfm.md), and removes
+[`tests/fixtures/markdown/gfm.md`](../tests/fixtures/markdown/gfm.md), and removes
 its temporary files afterward.
 
 Integration tests use the existing Lua runner where possible. The Chromium test
@@ -74,19 +74,19 @@ All of them exit non-zero on failure, so they work unchanged in CI or a git hook
 ## 🗂️ Layout
 
 ```
-config/tests/
-├── run.lua              Unit runner: loads every config/tests/spec/*_spec.lua, prints one summary
+tests/
+├── run.lua              Unit runner: loads every tests/spec/*_spec.lua, prints one summary
 ├── syntax_check.lua     Compiles (never runs) every Lua file in the repository
 ├── spec/                Unit specs -- pure logic, no plugins loaded (one file per feature)
 ├── integration/         Specs that need plugins and a real UI (run.lua + a handful of *_spec.lua)
 └── lua/                 Lua library specs and LuaLS completion check
 ```
 
-`config/tests/spec/` has one `*_spec.lua` per feature (`tasks_spec.lua`, `git_status_spec.lua`,
+`tests/spec/` has one `*_spec.lua` per feature (`tasks_spec.lua`, `git_status_spec.lua`,
 `wiki_modal_spec.lua`, and so on) — the filename always matches the module it pins down, so
-if you're editing `lua/plugins/fox/tasks.lua`, its test is `config/tests/spec/tasks_spec.lua`. This
-list grows constantly, so don't trust a snapshot of it here — `nvim -l config/tests/run.lua --only-failure` summarizes
-the current suite (omit `--only-failure` to list passing cases), and `ls config/tests/spec/` shows the files directly.
+if you're editing `lua/plugins/fox/tasks.lua`, its test is `tests/spec/tasks_spec.lua`. This
+list grows constantly, so don't trust a snapshot of it here — `nvim -l tests/run.lua --only-failure` summarizes
+the current suite (omit `--only-failure` to list passing cases), and `ls tests/spec/` shows the files directly.
 
 The Lua in Neovim library keeps its own suite in `lua/fox/lib/foxnvim/tests/`, run with
 `require("fox.lib.foxnvim.tests").run_all()`.
@@ -100,7 +100,7 @@ Both runners use the same framework, `foxnvim.test` — the Vitest-style
 
 ```lua
 -- ============================================================================
--- config/tests/spec/my_feature_spec.lua -- What this file pins down.
+-- tests/spec/my_feature_spec.lua -- What this file pins down.
 -- ============================================================================
 -- Why these particular cases matter.
 -- ============================================================================
@@ -130,7 +130,7 @@ Lifecycle hooks: `beforeEach`, `afterEach`, `beforeAll`, `afterAll`.
    `vim.fn.tempname()`, no changing the working directory. Clean up in
    `afterEach`.
 2. **Unit specs must not need a plugin.** If it needs telescope or nvim-dap, it
-   belongs in `config/tests/integration/`, which boots the full config.
+   belongs in `tests/integration/`, which boots the full config.
 3. **Test the contract, not the implementation.** A spec that breaks whenever the
    code is reorganized is worse than no spec.
 4. **Name the case, not the function.** `it("returns the fallback for malformed
@@ -168,24 +168,24 @@ pays for itself the first time a later edit breaks it silently. If it's pure UI
 layout (window size, border color, title text), skip it; see the note above.
 
 1. **Find its spec.** Filename mirrors the module: editing
-   `lua/plugins/fox/tasks.lua` → open `config/tests/spec/tasks_spec.lua`. Nothing there
+   `lua/plugins/fox/tasks.lua` → open `tests/spec/tasks_spec.lua`. Nothing there
    yet? Copy the shape from [Writing a spec](#✍️-writing-a-spec) above and create
-   `config/tests/spec/<module>_spec.lua` — `config/tests/run.lua` picks up every file in that
+   `tests/spec/<module>_spec.lua` — `tests/run.lua` picks up every file in that
    folder automatically, no registration step.
 2. **Write the case in plain language first**, then the assertion:
    `it("does not share its open key with LSP go-to-definition", ...)` reads as a
    sentence on its own, before you ever look at the `expect(...)` line.
-3. **Run just that spec while you iterate**: `nvim -l config/tests/run.lua tasks --only-failure` (or
+3. **Run just that spec while you iterate**: `nvim -l tests/run.lua tasks --only-failure` (or
    `:FoxTest tasks --only-failure` inside the editor) filters by filename substring, so you're
    not waiting on the whole suite every save.
-4. **Run everything once before you're done**: `nvim -l config/tests/run.lua --only-failure` — a change
+4. **Run everything once before you're done**: `nvim -l tests/run.lua --only-failure` — a change
    in a shared module (`lua/fox/core/*.lua`) can break a spec for a completely
    different feature that happens to depend on it.
 
 Check real LuaLS completion (requires Mason LuaLS):
 
 ```sh
-nvim -l config/tests/lua/completion_check.lua
+nvim -l tests/lua/completion_check.lua
 ```
 
 This checks a markerless `main.lua` / `library.lua` project, `lua/` modules and

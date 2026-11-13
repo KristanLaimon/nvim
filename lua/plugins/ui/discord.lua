@@ -56,6 +56,10 @@ for _, name in ipairs({ "DiscordReload", "CordReload" }) do
 	pcall(vim.api.nvim_create_user_command, name, hot_reload, { desc = "Hot-reload Discord plugin (cord.nvim)" })
 end
 
+vim.api.nvim_create_user_command("DiscordPrivacy", function()
+	require("fox.discord").select_privacy()
+end, { desc = "Set Discord privacy for this project", force = true })
+
 return {
 	"vyfor/cord.nvim",
 	build = ":Cord update",

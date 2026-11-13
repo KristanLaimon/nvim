@@ -139,7 +139,7 @@ that choice stays active until Git Center closes. Tab opens the details as a ful
 `H` and `F3` open repository Log Diff; `F2` opens file history. `h` keeps its Vim motion.
 Graph's former f canvas shortcut is now F6, preserving the f motion.
 
-In the Diff Mode sidebar, press `s` (or run `:GitDiffRendering`) to toggle Classic
+In the Diff Mode sidebar or code panels, press `s` (or run `:GitDiffRendering`) to toggle Classic
 and **Before | After** rendering while keeping the same comparison and selected
 file. Press `q` to return to Diff Mode Manager, then `q` again to return to Git Center.
 

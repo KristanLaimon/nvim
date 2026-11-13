@@ -1,6 +1,104 @@
 local t = require("fox.lib.foxnvim.test")
 local discord = require("fox.discord")
 
+t.describe("Discord Git activity and privacy", function()
+	local root, original, buf, saved, select
+	local modules = { "plugins.fox.git.diff_mode", "plugins.fox.git.log_diff", "plugins.fox.git.git_center.config" }
+	t.beforeEach(function()
+		root = vim.fn.tempname()
+		vim.fn.mkdir(root .. "/.foxnvim", "p")
+		original = vim.api.nvim_get_current_buf()
+		buf = vim.api.nvim_create_buf(false, true)
+		vim.api.nvim_buf_set_name(buf, root .. "/private.lua")
+		vim.api.nvim_set_current_buf(buf)
+		saved = {}
+		for _, module in ipairs(modules) do
+			saved[module] = package.loaded[module]
+			package.loaded[module] = nil
+		end
+		select = vim.ui.select
+	end)
+	t.afterEach(function()
+		vim.ui.select = select
+		for _, module in ipairs(modules) do
+			package.loaded[module] = saved[module]
+		end
+		vim.api.nvim_set_current_buf(original)
+		vim.api.nvim_buf_delete(buf, { force = true })
+		vim.fn.delete(root, "rf")
+	end)
+	t.it("reports Git scopes without branch names, hashes or file paths and follows focus", function()
+		local win = vim.api.nvim_get_current_win()
+		local state = { is_active = true, editor_win = win, cwd = root, commits_behind = 0, base_ref = "HEAD" }
+		package.loaded[modules[1]] = { state = state }
+		t.expect(discord.git_activity()).toBe("Reviewing Working Tree vs HEAD")
+		state.commits_behind = 7
+		t.expect(discord.git_activity()).toBe("Reviewing last 7 commits")
+		state.commits_behind, state.base_ref = 0, "sensitive-branch"
+		t.expect(discord.git_activity()).toBe("Reviewing a whole branch...")
+		state.custom_commits = true
+		t.expect(discord.git_activity()).toBe("Reviewing selected commits...")
+		package.loaded[modules[2]] = { state = { is_open = true, after_win = win, cwd = root } }
+		t.expect(discord.git_activity()).toBe("Reviewing commit log...")
+		vim.bo.filetype = "fox_git_diff_menu"
+		t.expect(discord.git_activity()).toBe("Selecting how to review project...")
+		vim.bo.filetype = "lua"
+		package.loaded[modules[2]] = nil
+		package.loaded[modules[3]] = {
+			main_win = win,
+			get_active_target = function()
+				return { full_path = root }
+			end,
+		}
+		t.expect(discord.git_activity()).toBe("Gitting around...")
+		package.loaded[modules[3]] = nil
+		state.editor_win = nil
+		t.expect(discord.git_activity()).toBe(nil)
+	end)
+	t.it("persists all three levels, strips private fields, and fails closed for invalid config", function()
+		local function activity()
+			local value = {
+				details = "Editing " .. root .. "/private.lua",
+				state = "In secret-project",
+				buttons = { { label = "Repository", url = "https://private.example/repo" } },
+				assets = { large_image = "lua-icon", large_text = root, small_text = root },
+			}
+			discord.post_activity({ workspace_dir = root, filetype = "lua" }, value)
+			return value
+		end
+		t.expect(discord.privacy(root)).toBe("none")
+		t.expect(activity().state).toBe("In secret-project")
+		for _, level in ipairs({ "project", "full", "none" }) do
+			vim.ui.select = function(_, _, callback)
+				callback(level)
+			end
+			discord.select_privacy()
+			t.expect(discord.privacy(root)).toBe(level)
+			local value = activity()
+			if level ~= "none" then
+				t.expect(value.buttons).toBe(nil)
+				t.expect(value.assets.large_text).toBe("lua")
+				t.expect(value.assets.large_image).toBe("lua-icon")
+				t.expect(vim.json.encode(value):find(root, 1, true)).toBe(nil)
+			end
+			if level == "full" then
+				t.expect(value.details).toBe("Editing code")
+				t.expect(value.state).toBe(nil)
+			elseif level == "project" then
+				t.expect(value.details).toBe("Editing private.lua")
+				t.expect(value.state:sub(1, 3)).toBe("in ")
+			end
+		end
+		vim.fn.writefile({ "broken JSON" }, root .. "/.foxnvim/discord.json")
+		t.expect(discord.privacy(root)).toBe("full")
+		vim.ui.select = function(_, _, callback)
+			callback(nil)
+		end
+		discord.select_privacy()
+		t.expect(discord.privacy(root)).toBe("full")
+	end)
+end)
+
 t.describe("Discord application identity", function()
 	t.it("applies config to the existing Cord modules before restarting its server", function()
 		local modules = {

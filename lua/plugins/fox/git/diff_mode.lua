@@ -85,6 +85,20 @@ M.state = {
 local EMPTY_TREE_SHA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 local render_file_list = nil
+local code_maps = {}
+
+local function set_code_toggles(buf)
+	if code_maps[buf] then
+		return
+	end
+	code_maps[buf] = {}
+	for key, callback in pairs({ B = M.toggle_blame, s = M.toggle_rendering }) do
+		code_maps[buf][key] = vim.api.nvim_buf_call(buf, function()
+			return vim.fn.maparg(key, "n", false, true)
+		end)
+		vim.keymap.set("n", key, callback, { buffer = buf, silent = true, nowait = true })
+	end
+end
 
 --- Notifies user with Diff Mode prefix
 --- @param msg string
@@ -1279,6 +1293,7 @@ render_file_list = function()
 	table.insert(lines, " [B]: Toggle Blame Author Column")
 	table.insert(lines, " [s]: Classic / Before | After")
 	table.insert(lines, " [q]: Back to Diff Mode Manager")
+	table.insert(lines, "")
 	table.insert(lines, " Annotations (in code panels):")
 	table.insert(lines, " [c]: Add | [C]: Copy whole session")
 	table.insert(lines, " [da]: Delete | [U]: Sessions")
@@ -1827,6 +1842,7 @@ function M.open_file_same_branch(file_path, opts)
 	local cur_win = vim.api.nvim_get_current_win()
 	local editor_buf = vim.api.nvim_win_get_buf(cur_win)
 	local r_opts = { buffer = editor_buf, noremap = true, silent = true, nowait = true }
+	set_code_toggles(editor_buf)
 	vim.keymap.set("n", "c", function()
 		local line = vim.api.nvim_win_get_cursor(0)[1]
 		review.add_annotation(file_path, line, M.state.cwd)
@@ -2130,6 +2146,7 @@ function M.open_file_between_branches(file_path, opts)
 
 	-- Set buffer-local keymaps for dual code panels
 	for _, buf in ipairs({ left_buf, right_buf }) do
+		set_code_toggles(buf)
 		-- J / K: jump to next / previous diff hunk
 		vim.keymap.set("n", "J", function()
 			M.jump_next_modification()
@@ -2258,6 +2275,19 @@ function M.close(opts)
 	is_closing = true
 
 	local status, err = pcall(function()
+		for buf, mappings in pairs(code_maps) do
+			if vim.api.nvim_buf_is_valid(buf) then
+				vim.api.nvim_buf_call(buf, function()
+					for key, mapping in pairs(mappings) do
+						pcall(vim.keymap.del, "n", key, { buffer = buf })
+						if mapping.buffer == 1 then
+							vim.fn.mapset("n", false, mapping)
+						end
+					end
+				end)
+			end
+		end
+		code_maps = {}
 		local is_between_branches = (M.state.mode == "between_branches")
 			or (M.state.dual_left_win ~= nil)
 			or (M.state.dual_right_win ~= nil)

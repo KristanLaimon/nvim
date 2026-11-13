@@ -2,9 +2,16 @@ local M = {}
 local ns = vim.api.nvim_create_namespace("fox_git_diff_menu")
 
 function M.open(title, cards, confirm, back)
+	local presence = package.loaded["fox.discord"]
+	local _, root
+	if presence then
+		_, root = presence.git_activity()
+	end
+	root = root or require("fox.core.project").root()
 	local selected, regions = 1, {}
 	local buf, win = require("fox.core.ui").float({ title = " " .. title .. " ", width = 1, height = 1 })
 	vim.bo[buf].filetype = "fox_git_diff_menu"
+	vim.b[buf].fox_git_root = root
 	vim.wo[win].wrap = false
 	local function draw()
 		local width = math.max(1, math.min(150, vim.o.columns - 4))

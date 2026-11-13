@@ -239,6 +239,23 @@ a state backend.
 
 ## Discord presence
 
+Git Center and its review dashboards show general activity messages, such as
+"Gitting around...", "Reviewing last 3 commits", or "Reviewing commit log...",
+with the project basename. Branch names, commit messages, hashes and file paths
+are omitted from these Git messages.
+
+Use `:DiscordPrivacy` or **Discord: Project Privacy / Censure** in the Command
+Palette to set privacy for the current project. The choice is saved in
+`.foxnvim/discord.json` as `{"censure":"none"}`, `"project"`, or `"full"`:
+
+- **No Censure**: default presence behavior.
+- **ProjectName Only**: replace the project with a playful place, such as
+  Foxaland or The Backrooms; filenames remain visible while editing.
+- **Full**: hide project and filenames, retaining general activity and icons.
+
+Both privacy levels remove repository buttons and use generic icon tooltips.
+An unreadable or invalid privacy file uses Full privacy until corrected.
+
 FoxVim keeps `vyfor/cord.nvim` for Discord Rich Presence. While you focus a
 terminal running a recognized AI CLI, its status cycles through a new loading
 message every 15 seconds. Switching to a file restores Cord's normal editing

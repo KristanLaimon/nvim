@@ -449,6 +449,7 @@ M.commands = {
 	-- 🎨 Discord Rich Presence (cord.nvim)
 	-- --------------------------------------------------------------------------
 	{ name = "🎮 Discord: Toggle", cmd = "Cord toggle", category = "Discord" },
+	{ name = "🎮 Discord: Project Privacy / Censure", cmd = "DiscordPrivacy", category = "Discord" },
 	{ name = "🎮 Discord: Reconnect", cmd = "Cord reconnect", category = "Discord" },
 	{ name = "🎮 Discord: Shutdown", cmd = "Cord shutdown", category = "Discord" },
 	{ name = "🎮 Discord: Status", cmd = "Cord status", category = "Discord" },

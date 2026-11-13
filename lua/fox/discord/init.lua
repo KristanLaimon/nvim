@@ -23,6 +23,102 @@ local session, timer, manager, polling
 local agents = {}
 local last_poll = {}
 local state_file = vim.fn.stdpath("state") .. "/discord-session.json"
+local project = require("fox.core.project")
+local places = require("fox.discord.places")
+local privacy_levels = { none = "No Censure", project = "ProjectName Only", full = "Full" }
+local place = places[math.random(#places)]
+
+-- Only inspect loaded dashboards; presence must never load Git UI modules.
+function M.git_activity()
+	local win = vim.api.nvim_get_current_win()
+	local center = package.loaded["plugins.fox.git.git_center.config"]
+	local root = center and center.get_active_target() or nil
+	root = root and root.full_path or nil
+	if vim.bo.filetype == "fox_git_diff_menu" then
+		return "Selecting how to review project...", vim.b.fox_git_root or project.root()
+	end
+	local log = package.loaded["plugins.fox.git.log_diff"]
+	if log and log.state.is_open then
+		for _, key in ipairs({ "files_win", "logs_win", "before_win", "after_win" }) do
+			if log.state[key] == win then
+				return "Reviewing commit log...", log.state.cwd
+			end
+		end
+	end
+	if center then
+		for _, key in ipairs({
+			"main_win",
+			"preview_win",
+			"tab_win",
+			"diff_modal_win",
+			"log_win",
+			"log_right_win",
+			"branch_win",
+			"graph_win",
+			"graph_right_win",
+		}) do
+			if center[key] == win then
+				return "Gitting around...", root or vim.fn.getcwd()
+			end
+		end
+	end
+	local diff = package.loaded["plugins.fox.git.diff_mode"]
+	local state = diff and diff.state
+	if state and state.is_active then
+		for _, key in ipairs({ "file_list_win", "editor_win", "dual_left_win", "dual_right_win" }) do
+			if state[key] == win then
+				local text = "Reviewing Working Tree vs HEAD"
+				if state.mode == "between_branches" then
+					text = "Reviewing a whole branch..."
+				elseif state.custom_commits then
+					text = "Reviewing selected commits..."
+				elseif state.base_ref ~= "HEAD" and state.commits_behind == 0 then
+					text = "Reviewing a whole branch..."
+				elseif state.commits_behind > 0 then
+					text = "Reviewing last " .. state.commits_behind .. " commits"
+				end
+				return text, state.cwd
+			end
+		end
+	end
+end
+
+function M.privacy(root)
+	local file, exists = project.config_path("discord.json", root)
+	if not exists then
+		return "none"
+	end
+	local ok, config = pcall(function()
+		return vim.json.decode(table.concat(vim.fn.readfile(file), "\n"))
+	end)
+	-- A broken privacy file must not accidentally publish project details.
+	return ok and type(config) == "table" and privacy_levels[config.censure] and config.censure or "full"
+end
+
+function M.select_privacy()
+	local _, root = M.git_activity()
+	root = root or project.root()
+	vim.ui.select({ "none", "project", "full" }, {
+		prompt = "Discord privacy for this project (current: " .. privacy_levels[M.privacy(root)] .. ")",
+		format_item = function(level)
+			return privacy_levels[level]
+		end,
+	}, function(level)
+		if not level then
+			return
+		end
+		local ok, err = pcall(function()
+			local file = project.config_path("discord.json", root)
+			vim.fn.mkdir(vim.fs.dirname(file), "p")
+			assert(vim.fn.writefile({ vim.json.encode({ censure = level }) }, file) == 0)
+		end)
+		if not ok then
+			vim.notify("Could not save Discord privacy: " .. tostring(err), vim.log.levels.ERROR)
+		elseif manager and not manager.is_paused then
+			manager:queue_update(true)
+		end
+	end)
+end
 
 local function basename(value)
 	return (value:lower():gsub("\\", "/"):match("([^/]+)$") or "")
@@ -242,6 +338,33 @@ function M.post_activity(opts, activity)
 			activity.assets.large_image = icon
 		end
 	end
+	if not activity then
+		return
+	end
+	local text, root = M.git_activity()
+	root = root or opts.workspace_dir or project.root()
+	if text and not opts.is_idle and not activity.is_idle then
+		activity.details = text
+		activity.state = "in " .. vim.fs.basename(root)
+		activity.buttons = nil
+	end
+	local privacy = M.privacy(root)
+	if privacy ~= "none" then
+		activity.state = privacy == "project" and ("in " .. place) or nil
+		activity.buttons = nil
+		-- Cord tooltips normally describe the language; keep them free of custom paths.
+		if activity.assets then
+			activity.assets.large_text = opts.filetype or "Foxnvim"
+			activity.assets.small_text = "Foxnvim"
+		end
+		if privacy == "full" then
+			activity.details = text or (opts.is_idle and "Idle" or "Editing code")
+		elseif not text then
+			-- Rebuild file text without a workspace prefix or repository name.
+			activity.details = vim.bo.buftype == "terminal" and M.terminal_text()
+				or ("Editing " .. vim.fs.basename(vim.api.nvim_buf_get_name(0)))
+		end
+	end
 end
 
 function M.stop()
@@ -291,7 +414,7 @@ function M.setup()
 			save()
 			poll()
 			local buf = vim.api.nvim_get_current_buf()
-			if vim.bo[buf].buftype == "terminal" and agents[buf] then
+			if vim.bo[buf].buftype == "terminal" and agents[buf] or M.git_activity() then
 				refresh()
 			end
 		end)

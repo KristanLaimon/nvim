@@ -32,6 +32,8 @@ t.describe("Discord Git activity and privacy", function()
 		local state = { is_active = true, editor_win = win, cwd = root, commits_behind = 0, base_ref = "HEAD" }
 		package.loaded[modules[1]] = { state = state }
 		t.expect(discord.git_activity()).toBe("Reviewing Working Tree vs HEAD")
+		state.commits_behind = 1
+		t.expect(discord.git_activity()).toBe("Reviewing last 1 commit")
 		state.commits_behind = 7
 		t.expect(discord.git_activity()).toBe("Reviewing last 7 commits")
 		state.commits_behind, state.base_ref = 0, "sensitive-branch"
@@ -54,6 +56,42 @@ t.describe("Discord Git activity and privacy", function()
 		package.loaded[modules[3]] = nil
 		state.editor_win = nil
 		t.expect(discord.git_activity()).toBe(nil)
+	end)
+	t.it("uses the Git icon in review dashboards at every privacy level while preserving idle assets", function()
+		local icon =
+			"https://raw.githubusercontent.com/KristanLaimon/nvim-config/main/config/discord-theme-icons/minecraft/dark/git.png"
+		assert(vim.fn.filereadable(vim.fn.stdpath("config") .. "/config/discord-theme-icons/minecraft/dark/git.png") == 1)
+		local win = vim.api.nvim_get_current_win()
+		local state = { is_active = true, editor_win = win, cwd = root, commits_behind = 1, base_ref = "HEAD" }
+		package.loaded[modules[1]] = { state = state }
+		package.loaded[modules[2]] = { state = { is_open = true, after_win = win, cwd = root } }
+		package.loaded[modules[3]] = {
+			main_win = win,
+			get_active_target = function()
+				return { full_path = root }
+			end,
+		}
+		for _, level in ipairs({ "none", "project", "full" }) do
+			vim.fn.writefile({ vim.json.encode({ censure = level }) }, root .. "/.foxnvim/discord.json")
+			for _, dashboard in ipairs({ "menu", "log", "center", "diff" }) do
+				vim.bo.filetype = dashboard == "menu" and "fox_git_diff_menu" or "lua"
+				vim.b.fox_git_root = root
+				package.loaded[modules[2]].state.after_win = dashboard == "log" and win or nil
+				package.loaded[modules[3]].main_win = dashboard == "center" and win or nil
+				local activity = { assets = { large_image = "default", small_image = "neovim" } }
+				discord.post_activity({ workspace_dir = root, filetype = "lua" }, activity)
+				t.expect(activity.assets.large_image).toBe(icon)
+				t.expect(activity.assets.large_text).toBe("Git")
+				t.expect(activity.assets.small_image).toBe("neovim")
+				local idle = { assets = { large_image = "idle" }, is_idle = true }
+				discord.post_activity({ workspace_dir = root }, idle)
+				t.expect(idle.assets.large_image).toBe("idle")
+			end
+		end
+		state.is_active = false
+		local editing = { assets = { large_image = "lua" } }
+		discord.post_activity({ workspace_dir = root, filetype = "lua" }, editing)
+		t.expect(editing.assets.large_image).toBe("lua")
 	end)
 	t.it("persists all three levels, strips private fields, and fails closed for invalid config", function()
 		local function activity()

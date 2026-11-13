@@ -6,6 +6,8 @@ for _, name in ipairs(require("fox.discord.ai_cli_names")) do
 	end
 end
 local messages = require("fox.discord.loading_msgs")
+local git_icon_url =
+	"https://raw.githubusercontent.com/KristanLaimon/nvim-config/main/config/discord-theme-icons/minecraft/dark/git.png"
 local fox_icons_url =
 	"https://raw.githubusercontent.com/KristanLaimon/nvim-config/main/config/discord-theme-icons/minecraft/fox-custom/"
 local fox_icons = {
@@ -75,7 +77,7 @@ function M.git_activity()
 				elseif state.base_ref ~= "HEAD" and state.commits_behind == 0 then
 					text = "Reviewing a whole branch..."
 				elseif state.commits_behind > 0 then
-					text = "Reviewing last " .. state.commits_behind .. " commits"
+					text = "Reviewing last " .. state.commits_behind .. (state.commits_behind == 1 and " commit" or " commits")
 				end
 				return text, state.cwd
 			end
@@ -347,6 +349,9 @@ function M.post_activity(opts, activity)
 		activity.details = text
 		activity.state = "in " .. vim.fs.basename(root)
 		activity.buttons = nil
+		activity.assets = activity.assets or {}
+		activity.assets.large_image = git_icon_url
+		activity.assets.large_text = "Git"
 	end
 	local privacy = M.privacy(root)
 	if privacy ~= "none" then
@@ -354,7 +359,7 @@ function M.post_activity(opts, activity)
 		activity.buttons = nil
 		-- Cord tooltips normally describe the language; keep them free of custom paths.
 		if activity.assets then
-			activity.assets.large_text = opts.filetype or "Foxnvim"
+			activity.assets.large_text = text and "Git" or opts.filetype or "Foxnvim"
 			activity.assets.small_text = "Foxnvim"
 		end
 		if privacy == "full" then

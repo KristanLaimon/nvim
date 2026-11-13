@@ -64,24 +64,30 @@ function M.environment_status()
 end
 
 function M.workflow_status()
-	local query, active = package.loaded["fox.query"], false
+	local query, query_active = package.loaded["fox.query"], false
 	if query then
 		for _, state in pairs(query.states) do
 			if state.mode == "query" and state.tab == vim.api.nvim_get_current_tabpage() then
-				active = true
+				query_active = true
 				break
 			end
 		end
 	end
+	local ft = vim.bo.filetype
+	local review_active = ft == "diff" or ft == "git"
 	local normal, dim = "%#StatusLine#", "%#FoxWorkflowInactive#"
 	return normal
 		.. "["
-		.. (active and dim or normal)
+		.. ((query_active or review_active) and dim or normal)
 		.. "Editor"
 		.. normal
 		.. " | "
-		.. (active and normal or dim)
+		.. (query_active and normal or dim)
 		.. "Query"
+		.. normal
+		.. " | "
+		.. (review_active and normal or dim)
+		.. "Review"
 		.. normal
 		.. "]"
 end

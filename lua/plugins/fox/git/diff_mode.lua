@@ -2008,8 +2008,8 @@ function M.open_file_between_branches(file_path, opts)
 	end
 
 	M.balance_dual_windows()
-	vim.wo[M.state.dual_left_win].winbar = " Before: " .. file_path:gsub("%%", "%%%%")
-	vim.wo[M.state.dual_right_win].winbar = " After: " .. file_path:gsub("%%", "%%%%")
+	vim.wo[M.state.dual_left_win].winbar = " ◀ Before │ " .. file_path:gsub("%%", "%%%%")
+	vim.wo[M.state.dual_right_win].winbar = " ▶ After │ " .. file_path:gsub("%%", "%%%%")
 
 	-- Create scratch buffers
 	local left_buf = M.state.dual_left_buf
@@ -2068,11 +2068,13 @@ function M.open_file_between_branches(file_path, opts)
 
 	diff.apply_highlights_side_by_side_dual(left_buf, left_kinds, right_buf, right_kinds, file_path)
 
-	-- Set synchronized scrolling
+	-- Set synchronized scrolling and word wrap
 	for _, w in ipairs({ M.state.dual_left_win, M.state.dual_right_win }) do
 		vim.api.nvim_set_option_value("scrollbind", true, { win = w })
 		vim.api.nvim_set_option_value("cursorbind", true, { win = w })
-		vim.api.nvim_set_option_value("wrap", false, { win = w })
+		vim.api.nvim_set_option_value("wrap", true, { win = w })
+		vim.api.nvim_set_option_value("linebreak", true, { win = w })
+		vim.api.nvim_set_option_value("breakindent", true, { win = w })
 	end
 
 	-- Record modifications for jumping
@@ -2084,6 +2086,32 @@ function M.open_file_between_branches(file_path, opts)
 	end
 	M.state.current_modifications = mods
 	M.state.current_mod_idx = #mods > 0 and 1 or 0
+
+	-- Set buffer-local keymaps for dual code panels
+	for _, buf in ipairs({ left_buf, right_buf }) do
+		-- J / K: jump to next / previous diff hunk
+		vim.keymap.set("n", "J", function()
+			M.jump_next_modification()
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+		vim.keymap.set("n", "K", function()
+			M.jump_prev_modification()
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+		-- H / L: navigate to previous / next changed file in sidebar
+		vim.keymap.set("n", "H", function()
+			if M.state.selected_file_idx > 1 then
+				M.state.selected_file_idx = M.state.selected_file_idx - 1
+				M.open_file_between_branches(M.state.files[M.state.selected_file_idx].file, { keep_focus = false })
+				render_file_list()
+			end
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+		vim.keymap.set("n", "L", function()
+			if M.state.selected_file_idx < #M.state.files then
+				M.state.selected_file_idx = M.state.selected_file_idx + 1
+				M.open_file_between_branches(M.state.files[M.state.selected_file_idx].file, { keep_focus = false })
+				render_file_list()
+			end
+		end, { buffer = buf, noremap = true, silent = true, nowait = true })
+	end
 
 	M.ensure_blame_between(file_path)
 

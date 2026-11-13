@@ -7,24 +7,56 @@ local describe, it, expect = t.describe, t.it, t.expect
 local statusline = require("plugins.fox.ui.statusline_picker")
 
 describe("plugins.fox.ui.statusline_picker", function()
-	it("shows Editor and Query with only the current workspace mode in normal color", function()
+	it("shows Editor, Query and Review with only the current workspace mode in normal color", function()
 		local saved = package.loaded["fox.query"]
+		local buf = vim.api.nvim_get_current_buf()
+		local saved_ft = vim.bo[buf].filetype
 		local ok, err = pcall(function()
 			package.loaded["fox.query"] = nil
+			vim.bo[buf].filetype = ""
 			local editor = statusline.workflow_status()
-			expect(vim.api.nvim_eval_statusline(editor, {}).str).toBe("[Editor | Query]")
+			expect(vim.api.nvim_eval_statusline(editor, {}).str).toBe("[Editor | Query | Review]")
 			expect(editor).toContain("%#StatusLine#Editor")
 			expect(editor).toContain("%#FoxWorkflowInactive#Query")
+			expect(editor).toContain("%#FoxWorkflowInactive#Review")
 			local state = { mode = "query", tab = vim.api.nvim_get_current_tabpage() }
 			package.loaded["fox.query"] = { states = { test = state } }
 			local query = statusline.workflow_status()
-			expect(vim.api.nvim_eval_statusline(query, {}).str).toBe("[Editor | Query]")
+			expect(vim.api.nvim_eval_statusline(query, {}).str).toBe("[Editor | Query | Review]")
 			expect(query).toContain("%#FoxWorkflowInactive#Editor")
 			expect(query).toContain("%#StatusLine#Query")
+			expect(query).toContain("%#FoxWorkflowInactive#Review")
 			state.tab = -1
 			expect(statusline.workflow_status()).toBe(editor)
 		end)
 		package.loaded["fox.query"] = saved
+		vim.bo[buf].filetype = saved_ft
+		if not ok then
+			error(err)
+		end
+	end)
+
+	it("highlights Review mode when in diff or git buffer", function()
+		local buf = vim.api.nvim_get_current_buf()
+		local saved_ft = vim.bo[buf].filetype
+		local saved = package.loaded["fox.query"]
+		local ok, err = pcall(function()
+			package.loaded["fox.query"] = nil
+			vim.bo[buf].filetype = "diff"
+			local diff_status = statusline.workflow_status()
+			expect(vim.api.nvim_eval_statusline(diff_status, {}).str).toBe("[Editor | Query | Review]")
+			expect(diff_status).toContain("%#FoxWorkflowInactive#Editor")
+			expect(diff_status).toContain("%#FoxWorkflowInactive#Query")
+			expect(diff_status).toContain("%#StatusLine#Review")
+			vim.bo[buf].filetype = "git"
+			local git_status = statusline.workflow_status()
+			expect(git_status).toContain("%#StatusLine#Review")
+			vim.bo[buf].filetype = ""
+			local normal_status = statusline.workflow_status()
+			expect(normal_status).toContain("%#FoxWorkflowInactive#Review")
+		end)
+		package.loaded["fox.query"] = saved
+		vim.bo[buf].filetype = saved_ft
 		if not ok then
 			error(err)
 		end
@@ -172,7 +204,7 @@ describe("native statusline rendering", function()
 			local rendered = engine.render()
 			local wide = vim.api.nvim_eval_statusline(rendered, { maxwidth = 300, highlights = true })
 			expect(wide.str).toContain("100%#Error#-🦊.lua")
-			expect(wide.str).toContain("[Editor | Query]")
+			expect(wide.str).toContain("[Editor | Query | Review]")
 			expect(wide.str).toContain("󰏫")
 			expect(wide.str).toContain("1:1")
 			local narrow = vim.api.nvim_eval_statusline(rendered, { maxwidth = 40 })

@@ -1279,6 +1279,10 @@ render_file_list = function()
 	table.insert(lines, " [B]: Toggle Blame Author Column")
 	table.insert(lines, " [s]: Classic / Before | After")
 	table.insert(lines, " [q]: Back to Diff Mode Manager")
+	table.insert(lines, " Annotations (in code panels):")
+	table.insert(lines, " [c]: Add | [C]: Copy annotations")
+	table.insert(lines, " [da]: Delete | [U]: Sessions")
+	table.insert(lines, " [q/r]: Previous/Next annotation")
 
 	vim.bo[M.state.file_list_buf].modifiable = true
 	vim.api.nvim_buf_set_lines(M.state.file_list_buf, 0, -1, false, lines)

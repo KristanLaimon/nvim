@@ -6,6 +6,17 @@ The **Git Control Center** (`<C-S-g>`) is a high-speed, interactive floating Git
 
 While Git Diff Mode is active, notifications appear in the upper left. They return to the upper right when review mode closes. Diff colors survive theme changes.
 
+Review annotations appear as colored virtual rectangles below their source line,
+with a `[SUGGESTION]`, `[NOTE]`, or `[ISSUE]` title and line number. They stay out
+of the source file and persist in `.foxnvim/review/`. In code panels, Normal-mode
+keys are `c` to add, `C` to copy annotations, `da` to delete, `U` to manage sessions,
+and `q` / `r` for the previous / next annotation. These keys are listed beneath
+the sidebar shortcuts; sidebar keys retain their own actions.
+
+The annotation input shows its type, line number, and controls in the border.
+Use `Tab` / `Shift-Tab` to change type, `Enter` to save, `Ctrl-J` for a newline,
+and `Esc` to cancel.
+
 Git Center and the multi-terminal pane are mutually exclusive. Opening Git Center hides the terminal without stopping its jobs; opening or selecting a terminal closes Git Center and preserves its cached view. Other windows keep their normal stacking behavior.
 
 ---

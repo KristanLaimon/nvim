@@ -996,6 +996,10 @@ function M.show_help()
 		"  K               Checkout selected commit",
 		"  r / <F5>        Refresh commit history & diffs from Git",
 		"  q / <Esc>       Close Dashboard & return to previous workspace",
+		"  In code panels (Normal mode):",
+		"  c / C           Add annotation / Copy annotations",
+		"  da / U          Delete annotation / Manage sessions",
+		"  q / r           Previous / Next annotation",
 		" ──────────────────────────────────────────────────────────",
 		"  Press 'q', '<Esc>', '<CR>', or '<Space>' to dismiss",
 	}

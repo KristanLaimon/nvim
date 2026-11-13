@@ -23,7 +23,6 @@
 
 local lazy_req = require("fox.core.lazy_require")
 local path_util = lazy_req("fox.core.path")
-local project = lazy_req("fox.core.project")
 
 local M = {}
 
@@ -110,8 +109,7 @@ end
 --- @param cwd string
 --- @return string
 local function review_dir(cwd)
-	local root = project.root() or cwd
-	local dir = path_util.join(root, ".foxnvim", "review")
+	local dir = path_util.join(cwd, ".foxnvim", "review")
 	return path_util.ensure_dir(dir)
 end
 
@@ -415,7 +413,7 @@ function M.delete_annotation(file_path, line_nr, cwd)
 		if ann.file == file_path and ann.line == line_nr then
 			table.remove(M.annotations, i)
 			M.save_session(cwd)
-			M._on_annotation_added()
+			M.render_annotations_for_file(file_path)
 			vim.notify("Annotation deleted at " .. file_path .. ":" .. line_nr, vim.log.levels.INFO, { title = "Git Review" })
 			return
 		end
@@ -451,13 +449,19 @@ local type_colors = {
 --- Ordered list of annotation types for cycling
 local ANNOTATION_TYPES = { "SUGGESTION", "ISSUE", "NOTE" }
 
+local function annotation_highlight(ann_type)
+	local group = "FoxReview" .. ann_type
+	vim.api.nvim_set_hl(0, group, { fg = type_colors[ann_type] or "#808080", bold = true })
+	return group
+end
+
 -- ---------------------------------------------------------------------------
 -- Inline annotation input (replaces the two-step select + modal)
 -- ---------------------------------------------------------------------------
 
 --- Opens an inline input at the cursor line for adding a review annotation.
---- The input appears directly on the current line with a colored type label.
---- Tab/S-Tab cycles types, Enter saves, Shift+Enter inserts newline, q/Esc cancels.
+--- The input appears below the current line with its type in the border title.
+--- Tab/S-Tab cycles types, Enter saves, Ctrl-J inserts newline, Esc cancels.
 --- @param file_path string Relative file path
 --- @param line_nr integer Line number (1-based)
 --- @param cwd string Working directory
@@ -481,7 +485,6 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 
 	local orig_win = vim.api.nvim_get_current_win()
 	local cursor = vim.api.nvim_win_get_cursor(orig_win)
-	local cursor_row = cursor[1]
 
 	-- Create the input buffer
 	local buf = vim.api.nvim_create_buf(false, true)
@@ -498,37 +501,25 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 
 	--- Creates custom highlight groups for annotation types
 	local function setup_highlights()
-		vim.api.nvim_set_hl(0, "FoxReviewSuggestion", { fg = type_colors.SUGGESTION, bold = true })
-		vim.api.nvim_set_hl(0, "FoxReviewIssue", { fg = type_colors.ISSUE, bold = true })
-		vim.api.nvim_set_hl(0, "FoxReviewNote", { fg = type_colors.NOTE, bold = true })
+		for _, ann_type in ipairs(ANNOTATION_TYPES) do
+			annotation_highlight(ann_type)
+		end
 		vim.api.nvim_set_hl(0, "FoxReviewInputBg", { blend = 20 })
 	end
 
 	setup_highlights()
 
-	--- Updates the type label highlight based on current type
+	--- Keeps the type in the border, separate from editable annotation text.
 	local function update_type_highlight()
-		if not vim.api.nvim_buf_is_valid(buf) then
+		if not win or not vim.api.nvim_win_is_valid(win) then
 			return
 		end
-		vim.api.nvim_buf_clear_namespace(buf, M.namespace, 0, -1)
-
 		local ann_type = ANNOTATION_TYPES[current_type_idx]
-		local hl_group = "FoxReview" .. ann_type
-
-		-- Highlight the type label at the beginning of line 1: "[SUGGESTION] "
-		local lines = vim.api.nvim_buf_get_lines(buf, 0, 1, false)
-		if lines and #lines > 0 then
-			local line = lines[1]
-			local end_col = #("[" .. ann_type .. "] ")
-			if line:sub(1, end_col - 1) == "[" .. ann_type .. "]" then
-				vim.api.nvim_buf_set_extmark(buf, M.namespace, 0, 0, {
-					end_col = end_col,
-					hl_group = hl_group,
-					priority = 201,
-				})
-			end
-		end
+		vim.api.nvim_win_set_config(win, {
+			title = string.format(" Add [%s] L%d (Tab/S-Tab:type Enter:save Ctrl-J:newline Esc:cancel) ", ann_type, line_nr),
+			title_pos = "left",
+		})
+		vim.wo[win].winhighlight = "FloatBorder:FoxReview" .. ann_type .. ",FloatTitle:FoxReview" .. ann_type
 	end
 
 	--- Cycles to the next annotation type and updates the buffer
@@ -542,21 +533,6 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 			current_type_idx = current_type_idx <= 1 and #ANNOTATION_TYPES or current_type_idx - 1
 		end
 
-		local ann_type = ANNOTATION_TYPES[current_type_idx]
-		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-		if lines and #lines > 0 then
-			local line = lines[1]
-			-- Replace the type label at the start
-			local new_line = line:gsub("^%[[%w]+%]", "[" .. ann_type .. "]")
-			vim.api.nvim_buf_set_lines(buf, 0, 1, false, { new_line })
-
-			-- Adjust cursor position if it was before the type label
-			local cur = vim.api.nvim_win_get_cursor(0)
-			local label_len = #("[" .. ann_type .. "] ")
-			if cur[2] < label_len then
-				vim.api.nvim_win_set_cursor(0, { cur[1], label_len })
-			end
-		end
 		update_type_highlight()
 	end
 
@@ -583,6 +559,14 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 		end
 		finished = true
 
+		-- Read the text BEFORE closing the buffer
+		local text = ""
+		local ann_type = ANNOTATION_TYPES[current_type_idx]
+		if ok and vim.api.nvim_buf_is_valid(buf) then
+			local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+			text = table.concat(lines, "\n")
+		end
+
 		-- Stop insert mode and close the float window
 		if vim.api.nvim_win_is_valid(win) then
 			vim.cmd("stopinsert")
@@ -602,28 +586,9 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 			return
 		end
 
-		-- Get the text from the buffer
-		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-		if not lines or #lines == 0 then
-			return
-		end
-
-		-- Extract text after the type label
-		local first_line = lines[1] or ""
-		local text = first_line:gsub("^%[[%w]+%]%s*", "")
-		if #lines > 1 then
-			local remaining = {}
-			for i = 2, #lines do
-				table.insert(remaining, lines[i] or "")
-			end
-			text = text .. "\n" .. table.concat(remaining, "\n")
-		end
-
 		if not text or text:match("^%s*$") then
 			return
 		end
-
-		local ann_type = ANNOTATION_TYPES[current_type_idx]
 
 		-- Add annotation
 		local annotation = {
@@ -636,8 +601,8 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 		table.insert(M.annotations, annotation)
 		M.save_session(cwd)
 
-		-- Re-render annotations
-		M._on_annotation_added()
+		-- Re-render annotations on all open buffers that match this file
+		M.render_annotations_for_file(file_path)
 
 		vim.notify(
 			"Annotation added: [" .. ann_type .. "] at " .. file_path .. ":" .. line_nr,
@@ -646,26 +611,20 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 		)
 	end
 
-	-- Initialize the buffer with the default type label
-	local default_text = "[SUGGESTION] "
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, { default_text })
-
-	-- Calculate window size and position (inline at cursor)
-	local cols = vim.o.columns or 80
-	local width = math.min(80, math.floor(cols * 0.70))
+	local width = math.max(1, math.min(110, vim.o.columns - 4))
 	local height = 3
-
-	-- Position the window at the cursor line, appearing inline
+	-- Buffer anchoring accounts for scrolling, folds, wrapping and diff virtual lines.
 	win = vim.api.nvim_open_win(buf, true, {
 		relative = "win",
 		win = orig_win,
-		row = cursor_row,
+		bufpos = { cursor[1] - 1, 0 },
+		row = 1,
 		col = 0,
 		width = width,
 		height = height,
 		style = "minimal",
-		border = "rounded",
-		zindex = 50,
+		border = { "+", "-", "+", "|", "+", "-", "+", "|" },
+		zindex = math.max(50, (vim.api.nvim_win_get_config(orig_win).zindex or 0) + 1),
 	})
 
 	-- Set window options for inline appearance
@@ -681,8 +640,7 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 		pcall(vim.api.nvim_set_option_value, option, value, { win = win })
 	end
 
-	-- Position cursor after the type label and enter insert mode
-	vim.api.nvim_win_set_cursor(win, { 1, #default_text })
+	vim.api.nvim_win_set_cursor(win, { 1, 0 })
 	vim.cmd("startinsert!")
 
 	-- Set up keymaps
@@ -693,7 +651,8 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 		finish(true)
 	end, kopts)
 
-	-- Shift+Enter for newline
+	-- Ctrl-J works in terminals that cannot distinguish Shift+Enter.
+	vim.keymap.set({ "n", "i" }, "<C-j>", insert_newline, kopts)
 	vim.keymap.set({ "n", "i" }, "<S-CR>", insert_newline, kopts)
 	vim.keymap.set({ "n", "i" }, "<S-Enter>", insert_newline, kopts)
 
@@ -711,11 +670,7 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 	vim.keymap.set("n", "q", function()
 		finish(false)
 	end, kopts)
-	vim.keymap.set("n", "<Esc>", function()
-		finish(false)
-	end, kopts)
-	vim.keymap.set("i", "<Esc>", "<Cmd>stopinsert<CR>", kopts)
-	vim.keymap.set("i", "q", function()
+	vim.keymap.set({ "n", "i" }, "<Esc>", function()
 		finish(false)
 	end, kopts)
 
@@ -752,7 +707,30 @@ function M.open_inline_annotation_input(file_path, line_nr, cwd)
 	update_type_highlight()
 end
 
---- Draws virtual text badges on annotated lines for the given buffer
+local function annotation_box(ann, width, group)
+	local title = string.format(" [%s] L%d ", ann.type, ann.line):sub(1, width - 4)
+	local lines = { { { "+--" .. title .. string.rep("-", width - #title - 4) .. "+", group } } }
+	local function body(text)
+		lines[#lines + 1] = { { "| " .. text .. string.rep(" ", width - 4 - vim.fn.strdisplaywidth(text)) .. " |", group } }
+	end
+	body("")
+	for _, text in ipairs(vim.split(ann.text, "\n", { plain = true })) do
+		local wrapped = ""
+		for _, char in ipairs(vim.fn.split(text:gsub("\t", "    "), "\\zs")) do
+			if vim.fn.strdisplaywidth(wrapped .. char) > width - 4 then
+				body(wrapped)
+				wrapped = ""
+			end
+			wrapped = wrapped .. char
+		end
+		body(wrapped)
+	end
+	body("")
+	lines[#lines + 1] = { { "+" .. string.rep("-", width - 2) .. "+", group } }
+	return lines
+end
+
+--- Draws virtual annotation boxes below annotated lines for the given buffer
 --- @param bufnr integer Buffer number
 --- @param file_path string Relative file path
 function M.render_annotations(bufnr, file_path)
@@ -762,17 +740,23 @@ function M.render_annotations(bufnr, file_path)
 
 	-- Clear existing extmarks for this buffer in our namespace
 	M.clear_buffer(bufnr)
+	vim.b[bufnr].fox_review_file = file_path
 
 	for _, ann in ipairs(M.annotations) do
 		if ann.file == file_path then
 			local row = math.max(0, ann.line - 1)
 			local line_count = vim.api.nvim_buf_line_count(bufnr)
 			if row < line_count then
-				local color = type_colors[ann.type] or "#808080"
-				local badge = "📝 " .. ann.type
-				pcall(vim.api.nvim_buf_set_extmark, bufnr, M.namespace, row, 0, {
-					virt_text = { { badge, { fg = color, bold = true } } },
-					virt_text_pos = "right_align",
+				local group = annotation_highlight(ann.type)
+				local width = 80
+				for _, win_id in ipairs(vim.fn.win_findbuf(bufnr)) do
+					local info = vim.fn.getwininfo(win_id)[1]
+					width = math.min(width, info.width - info.textoff)
+				end
+				local lines = annotation_box(ann, math.max(8, width), group)
+				vim.api.nvim_buf_set_extmark(bufnr, M.namespace, row, 0, {
+					virt_lines = lines,
+					virt_lines_above = false,
 					priority = 200,
 				})
 			end
@@ -785,6 +769,21 @@ end
 function M.clear_buffer(bufnr)
 	if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
 		pcall(vim.api.nvim_buf_clear_namespace, bufnr, M.namespace, 0, -1)
+		vim.b[bufnr].fox_review_file = nil
+	end
+end
+
+--- Re-render annotations on all open buffers that display the given file.
+--- Used after adding or deleting an annotation so the badge appears immediately.
+--- @param file_path string Relative file path
+function M.render_annotations_for_file(file_path)
+	if not file_path then
+		return
+	end
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.api.nvim_buf_is_loaded(buf) and vim.b[buf].fox_review_file == file_path then
+			M.render_annotations(buf, file_path)
+		end
 	end
 end
 

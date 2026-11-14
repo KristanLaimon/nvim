@@ -66,6 +66,8 @@ LSP executable lookup first uses the configured spelling. If it is missing, FOX 
 
 `nvim-treesitter` is pinned to the `main` branch (the rewrite), which dropped `highlight.enable`. Highlighting is started per-buffer by a `FileType` autocmd calling `vim.treesitter.start()`, wrapped in `pcall` — parser names don't always match filetype names (`tsx` → `typescriptreact`, `vimdoc` → `help`), so the autocmd matches every filetype and lets `pcall` skip the ones with no parser.
 
+Neovim's built-in Markdown ftplugin also starts Treesitter directly. FoxVim guards that call before plugins load so `.md` files still open when the Markdown parser is missing or incompatible. To restore Treesitter highlighting, run `:TSInstall markdown markdown_inline` (or `:TSUpdate markdown markdown_inline` for an existing installation), wait for completion, and reopen the file. On Linux, parser compilation requires the build tools listed in [Installation](installation.md).
+
 - **Editor-internal filetype** (part of the fresh-install default, e.g. Lua/markdown/vimdoc): add it to `core_parsers` at the top of `lua/plugins/lsp/treesitter.lua`, then `:TSUpdate` or restart.
 - **Real language**: add it to that language's own `M.treesitter = { ... }` list in `lua/fox/langs/<language>/init.lua` (`lua/fox/core/installer.lua`'s `M.language_bundles` picks it up automatically), then install via `:LanguageManager` (parsers are opt-in per bundle, not installed on startup).
 

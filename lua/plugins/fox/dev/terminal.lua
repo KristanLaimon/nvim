@@ -879,9 +879,13 @@ function M.setup()
 
 	for n = 1, M.settings.count do
 		for _, prefix in ipairs({ M.settings.keys.select_prefix, "<M-" }) do
-			vim.keymap.set({ "n", "i", "t" }, prefix .. n .. ">", function()
+			vim.keymap.set({ "n", "t" }, prefix .. n .. ">", function()
 				M.select_terminal(n)
 			end, { noremap = true, silent = true, desc = "Select Terminal #" .. n })
+			vim.keymap.set("i", prefix .. n .. ">", "<C-\\><C-n><Cmd>TerminalSelect " .. n .. "<CR>", {
+				silent = true,
+				desc = "Select Terminal #" .. n,
+			})
 		end
 	end
 
@@ -928,18 +932,19 @@ function M.setup()
 		end
 	end, { nargs = "?", desc = "Select terminal by number" })
 
-	for _, key in ipairs(M.settings.keys.toggle) do
-		vim.keymap.set({ "n", "i", "t" }, key, M.toggle_selected_terminal, {
+	local toggle_keys = vim.list_extend(vim.deepcopy(M.settings.keys.toggle), { "<M-;>" })
+	for _, key in ipairs(toggle_keys) do
+		vim.keymap.set({ "n", "t" }, key, M.toggle_selected_terminal, {
 			noremap = true,
 			silent = true,
 			desc = "Toggle Selected Terminal",
 		})
+		-- Leave insert before BufLeave's stopinsert can consume the first terminal character.
+		vim.keymap.set("i", key, "<C-\\><C-n><Cmd>TerminalToggle<CR>", {
+			silent = true,
+			desc = "Toggle Selected Terminal",
+		})
 	end
-	vim.keymap.set({ "n", "i", "t" }, "<M-;>", M.toggle_selected_terminal, {
-		noremap = true,
-		silent = true,
-		desc = "Toggle Selected Terminal",
-	})
 
 	-- Note: <C-w> in terminal mode is preserved for native shell word deletion (Ctrl+W)
 	if M.settings.keys.close and M.settings.keys.close ~= "<C-w>" then

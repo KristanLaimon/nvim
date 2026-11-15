@@ -149,7 +149,7 @@ M.langs = {
 ---
 
 ### Step 2: Add bundle metadata to the same `init.lua`
-This repo has **no automatic Mason install**: FOX maps packages from language metadata and installs only on explicit request in [`lua/plugins/lsp/lsp.lua`](../lua/plugins/lsp/lsp.lua). It also has **no automatic Treesitter parser install** beyond the fresh-install `core_parsers` list in [`lua/plugins/lsp/treesitter.lua`](../lua/plugins/lsp/treesitter.lua) (`lua`, `vim`, `vimdoc`, `markdown`, `markdown_inline`). Everything else — Mason LSP/DAP/formatter packages *and* Treesitter parsers — installs through an opt-in **Language Bundle**, shown in `:LanguageManager` (aliases: `:FoxLanguageManager`, `:LanguageTooling`).
+First startup installs only the default Lua and Markdown/MDX bundles from language metadata through [`installer.lua`](../lua/fox/core/installer.lua). Core Treesitter parsers (`lua`, `vim`, `vimdoc`, `markdown`, `markdown_inline`) also install through [`treesitter.lua`](../lua/plugins/lsp/treesitter.lua). Everything else — Mason LSP/DAP/formatter packages *and* Treesitter parsers — installs through an opt-in **Language Bundle**, shown in `:LanguageManager` (aliases: `:FoxLanguageManager`, `:LanguageTooling`).
 
 `lua/fox/core/installer.lua`'s `M.language_bundles` is **built automatically** from every language module's own metadata — nothing to hand-add there. A language only shows up as a bundle once its `init.lua` sets `M.bundle_name`; the bundle's Mason package list is resolved straight from the `M.mason_order` you already wrote in Step 1 (via `M.get_mason_package_name`), so the two can never drift out of sync. Add to the same `init.lua` from Step 1:
 
@@ -163,7 +163,7 @@ M.treesitter = { "zig" }
 ```
 
 Optional extra fields:
-- `M.is_minimal = true` — marks the always-on core bundle (reserved for Lua/editor-internal filetypes; not for real languages).
+- `M.is_minimal = true` — marks a default fresh-install bundle (reserved for Lua and Markdown/MDX). This does not preselect its operation checkbox.
 - `M.bundle_extra_mason_pkgs = { "some-pkg" }` — Mason packages the bundle should install that are intentionally **not** in `M.mason` (e.g. a DAP tool installed through a different mechanism, a standalone linter). See `lua/fox/langs/go/init.lua` (`delve`, `golangci-lint`) for an example.
 - `M.dotnet_tools = { "some-tool" }` — `dotnet tool install -g` packages, see `lua/fox/langs/csharp/init.lua`.
 

@@ -3,7 +3,7 @@
 [Back to Wiki Index](../index.md) | [Back to Languages Overview](../languages.md)
 
 Select **LaTeX / BibTeX** in `:LanguageManager` (also available in the Command
-Palette) to install this optional bundle. Fresh installations remain Lua-only;
+Palette) to install this optional bundle. Fresh installations include Lua and Markdown/MDX;
 opening a `.tex` or `.bib` file does not install tools.
 
 | Feature | Tool / Package | Details |

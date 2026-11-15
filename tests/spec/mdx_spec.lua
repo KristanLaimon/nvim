@@ -10,7 +10,7 @@ describe("MDX support", function()
 		expect(vim.treesitter.language.get_lang("mdx")).toBe("markdown")
 	end)
 
-	it("aggregates an optional bundle, LSP, and formatter without expanding Lua core", function()
+	it("includes Markdown/MDX tooling in the default bundles alongside Lua", function()
 		local installer = require("fox.core.installer")
 		local bundle
 		local minimal = {}
@@ -23,13 +23,14 @@ describe("MDX support", function()
 			end
 		end
 		expect(bundle).toBeDefined()
-		expect(bundle.is_minimal == true).toBe(false)
+		expect(bundle.is_minimal).toBe(true)
 		expect(bundle.mason_pkgs).toEqual({ "mdx-analyzer", "prettier" })
 		expect(bundle.treesitter).toEqual({ "markdown", "markdown_inline" })
-		expect(minimal).toEqual({ { "lua-language-server", "stylua" } })
+		expect(minimal).toEqual({ { "lua-language-server", "stylua" }, { "mdx-analyzer", "prettier" } })
 		local lsp = dofile("lua/plugins/lsp/lsp.lua")
 		expect(lsp[2].opts().servers.mdx_analyzer).toBeDefined()
 		local formatting = dofile("lua/plugins/lsp/formatting.lua")
+		expect(formatting[1].opts().formatters_by_ft.markdown).toEqual({ "prettier" })
 		expect(formatting[1].opts().formatters_by_ft.mdx).toEqual({ "prettier" })
 	end)
 end)

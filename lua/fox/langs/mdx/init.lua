@@ -11,12 +11,14 @@ M.mason = {
 	prettier = require("fox.langs.typescript").mason.prettier,
 }
 M.mason_order = { "mdx_analyzer", "prettier" }
-M.bundle_name = "📝 MDX"
+M.bundle_name = "📝 Markdown / MDX"
+M.is_minimal = true
 M.requires = {
 	{ cmd = "node", name = "Node.js", hint = "https://nodejs.org" },
 }
 M.treesitter = { "markdown", "markdown_inline" }
 M.formatters_by_ft = {
+	markdown = { "prettier" },
 	mdx = { "prettier" },
 }
 

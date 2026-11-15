@@ -1,6 +1,7 @@
 return {
 	dir = require("fox.core.lazyspec").for_module(),
 	name = "fox_installer",
+	event = "VeryLazy",
 	cmd = {
 		"LanguageManager",
 		"FoxLanguageManager",

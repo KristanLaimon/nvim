@@ -110,7 +110,9 @@ describe("fox.core.installer", function()
 	end)
 
 	it("registers user commands on init()", function()
+		local batch = t.spyOn(installer, "install_batch").mockImplementation(function() end)
 		installer.init()
+		batch.mockRestore()
 		local cmds = vim.api.nvim_get_commands({})
 		expect(cmds["FoxSetup"]).toBeDefined()
 		expect(cmds["FoxInstallAll"]).toBeDefined()
@@ -121,11 +123,8 @@ describe("fox.core.installer", function()
 	end)
 
 	-- ------------------------------------------------------------------------
-	-- Bundle manager: read-only / in-memory logic only. None of these call
-	-- install_language_bundle, uninstall_language_bundle,
-	-- install_bundle_components, or uninstall_bundle_components -- those
-	-- trigger real Mason/Treesitter/dotnet installs and are intentionally
-	-- never exercised by the test suite.
+	-- Bundle manager: metadata and UI tests use memory only; batch tests replace
+	-- package managers so no real tool is installed or removed.
 	-- ------------------------------------------------------------------------
 
 	it("builds language bundles with resolvable per-component metadata", function()
@@ -148,7 +147,7 @@ describe("fox.core.installer", function()
 		end
 	end)
 
-	it("registers LaTeX tooling as an optional bundle and keeps Lua as the only minimal bundle", function()
+	it("registers LaTeX tooling as optional and keeps only Lua and Markdown/MDX as defaults", function()
 		local latex = require("fox.langs").langs.latex
 		local bundle
 		local minimal = {}
@@ -166,7 +165,28 @@ describe("fox.core.installer", function()
 		expect(bundle.mason_pkgs).toEqual({ "texlab", "latexindent" })
 		expect(bundle.treesitter).toEqual({ "latex", "bibtex" })
 		expect(bundle.mason_components[2].type).toBe("formatter")
-		expect(minimal).toEqual({ { "lua-language-server", "stylua" } })
+		expect(minimal).toEqual({ { "lua-language-server", "stylua" }, { "mdx-analyzer", "prettier" } })
+	end)
+
+	it("bootstraps only Lua and Markdown/MDX once on a fresh installation", function()
+		local batches = {}
+		local batch = t.spyOn(installer, "install_batch").mockImplementation(function(jobs)
+			table.insert(batches, jobs)
+		end)
+		local ok, err = pcall(function()
+			installer.init()
+			installer.init()
+			expect(#batches).toBe(1)
+			expect(#batches[1]).toBe(2)
+			expect(batches[1][1].sel.mason).toEqual({ "lua-language-server", "stylua" })
+			expect(batches[1][2].sel.mason).toEqual({ "mdx-analyzer", "prettier" })
+			for _, job in ipairs(batches[1]) do
+				expect(job.bundle.is_minimal).toBe(true)
+				expect(job.sel.ts).toEqual(job.bundle.treesitter)
+			end
+		end)
+		batch.mockRestore()
+		assert(ok, err)
 	end)
 
 	it("computes bundle status as a pure read of on-disk/PATH state", function()
@@ -181,6 +201,44 @@ describe("fox.core.installer", function()
 		-- Same bundle, no state change between calls -> identical counts.
 		expect(status_a.installed_count).toBe(status_b.installed_count)
 		expect(status_a.total_count).toBe(status_b.total_count)
+	end)
+
+	it("queues shared packages and parsers only once across selected bundles", function()
+		local registry, treesitter, notify = package.loaded["mason-registry"], package.loaded["nvim-treesitter"], vim.notify
+		local packages, parsers = {}, {}
+		package.loaded["mason-registry"] = {
+			refresh = function(callback)
+				callback()
+			end,
+			has_package = function()
+				return true
+			end,
+			get_package = function(name)
+				return {
+					install = function()
+						table.insert(packages, name)
+					end,
+				}
+			end,
+		}
+		package.loaded["nvim-treesitter"] = {
+			get_installed = function()
+				return {}
+			end,
+			install = function(names)
+				vim.list_extend(parsers, names)
+			end,
+		}
+		vim.notify = function() end
+		local ok, err = pcall(function()
+			local job =
+				{ bundle = { name = "Selected bundle" }, sel = { mason = { "fox-fake-package" }, ts = { "fox-fake-parser" } } }
+			installer.install_batch({ job, vim.deepcopy(job) })
+			expect(packages).toEqual({ "fox-fake-package" })
+			expect(parsers).toEqual({ "fox-fake-parser" })
+		end)
+		package.loaded["mason-registry"], package.loaded["nvim-treesitter"], vim.notify = registry, treesitter, notify
+		assert(ok, err)
 	end)
 
 	it("counts and bulk-sets per-component selection purely in memory", function()

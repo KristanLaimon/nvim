@@ -73,6 +73,12 @@ If you skip running `install.ps1` or `install.sh`, FoxVim handles missing extern
 
 ---
 
+## Default language tooling
+
+On first startup, FoxVim installs the Lua and Markdown/MDX bundles (`lua-language-server`, `stylua`, `mdx-analyzer`, `prettier`, and core editor parsers). Node.js must be on PATH for Markdown/MDX tooling; if it is missing, install Node.js and select that bundle manually. Other languages remain optional.
+
+In `:FoxInstallDependencies` / `:LanguageManager`, installation badges show current status and checkboxes select the next operation. No bundles start checked. Use `Space` to select one or more bundles, or `Enter` to expand a bundle and select individual components. `i` installs and `u` uninstalls only checked components. `n` clears all checkboxes; an empty selection changes nothing. Shared components are processed once per batch.
+
 ## 🔍 In-Editor Health Checks & Diagnostics
 
 FoxVim provides several built-in commands to inspect runtime dependencies from within Neovim:

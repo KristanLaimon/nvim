@@ -1223,6 +1223,7 @@ local function run_batch(jobs, action)
 	-- toasts only ever describe what's really about to happen.
 	local installed_ts = get_installed_ts_parsers()
 	local todo_mason, todo_ts, todo_dotnet = {}, {}, {}
+	local seen_mason, seen_ts, seen_dotnet = {}, {}, {}
 	local bundle_names = {}
 
 	for _, job in ipairs(runnable) do
@@ -1230,7 +1231,8 @@ local function run_batch(jobs, action)
 
 		for _, pkg in ipairs(job.sel.mason or {}) do
 			local pkg_installed = is_mason_pkg_installed(pkg)
-			if installing ~= pkg_installed then
+			if installing ~= pkg_installed and not seen_mason[pkg] then
+				seen_mason[pkg] = true
 				table.insert(todo_mason, pkg)
 				any_for_bundle = true
 			end
@@ -1238,7 +1240,8 @@ local function run_batch(jobs, action)
 
 		for _, parser in ipairs(job.sel.ts or {}) do
 			local parser_installed = installed_ts[parser] or false
-			if installing ~= parser_installed then
+			if installing ~= parser_installed and not seen_ts[parser] then
+				seen_ts[parser] = true
 				table.insert(todo_ts, parser)
 				any_for_bundle = true
 			end
@@ -1247,8 +1250,11 @@ local function run_batch(jobs, action)
 		-- Dotnet tool install state isn't tracked, so treat every selected
 		-- tool as work to do (see `M.cli_healthcheck`'s ponytail note for why).
 		for _, tool in ipairs(job.sel.dotnet or {}) do
-			table.insert(todo_dotnet, tool)
-			any_for_bundle = true
+			if not seen_dotnet[tool] then
+				seen_dotnet[tool] = true
+				table.insert(todo_dotnet, tool)
+				any_for_bundle = true
+			end
 		end
 
 		if any_for_bundle then
@@ -1432,10 +1438,7 @@ function M.render_language_manager_buffer()
 	table.insert(lines, "  ==========================================================================")
 	table.insert(lines, "   📦 FOX INSTALL DEPENDENCIES & TOOLCHAINS -- PER-LANGUAGE SETUP & TEARDOWN")
 	table.insert(lines, "  ==========================================================================")
-	table.insert(
-		lines,
-		"   Fresh setup defaults to Minimal Core (Lua only). [Enter] a row to pick individual components."
-	)
+	table.insert(lines, "   Fresh setup includes Lua + Markdown/MDX. [Enter] a row to pick individual components.")
 	table.insert(lines, "")
 
 	local selected_count = 0
@@ -1505,10 +1508,7 @@ function M.render_language_manager_buffer()
 
 	table.insert(lines, "")
 	table.insert(lines, "  " .. string.rep("─", width - 4))
-	table.insert(
-		lines,
-		string.format("  👉 [ PRESS 'i' OR ENTER TO INSTALL SELECTED COMPONENTS (%d BUNDLES) ]", selected_count)
-	)
+	table.insert(lines, string.format("  👉 [ PRESS 'i' TO INSTALL SELECTED COMPONENTS (%d BUNDLES) ]", selected_count))
 	table.insert(lines, "  [Enter] Expand/Toggle Row            |  [Space] Toggle Checkbox  |  [d] Show Details")
 	table.insert(
 		lines,
@@ -1551,9 +1551,8 @@ function M.open_language_manager()
 	lang_items = {}
 	for _, bundle in ipairs(M.language_bundles) do
 		local status = M.get_bundle_status(bundle)
-		-- Only pre-select: minimal core (always on) or fully installed bundles.
-		-- Partial or missing bundles start deselected — user must opt-in.
-		local auto_select = bundle.is_minimal or (status.installed_count == status.total_count and status.total_count > 0)
+		-- Installation badges describe state; checkboxes select this operation only.
+		local auto_select = false
 
 		local comp = { mason = {}, ts = {}, dotnet = {} }
 		for _, c in ipairs(bundle.mason_components or {}) do
@@ -1664,69 +1663,22 @@ function M.open_language_manager()
 		return { mason = mason, ts = ts, dotnet = dotnet }
 	end
 
-	local function has_any_selection(item)
-		local sel_n = count_selected_components(item)
-		return sel_n > 0
-	end
-
-	local function install_action()
-		local entry, cursor = get_current_entry()
-		local any_global = false
-		for _, it in ipairs(lang_items) do
-			if has_any_selection(it) then
-				any_global = true
-				break
+	local function apply_selection(action)
+		local _, cursor = get_current_entry()
+		local jobs = {}
+		for _, item in ipairs(lang_items) do
+			if count_selected_components(item) > 0 then
+				table.insert(jobs, { bundle = item.bundle, sel = collect_selection(item) })
 			end
 		end
-
-		if any_global then
-			for _, it in ipairs(lang_items) do
-				if has_any_selection(it) then
-					M.install_bundle_components(it.bundle, collect_selection(it))
-				end
-			end
-		elseif entry and entry.item then
-			M.install_language_bundle(entry.item.bundle)
-		else
-			vim.notify(
-				"⚠️ Move cursor to a language row or select checkboxes with <Space> to install.",
-				vim.log.levels.WARN
-			)
+		if #jobs == 0 then
+			vim.notify("Select components with <Space> before " .. action .. ".", vim.log.levels.WARN)
 			return
 		end
-
-		vim.defer_fn(function()
-			M.render_language_manager_buffer()
-			if cursor and lang_win and vim.api.nvim_win_is_valid(lang_win) then
-				pcall(vim.api.nvim_win_set_cursor, lang_win, cursor)
-			end
-		end, 600)
-	end
-
-	local function uninstall_action()
-		local entry, cursor = get_current_entry()
-		local any_global = false
-		for _, it in ipairs(lang_items) do
-			if has_any_selection(it) then
-				any_global = true
-				break
-			end
-		end
-
-		if any_global then
-			for _, it in ipairs(lang_items) do
-				if has_any_selection(it) then
-					M.uninstall_bundle_components(it.bundle, collect_selection(it))
-				end
-			end
-		elseif entry and entry.item then
-			M.uninstall_language_bundle(entry.item.bundle)
+		if action == "install" then
+			M.install_batch(jobs)
 		else
-			vim.notify(
-				"⚠️ Move cursor to a language row or select checkboxes with <Space> to uninstall.",
-				vim.log.levels.WARN
-			)
-			return
+			M.uninstall_batch(jobs)
 		end
 
 		vim.defer_fn(function()
@@ -1759,10 +1711,16 @@ function M.open_language_manager()
 	vim.keymap.set("n", "<CR>", expand_or_toggle, opts)
 	vim.keymap.set("n", "<2-LeftMouse>", expand_or_toggle, opts)
 
-	vim.keymap.set("n", "i", install_action, opts)
-	vim.keymap.set("n", "I", install_action, opts)
-	vim.keymap.set("n", "u", uninstall_action, opts)
-	vim.keymap.set("n", "U", uninstall_action, opts)
+	for _, key in ipairs({ "i", "I" }) do
+		vim.keymap.set("n", key, function()
+			apply_selection("install")
+		end, opts)
+	end
+	for _, key in ipairs({ "u", "U" }) do
+		vim.keymap.set("n", key, function()
+			apply_selection("uninstall")
+		end, opts)
+	end
 	vim.keymap.set("n", "d", show_details, opts)
 
 	vim.keymap.set("n", "a", function()
@@ -1777,7 +1735,7 @@ function M.open_language_manager()
 
 	vim.keymap.set("n", "n", function()
 		for _, item in ipairs(lang_items) do
-			set_item_components(item, item.bundle.is_minimal == true)
+			set_item_components(item, false)
 		end
 		M.render_language_manager_buffer()
 	end, opts)
@@ -1875,8 +1833,18 @@ function M.init()
 
 	local state = M.load_state()
 
-	-- Mark setup complete on startup without popup warning toasts
+	-- Bootstrap only the default bundles once; later operations use explicit selections.
 	if not state.completed then
+		local jobs = {}
+		for _, bundle in ipairs(M.language_bundles) do
+			if bundle.is_minimal then
+				table.insert(jobs, {
+					bundle = bundle,
+					sel = { mason = bundle.mason_pkgs, ts = bundle.treesitter, dotnet = bundle.dotnet_tools },
+				})
+			end
+		end
+		M.install_batch(jobs)
 		M.save_state(true)
 	end
 end

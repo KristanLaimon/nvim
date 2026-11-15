@@ -103,7 +103,7 @@ M.mason_order = { "example_ls", "example_fmt", "example_dap" }
 --- Display title with icon shown in `:LanguageManager`.
 M.bundle_name = "🚀 Example Language"
 
---- Omit or set to `false`. (`true` is strictly reserved for minimal Lua core).
+--- Omit or set to `false`. (`true` is reserved for Lua and Markdown/MDX defaults).
 M.is_minimal = false
 
 --- Pre-requisite system CLI binaries checked before Mason installation.

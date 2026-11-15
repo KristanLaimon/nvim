@@ -1,14 +1,17 @@
-# MDX Development Guide
+# Markdown / MDX Development Guide
 
 [← Back to Wiki Index](../index.md) | [← Back to Languages Overview](../languages.md)
 
-Select **MDX** in **Dependencies & Toolchains** (`:LanguageManager`) to install
-the optional bundle. Node.js must be on PATH. Fresh setups still install only Lua core tooling.
+**Markdown / MDX** is installed by default alongside Lua on a fresh setup.
+Node.js must be on PATH for `mdx-analyzer` and Prettier. If Node.js is missing,
+install it and select this bundle in **Dependencies & Toolchains** (`:LanguageManager`).
+The menu starts with no checkboxes selected; check only the bundles or components
+you want to install or uninstall.
 
 | Feature | Tool / Package | Details |
 | :--- | :--- | :--- |
 | Language server | `mdx_analyzer` / `mdx-analyzer` | Completion, diagnostics, and navigation for `.mdx` files |
-| Formatter | `prettier` | Built-in MDX support; no Prettier plugin required |
+| Formatter | `prettier` | Markdown and MDX formatting; no Prettier plugin required |
 | Treesitter | `markdown`, `markdown_inline` | Markdown highlighting; JSX and MDX expressions have limited highlighting |
 
 Restart Neovim after updating the configuration. `.mdx` files use the `mdx`

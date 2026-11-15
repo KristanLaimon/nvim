@@ -36,13 +36,13 @@ When adding support for a new programming language (or updating an existing one)
 2. **Nothing to touch in `installer.lua`**: `M.language_bundles` is built automatically from every module's `bundle_name`/`requires`/`treesitter`, and its `mason_pkgs` is resolved straight from the `mason_order` you already wrote -- the two can never drift. The language appears as an optional selectable bundle in the Language Tooling Manager (`:LanguageManager`, `:FoxLanguageManager`) the moment `M.bundle_name` is set.
 
 
-### 🌙 1.2 Minimal Fresh Setup Rule (Lua Only)
-* **Default Fresh Behavior**: On a fresh Neovim installation, the default toolchain installation MUST remain **minimal** (Lua language server `lua_ls`, `stylua` formatter, and core editor parsers `lua`, `vim`, `vimdoc`, `markdown` only).
+### 🌙 1.2 Minimal Fresh Setup Rule (Lua + Markdown/MDX)
+* **Default Fresh Behavior**: On a fresh Neovim installation, the default toolchain installation MUST remain **minimal**: Lua (`lua_ls`, `stylua`), Markdown/MDX (`mdx-analyzer`, `prettier`), and core editor parsers `lua`, `vim`, `vimdoc`, `markdown`, `markdown_inline`. These two bundles install on first startup; all other languages remain opt-in.
 * **No Background Heavy Installs**: Never auto-install optional language tools (PHP, TypeScript, Python, Go, C#, Docker, Shell) in the background without explicit user selection.
 * **UI Selection**: Users choose which optional language toolchains to install using the UI selection menu:
   - **`Select All` (`a`)**: Selects all optional language bundles for installation.
-  - **`Select None` (`n`)**: Deselects optional languages, reverting to minimal Lua core.
-  - **`Per-Row Toggle` (`Space` / `Enter`)**: Selects/deselects individual language bundles (e.g. PHP & Laravel).
+  - **`Select None` (`n`)**: Clears every checkbox, including core bundles. Installation state never preselects an operation.
+  - **`Per-Row Toggle` (`Space`)**: Selects/deselects a bundle or component. `Enter` expands a bundle or toggles a component. Install/uninstall acts only on checked components; no selection performs no action.
 
 ### 🧰 1.3 Command Palette Preference (No `<leader>` Shortcuts)
 * **Prefer Command Palette Commands**: Always prefer registering actions and tools in the **Command Palette** (`<C-S-p>` or `:CommandPalette`) over assigning `<leader>` keymaps.
@@ -198,7 +198,7 @@ Both must be on `PATH`. The scripts exit 1 with an install hint if either is mis
 ## ⚡ Quick Rule Summary for AI Assistants
 
 > [!IMPORTANT]
-> 1. **Always keep fresh setups minimal** (Lua core only).
+> 1. **Always keep fresh setups minimal** (Lua + Markdown/MDX only).
 > 2. **Always list new languages in `:LanguageManager`** as optional UI selections.
 > 3. **Prefer Command Palette options** over assigning `<leader>` keymaps.
 > 4. **Reference dedicated wiki pages** under [`docs/languages/`](docs/languages) for language-specific toolchain details.

@@ -88,7 +88,7 @@
 ---@field dap_debug_port? integer Custom DAP debug port if used by language adapter (e.g. 9003 for Xdebug).
 ---@field launch_runtimes? table<string, FoxLaunchRuntime> Launch-profile runtimes this language owns (see lua/fox/launch/runtimes.lua).
 ---@field bundle_name? string Display name (with icon) for this language's entry in the Language Tooling Manager (`:LanguageManager`).
----@field is_minimal? boolean Marks the always-on core bundle (Lua only); pre-selected and excluded from the "pending" count.
+---@field is_minimal? boolean Default fresh-install bundle (Lua or Markdown/MDX); excluded from the "pending" count.
 ---@field requires? FoxLangRequirement[] System runtimes the bundle needs before Mason packages can install; missing ones block the bundle with a lock icon.
 ---@field treesitter? string[] Treesitter parser names the Language Tooling Manager installs alongside this language's Mason packages.
 ---@field health_tools? {cmd: string, name: string, alt?: string, note?: string}[] Optional system tools reported by FoxHealthCheck, without blocking editor tooling installation.

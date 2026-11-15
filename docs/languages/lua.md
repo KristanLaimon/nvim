@@ -1,7 +1,7 @@
 # Lua development
 
 FoxVim uses `lua_ls`, StyLua and the Lua Treesitter parser for ordinary `.lua` files.
-The minimal fresh installation remains Lua only.
+The minimal fresh installation includes Lua and Markdown/MDX.
 
 ## Libraries and completion
 

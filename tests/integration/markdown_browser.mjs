@@ -283,6 +283,52 @@ try {
   assert.equal(await evaluate(`document.querySelector('img[alt="Local SVG"]').previousSibling.textContent`), '\u00a0\u00a0');
   assert.ok(await evaluate(`document.querySelector('article').textContent.includes('A\u00a0B')`));
   console.log('PASS: relative SVG images load and HTML character references render as spaces');
+  lua(`(function()
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.fn.readfile('tests/fixtures/markdown/contributing.md'))
+    return true
+  end)()`);
+  await until(() => evaluate('document.querySelector("h1")?.textContent === "Contributing"'));
+  const contribution = await evaluate(`(() => {
+    const body = document.querySelector('article');
+    const nested = body.querySelector('ul > li > ul');
+    const parent = nested.parentElement;
+    return {
+      nestedLabels: [...nested.children].map(item => item.textContent.trim()),
+      emphasis: parent.querySelector('strong > em')?.textContent,
+      quotedItems: [...body.querySelectorAll('blockquote ul > li')].map(item => item.textContent.trim()),
+      deepNumbered: body.querySelector('ol > li > ul > li > ol > li')?.textContent.trim(),
+      task: body.querySelector('ol .task-list-item input')?.checked,
+      secondParagraph: body.querySelector('ol > li:nth-child(2) > p:nth-child(2)')?.textContent.trim(),
+      code: body.querySelector('ol pre code')?.textContent,
+      videos: [...body.querySelectorAll('video')].map(video => ({src: video.getAttribute('src'), controls: video.controls})),
+      indented: nested.firstElementChild.getBoundingClientRect().left > parent.getBoundingClientRect().left,
+      inlineLink: [...body.querySelectorAll('p > span > a')].some(link => link.href.includes('/user-attachments/assets/')),
+      literal: [...body.querySelectorAll('code')].some(code => code.textContent.startsWith('https://github.com/')),
+    };
+  })()`);
+  assert.deepEqual(contribution.nestedLabels, ['Bug', 'Feature Request', 'Translation Submission / Update']);
+  assert.equal(contribution.emphasis, 'Bug Reporting');
+  assert.deepEqual(contribution.quotedItems, ['Moving settings of place', 'Adding a small feature']);
+  assert.match(contribution.deepNumbered, /Deep numbered step\s+continued on another line/);
+  assert.equal(contribution.task, true);
+  assert.equal(contribution.secondParagraph, 'A second paragraph in the same item.');
+  assert.match(contribution.code, /print\('nested code'\)/);
+  assert.deepEqual(contribution.videos, [
+    {src: 'https://github.com/user-attachments/assets/2d6805ba-07f0-4d4d-b470-d0eb41c657e0', controls: true},
+    {src: 'https://github.com/user-attachments/assets/13af8304-b0be-40ec-95f4-ca3d15ba76f1', controls: true},
+  ]);
+  assert.equal(contribution.indented, true);
+  assert.equal(contribution.inlineLink, true);
+  assert.equal(contribution.literal, true);
+  lua(`(function()
+    vim.api.nvim_win_set_cursor(0, {18, 0})
+    vim.api.nvim_exec_autocmds('CursorMoved', {buffer = 0})
+    return true
+  end)()`);
+  await until(() => evaluate(`document.querySelector('[aria-current="location"]')?.dataset.sourceLine === "18"`));
+  assert.match(await evaluate(`document.querySelector('[aria-current="location"]').textContent`), /Deep numbered step/);
+  console.log('PASS: nested contribution lists, quoted lists, emphasis, source mapping and GitHub attachment video players');
+
   lua(`(function() vim.cmd('bdelete!'); return true end)()`);
   await until(() => evaluate('document.querySelector("#status").textContent.includes("reconnect")'));
   await assert.rejects(fetch(url));

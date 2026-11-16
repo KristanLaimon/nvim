@@ -2,6 +2,12 @@
 
 `page.html` and `preview.js` are FOX's local preview UI. The HTTP server and
 Markdown renderer are original Lua modules in `lua/fox/markdown/`.
+The renderer supports nested ordered/unordered lists, nested tasks, lists inside
+blockquotes, and combined bold/italic emphasis. Standalone
+`https://github.com/user-attachments/assets/<id>` lines create video players with
+controls; inline URLs and code remain links and literal text respectively.
+Remote video playback depends on network access and the browser's codec support.
+The renderer remains a focused Markdown subset rather than a full GFM parser.
 
 `mermaid.min.js` is an unmodified third-party browser bundle, **not a FOX rewrite**.
 It was taken from the installed `iamcco/markdown-preview.nvim` resource

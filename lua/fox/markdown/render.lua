@@ -31,11 +31,13 @@ local function inline(text)
 		return hold('<a href="mailto:' .. M.escape(email) .. '">' .. M.escape(email) .. "</a>")
 	end)
 	text = markup.escape_text(text)
+	text = text:gsub("%*%*%*(%S.-)%*%*%*", "<strong><em>%1</em></strong>")
+	text = text:gsub("___(%S.-)___", "<strong><em>%1</em></strong>")
 	for _, rule in ipairs({
 		{ "%*%*(.-)%*%*", "strong" },
 		{ "__(.-)__", "strong" },
 		{ "~~(.-)~~", "s" },
-		{ "%*(.-)%*", "em" },
+		{ "%*(%S.-)%*", "em" },
 	}) do
 		text = text:gsub(rule[1], "<" .. rule[2] .. ">%1</" .. rule[2] .. ">")
 	end
@@ -72,9 +74,20 @@ local function table_separator(line)
 	return true
 end
 
-function M.render(lines)
+local function list_item(line)
+	local indent, marker, value = line:match("^( *)([-+*])%s+(.*)$")
+	if not indent then
+		indent, marker, value = line:match("^( *)(%d+[.)])%s+(.*)$")
+	end
+	if indent then
+		local prefix = line:match("^ *[^ ]+%s+")
+		return #indent, marker:match("^%d") and "ol" or "ul", value, #prefix, marker
+	end
+end
+
+function M.render(lines, source_offset)
 	-- shortcut: focused Markdown subset, extend with fixtures when documents need more CommonMark constructs.
-	local output, paragraph, list, fence, code = {}, {}, nil, nil, {}
+	local output, paragraph, fence, code = {}, {}, nil, {}
 	local paragraph_start
 	local function emit(html, first, last)
 		if first then
@@ -87,12 +100,6 @@ function M.render(lines)
 		if #paragraph > 0 then
 			emit("<p>" .. table.concat(paragraph, "\n") .. "</p>", paragraph_start, paragraph_start + #paragraph - 1)
 			paragraph = {}
-		end
-	end
-	local function close_list()
-		if list then
-			emit("</" .. list .. ">")
-			list = nil
 		end
 	end
 	local function close_code(last)
@@ -128,16 +135,13 @@ function M.render(lines)
 			end
 		elseif marker and #marker >= 3 then
 			flush()
-			close_list()
 			fence = { char = marker:sub(1, 1), size = #marker, lang = lang, first = i }
 		elseif html_block then
 			flush()
-			close_list()
 			emit(html_block)
 			i = block_end
 		elseif table_separator(lines[i + 1]) and line:find("|", 1, true) then
 			flush()
-			close_list()
 			local alignment = cells(lines[i + 1])
 			local function row(value, tag, number)
 				local html = { '<tr data-source-line="' .. number .. '">' }
@@ -158,33 +162,86 @@ function M.render(lines)
 			i = i - 1
 		else
 			local heading, title = line:match("^(#+)%s+(.+)$")
-			local item = line:match("^%s*[-+*]%s+(.+)$")
-			local numbered = line:match("^%s*%d+[.)]%s+(.+)$")
-			if not item and not numbered then
-				close_list()
-			end
-			if heading and #heading <= 6 then
+			local indent, kind, item, content_indent, bullet = list_item(line)
+			local attachment = vim.trim(line):match("^https://github%.com/user%-attachments/assets/[%w-]+$")
+			if attachment then
+				flush()
+				emit(
+					'<video controls preload="metadata" src="'
+						.. M.escape(attachment)
+						.. '">'
+						.. '<a href="'
+						.. M.escape(attachment)
+						.. '">Open video</a></video>',
+					i
+				)
+			elseif heading and #heading <= 6 then
 				flush()
 				emit("<h" .. #heading .. ">" .. inline(title:gsub("%s+#+%s*$", "")) .. "</h" .. #heading .. ">", i)
 			elseif vim.trim(line) == "" then
 				flush()
 			elseif line:match("^%s*>%s?") then
 				flush()
-				emit("<blockquote>" .. inline((line:gsub("^%s*>%s?", ""))) .. "</blockquote>", i)
-			elseif item or numbered then
-				flush()
-				local kind = numbered and "ol" or "ul"
-				if list ~= kind then
-					close_list()
-					list = kind
-					emit("<" .. kind .. ">")
+				local first, quoted = i, {}
+				while lines[i] and lines[i]:match("^%s*>") do
+					quoted[#quoted + 1] = lines[i]:gsub("^%s*>%s?", "", 1)
+					i = i + 1
 				end
-				local value = item or numbered
-				local checked, label = value:match("^%[([ xX])%]%s+(.*)$")
-				local checkbox = checked
-						and ('<input type="checkbox" disabled' .. (checked ~= " " and " checked" or "") .. "> ")
-					or ""
-				emit((checked and '<li class="task-list-item">' or "<li>") .. checkbox .. inline(label or value) .. "</li>", i)
+				emit("<blockquote>" .. M.render(quoted, first - 1) .. "</blockquote>", first, i - 1)
+				i = i - 1
+			elseif item then
+				flush()
+				local start = kind == "ol" and (' start="' .. bullet:match("%d+") .. '"') or ""
+				emit("<" .. kind .. start .. ">")
+				while item do
+					local first, contents = i, { item }
+					i = i + 1
+					while lines[i] do
+						local next_indent = list_item(lines[i])
+						if next_indent and next_indent <= indent then
+							break
+						end
+						if vim.trim(lines[i]) == "" then
+							local next_line = i + 1
+							while lines[next_line] and vim.trim(lines[next_line]) == "" do
+								next_line = next_line + 1
+							end
+							if not lines[next_line] or #(lines[next_line]:match("^ *")) < content_indent then
+								break
+							end
+						elseif #(lines[i]:match("^ *")) < content_indent then
+							break
+						end
+						contents[#contents + 1] = lines[i]:sub(content_indent + 1)
+						i = i + 1
+					end
+					local checked, label = contents[1]:match("^%[([ xX])%]%s+(.*)$")
+					if checked then
+						contents[1] = label
+					end
+					local body = M.render(contents, first - 1)
+					if checked then
+						local checkbox = '<input type="checkbox" disabled' .. (checked ~= " " and " checked" or "") .. "> "
+						body = body:gsub("(<p[^>]*>)", "%1" .. checkbox, 1)
+					end
+					if not vim.tbl_contains(contents, "") then
+						body = body:gsub("^<p[^>]*>(.-)</p>", "%1", 1)
+					end
+					emit((checked and '<li class="task-list-item">' or "<li>") .. body .. "</li>", first, i - 1)
+					local next_line = i
+					while lines[next_line] and vim.trim(lines[next_line]) == "" do
+						next_line = next_line + 1
+					end
+					local sibling_indent, sibling_kind = list_item(lines[next_line] or "")
+					if sibling_indent == indent and sibling_kind == kind then
+						i = next_line
+					end
+					local next_indent, next_kind, next_item, next_content_indent = list_item(lines[i] or "")
+					item = next_indent == indent and next_kind == kind and next_item or nil
+					content_indent = next_content_indent
+				end
+				emit("</" .. kind .. ">")
+				i = i - 1
 			elseif line:match("^%s*<[/]?[%a][%w]*[%s>/]") then
 				flush()
 				emit(inline(line), i)
@@ -201,11 +258,15 @@ function M.render(lines)
 		i = i + 1
 	end
 	flush()
-	close_list()
 	if fence then
 		close_code(#lines)
 	end
-	return table.concat(output, "\n")
+	local html = table.concat(output, "\n")
+	return (
+		html:gsub('(data%-source%-[%w]+=")(%d+)', function(attribute, number)
+			return attribute .. (tonumber(number) + (source_offset or 0))
+		end)
+	)
 end
 
 return M

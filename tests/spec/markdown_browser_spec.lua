@@ -96,6 +96,25 @@ t.describe("Native Markdown renderer", function()
 			t.expect(html).toContain(expected)
 		end
 	end)
+	t.it("renders nested contribution lists, quoted lists, emphasis and bare attachment videos", function()
+		local html = render.render(vim.fn.readfile("tests/fixtures/markdown/contributing.md"))
+		for _, expected in ipairs({
+			"<strong><em>Bug Reporting</em></strong>",
+			"<strong><em>QA &amp; Tester</em></strong>",
+			'<a href="https://example.com/translations">translation guide</a>',
+			'<ol start="1">',
+			'data-source-line="18"',
+			"continued on another line",
+			"A second paragraph in the same item.",
+			"print(&#39;nested code&#39;)",
+			'<video data-source-line="31" data-source-end="31" controls preload="metadata"',
+		}) do
+			t.expect(html).toContain(expected)
+		end
+		t.expect(select(2, html:gsub("<video ", ""))).toBe(2)
+		t.expect(html).not_.toContain("***Bug Reporting")
+	end)
+
 	t.it("escapes scripts, handlers and unsafe link schemes", function()
 		local html = render.render({
 			"<script>alert(1)</script>",

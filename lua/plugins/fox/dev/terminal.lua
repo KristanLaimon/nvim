@@ -980,6 +980,23 @@ function M.setup()
 
 	local function setup_term_buffer(bufnr)
 		if is_term_buf(bufnr) then
+			vim.keymap.set("t", "<C-Space>", "<C-\\><C-n>", {
+				buffer = bufnr,
+				silent = true,
+				desc = "Navigate terminal output",
+			})
+			for _, key in ipairs({ "<C-u>", "<C-d>" }) do
+				vim.keymap.set("t", key, "<C-\\><C-n>" .. key, {
+					buffer = bufnr,
+					silent = true,
+					desc = "Scroll terminal output",
+				})
+			end
+			vim.keymap.set("x", "y", '"+y', {
+				buffer = bufnr,
+				silent = true,
+				desc = "Copy terminal selection to clipboard",
+			})
 			for _, k in ipairs(M.settings.keys.resize_up or {}) do
 				pcall(vim.keymap.set, { "n", "t", "i" }, k, function()
 					M.increase_height()

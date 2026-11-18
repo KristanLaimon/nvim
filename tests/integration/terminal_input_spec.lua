@@ -1,6 +1,57 @@
 local t = require("fox.lib.foxnvim.test")
 
 t.describe("immediate terminal input", function()
+	t.it("navigates terminal output and copies a visual selection", function()
+		local channel = vim.fn.jobstart({ vim.v.progpath, "--embed", "--headless", "-u", "NONE", "-i", "NONE" }, {
+			rpc = true,
+		})
+		local function call(method, ...)
+			return vim.rpcrequest(channel, method, ...)
+		end
+		local ok, err = xpcall(function()
+			call("nvim_ui_attach", 80, 24, { rgb = true })
+			local buf = call(
+				"nvim_exec_lua",
+				[[
+				vim.opt.rtp:prepend(...)
+				vim.g.clipboard = {name = 'test', copy = {['+'] = function(lines) _G.copied = table.concat(lines, '\n') end}, paste = {['+'] = function() return {''} end}}
+				require('plugins.fox.dev.terminal').setup()
+				local buf = vim.api.nvim_create_buf(false, true)
+				vim.api.nvim_set_current_buf(buf)
+				local term = vim.api.nvim_open_term(buf, {})
+				vim.b[buf].fox_is_multi_term = true
+				vim.api.nvim_exec_autocmds('BufEnter', {buffer = buf})
+				vim.api.nvim_chan_send(term, 'hello world')
+				return buf
+			]],
+				{ vim.fn.stdpath("config") }
+			)
+			assert(
+				vim.wait(3000, function()
+					return call("nvim_get_mode").mode == "t"
+				end, 10),
+				"terminal did not enter input mode"
+			)
+			call("nvim_input", "<C-Space>0v4ly")
+			assert(
+				vim.wait(3000, function()
+					return call("nvim_exec_lua", "return _G.copied", {}) == "hello"
+				end, 10),
+				"visual selection was not copied"
+			)
+			assert(call("nvim_get_current_buf") == buf)
+			call("nvim_input", "i")
+			assert(
+				vim.wait(3000, function()
+					return call("nvim_get_mode").mode == "t"
+				end, 10),
+				"terminal input did not resume"
+			)
+		end, debug.traceback)
+		pcall(call, "nvim_command", "qa!")
+		assert(ok, err)
+	end)
+
 	t.it("preserves queued typing when toggling or selecting from plain editing in every layout", function()
 		local channel = vim.fn.jobstart({ vim.v.progpath, "--embed", "--headless", "-u", "NONE", "-i", "NONE" }, {
 			rpc = true,

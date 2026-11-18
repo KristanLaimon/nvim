@@ -26,6 +26,7 @@ Clicking terminal content enters terminal input mode, including when the termina
 - `<Ctrl + Up>`: Stretch terminal bigger (stretching upwards from top edge in bottom float / docked split; centered expansion in center float)
 - `<Ctrl + Down>`: Shrink terminal smaller (anchored at bottom edge in bottom float / docked split; centered shrink in center float)
 - `<C-w>` (inside terminal): Standard Neovim window navigation prefix
+- `<Ctrl + Space>`: Navigate terminal output with Vim motions. `Ctrl+u` / `Ctrl+d` also enter navigation directly and scroll half a page up / down. Use `v` to select, `y` to copy to the system clipboard, and `i` to return to terminal input. These keys no longer reach the shell or terminal application as input. This also works with the text currently visible in terminal applications such as Codex; their own screen and history behavior may limit older content.
 - `:TerminalKillCurrent`: Stop and remove only the visible terminal; hidden slots keep running. Also available as **Kill Current Terminal** in the Command Palette. Does nothing when no terminal is open.
 - `:TerminalToggle`: Toggle show/hide for selected terminal
 - `:TerminalToggleLayout`: Toggle between Docked Split and Floating Overlay

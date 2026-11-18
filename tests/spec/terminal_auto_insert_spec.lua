@@ -46,6 +46,24 @@ describe("terminal auto insert & click behavior", function()
 		end
 	end)
 
+	it("routes terminal Ctrl+u and Ctrl+d to navigation", function()
+		terminal.setup()
+		local buf = vim.api.nvim_create_buf(false, true)
+		table.insert(created_bufs, buf)
+		vim.b[buf].fox_is_multi_term = true
+		vim.api.nvim_exec_autocmds("BufEnter", { buffer = buf })
+		for _, key in ipairs({ "<C-U>", "<C-D>" }) do
+			local maps = vim.api.nvim_buf_get_keymap(buf, "t")
+			local found = false
+			for _, entry in ipairs(maps) do
+				if entry.lhs == key and entry.rhs == "<C-\\><C-N>" .. key then
+					found = true
+				end
+			end
+			expect(found).toBe(true)
+		end
+	end)
+
 	it("enters input on a content click in the already focused terminal, including its first row", function()
 		terminal.setup()
 		local buf = vim.api.nvim_create_buf(false, true)

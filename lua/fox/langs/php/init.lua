@@ -16,6 +16,26 @@ local M = {
 	composer = require("fox.langs.php.composer"),
 }
 
+function M.ini_schema_path(bufnr)
+	local filename = vim.fs.basename(vim.api.nvim_buf_get_name(bufnr)) or ""
+	if vim.fn.has("win32") == 1 then
+		filename = filename:lower()
+	end
+	if
+		filename ~= "php.ini"
+		and filename ~= "php.ini-development"
+		and filename ~= "php.ini-production"
+		and not filename:match("^php%-%w[%w-]*%.ini$")
+	then
+		return
+	end
+
+	local version = vim.b[bufnr].fox_php_ini_version or "8.5.12"
+	if type(version) == "string" and version:match("^%d+%.%d+%.%d+$") then
+		return "php/" .. version .. ".json"
+	end
+end
+
 -- M.composer = require("fox.langs.php.composer")
 
 --- The lspconfig/mason server name(s) this language owns.

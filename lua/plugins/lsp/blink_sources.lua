@@ -19,6 +19,11 @@
 
 --- Sources added to blink.cmp: provider name -> definition.
 local sources = {
+	config_directives = {
+		name = "Config",
+		module = "fox.lsp.config_directives",
+		score_offset = 100,
+	},
 	fox_query = {
 		name = "Database",
 		module = "fox.query.completion",

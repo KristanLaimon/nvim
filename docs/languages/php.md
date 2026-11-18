@@ -19,6 +19,12 @@ FoxVim provides a complete development environment for **PHP** and **Laravel** a
 
 The local Laravel index supplies routes, views, components, Livewire, config, environment, translation and Inertia references through Blink and buffer-local `gf`. Indexes are scoped to the nearest `artisan` project, expire after five seconds, and clear on writes or `:BladeNavClearCache`. PHP Artisan is queried asynchronously for runtime routes and registered aliases when available; static references work without PHP or a parser. Value annotations are opt-in with `:BladeNavToggleShowValues`.
 
+## php.ini completion
+
+Blink completes directive names in `php.ini`, `php.ini-development`, `php.ini-production`, and SAPI-specific files such as `php-cli.ini`. The default schema is [PHP 8.5.12](../../config/schemas/php/8.5.12.json), based on the PHP manual, the release's bundled templates, and the directives registered by the installed build and its extensions.
+
+Each bundled PHP release has its own file under `config/schemas/php/`. To select a different bundled release for a buffer, set `b:fox_php_ini_version` to its full version string, for example `:let b:fox_php_ini_version = '8.5.12'`.
+
 ---
 
 ## 🧰 Ex Commands & Command Palette Actions
@@ -65,3 +71,5 @@ Blade templates frequently incorporate JavaScript blocks for frontend interactio
 
 
 Blade syntax and indentation are local (`fox.langs.php.blade`), using Neovim’s built-in PHP/HTML syntax. `@script`/`@assets` pairs and `g:blade_custom_directives_pairs` are supported. The `=` operator uses the local Blade indent function even when a Treesitter parser is installed.
+
+In `.blade.php` files, type `@` in Insert mode for directive completions. In Normal mode, press `Shift+K` over a known directive to see its usage and description. Both use the bundled Blade and Livewire reference and work offline.

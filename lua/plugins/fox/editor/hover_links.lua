@@ -357,6 +357,21 @@ function M.show_or_focus_hover()
 		return
 	end
 
+	if vim.bo.filetype == "blade" then
+		local cursor = vim.api.nvim_win_get_cursor(current_win)
+		local docs = require("fox.langs.php.blade_directives").under_cursor(vim.api.nvim_get_current_line(), cursor[2])
+		if docs then
+			local buf, win = vim.lsp.util.open_floating_preview(docs, "markdown", {
+				border = M.settings.border,
+				focusable = true,
+				focus_id = "fox_blade_directive",
+				max_width = 80,
+			})
+			M.attach_hover_keymaps(buf, win)
+			return
+		end
+	end
+
 	-- Otherwise trigger hover
 	pcall(function()
 		vim.lsp.buf.hover({ border = M.settings.border, focusable = true })

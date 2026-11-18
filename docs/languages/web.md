@@ -4,6 +4,8 @@
 
 FoxVim provides the baseline frontend setup for plain HTML and CSS projects, including Emmet snippets and Tailwind CSS support. Framework-specific tooling is documented separately in the [Astro guide](astro.md) and [Web UI guide](web-ui.md).
 
+Blink completes directive names at the start of a line in buffers with the `apache` or `nginx` filetype, including `httpd.conf`, `apache2.conf`, `.htaccess`, and `nginx.conf`. Apache section names also complete after `<` or `</`. Both catalogs are bundled under `config/schemas/` and completion works offline. The catalogs include directives from optional modules, so availability depends on the server build and where the directive is used.
+
 ---
 
 ## 🛠️ Toolchain Summary

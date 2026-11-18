@@ -9,6 +9,14 @@ function Source.get_trigger_characters(_)
 	return { ".", "<", ":", "@", "(", "'", '"' }
 end
 function Source.get_completions(_, ctx, callback)
+	local buf = ctx.bufnr or vim.api.nvim_get_current_buf()
+	if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "blade" then
+		local items = require("fox.langs.php.blade_directives").complete(ctx.line, ctx.cursor[1] - 1, ctx.cursor[2])
+		if items then
+			return callback({ items = items, is_incomplete_forward = true, is_incomplete_backward = true })
+		end
+	end
+
 	local cancelled = false
 	vim.schedule(function()
 		if cancelled then
@@ -17,7 +25,6 @@ function Source.get_completions(_, ctx, callback)
 		local items = {}
 		local ok, err = pcall(function()
 			local m = require("fox.langs.php.laravel")
-			local buf = ctx.bufnr or vim.api.nvim_get_current_buf()
 			if not vim.api.nvim_buf_is_valid(buf) then
 				return
 			end

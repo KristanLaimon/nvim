@@ -532,6 +532,7 @@ M.commands = {
 		cmd = "MarkdownPreviewToggle",
 		category = "Markdown",
 	},
+	{ name = "📖 Open Fox Reader", cmd = "FoxReader", category = "Markdown" },
 }
 
 -- ============================================================================

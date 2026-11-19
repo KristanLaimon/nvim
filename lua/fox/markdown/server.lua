@@ -2,7 +2,7 @@ local render = require("fox.markdown.render")
 local M = {}
 local server, prefix, origin
 local pages, clients = {}, {}
-local assets = vim.fn.stdpath("config") .. "/config/markdown/"
+local assets = vim.fn.stdpath("config") .. "/config/tools/gb-markdown-render/"
 
 local function close(handle)
 	if handle and not handle:is_closing() then

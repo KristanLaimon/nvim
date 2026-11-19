@@ -191,6 +191,20 @@ function M.get_npm_bin()
 	return nil
 end
 
+local function npm_command(npm_bin, package_name)
+	local command = { npm_bin, "install", "--save-dev", package_name }
+	if (vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1) and npm_bin:lower():match("%.cmd$") then
+		local cli = path.join(vim.fs.dirname(vim.fs.normalize(npm_bin)), "node_modules/npm/bin/npm-cli.js")
+		local node = vim.fn.exepath("node")
+		if node == "" or not path.is_file(cli) then
+			error("Cannot find Node.js or npm-cli.js for " .. npm_bin)
+		end
+		command[1] = cli
+		table.insert(command, 1, node)
+	end
+	return command
+end
+
 --- Installs a TypeScript type package into the schema store.
 --- Accepts `node`, `@scope/pkg`, and either with an `@version` suffix. A bare
 --- name is resolved as `@types/<name>`; a scoped name is taken as-is.
@@ -245,7 +259,7 @@ function M.install_npm_types(input_pkg, callback, core)
 	core.notify("📦 Installing " .. npm_package .. " via npm...")
 
 	local ok, spawn_err = pcall(function()
-		vim.system({ npm_bin, "install", "--save-dev", npm_package }, { cwd = schema_dir }, function(obj)
+		vim.system(npm_command(npm_bin, npm_package), { cwd = schema_dir }, function(obj)
 			vim.schedule(function()
 				if obj.code == 0 then
 					core.notify("✅ Installed " .. npm_package .. " successfully!")
@@ -313,7 +327,7 @@ function M.update_npm_types(schema_folder, callback, core)
 
 	local target_pkg = pkg_to_update .. "@latest"
 	local ok, spawn_err = pcall(function()
-		vim.system({ npm_bin, "install", "--save-dev", target_pkg }, { cwd = schema_dir }, function(obj)
+		vim.system(npm_command(npm_bin, target_pkg), { cwd = schema_dir }, function(obj)
 			vim.schedule(function()
 				if obj.code == 0 then
 					core.notify("✅ Updated " .. pkg_to_update .. " successfully!")

@@ -94,7 +94,7 @@ Existing integration points to inspect and reuse where suitable:
 | `lua/fox/markdown/server.lua` | Local HTTP transport, asset serving and preview lifecycle. |
 | `lua/plugins/editor/markdown.lua` | Lazy loading and Markdown feature registration. |
 | `lua/plugins/fox/tools/command_palette.lua` | User-facing Command Palette actions. |
-| `config/markdown/` | Existing browser preview assets and attribution conventions. |
+| `config/tools/gb-markdown-render/` | Assets and attribution conventions for the separate GitHub-style browser preview. |
 | `docs/editor-qol.md` | Documentation for the current browser preview. |
 
 The existing server is tied to individual buffers and serves rendered HTML. A cwd reader needs a workspace-oriented document interface and Folio's rendering path. Inspect the server before deciding whether to extend it or add a small reader-specific service. Reuse suitable code without forcing both features into an unsuitable lifecycle.

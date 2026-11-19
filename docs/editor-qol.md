@@ -15,7 +15,7 @@ last source closes, the HTTP listener and its connections shut down automaticall
 exiting Neovim also closes them. Merely switching to another buffer keeps the
 preview available. There is no separate server process to leave running.
 Mermaid diagrams in fenced blocks and standalone files use the attributed local
-JavaScript bundle in `config/markdown/`; no CDN or Mermaid CLI is used. Source
+JavaScript bundle in `config/tools/gb-markdown-render/`; no CDN or Mermaid CLI is used. Source
 buffers stay untouched. Edits update the same browser tab without saving.
 The preview uses the former plugin's attributed GitHub-like stylesheet, including
 headings, tables, code blocks and task lists. It follows the browser's light/dark

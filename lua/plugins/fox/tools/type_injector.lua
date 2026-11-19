@@ -280,6 +280,11 @@ function M.get_schema_version(lang, schema_name)
 		path.join(schema_dir, "package.json"),
 		path.join(schema_dir, "node_modules/@types", schema_name, "package.json"),
 	}
+	local manifest = store.load(candidates[1], {})
+	local package_name = next(manifest.devDependencies or manifest.dependencies or {})
+	if package_name then
+		table.insert(candidates, 1, path.join(schema_dir, "node_modules", package_name, "package.json"))
+	end
 	for _, candidate in ipairs(candidates) do
 		local version = store.load(candidate, {}).version
 		if version then
@@ -373,10 +378,11 @@ local function open_schema_picker(lang, root, active_data)
 	local items = {}
 	for _, name in ipairs(M.scan_available_schemas(lang.key)) do
 		local version = M.get_schema_version(lang.key, name)
+		local display_name = lang.key == "typescript_javascript" and name:gsub("^types__", "@types/") or name
 		table.insert(items, {
 			name = name,
 			is_active = active_set[name] == true,
-			display = (active_set[name] and "✅ " or "⬜ ") .. name .. (version and (" (" .. version .. ")") or ""),
+			display = (active_set[name] and "✅ " or "⬜ ") .. display_name .. (version and (" | " .. version) or ""),
 		})
 	end
 
@@ -553,20 +559,32 @@ function M.open_menu()
 		return
 	end
 
-	local choices = {}
-	for index, entry in ipairs(M.settings.languages) do
-		table.insert(choices, index .. ". " .. entry.label)
-	end
-
-	vim.ui.select(choices, { prompt = "Select Language for Type Injector:" }, function(choice)
-		if not choice then
-			return
-		end
-		local index = tonumber(choice:match("^(%d+)%."))
-		if index and M.settings.languages[index] then
-			open_schema_picker(M.settings.languages[index], root, active_data)
-		end
-	end)
+	local pickers = require("telescope.pickers")
+	local finders = require("telescope.finders")
+	local actions = require("telescope.actions")
+	local action_state = require("telescope.actions.state")
+	pickers
+		.new({}, {
+			prompt_title = "Type Injector: Select Language",
+			finder = finders.new_table({
+				results = M.settings.languages,
+				entry_maker = function(entry)
+					return { value = entry, display = entry.label, ordinal = entry.label }
+				end,
+			}),
+			sorter = require("telescope.config").values.generic_sorter({}),
+			attach_mappings = function(bufnr)
+				actions.select_default:replace(function()
+					local selected = action_state.get_selected_entry()
+					actions.close(bufnr)
+					if selected then
+						open_schema_picker(selected.value, root, active_data)
+					end
+				end)
+				return true
+			end,
+		})
+		:find()
 end
 
 -- ============================================================================
@@ -655,7 +673,7 @@ function M.setup()
 				return
 			end
 			for _, lang in ipairs(M.settings.languages) do
-				if client.name == lang.lsp then
+				if client.name == resolved_lsp_name(lang) then
 					M.apply_lsp_settings(M.get_project_root())
 					return
 				end

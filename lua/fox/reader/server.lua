@@ -31,6 +31,27 @@ local function editor_theme()
 	}
 end
 
+local function document(content)
+	local lines = vim.split(content, "\n", { plain = true, trimempty = false })
+	if vim.trim(lines[1] or "") == "---" then
+		local has_field = false
+		for index = 2, #lines do
+			local line = lines[index]:gsub("\r$", "")
+			if line:match("^%-%-%-%s*$") or line:match("^%.%.%.%s*$") then
+				if has_field then
+					return renderer.render(vim.list_slice(lines, index + 1), index),
+						table.concat(vim.list_slice(lines, 2, index - 1), "\n"):gsub("\r\n", "\n")
+				end
+				break
+			end
+			if line:match("^[^%s:#][^:]*:%s*") then
+				has_field = true
+			end
+		end
+	end
+	return renderer.render(lines)
+end
+
 local function response(session, target)
 	if target:sub(1, #session.prefix) ~= session.prefix then
 		return 404, "Not found", "text/plain"
@@ -46,9 +67,8 @@ local function response(session, target)
 		if not content then
 			return 404, err, "text/plain"
 		end
-		return 200,
-			vim.json.encode({ html = renderer.render(vim.split(content, "\n", { plain = true })), path = path }),
-			"application/json"
+		local html, frontmatter = document(content)
+		return 200, vim.json.encode({ html = html, frontmatter = frontmatter, path = path }), "application/json"
 	end
 	local state_path = route:match("^state%?path=(.*)$")
 	if route == "state" or state_path then

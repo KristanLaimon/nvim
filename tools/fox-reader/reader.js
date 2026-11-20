@@ -4,6 +4,7 @@ const article = document.querySelector("#content");
 const status = document.querySelector("#status");
 let current = new URL(location.href).searchParams.get("path") || "";
 let lastHtml = "";
+let lastMetadata = "";
 let navigation = 0;
 let allFiles = [];
 const expandedFolders = new Set();
@@ -24,6 +25,7 @@ function applyReadingStyle() {
   document.documentElement.style.setProperty("--reading-spacing", preferences.lineSpacing);
   document.documentElement.style.setProperty("--reading-width", `${preferences.width}px`);
   document.body.classList.toggle("focus", preferences.focus);
+  document.querySelector("#focus").setAttribute("aria-pressed", String(preferences.focus));
 }
 /** @param {object} value @returns {void} */
 function saveState(value) {
@@ -71,9 +73,11 @@ function renderFiles() {
   const query = document.querySelector("#filter").value.toLowerCase();
   files.replaceChildren();
   const folders = new Map([["", files]]);
-  for (const path of allFiles.filter(name => name.toLowerCase().includes(query))) {
+  const matchingFiles = allFiles.filter(name => name.toLowerCase().includes(query))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true }));
+  for (const path of matchingFiles) {
     const parts = path.split("/");
-    const filename = parts.pop();
+    parts.pop();
     let parent = "";
     for (const part of parts) {
       const folderPath = parent ? `${parent}/${part}` : part;
@@ -94,6 +98,11 @@ function renderFiles() {
       }
       parent = folderPath;
     }
+  }
+  for (const path of matchingFiles) {
+    const parts = path.split("/");
+    const filename = parts.pop();
+    const parent = parts.join("/");
     const link = document.createElement("a");
     link.href = "?path=" + encodeURIComponent(path);
     link.textContent = filename;
@@ -118,6 +127,7 @@ async function openDocument(path, push = true, anchor = "") {
   const revision = navigation;
   restoring = true;
   lastHtml = "";
+  lastMetadata = "";
   if (push) history.pushState({ path }, "", path ? "?path=" + encodeURIComponent(path) + anchor : location.pathname);
   if (!path) {
     article.replaceChildren();
@@ -152,7 +162,7 @@ async function refresh() {
     if (!result.ok) throw new Error("Document is unavailable: " + path);
     const documentData = await result.json();
     if (revision !== navigation || documentData.path !== current) return;
-    if (documentData.html !== lastHtml) {
+    if (documentData.html !== lastHtml || (documentData.frontmatter || "") !== lastMetadata) {
       const headings = [...article.querySelectorAll("h1,h2,h3,h4,h5,h6")];
       const visible = headings.filter(heading => heading.getBoundingClientRect().top <= 0).pop();
       const anchorId = visible?.id;
@@ -160,6 +170,53 @@ async function refresh() {
       const top = window.scrollY;
       article.innerHTML = documentData.html;
       lastHtml = documentData.html;
+      lastMetadata = documentData.frontmatter || "";
+      if (lastMetadata) {
+        const metadata = document.createElement("details");
+        metadata.className = "metadata";
+        metadata.open = true;
+        const title = document.createElement("summary");
+        title.textContent = "Properties";
+        metadata.append(title);
+        const fields = document.createElement("dl");
+        let value;
+        for (const line of lastMetadata.split("\n")) {
+          const field = line.match(/^([^\s:#][^:]*):(?:\s+(.*)|\s*)$/);
+          if (field) {
+            const key = document.createElement("dt");
+            key.textContent = field[1].trim();
+            value = document.createElement("dd");
+            value.textContent = field[2] || "";
+            fields.append(key, value);
+          } else {
+            if (!value) {
+              const key = document.createElement("dt");
+              key.textContent = "YAML";
+              value = document.createElement("dd");
+              fields.append(key, value);
+            }
+            value.textContent += (value.textContent ? "\n" : "") + line;
+          }
+        }
+        for (const field of fields.querySelectorAll("dd")) {
+          const lines = field.textContent.split("\n");
+          const blockItems = lines.map(line => line.match(/^\s+-\s+([^\n]+)$/));
+          const inlineItems = field.textContent.match(/^\[([^\[\]"']*)\]$/);
+          const items = blockItems.every(Boolean) ? blockItems.map(item => item[1])
+            : inlineItems ? inlineItems[1].split(",").map(item => item.trim()).filter(Boolean) : [];
+          if (items.length) {
+            field.replaceChildren();
+            for (const item of items) {
+              const tag = document.createElement("span");
+              tag.className = "metadata-item";
+              tag.textContent = item;
+              field.append(tag);
+            }
+          }
+        }
+        metadata.append(fields);
+        article.prepend(metadata);
+      }
       document.querySelector("#title").textContent = current;
       const base = new URL(current.split("/").map(encodeURIComponent).join("/"), "https://workspace.invalid/");
       for (const image of article.querySelectorAll("img[src]")) {
@@ -204,6 +261,7 @@ async function refresh() {
   } catch (error) {
     if (revision !== navigation) return;
     lastHtml = "";
+    lastMetadata = "";
     article.replaceChildren();
     document.querySelector("#outline nav").replaceChildren();
     document.querySelector("#title").textContent = path;
@@ -228,12 +286,44 @@ document.querySelector("#theme").onclick = () => {
   document.documentElement.dataset.theme = preferences.theme;
   saveState({ kind: "preferences", value: { ...preferences } });
 };
+for (const control of document.querySelectorAll(".control")) {
+  const button = control.querySelector("button");
+  const panel = control.querySelector(".control-panel");
+  button.onclick = () => {
+    const opening = panel.hidden;
+    for (const other of document.querySelectorAll(".control")) {
+      other.querySelector(".control-panel").hidden = true;
+      other.querySelector("button").setAttribute("aria-expanded", "false");
+    }
+    panel.hidden = !opening;
+    button.setAttribute("aria-expanded", String(opening));
+  };
+}
+document.addEventListener("click", event => {
+  if (event.target.closest(".control")) return;
+  for (const control of document.querySelectorAll(".control")) {
+    control.querySelector(".control-panel").hidden = true;
+    control.querySelector("button").setAttribute("aria-expanded", "false");
+  }
+});
+document.addEventListener("keydown", event => {
+  if (event.key !== "Escape") return;
+  for (const control of document.querySelectorAll(".control")) {
+    control.querySelector(".control-panel").hidden = true;
+    control.querySelector("button").setAttribute("aria-expanded", "false");
+  }
+});
 for (const setting of ["font", "alignment", "size", "lineSpacing", "width"]) {
-  document.querySelector(`#${setting}`).onchange = event => {
+  const input = document.querySelector(`#${setting}`);
+  const update = event => {
     preferences[setting] = ["size", "lineSpacing", "width"].includes(setting) ? Number(event.target.value) : event.target.value;
     applyReadingStyle();
-    saveState({ kind: "preferences", value: { ...preferences } });
   };
+  input.addEventListener("input", update);
+  input.addEventListener("change", event => {
+    update(event);
+    saveState({ kind: "preferences", value: { ...preferences } });
+  });
 }
 for (const [id, direction] of [["width-left", -1], ["width-right", 1]]) {
   const handle = document.querySelector(`#${id}`);

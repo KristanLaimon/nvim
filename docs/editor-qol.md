@@ -25,6 +25,8 @@ The reader reports corrupt or unwritable state while remaining usable.
 The reader supports local links and raster images, tables, task lists and
 Mermaid using local assets. Its shared Markdown renderer does not yet cover every
 GitHub Flavored Markdown feature; math and syntax highlighting remain planned.
+YAML frontmatter at the start of a document appears in a collapsible Properties
+panel. Nested and multiline values are shown as text rather than interpreted.
 
 ## Markdown browser preview
 

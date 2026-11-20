@@ -1,23 +1,16 @@
 local render = require("fox.markdown.render")
+local http = require("fox.markdown.http")
 local M = {}
-local server, prefix, origin
-local pages, clients = {}, {}
-local assets = vim.fn.stdpath("config") .. "/config/tools/gb-markdown-render/"
-
-local function close(handle)
-	if handle and not handle:is_closing() then
-		handle:close()
-	end
-end
+local server, prefix
+local pages = {}
+local assets = vim.fn.stdpath("config") .. "/tools/fox-markdown-gh/"
 
 function M.stop()
-	close(server)
-	server = nil
-	for client, timer in pairs(clients) do
-		close(timer)
-		close(client)
+	if server then
+		server:stop()
+		server = nil
 	end
-	pages, clients = {}, {}
+	pages = {}
 end
 
 local mime = {
@@ -31,16 +24,6 @@ local mime = {
 local preview_csp =
 	"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; media-src 'self' https: http:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'"
 local svg_csp = "sandbox; default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"
-
-local function read_file(path)
-	local file = io.open(path, "rb")
-	if not file then
-		return nil
-	end
-	local content = file:read("*a")
-	file:close()
-	return content
-end
 
 local function response(target)
 	if target:sub(1, #prefix) ~= prefix then
@@ -85,7 +68,7 @@ local function response(target)
 	}
 	if files[resource] then
 		local file = files[resource]
-		local data = read_file(assets .. file[1])
+		local data = http.read_file(assets .. file[1])
 		return data and 200 or 404, data or "Resource missing", file[2]
 	end
 	-- Only image files inside the current document directory are exposed.
@@ -101,7 +84,7 @@ local function response(target)
 		then
 			local stat = vim.uv.fs_stat(path)
 			if stat and stat.type == "file" and stat.size <= 10 * 1024 * 1024 then
-				local data = read_file(path)
+				local data = http.read_file(path)
 				if data then
 					return 200, data, kind
 				end
@@ -111,90 +94,25 @@ local function response(target)
 	return 404, "Not found", "text/plain"
 end
 
-local function accept(err)
-	if err or not server then
-		return
-	end
-	local client = vim.uv.new_tcp()
-	if not server:accept(client) then
-		close(client)
-		return
-	end
-	local timer = vim.uv.new_timer()
-	clients[client] = timer
-	local function finish()
-		clients[client] = nil
-		close(timer)
-		close(client)
-	end
-	timer:start(5000, 0, finish)
-	local request = ""
-	client:read_start(function(read_error, data)
-		if read_error or not data then
-			finish()
-			return
-		end
-		request = request .. data
-		if #request > 8192 then
-			finish()
-			return
-		end
-		if not request:find("\r\n\r\n", 1, true) then
-			return
-		end
-		client:read_stop()
-		vim.schedule(function()
-			if client:is_closing() then
-				return
-			end
-			local method, target = request:match("^(%u+) ([^ ]+) HTTP/1%.[01]\r\n")
-			local host = request:lower():match("\r\nhost:%s*([^\r\n]+)")
-			local status, body, content_type = 403, "Forbidden", "text/plain"
-			if method == "GET" and host == origin and server then
-				local ok
-				ok, status, body, content_type = pcall(response, target)
-				if not ok then
-					status, body, content_type = 500, "Preview could not be rendered", "text/plain"
-				end
-			end
-			local csp = content_type == mime.svg and svg_csp or preview_csp
-			client:write(
-				"HTTP/1.1 "
-					.. status
-					.. " OK\r\nContent-Type: "
-					.. content_type
-					.. "; charset=utf-8\r\nContent-Length: "
-					.. #body
-					.. "\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: "
-					.. csp
-					.. "\r\n\r\n"
-					.. body,
-				finish
-			)
-		end)
-	end)
-end
-
 function M.start(buf)
 	if not server then
-		local candidate = assert(vim.uv.new_tcp())
-		local ok, err = candidate:bind("127.0.0.1", 0)
-		if not ok then
-			close(candidate)
-			error(err)
-		end
-		server = candidate
-		origin = "127.0.0.1:" .. server:getsockname().port
-		prefix = "/" .. vim.fn.sha256(assert(vim.uv.random(32))):sub(1, 32) .. "/"
-		ok, err = server:listen(32, accept)
-		if not ok then
-			M.stop()
-			error(err)
-		end
+		server = http.start({
+			max_request = 8192,
+			csp = preview_csp,
+			error_message = "Preview could not be rendered",
+			handle = function(_, method, target)
+				if method ~= "GET" or not server then
+					return 403, "Forbidden", "text/plain"
+				end
+				local status, body, kind = response(target)
+				return status, body, kind, kind == mime.svg and svg_csp or preview_csp
+			end,
+		})
+		prefix = server.prefix
 	end
 	local win = vim.fn.bufwinid(buf)
 	pages[buf] = { line = win ~= -1 and vim.api.nvim_win_get_cursor(win)[1] or 1 }
-	return "http://" .. origin .. prefix .. buf .. "/"
+	return server.url .. buf .. "/"
 end
 
 function M.active(buf)

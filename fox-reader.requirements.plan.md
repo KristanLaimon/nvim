@@ -20,7 +20,7 @@ Make repository Markdown comfortable to read for extended periods, inspired by t
 ## Non-Functional Requirements
 
 - Implement the HTTP server in Lua using Neovim's APIs. The feature must not require Node.js, Python or Go at runtime; no separate app, document import, browser folder picker, account or separate frontend server. Frontend build tools may be used during development or packaging.
-- Ship the static frontend assets, including locally bundled dependencies needed for offline rendering, in `config/tools/fox-reader/`.
+- Ship the static frontend assets, including locally bundled dependencies needed for offline rendering, in `tools/fox-reader/`.
 - Serve only on loopback; restrict document and asset access to resolved paths inside the selected root. Editor actions must use validated document identities and target the originating session.
 - Handle missing, deleted or renamed files with a useful message; handle spaces and Unicode in paths. Scan large trees incrementally or with bounded work without silently excluding directories from the cwd library.
 - Keep the existing cursor-following Markdown preview intact. Stop the reader service on Neovim exit.

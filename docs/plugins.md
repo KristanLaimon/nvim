@@ -12,7 +12,7 @@ See [Module Architecture](module-architecture.md) for how the custom ones are wi
 
 | Module | File | What it does | Keys / commands |
 |---|---|---|---|
-| **FoxQuerier** | `config/tools/query.lua` | Read-only SQL workspace, Standard/Visual layouts, cached completion, FK maps, notes, and local workspace persistence. | `<C-A-o>`, `:FoxMode`, `:FoxQueryView`, `:FoxQueryConnections` |
+| **FoxQuerier** | `tools/query.lua` | Read-only SQL workspace, Standard/Visual layouts, cached completion, FK maps, notes, and local workspace persistence. | `<C-A-o>`, `:FoxMode`, `:FoxQueryView`, `:FoxQueryConnections` |
 | **Project Replace** | `tools/project_replace.lua` | Right search sidebar, grouped results, one reusable preview tab, guarded replacement writes. No plugin or external tool dependencies. | `<C-f>`, `<C-S-m>`, `<F9>`, `:ProjectSearch`, `:ProjectReplace` |
 | **Workspaces Manager** | `workspaces.lua` | Harpoon + Telescope hybrid session manager. Saves buffers, tab layout and `cwd` per project into numbered slots; rename, overwrite, delete from a floating UI. | `<C-S-w>`, `<leader>ws`, `<leader>ww`, `<leader>wm`, `<leader>w1`..`9` |
 | **Command Palette** | `command_palette.lua` | VSCode-style fuzzy command list — Vim commands, simulated keypresses or Lua functions from one picker. Other modules register into it at runtime. | `<C-S-p>`, `:CommandPalette` |

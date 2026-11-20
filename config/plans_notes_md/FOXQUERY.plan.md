@@ -1,6 +1,6 @@
 # FoxQuerier: a database workspace inside FoxVim
 
-Current backend: FoxQuery uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under config/tools/repos/foxquery (vendor is generated locally when missing, reused, and Git-ignored); final executables live under config/tools/foxquery. SQLite, MySQL/MariaDB, and PostgreSQL drivers are compiled into those binaries. MariaDB uses the mysql connection engine and SQL dialect. Existing profiles, SQL, caches, and passwords retain their formats. See config/tools/repos/foxquery/README.md.
+Current backend: FoxQuery uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under tools/repos/fox-query (vendor is generated locally when missing, reused, and Git-ignored); final executables live under tools/fox-query. SQLite, MySQL/MariaDB, and PostgreSQL drivers are compiled into those binaries. MariaDB uses the mysql connection engine and SQL dialect. Existing profiles, SQL, caches, and passwords retain their formats. See tools/repos/fox-query/README.md.
 
 Status: **initial read-only implementation available**. See [the usage and validation guide](../../docs/query-mode.md) for commands, implemented behavior, and current limitations. This document retains the intended product design; unchecked acceptance items and suggested follow-ups are not claims of completed validation.
 
@@ -551,7 +551,7 @@ Panel-local keys should be familiar: arrows or `h/j/k/l`, Enter to inspect, `/` 
 
 Suggested ownership: domain/session/cache logic under `lua/fox/query/`, thin FOX plugin entry following current grouping, language-tooling settings in `lua/fox/langs/sql/init.lua`. Create modules only when responsibilities justify them. Never scatter SQL language settings across aggregators.
 
-Fresh setups stay Lua-core-only. No optional SQL config/tools/parsers/drivers install in the background; explain missing dependencies and offer explicit selection/installation.
+Fresh setups stay Lua-core-only. No optional SQL tools/parsers/drivers install in the background; explain missing dependencies and offer explicit selection/installation.
 
 ## 16. Build order and acceptance checks
 

@@ -10,10 +10,10 @@ class Element {
 }
 const files = new Element("nav");
 const filter = { value: "" };
-const source = fs.readFileSync("config/tools/fox-reader/reader.js", "utf8");
+const source = fs.readFileSync("tools/fox-reader/reader.js", "utf8");
 const treeFunction = source.slice(source.indexOf("function renderFiles()"), source.indexOf("async function openDocument"));
 const context = {
-  files, allFiles: ["README.md", "docs/Guía uno.md", "docs/nested/test.txt"],
+  files, current: "", allFiles: ["README.md", "docs/Guía uno.md", "docs/nested/test.txt"],
   expandedFolders: new Set(), URL, encodeURIComponent,
   document: { querySelector: () => filter, createElement: tag => new Element(tag) },
   openDocument: () => {},

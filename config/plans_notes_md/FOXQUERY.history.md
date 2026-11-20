@@ -1,6 +1,6 @@
 # FoxQuerier / FOXQUERYGRIP — resume notes
 
-Current backend: FoxQuery uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under config/tools/repos/foxquery (vendor is generated locally when missing, reused, and Git-ignored); final executables live under config/tools/foxquery. SQLite, MySQL/MariaDB, and PostgreSQL drivers are compiled into those binaries. MariaDB uses the mysql connection engine and SQL dialect. Existing profiles, SQL, caches, and passwords retain their formats. See config/tools/repos/foxquery/README.md.
+Current backend: FoxQuery uses bundled Go workers for Windows/Linux amd64. Source, pinned dependency lockfiles, tests, and build.ps1/build.sh live under tools/repos/fox-query (vendor is generated locally when missing, reused, and Git-ignored); final executables live under tools/fox-query. SQLite, MySQL/MariaDB, and PostgreSQL drivers are compiled into those binaries. MariaDB uses the mysql connection engine and SQL dialect. Existing profiles, SQL, caches, and passwords retain their formats. See tools/repos/fox-query/README.md.
 
 Updated: 2026-10-27. Repository: the Neovim configuration root.
 
@@ -54,7 +54,7 @@ Core:
 - `lua/fox/query/storage.lua` — project paths, atomic writes, profiles/cache validation, document buffers, fingerprints.
 - `lua/fox/query/layout.lua` — global geometry persistence via the house store; validated/clamped pane ratios and popup sizes, geometry only; tests use isolated temporary paths.
 - `lua/fox/query/client.lua` — async Neovim/Go JSONL transport, worker lifecycle/cancellation, local driver lookup.
-- `config/tools/repos/foxquery/` — Go driver adapters, read-only enforcement, binding, bounded fetches, metadata, cancellation, and JSONL protocol.
+- `tools/repos/fox-query/` — Go driver adapters, read-only enforcement, binding, bounded fetches, metadata, cancellation, and JSONL protocol.
 
 Integration:
 
@@ -78,7 +78,7 @@ Tests:
 - `tests/spec/query_usability_spec.lua` — completion/ambiguity/current statement, UML alignment, SQLite profile picker, shared explorer navigation/callback.
 - `tests/spec/query_live_spec.lua` — SELECT debounce/guard/parameters, real SQLite execution/restore/failure badges, connection CRUD, key delivery aliases, both layouts, dim columns/FK candidates.
 - `tests/spec/statusline_spec.lua` — workflow label/highlights/current-tab handling and presence in all statusline themes.
-- `config/tools/repos/foxquery/driver_test.go` — disposable SQLite/binding/read-only/caps/cancellation/transport tests.
+- `tools/repos/fox-query/driver_test.go` — disposable SQLite/binding/read-only/caps/cancellation/transport tests.
 
 Docs/design:
 
@@ -102,7 +102,7 @@ Useful commands from repository root:
 ```text
 nvim --headless -u NONE -i NONE -l tests/run.lua query
 nvim --headless -u NONE -i NONE -l tests/run.lua
-cd config/tools/repos/foxquery && go test -mod=vendor ./...
+cd tools/repos/fox-query && go test -mod=vendor ./...
 ```
 
 Never run terminal setup against actual user settings just to test it; use temporary LOCALAPPDATA fixtures.

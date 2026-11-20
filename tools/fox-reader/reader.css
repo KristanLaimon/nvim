@@ -1,0 +1,47 @@
+:root { color-scheme: light; --paper: #f7f2e8; --ink: #28241f; --muted: #766f64; }
+:root[data-theme="light"] { --paper: #fff; --ink: #222; --muted: #777; }
+:root[data-theme="dark"] { color-scheme: dark; --paper: #191919; --ink: #e6e0d5; --muted: #aaa; }
+:root[data-theme="editor"] { color-scheme: var(--editor-scheme, light); --paper: var(--editor-background, #f7f2e8); --ink: var(--editor-foreground, #28241f); --muted: var(--editor-muted, #766f64); }
+:root { background: var(--paper); color: var(--ink); }
+* { box-sizing: border-box; }
+body { margin: 0; display: flex; background: var(--paper); color: var(--ink); font: 16px "Trebuchet MS", sans-serif; }
+aside { width: 240px; height: 100vh; overflow: auto; padding: 1rem .75rem; position: sticky; top: 0; flex-shrink: 0; background: color-mix(in srgb, var(--paper), var(--ink) 4%); }
+#library { border-right: 1px solid color-mix(in srgb, var(--muted), transparent 65%); }
+#outline { border-left: 1px solid color-mix(in srgb, var(--muted), transparent 65%); }
+aside h1, aside h2 { margin: .4rem .5rem 1rem; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+#filter { width: 100%; margin-bottom: .75rem; padding: .45rem .6rem; border: 1px solid color-mix(in srgb, var(--muted), transparent 55%); border-radius: 4px; background: var(--paper); color: var(--ink); }
+nav a, #files summary { display: block; min-width: 0; overflow-wrap: anywhere; padding: .4rem .5rem; border-radius: 4px; color: var(--ink); text-decoration: none; }
+nav a:hover, #files summary:hover { background: color-mix(in srgb, var(--ink), transparent 91%); }
+nav a:focus-visible, #files summary:focus-visible { outline: 2px solid var(--muted); outline-offset: -2px; }
+nav a[aria-current="page"] { background: color-mix(in srgb, var(--ink), transparent 85%); }
+#files details { padding-left: .7rem; }
+#files summary { cursor: pointer; list-style: none; }
+#files summary::-webkit-details-marker { display: none; }
+#files summary::before { content: "▸  📁"; display: inline-block; width: 2.8em; }
+#files details[open] > summary::before { content: "▾  📂"; }
+#files a::before { content: "📄"; display: inline-block; width: 1.8em; }
+#files a[data-extension="md"]::before, #files a[data-extension="mdx"]::before { content: "📝"; }
+#files a[data-extension="txt"]::before { content: "📃"; }
+main { min-width: 0; flex: 1; }
+header { position: sticky; top: 0; background: var(--paper); display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; padding: .8rem; border-bottom: 1px solid var(--muted); z-index: 2; }
+header strong { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button, input, select { font: inherit; }
+#reading-area { position: relative; width: min(100%, var(--reading-width, 760px)); margin: 3rem auto; }
+.width-handle { position: absolute; top: 2rem; width: 12px; height: 60px; padding: 0; border: 0; border-radius: 6px; background: var(--muted); opacity: .55; cursor: ew-resize; touch-action: none; }
+.width-handle:hover, .width-handle:focus-visible { opacity: 1; }
+#width-left { left: 0; }
+#width-right { right: 0; }
+article { margin: 0; padding: 0 2rem 6rem; font: var(--reading-size, 18px)/var(--reading-spacing, 1.8) var(--reading-font, "Trebuchet MS"), sans-serif; text-align: var(--reading-alignment, justify); overflow-wrap: anywhere; }
+article img { max-width: 100%; }
+pre, table { max-width: 100%; overflow: auto; display: block; }
+pre { background: #8882; padding: 1rem; font: .85em/1.5 monospace; }
+table { border-collapse: collapse; } td, th { border: 1px solid var(--muted); padding: .4rem; }
+a { color: inherit; }
+#status, #state-status { text-align: center; color: var(--muted); }
+body.focus aside { display: none; }
+@media (max-width: 850px) { #outline { display: none; } #library { width: 180px; } }
+@media (max-width: 600px) { #library { display: none; } body.show-library #library { display: block; position: fixed; background: var(--paper); z-index: 3; } }
+@font-face { font-family: "Trebuchet MS"; src: local("Trebuchet MS"), url("fonts/trebuc.ttf") format("truetype"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Trebuchet MS"; src: local("Trebuchet MS Bold"), url("fonts/trebucbd.ttf") format("truetype"); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Trebuchet MS"; src: local("Trebuchet MS Italic"), url("fonts/trebucit.ttf") format("truetype"); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Trebuchet MS"; src: local("Trebuchet MS Bold Italic"), url("fonts/trebucbi.ttf") format("truetype"); font-weight: 700; font-style: italic; }

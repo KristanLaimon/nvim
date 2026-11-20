@@ -3,7 +3,7 @@
 ## Verified context
 
 - `lua/fox/markdown/browser.lua` launches browsers across supported platforms and installs preview lifecycle hooks. `server.lua` is a loopback HTTP server with a random URL prefix, Host validation, a content security policy, buffer-based pages and cursor-following updates.
-- `lua/plugins/editor/markdown.lua` lazily registers preview commands; `lua/plugins/fox/tools/command_palette.lua` registers the existing palette action. `config/tools/gb-markdown-render/` contains assets for the separate GitHub-style Markdown preview, which is outside Fox Reader's scope.
+- `lua/plugins/editor/markdown.lua` lazily registers preview commands; `lua/plugins/fox/tools/command_palette.lua` registers the existing palette action. `tools/fox-markdown-gh/` contains assets for the separate GitHub-style Markdown preview, which is outside Fox Reader's scope.
 - The user chose a FoxVim-native reader instead of adapting Folio. The existing reader uses the local Markdown renderer and Mermaid bundle; further rendering dependencies must include their required notices.
 
 ## Decisions and proposed boundaries
@@ -29,7 +29,7 @@ flowchart LR
 
 - `lua/fox/markdown/`: reader session, transport and workspace logic as needed; share only code that fits both lifecycles.
 - `lua/plugins/editor/markdown.lua` and `lua/plugins/fox/tools/command_palette.lua`: lazy command and palette registration.
-- `config/tools/fox-reader/`: permitted static frontend build assets, local runtime dependencies and required notices.
+- `tools/fox-reader/`: permitted static frontend build assets, local runtime dependencies and required notices.
 - `tests/` and `docs/editor-qol.md`: meaningful unit/integration coverage and user-facing workflow.
 
 A document identity comprises the captured canonical workspace root and a validated root-relative path; state must never be treated as authority to bypass path checks.

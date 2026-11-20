@@ -27,4 +27,17 @@ t.describe("Fox Reader command registration", function()
 		t.expect(err).toBe(nil)
 		t.expect(type(opened)).toBe("string")
 	end)
+
+	t.it("registers the stop action in the palette", function()
+		local palette = require("plugins.fox.tools.command_palette")
+		local item
+		for _, command in ipairs(palette.commands) do
+			if command.cmd == "FoxReaderStop" then
+				item = command
+				break
+			end
+		end
+		t.expect(item ~= nil).toBe(true)
+		t.expect(vim.fn.exists(":FoxReaderStop")).toBe(2)
+	end)
 end)

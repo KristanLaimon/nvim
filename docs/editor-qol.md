@@ -4,6 +4,28 @@
 
 The small modules — each one file in `lua/plugins/fox/`, each fixing one specific annoyance.
 
+## Fox Reader
+
+Run `:FoxReader` or select **Open Fox Reader** in the command palette to open a
+reading view of the current workspace. `:FoxReaderStop` and **Stop Fox Reader**
+stop all reader sessions. The reader follows the editor's colors by default;
+the Theme button also offers paper, light and dark. Font and alignment controls
+adjust the reading text, which is justified by default. Line spacing and content
+width are adjustable too. Trebuchet MS is the default; the reader falls back to
+an available sans-serif font when it is not installed. A locally licensed copy
+may be placed under `tools/fox-reader/fonts/` using the Windows filenames
+`trebuc.ttf`, `trebucbd.ttf`, `trebucit.ttf`, and `trebucbi.ttf`. These files
+are Git-ignored because [Microsoft generally does not permit redistribution of
+Windows-supplied fonts](https://learn.microsoft.com/en-us/typography/fonts/font-faq).
+Drag either handle at the edge of the reading area to change its width.
+Preferences and per-document reading positions are stored in `fox-reader.json`
+under Neovim's state directory and restored across restarts and server ports.
+The reader reports corrupt or unwritable state while remaining usable.
+
+The reader supports local links and raster images, tables, task lists and
+Mermaid using local assets. Its shared Markdown renderer does not yet cover every
+GitHub Flavored Markdown feature; math and syntax highlighting remain planned.
+
 ## Markdown browser preview
 
 With a Markdown, `.mermaid`, or `.mmd` file open, select **Toggle Live Markdown / Mermaid Browser Preview** in
@@ -15,7 +37,7 @@ last source closes, the HTTP listener and its connections shut down automaticall
 exiting Neovim also closes them. Merely switching to another buffer keeps the
 preview available. There is no separate server process to leave running.
 Mermaid diagrams in fenced blocks and standalone files use the attributed local
-JavaScript bundle in `config/tools/gb-markdown-render/`; no CDN or Mermaid CLI is used. Source
+JavaScript bundle in `tools/fox-markdown-gh/`; no CDN or Mermaid CLI is used. Source
 buffers stay untouched. Edits update the same browser tab without saving.
 The preview uses the former plugin's attributed GitHub-like stylesheet, including
 headings, tables, code blocks and task lists. It follows the browser's light/dark

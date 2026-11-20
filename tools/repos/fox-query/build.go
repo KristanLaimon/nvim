@@ -41,7 +41,7 @@ func main() {
 	}
 	env = append(env, "GOPROXY=off", "GOSUMDB=off")
 	run([]string{"test", "-mod=vendor", "./..."})
-	output := filepath.Clean(filepath.Join(root, "..", "..", "foxquery"))
+	output := filepath.Clean(filepath.Join(root, "..", "..", "fox-query"))
 	if err := os.MkdirAll(output, 0755); err != nil {
 		panic(err)
 	}
@@ -82,7 +82,7 @@ func main() {
 	}
 	checksums := ""
 	for _, platform := range []struct{ os, arch string }{{"windows", "amd64"}, {"linux", "amd64"}} {
-		name := "foxquery-" + platform.os + "-" + platform.arch
+		name := "fox-query-" + platform.os + "-" + platform.arch
 		if platform.os == "windows" {
 			name += ".exe"
 		}

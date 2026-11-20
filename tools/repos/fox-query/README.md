@@ -24,13 +24,13 @@ bash build.sh
 ```
 
 This runs tests and builds Windows and Linux executables for amd64
-under `../../foxquery/`, then writes `SHA256SUMS`. The first build needs network
+under `../../fox-query/`, then writes `SHA256SUMS`. The first build needs network
 access unless the pinned dependencies are already cached. Later builds reuse
 `vendor/` offline. After changing `go.mod`/`go.sum`, regenerate it with
 `go mod vendor`; Go rejects stale vendor metadata. Only rebuilding requires Go.
 The first Go invocation may initialize its toolchain cache; compiler and module
 caches used by the shared builder are under `.cache/`.
-Intermediate caches, `vendor/`, `dist/`, and generated `config/tools/foxquery/licenses/`
+Intermediate caches, `vendor/`, `dist/`, and generated `tools/fox-query/licenses/`
 notices are ignored; source, module lockfiles, executables, and checksums belong
 in Git. The builder copies those notices locally from dependencies and the Go toolchain.
 On Linux the Lua launcher restores executable permissions if checkout did not

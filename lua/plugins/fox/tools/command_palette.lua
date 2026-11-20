@@ -533,6 +533,7 @@ M.commands = {
 		category = "Markdown",
 	},
 	{ name = "📖 Open Fox Reader", cmd = "FoxReader", category = "Markdown" },
+	{ name = "⏹ Stop Fox Reader", cmd = "FoxReaderStop", category = "Markdown" },
 }
 
 -- ============================================================================

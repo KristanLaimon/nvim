@@ -30,7 +30,7 @@ The existing wiki is useful but some paths describe older layouts. The current i
 | `lua/fox/core/project.lua` resolves roots and searches `.foxnvim`, `.vscode`, `.foxlocal`, `.nvimfox` in that order. | Preserve lookup intent, test nested roots/submodules, and distinguish incompatible FOX and native VS Code schemas. |
 | `lua/fox/langs/<language>/init.lua` centralizes language tooling and runtime behavior. | Retain per-language ownership in the port; Mason identifiers are not VS Code extension identifiers. |
 | `lua/fox/query/client.lua` talks UTF-8 JSONL to a standalone Go worker. | FoxQuery has a genuinely reusable backend; rewrite its transport/UI rather than its database drivers. |
-| `config/tools/repos/foxquery/README.md` documents bundled Windows/Linux amd64 workers, cancellation, read-only guards, and result limits. | Initial database support can match those platforms; macOS/ARM require builds and verification. |
+| `tools/repos/fox-query/README.md` documents bundled Windows/Linux amd64 workers, cancellation, read-only guards, and result limits. | Initial database support can match those platforms; macOS/ARM require builds and verification. |
 | `lua/fox/{editor,lsp,ui,markdown,wakatime}/` and `lua/plugins/ui/` contain more local replacements. | Scope includes local behavior outside the `plugins/fox` tree, not just the older inventory table. |
 
 Useful local references: [plugin inventory](docs/plugins.md), [keyboard shortcuts](docs/keybinds.md), [Git Center](docs/git-center.md), [environments](docs/environments.md), [VS Code compatibility](docs/vscode-support.md), [Query Mode](docs/query-mode.md), and [language registration rules](AGENTS.md).

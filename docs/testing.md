@@ -17,6 +17,7 @@ typo in a plugin file is invisible until then.
 | `nvim -l tests/run.lua tasks --only-failure` | Only specs whose name contains "tasks" | ~1s |
 | `nvim --headless -S tests/integration/run.lua -- --only-failure` | Specs that need the real editor | a few seconds |
 | `node tests/integration/markdown_browser.mjs` | GFM and Mermaid rendering and live updates in Chromium | a few seconds |
+| `node tests/integration/reader_browser.mjs` | Fox Reader navigation, rendering, updates, controls and workspace isolation in Chromium | a few seconds |
 | `nvim --headless -S tests/integration/run.lua -- kitty_shortcuts --only-failure` | Kitty shortcut setup, upgrades and undo (requires Kitty) | a few seconds |
 | `:FoxTest --only-failure` | Full Lua suite in a separate headless process | about 1–2 minutes |
 | `:FoxTest git --only-failure` | Filtered, from inside the editor | ~1s |
@@ -60,6 +61,10 @@ and `nvim`. It uses the local FOX Markdown preview and starts an isolated
 browser profile and a local preview server, checks
 [`tests/fixtures/markdown/gfm.md`](../tests/fixtures/markdown/gfm.md), and removes
 its temporary files afterward.
+
+The Fox Reader browser test has the same requirements. Set `FOX_TEST_BROWSER` to
+the browser executable if Chromium or Edge is installed elsewhere. It starts a
+real reader server and uses temporary workspaces and an isolated browser profile.
 
 Integration tests use the existing Lua runner where possible. The Chromium test
 uses JavaScript because Node provides WebSocket for the browser's debugging

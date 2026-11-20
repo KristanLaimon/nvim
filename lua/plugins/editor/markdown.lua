@@ -113,7 +113,7 @@ return {
 	{
 		name = "fox_markdown_preview",
 		dir = vim.fn.stdpath("config"),
-		cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop", "FoxReader" },
+		cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop", "FoxReader", "FoxReaderStop" },
 		ft = { "markdown", "mermaid" },
 		init = function()
 			require("fox.markdown.browser").setup()

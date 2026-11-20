@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fox Reader</title>
+  <link rel="stylesheet" href="reader.css">
+  <script defer src="mermaid.min.js"></script>
+  <script defer src="reader.js"></script>
+</head>
+<body>
+  <aside id="library"><h1>Library</h1><input id="filter" type="search" placeholder="Filter files" aria-label="Filter files"><nav id="files"></nav></aside>
+  <main><header><button id="library-toggle" aria-label="Toggle library">☰</button><strong id="title">Fox Reader</strong><button id="focus">Focus</button><button id="theme">Theme</button><label>Font <select id="font"><option>Georgia</option><option>Arial</option><option>Verdana</option><option>Tahoma</option><option>Trebuchet MS</option><option>Times New Roman</option><option>Palatino Linotype</option><option>Garamond</option><option>Cambria</option><option>Consolas</option><option>Courier New</option><option>system-ui</option><option>serif</option><option>sans-serif</option><option>monospace</option></select></label><label>Align <select id="alignment"><option value="justify">Justified</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><label>Spacing <input id="lineSpacing" type="range" min="1" max="2.5" step="0.1" value="1.8"></label><label>Width <input id="width" type="range" min="400" max="1200" step="20" value="760"></label><label>Size <input id="size" type="range" min="14" max="28" value="18"></label></header><div id="reading-area"><button class="width-handle" id="width-left" aria-label="Drag to adjust reading width" title="Drag to adjust reading width"></button><article id="content"><p>Choose a document from the library.</p></article><button class="width-handle" id="width-right" aria-label="Drag to adjust reading width" title="Drag to adjust reading width"></button></div><p id="status" role="status"></p><p id="state-status" role="status"></p></main>
+  <aside id="outline"><h2>On this page</h2><nav></nav></aside>
+</body>
+</html>

@@ -23,6 +23,9 @@ end
 
 function M.setup()
 	vim.api.nvim_create_user_command("FoxReader", M.open, { desc = "Open Fox Reader", force = true })
+	vim.api.nvim_create_user_command("FoxReaderStop", function()
+		require("fox.reader.server").stop()
+	end, { desc = "Stop Fox Reader", force = true })
 	local group = vim.api.nvim_create_augroup("FoxReader", { clear = true })
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		group = group,

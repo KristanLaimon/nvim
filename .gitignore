@@ -19,7 +19,6 @@ tools/repos/**/vendor/
 tools/fox-query/licenses/
 tools/repos/**/dist/
 tools/repos/**/*.test
-/tools/fox-reader/fonts/
 
 
 # Test Artifacts

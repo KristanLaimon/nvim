@@ -15,9 +15,11 @@ mkdirSync(second);
 const stateFile = join(temporary, 'reader-state.json');
 const source = join(first, 'start.md');
 const target = join(first, 'nested', 'Guía uno.md');
-writeFileSync(source, '---\ntitle: A <safe> title\ntags:\n  - reading\n  - fox\ndescription: |\n  two lines\n  stay together\n---\n# Start\n\n[Go](nested/Gu%C3%ADa%20uno.md#destination)\n\n![Local](nested/pixel.png)\n\n| A | B |\n| --- | --- |\n| one | two |\n\n- [x] Task\n\n```mermaid\ngraph TD\nA[Reader] --> B[Diagram]\n```\n');
+writeFileSync(source, '---\ntitle: A <safe> title\ntags:\n  - reading\n  - fox\ndescription: |\n  two lines\n  stay together\n---\n# Start\n\n[Go](nested/Gu%C3%ADa%20uno.md#destination)\n\n![Local](nested/pixel.png)\n\n![Vector](nested/shape.svg)\n\n| A | B |\n| --- | --- |\n| one | two |\n\n- [x] Task\n\n```mermaid\ngraph TD\nA[Reader] --> B[Diagram]\n```\n');
 writeFileSync(target, '# Destination\n\n' + Array.from({length: 80}, (_, i) => `${i === 40 ? "## Middle\n\n" : ""}Paragraph ${i}\n`).join('\n') + '\n## End\n');
 writeFileSync(join(first, 'nested', 'pixel.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aWQAAAAASUVORK5CYII=', 'base64'));
+writeFileSync(join(first, 'nested', 'shape.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="red"/></svg>');
+writeFileSync(join(first, 'actual-readme.md'), readFileSync(join(root, 'README.md')));
 writeFileSync(join(first, 'notes.custom'), '# Custom extension\n');
 writeFileSync(join(first, 'ordinary.md'), '---\nNormal text\n---\n# Regular document\n');
 writeFileSync(join(second, 'other.md'), '# Other workspace\n');
@@ -92,6 +94,11 @@ try {
   await cdp('Page.navigate', { url });
   await until(() => evaluate('document.querySelector("#content h1")?.textContent === "Start"'), 'initial document');
   await until(() => evaluate('document.querySelector("#content img")?.naturalWidth === 1'), 'local image');
+  await until(() => evaluate(`document.querySelector('img[alt="Vector"]')?.naturalWidth === 40`), 'local SVG image');
+  const svg = await fetch(new URL('image?path=nested%2Fshape.svg', url));
+  assert.equal(svg.headers.get('content-type').split(';')[0], 'image/svg+xml');
+  assert.match(svg.headers.get('content-security-policy'), /sandbox/);
+  assert.equal((await fetch(new URL('image?path=..%2Foutside.svg', url))).status, 404);
   await until(() => evaluate('Boolean(document.querySelector("#content .mermaid svg"))'), 'Mermaid');
   assert.equal(await evaluate('document.querySelector(".metadata summary")?.textContent'), 'Properties');
   assert.match(await evaluate('document.querySelector("#state-status").textContent'), /corrupt/);
@@ -161,6 +168,31 @@ try {
   await until(() => evaluate('getComputedStyle(document.body).backgroundColor === "rgb(18, 52, 86)"'), 'editor theme');
   assert.equal(await evaluate('getComputedStyle(document.body).color'), 'rgb(238, 221, 204)');
   await until(() => evaluate('[...document.querySelectorAll("#files a")].some(a => a.textContent === "Guía uno.md")'), 'library');
+  const remoteRequests = [];
+  connection.addEventListener('message', event => {
+    const message = JSON.parse(event.data);
+    if (message.method !== 'Fetch.requestPaused') return;
+    remoteRequests.push(message.params.request.url);
+    const badge = message.params.request.url.startsWith('https://img.shields.io/');
+    cdp('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 200,
+      responseHeaders: [{name: 'Content-Type', value: badge ? 'image/svg+xml' : 'image/png'}],
+      body: badge ? Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1"/></svg>').toString('base64')
+        : 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aWQAAAAASUVORK5CYII=' }).catch(() => {});
+  });
+  await cdp('Fetch.enable', { patterns: [{urlPattern: 'https://github.com/user-attachments/assets/*'}, {urlPattern: 'https://img.shields.io/*'}] });
+  await evaluate('openDocument("actual-readme.md")');
+  await until(() => evaluate('document.querySelectorAll("#content img").length === 3'), 'README images');
+  const readmeImages = await evaluate('[...document.querySelectorAll("#content img")].map(image => ({src: image.getAttribute("src"), width: image.getAttribute("width"), link: image.parentElement.closest("a")?.href || ""}))');
+  assert.ok(readmeImages.every(image => image.src?.startsWith('https://')), JSON.stringify(readmeImages));
+  await until(() => evaluate('[...document.querySelectorAll("#content img")].every(image => image.naturalWidth === 1)'), 'remote README image downloads');
+  assert.equal(remoteRequests.length, 3);
+  assert.deepEqual(readmeImages.map(image => image.width), ['99%', null, '80%']);
+  assert.match(readmeImages[1].link, /github\.com\/KristanLaimon\/nvim\/stargazers/);
+  assert.match(await evaluate('getComputedStyle(document.querySelector("#content img").closest("p")).textAlign'), /^(?:-webkit-)?center$/);
+  await cdp('Fetch.disable');
+  await evaluate('openDocument("start.md")');
+  await until(() => evaluate('document.querySelector("#content h1")?.textContent === "Start"'), 'return from README');
+  console.log('PASS: actual README remote images and badge, local SVG and image boundaries');
   await evaluate('document.querySelector("#content a").click()');
   await until(() => evaluate('document.querySelector("#content h1")?.textContent === "Destination" && location.hash === "#destination"'), 'relative Unicode link and anchor');
   await evaluate('history.back()');

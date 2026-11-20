@@ -22,7 +22,8 @@ Preferences and per-document reading positions are stored in `fox-reader.json`
 under Neovim's state directory and restored across restarts and server ports.
 The reader reports corrupt or unwritable state while remaining usable.
 
-The reader supports local links and raster images, tables, task lists and
+The reader supports local links, local raster and SVG images, remote HTTP(S)
+images, tables, task lists and
 Mermaid using local assets. Its shared Markdown renderer does not yet cover every
 GitHub Flavored Markdown feature; math and syntax highlighting remain planned.
 YAML frontmatter at the start of a document appears in a collapsible Properties

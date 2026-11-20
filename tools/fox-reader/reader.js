@@ -223,6 +223,7 @@ async function refresh() {
         try {
           const target = new URL(image.getAttribute("src"), base);
           if (target.origin === base.origin) image.src = "image?path=" + encodeURIComponent(decodeURIComponent(target.pathname.slice(1)));
+          else if (target.protocol === "https:" || target.protocol === "http:") image.src = target.href;
           else image.removeAttribute("src");
         } catch { image.removeAttribute("src"); }
       }

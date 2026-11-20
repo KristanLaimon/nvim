@@ -91,15 +91,21 @@ local function response(session, target)
 	local image = route:match("^image%?path=(.*)$")
 	if image then
 		image = decode(image)
-		local kind = (
-			{ png = "image/png", jpg = "image/jpeg", jpeg = "image/jpeg", gif = "image/gif", webp = "image/webp" }
-		)[(image:match("%.(%a+)$") or ""):lower()]
+		local kind = ({
+			png = "image/png",
+			jpg = "image/jpeg",
+			jpeg = "image/jpeg",
+			gif = "image/gif",
+			webp = "image/webp",
+			svg = "image/svg+xml",
+		})[(image:match("%.(%a+)$") or ""):lower()]
 		local image_path = kind and workspace.resolve(session.root, image)
 		local stat = image_path and vim.uv.fs_stat(image_path)
 		if stat and stat.type == "file" and stat.size <= 10 * 1024 * 1024 then
 			local data = http.read_file(image_path)
 			if data then
-				return 200, data, kind
+				local svg_policy = "sandbox; default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"
+				return 200, data, kind, kind == "image/svg+xml" and svg_policy or nil
 			end
 		end
 		return 404, "Image unavailable", "text/plain"
@@ -146,7 +152,7 @@ function M.start(root)
 	end
 	local session = { root = root, files = {}, scanning = true }
 	local csp =
-		"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"
+		"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; font-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"
 	session.http = http.start({
 		max_request = 16384,
 		csp = csp,

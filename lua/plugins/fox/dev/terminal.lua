@@ -973,8 +973,8 @@ function M.setup()
 		})
 	end
 
-	-- Auto-enter terminal mode on buffer focus and mouse click.
-	-- Ensures clicking inside a terminal window or returning to it (e.g. toggling Neo-tree off)
+	-- Auto-enter terminal mode on buffer focus.
+	-- Ensures returning to a terminal window (e.g. toggling Neo-tree off)
 	-- automatically puts Neovim into terminal (insert) mode (`startinsert`).
 	local auto_insert_group = vim.api.nvim_create_augroup("FoxTerminalAutoInsert", { clear = true })
 
@@ -1017,33 +1017,6 @@ function M.setup()
 					desc = "Terminal Shrink Smaller (Decrease Height)",
 				})
 			end
-
-			pcall(vim.keymap.set, "n", "<LeftMouse>", function()
-				local mouse = vim.fn.getmousepos()
-				-- Leave borders and separators available for native resizing.
-				if not mouse or mouse.line <= 0 then
-					return "<LeftMouse>"
-				end
-				if
-					mouse.winid
-					and vim.api.nvim_win_is_valid(mouse.winid)
-					and is_term_buf(vim.api.nvim_win_get_buf(mouse.winid))
-				then
-					vim.schedule(function()
-						if vim.api.nvim_win_is_valid(mouse.winid) and vim.api.nvim_get_current_win() == mouse.winid then
-							pcall(vim.cmd, "startinsert")
-						end
-					end)
-					return "<LeftMouse>"
-				end
-				return "<LeftMouse>"
-			end, {
-				buffer = bufnr,
-				expr = true,
-				noremap = true,
-				silent = true,
-				desc = "Enter Terminal Mode on Click",
-			})
 		end
 	end
 

@@ -26,6 +26,15 @@ local function value(v)
 	return type(v) == "function" and v() or v
 end
 
+local function random_index(count)
+	local bytes = vim.uv.random(4)
+	if not bytes then
+		return math.random(count)
+	end
+	local a, b, c, d = bytes:byte(1, 4)
+	return (a * 16777216 + b * 65536 + c * 256 + d) % count + 1
+end
+
 local function execute(button)
 	if button then
 		vim.cmd(button.command:gsub("^:", ""):gsub("<CR>$", ""))
@@ -40,7 +49,14 @@ function M.draw()
 	if win == -1 then
 		return
 	end
-	local width = vim.api.nvim_win_get_width(win)
+	local window_width = vim.api.nvim_win_get_width(win)
+	local height = vim.api.nvim_win_get_height(win)
+	local art = state.opts.artwork
+	local wide = art and window_width >= 100 and height >= 22
+	local large = wide and window_width >= 140 and height >= 32 and state.opts.large_header
+	local width = wide and (large and 100 or 50) or window_width
+	local left_width = wide and math.min(55, window_width - width - 6) or window_width
+	local outer = wide and math.floor((window_width - width - left_width - 6) / 2) or 0
 	local sections = state.opts.sections
 	local lines, highlights, rows = {}, {}, {}
 	local function add(text, hl)
@@ -54,19 +70,35 @@ function M.draw()
 	for _ = 1, value(state.opts.layout[1].val) do
 		add("")
 	end
-	for _, line in ipairs(value(sections.header.val)) do
-		add(line, sections.header.opts.hl)
+	local compact = art and height < #sections.buttons.val + 12
+	local header = large or value(sections.header.val)
+	if art and (width < 50 or compact) then
+		header = { "F O X V I M" }
 	end
-	add("")
-	add("")
+	local header_width = 0
+	for _, line in ipairs(header) do
+		header_width = math.max(header_width, vim.fn.strdisplaywidth(line))
+	end
+	for _, line in ipairs(header) do
+		add(line .. string.rep(" ", header_width - vim.fn.strdisplaywidth(line)), sections.header.opts.hl)
+	end
+	if not compact then
+		add("")
+		add("")
+	end
 	local spacing = sections.buttons.opts.spacing or 1
 	local count = #sections.buttons.val
-	if #lines + count + math.max(0, count - 1) * spacing + 2 > vim.api.nvim_win_get_height(win) then
+	if compact or #lines + count + math.max(0, count - 1) * spacing + (art and 6 or 2) > height then
 		spacing = 0
 	end
 	for i, button in ipairs(sections.buttons.val) do
 		local label = value(button.label)
-		local gap = math.max(0, math.min(50, width) - vim.fn.strdisplaywidth(label .. button.key))
+		if art then
+			while vim.fn.strdisplaywidth(label .. " " .. button.key) > width and vim.fn.strchars(label) > 0 do
+				label = vim.fn.strcharpart(label, 0, vim.fn.strchars(label) - 1)
+			end
+		end
+		local gap = math.max(1, math.min(50, width) - vim.fn.strdisplaywidth(label .. button.key))
 		local text = label .. string.rep(" ", gap) .. button.key
 		local pad = add(text)
 		highlights[#highlights + 1] = { #lines - 1, pad + #text - #button.key, "Keyword", pad + #text }
@@ -83,8 +115,112 @@ function M.draw()
 			end
 		end
 	end
-	add("")
-	add(value(sections.footer.val), "Number")
+	if not compact then
+		add("")
+		add(value(sections.footer.val), "Number")
+	end
+	if art then
+		local left = {}
+		local quote_index = state.quote_index or random_index(#art.quotes)
+		state.quote_index = quote_index
+		local quote = art.quotes[quote_index]
+		local fox = state.fox or art.foxes[random_index(#art.foxes)]
+		state.fox = fox
+		local function left_add(text)
+			if vim.fn.strdisplaywidth(text) <= left_width then
+				left[#left + 1] = string.rep(" ", math.max(0, math.floor((left_width - vim.fn.strdisplaywidth(text)) / 2)))
+					.. text
+			end
+		end
+		local quote_line = ""
+		for word in quote:gmatch("%S+") do
+			local next_line = quote_line == "" and word or quote_line .. " " .. word
+			if vim.fn.strdisplaywidth(next_line) > left_width and quote_line ~= "" then
+				left_add(quote_line)
+				quote_line = word
+			else
+				quote_line = next_line
+			end
+		end
+		left_add(quote_line)
+		local author = art.authors and art.authors[quote_index]
+		local attribution = "- A random fox" .. (author and " (" .. author .. ")" or "")
+		if author and vim.fn.strdisplaywidth(attribution) > left_width then
+			left_add("- A random fox")
+			left_add("(" .. author .. ")")
+		else
+			left_add(attribution)
+		end
+		left_add("Environment: " .. state.opts.environment)
+		if wide then
+			left_add("")
+			left_add("")
+			local fox_width = 0
+			for _, line in ipairs(fox) do
+				fox_width = math.max(fox_width, vim.fn.strdisplaywidth(line))
+			end
+			if fox_width <= left_width and #left + #fox <= height then
+				local padding = string.rep(" ", math.floor((left_width - fox_width) / 2))
+				for _, line in ipairs(fox) do
+					left[#left + 1] = padding .. line
+				end
+			end
+			local offset = outer + left_width + 6
+			for i = 1, math.max(#lines, #left) do
+				local prefix = string.rep(" ", outer) .. (left[i] or "")
+				prefix = prefix .. string.rep(" ", math.max(0, offset - vim.fn.strdisplaywidth(prefix)))
+				lines[i] = prefix .. (lines[i] or "")
+			end
+			-- Prefixes contain Unicode art, so highlights use byte offsets and mouse targets use cells.
+			for _, hl in ipairs(highlights) do
+				local prefix = string.rep(" ", outer) .. (left[hl[1] + 1] or "")
+				local bytes = #prefix + math.max(0, offset - vim.fn.strdisplaywidth(prefix))
+				hl[2], hl[4] = hl[2] + bytes, hl[4] + bytes
+			end
+			for _, row in ipairs(rows) do
+				local prefix = string.rep(" ", outer) .. (left[row.line] or "")
+				local bytes = #prefix + math.max(0, offset - vim.fn.strdisplaywidth(prefix))
+				row.column = row.column + bytes
+				row.first_column, row.last_column = row.first_column + offset, row.last_column + offset
+			end
+		else
+			local prefix = {}
+			for _, line in ipairs(left) do
+				prefix[#prefix + 1] = line
+			end
+			if height >= #lines + #prefix + #fox + 1 then
+				local fox_width = 0
+				for _, line in ipairs(fox) do
+					fox_width = math.max(fox_width, vim.fn.strdisplaywidth(line))
+				end
+				if fox_width <= width then
+					local padding = string.rep(" ", math.floor((width - fox_width) / 2))
+					for _, line in ipairs(fox) do
+						prefix[#prefix + 1] = padding .. line
+					end
+				end
+			end
+			for i = #prefix, 1, -1 do
+				table.insert(lines, 1, prefix[i])
+			end
+			for _, hl in ipairs(highlights) do
+				hl[1] = hl[1] + #prefix
+			end
+			for _, row in ipairs(rows) do
+				row.line = row.line + #prefix
+			end
+		end
+		local top = math.max(0, math.floor((height - #lines) / 2))
+		for _ = 1, top do
+			table.insert(lines, 1, "")
+		end
+		for _, hl in ipairs(highlights) do
+			hl[1] = hl[1] + top
+		end
+		for _, row in ipairs(rows) do
+			row.line = row.line + top
+		end
+	end
 	vim.bo[state.buf].modifiable = true
 	vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
 	vim.bo[state.buf].modifiable = false
@@ -164,6 +300,7 @@ function M.start()
 		end
 	end
 	state.selected = 1
+	state.quote_index, state.fox = nil, nil
 	vim.cmd.stopinsert()
 	vim.api.nvim_win_set_buf(0, state.buf)
 	M.draw()

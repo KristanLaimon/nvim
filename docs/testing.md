@@ -46,6 +46,11 @@ the run.
 On Windows, the runner requires Python (standard library only) to isolate process
 handles and capture output without inherited pipes holding the run open.
 
+Dashboard screen previews run with `nvim --headless -S tests/integration/run.lua -- dashboard_preview --only-failure`.
+The test writes terminal screen grids to `tests/temp/` and deletes successful previews;
+a failed case retains its preview and reports the path. Set `FOX_KEEP_DASHBOARD_PREVIEWS=1`
+to keep all previews for inspection. Remove those files when finished.
+
 `:FoxTest` and `run_me.lua` launch the unit suite in a clean Neovim process so
 test mocks cannot interfere with the editor's plugins or active language servers.
 

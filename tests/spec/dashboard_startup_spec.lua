@@ -23,7 +23,7 @@ t.describe("dashboard initial startup", function()
 			assert(vim.v.vim_did_enter == 0)
 			assert(vim.bo.filetype == "alpha", "dashboard was deferred")
 			local text = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
-			assert(text:find("Foxes can be coders too!", 1, true), "missing banner")
+			assert(text:find("Environment:", 1, true), "missing banner")
 			assert(text:find("Recent projects", 1, true), "missing menu")
 		]]
 		)

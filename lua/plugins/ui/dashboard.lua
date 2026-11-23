@@ -39,135 +39,32 @@ return {
 		local dashboard = alpha.layout()
 		local env = env_lib.detect()
 
-		--- Determines the visible width of the dashboard window, accounting for Neo-tree width.
-		local function get_dashboard_width()
-			for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-				if vim.api.nvim_win_is_valid(win) then
-					local cfg = vim.api.nvim_win_get_config(win)
-					local is_float = cfg and cfg.relative and cfg.relative ~= ""
-					if not is_float then
-						local buf = vim.api.nvim_win_get_buf(win)
-						if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "alpha" then
-							return vim.api.nvim_win_get_width(win)
-						end
-					end
-				end
-			end
-
-			for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-				if vim.api.nvim_win_is_valid(win) then
-					local buf = vim.api.nvim_win_get_buf(win)
-					if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "neo-tree" then
-						local nw = vim.api.nvim_win_get_width(win)
-						return math.max(20, (vim.o.columns or 80) - nw - 1)
-					end
-				end
-			end
-
-			return vim.o.columns or 80
-		end
-
-		local get_dashboard_height
-		--- Returns an ASCII banner adapted to the current dashboard window width & environment.
-		--- @param target_width integer|nil
-		local function get_responsive_header(target_width)
-			local width = target_width or get_dashboard_width()
-			if width < 55 or env.is_mobile or get_dashboard_height() < 30 then
-				return {
-					[[        F O X N V I M        ]],
-					[[ "Foxes can be coders too!"]],
-					"[ " .. env.label .. " ]",
-				}
-			elseif width < 100 then
-				return {
-					[[  _____ ___ __  __ _   _ __     _____ __  __  ]],
-					[[ |  ___/ _ \\ \/ /| \ | |\ \   / /_ _|  \/  | ]],
-					[[ | |_ | | | |\  / |  \| | \ \ / / | || |\/| | ]],
-					[[ |  _|| |_| |/  \ | |\  |  \ V /  | || |  | | ]],
-					[[ |_|   \___//_/\_\|_| \_|   \_/  |___|_|  |_| ]],
-					[[]],
-					[[        "Foxes can be coders too!"    ]],
-					"📱 Environment: " .. env.label,
-				}
-			else
-				return {
-					[[      ___           ___           ___           ___           ___                       ___     ]],
-					[[     /\  \         /\  \         |\__\         /\__\         /\__\          ___        /\__\    ]],
-					[[    /::\  \       /::\  \        |:|  |       /::|  |       /:/  /         /\  \      /::|  |   ]],
-					[[   /:/\:\  \     /:/\:\  \       |:|  |      /:|:|  |      /:/  /          \:\  \    /:|:|  |   ]],
-					[[  /::\~\:\  \   /:/  \:\  \      |:|__|__   /:/|:|  |__   /:/__/  ___      /::\__\  /:/|:|__|__ ]],
-					[[ /:/\:\ \:\__\ /:/__/ \:\__\ ____/::::\__\ /:/ |:| /\__\  |:|  | /\__\  __/:/\/__/ /:/ |::::\__\ ]],
-					[[ \/__\:\ \/__/ \:\  \ /:/  / \::::/~~/~    \/__|:|/:/  /  |:|  |/:/  / /\/:/  /    \/__/~~/:/  / ]],
-					[[      \:\__\    \:\  /:/  /   ~~|:|~~|         |:/:/  /   |:|__/:/  /  \::/__/           /:/  /  ]],
-					[[       \/__/     \:\/:/  /      |:|  |         |::/  /     \::::/__/    \:\__\          /:/  /   ]],
-					[[                  \::/  /       |:|  |         /:/  /       ~~~~         \/__/         /:/  /    ]],
-					[[                   \/__/         \|__|         \/__/                                   \/__/     ]],
-					[[]],
-					[[]],
-					[[]],
-					[[                       "Foxes can be coders too!" - A random fox                                 ]],
-					"💻 Environment: " .. env.label,
-				}
-			end
-		end
-
-		--- Determines the visible height of the dashboard window.
-		get_dashboard_height = function()
-			for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-				if vim.api.nvim_win_is_valid(win) then
-					local cfg = vim.api.nvim_win_get_config(win)
-					local is_float = cfg and cfg.relative and cfg.relative ~= ""
-					if not is_float then
-						local buf = vim.api.nvim_win_get_buf(win)
-						if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == "alpha" then
-							return vim.api.nvim_win_get_height(win)
-						end
-					end
-				end
-			end
-			return vim.o.lines or 24
-		end
-		dashboard.section.header.val = get_responsive_header()
-
-		--- Calculates top padding lines so the dashboard content is centered vertically in the window.
-		local function get_vertical_padding()
-			local win_height = get_dashboard_height()
-
-			local header_lines = 0
-			local h_val = dashboard.section.header.val
-			if type(h_val) == "function" then
-				local res = h_val()
-				header_lines = type(res) == "table" and #res or 1
-			elseif type(h_val) == "table" then
-				header_lines = #h_val
-			end
-
-			local btn_count = (type(dashboard.section.buttons.val) == "table" and #dashboard.section.buttons.val) or 0
-			local spacing = (dashboard.section.buttons.opts and dashboard.section.buttons.opts.spacing) or 1
-			local btn_lines = btn_count > 0 and (btn_count + (btn_count - 1) * spacing) or 0
-
-			local footer_lines = (
-				dashboard.section.footer
-				and dashboard.section.footer.val
-				and dashboard.section.footer.val ~= ""
-			)
-					and 1
-				or 0
-			local middle_padding = 2
-			local footer_padding = footer_lines > 0 and 1 or 0
-
-			local content_height = header_lines + middle_padding + btn_lines + footer_padding + footer_lines
-			local pad = math.floor((win_height - content_height) / 2)
-			return math.max(1, pad)
-		end
-
-		-- Set vertical centering dynamic padding on the top layout element
-		if dashboard.opts and dashboard.opts.layout and dashboard.opts.layout[1] then
-			dashboard.opts.layout[1].val = get_vertical_padding
-		end
+		local artwork = require("fox.ui.dashboard_art")
+		dashboard.opts.artwork = artwork
+		dashboard.opts.environment = env.label
+		dashboard.opts.layout[1].val = 0
+		dashboard.opts.large_header = {
+			[[      ___           ___           ___           ___           ___                       ___     ]],
+			[[     /\  \         /\  \         |\__\         /\__\         /\__\          ___        /\__\    ]],
+			[[    /::\  \       /::\  \        |:|  |       /::|  |       /:/  /         /\  \      /::|  |   ]],
+			[[   /:/\:\  \     /:/\:\  \       |:|  |      /:|:|  |      /:/  /          \:\  \    /:|:|  |   ]],
+			[[  /::\~\:\  \   /:/  \:\  \      |:|__|__   /:/|:|  |__   /:/__/  ___      /::\__\  /:/|:|__|__ ]],
+			[[ /:/\:\ \:\__\ /:/__/ \:\__\ ____/::::\__\ /:/ |:| /\__\  |:|  | /\__\  __/:/\/__/ /:/ |::::\__\ ]],
+			[[ \/__\:\ \/__/ \:\  \ /:/  / \::::/~~/~    \/__|:|/:/  /  |:|  |/:/  / /\/:/  /    \/__/~~/:/  / ]],
+			[[      \:\__\    \:\  /:/  /   ~~|:|~~|         |:/:/  /   |:|__/:/  /  \::/__/           /:/  /  ]],
+			[[       \/__/     \:\/:/  /      |:|  |         |::/  /     \::::/__/    \:\__\          /:/  /   ]],
+			[[                  \::/  /       |:|  |         /:/  /       ~~~~         \/__/         /:/  /    ]],
+			[[                   \/__/         \|__|         \/__/                                   \/__/     ]],
+		}
+		dashboard.section.header.val = {
+			[[  _____ ___ __  __ _   _ __     _____ __  __  ]],
+			[[ |  ___/ _ \ \/ /| \ | |\ \   / /_ _|  \/  | ]],
+			[[ | |_ | | | |\  / |  \| | \ \ / / | || |\/| | ]],
+			[[ |  _|| |_| |/  \ | |\  |  \ V /  | || |  | | ]],
+			[[ |_|   \___//_/\_\_| \_|   \_/  |___|_|  |_| ]],
+		}
 
 		local function refresh_dashboard()
-			dashboard.section.header.val = get_responsive_header()
 			pcall(alpha.redraw)
 		end
 

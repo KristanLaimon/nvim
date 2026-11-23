@@ -166,43 +166,8 @@ function M.apply_lsp_settings(root, core)
 	M.sync_ts_type_links(root, active.typescript_javascript, core)
 end
 
---- Installs a TypeScript type package into the schema store.
---- Resolves the npm executable on the system, taking Windows (.cmd) into account.
---- @return string|nil npm_path
-function M.get_npm_bin()
-	local bin = vim.fn.exepath("npm")
-	if bin ~= "" then
-		return bin
-	end
-	if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
-		bin = vim.fn.exepath("npm.cmd")
-		if bin ~= "" then
-			return bin
-		end
-		local scoop_npm = vim.fs.normalize(vim.env.USERPROFILE or "") .. "/scoop/apps/nodejs/current/npm.cmd"
-		if vim.fn.filereadable(scoop_npm) == 1 then
-			return scoop_npm
-		end
-		local prog_npm = "C:/Program Files/nodejs/npm.cmd"
-		if vim.fn.filereadable(prog_npm) == 1 then
-			return prog_npm
-		end
-	end
-	return nil
-end
-
-local function npm_command(npm_bin, package_name)
-	local command = { npm_bin, "install", "--save-dev", package_name }
-	if (vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1) and npm_bin:lower():match("%.cmd$") then
-		local cli = path.join(vim.fs.dirname(vim.fs.normalize(npm_bin)), "node_modules/npm/bin/npm-cli.js")
-		local node = vim.fn.exepath("node")
-		if node == "" or not path.is_file(cli) then
-			error("Cannot find Node.js or npm-cli.js for " .. npm_bin)
-		end
-		command[1] = cli
-		table.insert(command, 1, node)
-	end
-	return command
+local function bun_command(package_name)
+	return { "bun", "add", "--dev", package_name }
 end
 
 --- Installs a TypeScript type package into the schema store.
@@ -241,25 +206,24 @@ function M.install_npm_types(input_pkg, callback, core)
 
 	local schema_dir = path.ensure_dir(path.join(core.get_schemas_base_dir("typescript_javascript"), schema_folder))
 
-	-- npm refuses to install into a directory with no manifest.
+	-- Keep each schema in its own package directory.
 	local pkg_json = path.join(schema_dir, "package.json")
 	if not path.is_file(pkg_json) then
 		store.save(pkg_json, { name = "fox-schema-" .. schema_folder, private = true })
 	end
 
-	local npm_bin = M.get_npm_bin()
-	if not npm_bin then
-		core.notify("❌ 'npm' was not found on PATH. Please ensure Node.js and npm are installed.", vim.log.levels.ERROR)
+	if vim.fn.executable("bun") ~= 1 then
+		core.notify("❌ 'bun' was not found on PATH. Please install Bun.", vim.log.levels.ERROR)
 		if callback then
 			callback(false, schema_folder)
 		end
 		return
 	end
 
-	core.notify("📦 Installing " .. npm_package .. " via npm...")
+	core.notify("📦 Installing " .. npm_package .. " via Bun...")
 
 	local ok, spawn_err = pcall(function()
-		vim.system(npm_command(npm_bin, npm_package), { cwd = schema_dir }, function(obj)
+		vim.system(bun_command(npm_package), { cwd = schema_dir }, function(obj)
 			vim.schedule(function()
 				if obj.code == 0 then
 					core.notify("✅ Installed " .. npm_package .. " successfully!")
@@ -275,7 +239,7 @@ function M.install_npm_types(input_pkg, callback, core)
 	end)
 
 	if not ok then
-		core.notify("❌ Failed to launch npm: " .. tostring(spawn_err), vim.log.levels.ERROR)
+		core.notify("❌ Failed to launch Bun: " .. tostring(spawn_err), vim.log.levels.ERROR)
 		if callback then
 			callback(false, schema_folder)
 		end
@@ -314,20 +278,19 @@ function M.update_npm_types(schema_folder, callback, core)
 		pkg_to_update = schema_folder:find("^@") and schema_folder or ("@types/" .. schema_folder)
 	end
 
-	local npm_bin = M.get_npm_bin()
-	if not npm_bin then
-		core.notify("❌ 'npm' was not found on PATH. Please ensure Node.js and npm are installed.", vim.log.levels.ERROR)
+	if vim.fn.executable("bun") ~= 1 then
+		core.notify("❌ 'bun' was not found on PATH. Please install Bun.", vim.log.levels.ERROR)
 		if callback then
 			callback(false, schema_folder)
 		end
 		return
 	end
 
-	core.notify("📦 Updating " .. pkg_to_update .. " via npm...")
+	core.notify("📦 Updating " .. pkg_to_update .. " via Bun...")
 
 	local target_pkg = pkg_to_update .. "@latest"
 	local ok, spawn_err = pcall(function()
-		vim.system(npm_command(npm_bin, target_pkg), { cwd = schema_dir }, function(obj)
+		vim.system(bun_command(target_pkg), { cwd = schema_dir }, function(obj)
 			vim.schedule(function()
 				if obj.code == 0 then
 					core.notify("✅ Updated " .. pkg_to_update .. " successfully!")
@@ -343,7 +306,7 @@ function M.update_npm_types(schema_folder, callback, core)
 	end)
 
 	if not ok then
-		core.notify("❌ Failed to launch npm: " .. tostring(spawn_err), vim.log.levels.ERROR)
+		core.notify("❌ Failed to launch Bun: " .. tostring(spawn_err), vim.log.levels.ERROR)
 		if callback then
 			callback(false, schema_folder)
 		end

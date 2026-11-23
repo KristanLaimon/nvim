@@ -76,6 +76,53 @@ t.describe("Native dashboard", function()
 			t.expect(mark[4].line_hl_group).toBe(nil)
 		end
 	end)
+	t.it("keeps the quote and menu usable when the dashboard changes width", function()
+		local d = dashboard.layout()
+		d.section.header.val = { "FoxVim" }
+		d.section.buttons.val = { d.button("x", "Run action", ":let g:fox_dashboard_action = 1<CR>") }
+		d.opts.artwork = { quotes = { "Stay foxy" }, foxes = { { "fox" } } }
+		d.opts.environment = "Windows"
+		dashboard.setup(d.opts)
+		dashboard.start()
+		for _, width in ipairs({ 120, 30 }) do
+			vim.o.columns = width
+			dashboard.redraw()
+			local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+			local text = table.concat(lines, "\n")
+			assert(text:find("Stay foxy", 1, true))
+			assert(text:find("Run action", 1, true))
+			for _, line in ipairs(lines) do
+				assert(vim.fn.strdisplaywidth(line) <= vim.api.nvim_win_get_width(0))
+			end
+		end
+		vim.o.columns = 80
+	end)
+	t.it("keeps artwork aligned and shows the quote in a short window", function()
+		local d = dashboard.layout()
+		d.section.header.val = { "AAA", " A" }
+		d.section.buttons.val = { d.button("x", "Run action", ":let g:fox_dashboard_action = 1<CR>") }
+		d.opts.artwork = { quotes = { "Stay foxy" }, foxes = { { "ABC", " A" } } }
+		d.opts.environment = "Windows"
+		dashboard.setup(d.opts)
+		local old_columns, old_lines = vim.o.columns, vim.o.lines
+		vim.o.columns, vim.o.lines = 120, 40
+		dashboard.start()
+		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+		local first, second
+		for i, line in ipairs(lines) do
+			if line:find("ABC", 1, true) then
+				first, second = line, lines[i + 1]
+			end
+		end
+		assert(first and second)
+		assert(second:find("A", 1, true) == first:find("ABC", 1, true) + 1)
+		vim.o.columns, vim.o.lines = 40, 12
+		dashboard.redraw()
+		lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+		assert(#lines <= vim.api.nvim_win_get_height(0))
+		assert(table.concat(lines, "\n"):find("Stay foxy", 1, true))
+		vim.o.columns, vim.o.lines = old_columns, old_lines
+	end)
 	t.it("restores inherited cursor highlighting after leaving the dashboard", function()
 		vim.api.nvim_win_set_buf(0, original)
 		local saved_line, saved_column = vim.wo.cursorline, vim.wo.cursorcolumn

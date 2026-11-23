@@ -71,4 +71,4 @@ Commit that file — it's the project's decision. The *generated* `.foxnvim/type
 
 ## 📦 Installing `@types` from NPM
 
-`<C-n>` in the picker takes a package name, normalises it to `@types/<name>` when needed, and installs it into the TypeScript schemas directory. It then shows up as a normal togglable schema with its version — so a project that needs `@types/node` gets it once, and every other project stays clean.
+`<C-n>` in the picker takes a package name, normalises it to `@types/<name>` when needed, and installs it with Bun into the TypeScript schemas directory. It then shows up as a normal togglable schema with its version — so a project that needs `@types/node` gets it once, and every other project stays clean.

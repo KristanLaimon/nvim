@@ -16,6 +16,7 @@ local schema = {
 	options = {
 		["tests"] = "Run project test suite (run_tests)",
 		["only-failure"] = "Show failed test cases and totals; hide passing test output",
+		["ai-output"] = "Compact output: show failures and test totals only",
 		["syntax"] = "Run syntax check on all Lua files (run_sintaxcheck)",
 		["setup"] = "Run dependency setup script (install.ps1 / install.sh)",
 		["setup-ps"] = "Configure Windows Terminal keymaps (setup-powershell.ps1)",
@@ -168,6 +169,46 @@ end
 local raw_args = arg or {}
 local parsed = cli.parse_args(raw_args, schema)
 test_options.only_failure = parsed.flags["only-failure"] == true
+
+if parsed.flags["ai-output"] then
+	local checks = {}
+	if parsed.flags.all or parsed.flags.a then
+		checks = { "lint", "syntax", "tests" }
+	elseif parsed.flags.tests or parsed.flags.t then
+		checks = { "tests" }
+	elseif parsed.flags.syntax or parsed.flags.s then
+		checks = { "syntax" }
+	elseif parsed.flags.lint or parsed.flags.l then
+		checks = { "lint" }
+	else
+		print("--ai-output requires --all, --tests, --syntax, or --lint")
+		os.exit(1)
+	end
+	local failed = false
+	for _, check in ipairs(checks) do
+		local result = vim
+			.system({ vim.v.progpath, "-l", root .. "/run_me.lua", "--" .. check, "--only-failure" }, { text = true })
+			:wait()
+		local output = (result.stdout or "") .. (result.stderr or "")
+		if result.code ~= 0 then
+			failed = true
+			print(check .. " FAILED (exit " .. result.code .. ")\n" .. output)
+		else
+			print(check .. " OK")
+			if check == "tests" then
+				for line in output:gmatch("[^\r\n]+") do
+					if line:find("Not%-Tests OS%-Dependent") or line:find("Test Results:") or line:match("^Skipping ") then
+						print(line)
+					end
+				end
+			end
+		end
+	end
+	if failed then
+		os.exit(1)
+	end
+	return
+end
 
 if parsed.flags.help or parsed.flags.h then
 	print(cli.help(schema))

@@ -22,8 +22,9 @@ typo in a plugin file is invisible until then.
 | `:FoxTest --only-failure` | Full Lua suite in a separate headless process | about 1–2 minutes |
 | `:FoxTest git --only-failure` | Filtered, from inside the editor | ~1s |
 
-AI assistants use `--only-failure` by default, for full and filtered Lua test
-runs. It hides passing cases, passing suite headings, and their `print`,
+AI assistants use `--ai-output` with `run_me.lua` quality checks to show only
+failed check output and test totals. For direct full and filtered Lua test runs,
+use `--only-failure`. It hides passing cases, passing suite headings, and their `print`,
 `vim.notify`, and `nvim_echo` output. Failed cases retain their diagnostics and
 errors, and the final totals and exit
 status remain unchanged. Omit the flag when verbose output is useful. The flag

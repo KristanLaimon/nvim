@@ -138,24 +138,17 @@ Detailed setup, Ex commands, DAP debug profiles, and plugin integrations for eac
 
 ## 🧪 5. Headless Quality Checks (CI / CLI)
 
-Whenever adding or modifying code in this repository, AI assistants MUST finish
-with all tests applicable to the current OS green and report OS exclusions
-separately. Run the complete test suites after the final code change,
-including integration tests; focused runs are only for iteration and do not
-replace the final full runs. Fix failures at their root cause, including existing
-bugs exposed by the full suites. Do not weaken assertions, skip or disable tests,
-hide failures, or add test-only workarounds merely to obtain a passing result.
-Tests that require another operating system MUST be skipped on the current OS
-and reported separately as **Not-Tests OS-Dependent**, counting as neither passed
-(green) nor failed. Apply this in both directions (Linux on Windows and Windows
-on Linux); retain and run those tests on their supported OS.
-If an environment or dependency prevents a suite from running, report the exact
-blocker and do not claim the work is fully verified or all tests are green.
+After code changes, run complete suites, including integration, after the final
+change; focused runs are for iteration only. Fix all failures at the root,
+including existing bugs exposed; never weaken assertions, skip/disable tests,
+hide failures, or add test-only workarounds to pass. Tests requiring another OS:
+skip on the current OS, report separately as **Not-Tests OS-Dependent** (neither
+pass nor fail), and retain/run on their supported OS, in both directions.
+Report exact environment/dependency blockers; do not claim full verification or
+all green when blocked.
 
-AI assistants MUST use `--only-failure` by default for test runs, including filtered
-runs. This keeps failed cases, their captured diagnostics, and final totals
-without printing hundreds of passing tests. Use verbose output only when a
-specific investigation needs it. Prefer focused tests while iterating:
+AI: use `--ai-output` with `run_me.lua`, `--only-failure` for direct full or
+filtered tests; verbose only to investigate. Focused examples:
 
 ```bash
 nvim -l tests/run.lua --only-failure
@@ -168,20 +161,20 @@ Run all quality gates from the command line without opening the UI:
 ### All checks at once (lint + syntax + tests)
 
 ```bash
-nvim --headless -c "lua _G.arg = {'--all', '--only-failure'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
+nvim --headless -c "lua _G.arg = {'--all', '--ai-output'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
 ```
 
 ### Individual checks
 
 ```bash
 # Lint & format (stylua + luacheck)
-nvim --headless -c "lua _G.arg = {'--lint'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
+nvim --headless -c "lua _G.arg = {'--lint', '--ai-output'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
 
 # Syntax check (parse all Lua files)
-nvim --headless -c "lua _G.arg = {'--syntax'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
+nvim --headless -c "lua _G.arg = {'--syntax', '--ai-output'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
 
 # Test suite
-nvim --headless -c "lua _G.arg = {'--tests', '--only-failure'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
+nvim --headless -c "lua _G.arg = {'--tests', '--ai-output'}; dofile(vim.fn.stdpath('config') .. '/run_me.lua')" -c "qa!"
 ```
 
 ### Required tools

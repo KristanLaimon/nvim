@@ -1,6 +1,25 @@
 local t = require("fox.lib.foxnvim.test")
 local root = vim.fn.stdpath("config")
 
+t.describe("AI quality output", function()
+	t.it("reports a successful syntax check compactly", function()
+		local result = vim
+			.system({ vim.v.progpath, "-l", root .. "/run_me.lua", "--syntax", "--ai-output" }, { text = true })
+			:wait(30000)
+		local output = (result.stdout or "") .. (result.stderr or "")
+		t.expect(result.code).toBe(0)
+		t.expect(output).toContain("syntax OK")
+		t.expect(output:find("Running Syntax", 1, true)).toBe(nil)
+	end)
+	t.it("rejects AI output without a check", function()
+		local result = vim
+			.system({ vim.v.progpath, "-l", root .. "/run_me.lua", "--ai-output" }, { text = true })
+			:wait(10000)
+		t.expect(result.code).toBe(1)
+		t.expect((result.stdout or "") .. (result.stderr or "")).toContain("requires --all")
+	end)
+end)
+
 t.describe("Test runner failure-only output", function()
 	local fixture
 	t.beforeEach(function()

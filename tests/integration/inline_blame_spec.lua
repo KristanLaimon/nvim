@@ -32,18 +32,20 @@ t.describe("Real Git inline blame", function()
 		vim.fn.delete(root, "rf")
 	end)
 	local function fetch(b, row)
-		local done, info = false, nil
-		m.fetch(b, row, function(value)
+		local done, info, failure = false, nil, nil
+		m.fetch(b, row, function(value, err)
 			info = value
+			failure = err
 			done = true
 		end)
 		t.expect(vim.wait(3000, function()
 			return done
 		end, 10)).toBe(true)
-		return info
+		return info, failure
 	end
 	t.it("blames committed and unsaved text and renders/clears real extmarks", function()
-		local info = fetch(buf, 1)
+		local info, failure = fetch(buf, 1)
+		assert(info, failure or "Git blame returned no result")
 		t.expect(info.author).toBe("FOX Test")
 		t.expect(info.sha).toBe(git({ "rev-parse", "HEAD" }))
 		m.refresh(buf)

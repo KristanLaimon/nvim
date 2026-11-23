@@ -70,7 +70,7 @@ M.PRETTIER_CONFIG_FILES = {
 	"prettier.config.cjs",
 	"prettier.config.mjs",
 }
-M.BIOME_CONFIG_FILES = { "biome.json", "biome.jsonc" }
+M.BIOME_CONFIG_FILES = { "biome.json", "biome.jsonc", ".biome.json", ".biome.jsonc" }
 M.ESLINT_CONFIG_FILES = {
 	"eslint.config.js",
 	"eslint.config.mjs",
@@ -374,18 +374,34 @@ M.launch_runtimes = {
 }
 
 --- conform.nvim formatter list per filetype. `stop_after_first`: preference order
---- (prettierd, the daemon, first) not a pipeline.
+--- (Biome first for JavaScript) not a pipeline.
 M.formatters_by_ft = {
 	json = { "prettierd", "prettier", "biome", stop_after_first = true },
-	javascript = { "prettierd", "prettier", "biome", stop_after_first = true },
+	javascript = { "biome", "prettierd", "prettier", stop_after_first = true },
 	typescript = { "prettierd", "prettier", "biome", stop_after_first = true },
-	javascriptreact = { "prettierd", "prettier", "biome", stop_after_first = true },
+	javascriptreact = { "biome", "prettierd", "prettier", stop_after_first = true },
 	typescriptreact = { "prettierd", "prettier", "biome", stop_after_first = true },
 }
 
 --- conform.nvim per-formatter overrides. prettier/prettierd only run when the
 --- project actually asks for them (a Prettier config file exists).
 M.conform_formatters = {
+	biome = {
+		condition = function(_, ctx)
+			return not vim.bo[ctx.buf].filetype:match("^javascript")
+				or vim.fs.find(M.BIOME_CONFIG_FILES, { path = ctx.filename, upward = true })[1] ~= nil
+				or not M.has_prettier_config(ctx.filename)
+		end,
+		append_args = function(_, ctx)
+			if
+				vim.bo[ctx.buf].filetype:match("^javascript")
+				and not vim.fs.find(M.BIOME_CONFIG_FILES, { path = ctx.filename, upward = true })[1]
+			then
+				return { "--line-width", "120" }
+			end
+			return {}
+		end,
+	},
 	prettier = {
 		condition = function(_, ctx)
 			return M.has_prettier_config(ctx.filename)

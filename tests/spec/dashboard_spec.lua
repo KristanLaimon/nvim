@@ -76,6 +76,40 @@ t.describe("Native dashboard", function()
 			t.expect(mark[4].line_hl_group).toBe(nil)
 		end
 	end)
+	t.it("keeps every quote paired with an author and fox artwork compact", function()
+		local art = require("fox.ui.dashboard_art")
+		assert(#art.quotes >= 50 and #art.quotes == #art.authors)
+		assert(#art.foxes == 2)
+		for i, quote in ipairs(art.quotes) do
+			assert(quote ~= "" and art.authors[i] ~= "")
+		end
+		for _, fox in ipairs(art.foxes) do
+			assert(#fox > 0 and #fox <= 22)
+			for _, line in ipairs(fox) do
+				assert(vim.fn.strdisplaywidth(line) <= 34)
+			end
+		end
+	end)
+	t.it("selects artwork that fits a short window and keeps it on redraw", function()
+		local d = dashboard.layout()
+		d.section.header.val = { "FoxVim" }
+		d.section.buttons.val = { d.button("x", "Run action", ":let g:fox_dashboard_action = 1<CR>") }
+		d.opts.artwork = {
+			quotes = { "Stay foxy" },
+			foxes = { vim.fn["repeat"]({ "too tall" }, 30), { "small fox" } },
+		}
+		local old_columns, old_lines = vim.o.columns, vim.o.lines
+		vim.o.columns, vim.o.lines = 120, 22
+		dashboard.setup(d.opts)
+		dashboard.start()
+		for _ = 1, 2 do
+			local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+			assert(text:find("small fox", 1, true))
+			assert(not text:find("too tall", 1, true))
+			dashboard.redraw()
+		end
+		vim.o.columns, vim.o.lines = old_columns, old_lines
+	end)
 	t.it("keeps the quote and menu usable when the dashboard changes width", function()
 		local d = dashboard.layout()
 		d.section.header.val = { "FoxVim" }

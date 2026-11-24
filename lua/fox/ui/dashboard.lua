@@ -124,8 +124,6 @@ function M.draw()
 		local quote_index = state.quote_index or random_index(#art.quotes)
 		state.quote_index = quote_index
 		local quote = art.quotes[quote_index]
-		local fox = state.fox or art.foxes[random_index(#art.foxes)]
-		state.fox = fox
 		local function left_add(text)
 			if vim.fn.strdisplaywidth(text) <= left_width then
 				left[#left + 1] = string.rep(" ", math.max(0, math.floor((left_width - vim.fn.strdisplaywidth(text)) / 2)))
@@ -145,6 +143,24 @@ function M.draw()
 		left_add(quote_line)
 		local author = art.authors and art.authors[quote_index]
 		left_add("- " .. (author or "A random fox"))
+		local available_height = wide and height - #left - 2 or height - #lines - #left - 1
+		local function fits(fox)
+			if #fox == 0 or #fox > available_height then
+				return false
+			end
+			for _, line in ipairs(fox) do
+				if vim.fn.strdisplaywidth(line) > left_width then
+					return false
+				end
+			end
+			return true
+		end
+		local fox = state.fox
+		if not fox or not fits(fox) then
+			local candidates = vim.tbl_filter(fits, art.foxes)
+			fox = #candidates > 0 and candidates[random_index(#candidates)] or {}
+			state.fox = fox
+		end
 		if wide then
 			left_add("")
 			left_add("")

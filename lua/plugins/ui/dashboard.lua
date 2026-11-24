@@ -41,7 +41,6 @@ return {
 
 		local artwork = require("fox.ui.dashboard_art")
 		dashboard.opts.artwork = artwork
-		dashboard.opts.environment = env.label
 		dashboard.opts.layout[1].val = 0
 		dashboard.opts.large_header = {
 			[[      ___           ___           ___           ___           ___                       ___     ]],

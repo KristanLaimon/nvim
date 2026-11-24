@@ -20,7 +20,7 @@ This file defines mandatory guidelines and reference links for AI coding assista
 | `M.mason_order` | array of tool-name strings, this language's Mason install/display order | `installer.lua` concatenates these into `M.mason_packages` |
 | `M.formatters_by_ft` | `{ [filetype] = <conform formatter list> }` | `lua/plugins/lsp/formatting.lua` merges into `opts.formatters_by_ft` |
 | `M.conform_formatters` | `{ [formatter_name] = <conform formatter opts: condition/args> }` | `formatting.lua` merges into `opts.formatters` |
-| `M.toolchain` | Tool-name keys with native config filenames, starter content and optional CLI or linter adapter | **Configure current LANGUAGE** and the formatting, diagnostic and LSP runtimes |
+| `M.toolchain` | Tool-name keys with native config filenames, starter content and optional CLI or linter adapter | **Language Configure (Current file lang)** and the formatting, diagnostic and LSP runtimes |
 | `M.dap_filetypes` + `M.dap_configs` | array of filetypes; array of static nvim-dap config tables | `lua/plugins/editor/dap.lua` calls `debuggers._shared.add(dap, dap_filetypes, dap_configs)` for languages with a plain static list (see `php`/`csharp`/`python`) |
 | `M.dap_setup` | `function(dap)` | `dap.lua` calls this instead, for languages whose adapter needs runtime setup (conditional adapter registration, delegating to another plugin's own `setup()`) -- see `bash` (conditional bashdb/bash adapter), `go` (`dap-go`) |
 | `M.launch_runtimes` | `{ [runtime_key] = { command=, dap=, execute= } }` | `lua/fox/launch/runtimes.lua` merges every language's `launch_runtimes` into its registry -- one language can own several runtime flavors (e.g. `typescript` owns `bun`/`node`/`deno`) |
@@ -33,7 +33,7 @@ A handful of truly generic, cross-language things have no owning module and stay
 Don't invent a language module, or force a field into one, just to host something that doesn't actually belong to a single language.
 
 When adding or changing a formatter, linter or LSP, verify that it appears for
-its supported filetypes in **Configure current LANGUAGE**. Register native config
+its supported filetypes in **Language Configure (Current file lang)**. Register native config
 filenames and starter content in the owning language's `M.toolchain` when
 supported. For custom filenames, pass the tool's native config flag or document
 that filenames are detection markers only. Put standalone diagnostic commands

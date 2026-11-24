@@ -55,8 +55,8 @@ function M.draw()
 	local wide = art and window_width >= 100 and height >= 22
 	local large = wide and window_width >= 140 and height >= 32 and state.opts.large_header
 	local width = wide and (large and 100 or 50) or window_width
-	local left_width = wide and math.min(55, window_width - width - 6) or window_width
-	local outer = wide and math.floor((window_width - width - left_width - 6) / 2) or 0
+	local left_width = wide and math.min(34, window_width - width - 4) or window_width
+	local outer = wide and math.floor((window_width - width - left_width - 4) / 2) or 0
 	local sections = state.opts.sections
 	local lines, highlights, rows = {}, {}, {}
 	local function add(text, hl)
@@ -144,14 +144,7 @@ function M.draw()
 		end
 		left_add(quote_line)
 		local author = art.authors and art.authors[quote_index]
-		local attribution = "- A random fox" .. (author and " (" .. author .. ")" or "")
-		if author and vim.fn.strdisplaywidth(attribution) > left_width then
-			left_add("- A random fox")
-			left_add("(" .. author .. ")")
-		else
-			left_add(attribution)
-		end
-		left_add("Environment: " .. state.opts.environment)
+		left_add("- " .. (author or "A random fox"))
 		if wide then
 			left_add("")
 			left_add("")
@@ -165,7 +158,11 @@ function M.draw()
 					left[#left + 1] = padding .. line
 				end
 			end
-			local offset = outer + left_width + 6
+			local left_top = math.max(0, math.floor((#lines - #left) / 2))
+			for _ = 1, left_top do
+				table.insert(left, 1, "")
+			end
+			local offset = outer + left_width + 4
 			for i = 1, math.max(#lines, #left) do
 				local prefix = string.rep(" ", outer) .. (left[i] or "")
 				prefix = prefix .. string.rep(" ", math.max(0, offset - vim.fn.strdisplaywidth(prefix)))
@@ -232,6 +229,11 @@ function M.draw()
 	local selected = math.min(state.selected or 1, #rows)
 	if rows[selected] then
 		vim.api.nvim_win_set_cursor(win, { rows[selected].line, rows[selected].column })
+		if #lines <= height then
+			vim.api.nvim_win_call(win, function()
+				vim.fn.winrestview({ topline = 1 })
+			end)
+		end
 	end
 end
 M.redraw = M.draw

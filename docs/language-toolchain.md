@@ -1,6 +1,6 @@
-# Configure current LANGUAGE
+# Language Configure
 
-Open a file and choose **Configure current LANGUAGE** from the Command Palette,
+Open a file and choose **🛠️ Language Configure (Current file lang)** from the Command Palette,
 or run `:ConfigureCurrentLanguage`. The title follows the buffer's filetype, so
 PHP and Blade can have separate selections.
 

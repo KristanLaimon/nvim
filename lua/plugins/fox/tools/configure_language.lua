@@ -1,10 +1,20 @@
 local toolchain = require("fox.langs.toolchain")
 local ui = require("fox.core.ui")
+local list_highlights = vim.api.nvim_create_namespace("fox_language_configure")
+local first_tool_row = 5
 
 local categories = {
-	{ key = "formatters", title = "Formatters", lines = { "Choose a default or a pipeline" } },
-	{ key = "linters", title = "Linters", lines = { "Choose diagnostic tools" } },
-	{ key = "servers", title = "LSPs", lines = { "Choose language servers" } },
+	{
+		key = "formatters",
+		title = "Formatters",
+		lines = { "[ === ]", "Choose the default formatter", "or run tools in order." },
+	},
+	{ key = "linters", title = "Linters", lines = { "[  !  ]", "Choose which tools", "report diagnostics." } },
+	{
+		key = "servers",
+		title = "LSPs",
+		lines = { "[ < > ]", "Manage language servers", "for this project or globally." },
+	},
 }
 
 local function maps(buf, bindings)
@@ -96,13 +106,19 @@ local function open()
 		local key = category.key
 		local candidates = defaults[key]
 		local scope = "Project"
-		local list, win = ui.float({ width = 0.85, height = 0.65, title = " " .. category.title .. " / " .. ctx.ft .. " " })
+		local list, win = ui.float({
+			width = 1,
+			height = 1,
+			title = " " .. category.title .. " / " .. ctx.ft .. " ",
+			border = { "+", "-", "+", "|", "+", "-", "+", "|" },
+		})
 		vim.wo[win].cursorline = true
+		vim.wo[win].wrap = false
 		local rows, selected, state
 		local function target()
 			return scope == "Global" and toolchain.global_context(ctx) or ctx
 		end
-		local function draw(cursor)
+		local function draw(focused)
 			state = toolchain.read(target(), scope == "Global")
 			selected = toolchain.selection(state, key, candidates.enabled)
 			rows = vim.tbl_filter(function(name)
@@ -113,30 +129,72 @@ local function open()
 					rows[#rows + 1] = name
 				end
 			end
-			local mode = (state.formatter_mode or (candidates.fallback and "fallback" or "pipeline"))
+			local mode = state.formatter_mode or (candidates.fallback and "fallback" or "pipeline")
+			local width = math.max(1, math.min(76, vim.o.columns - 4))
+			local status = scope:upper()
+			if key == "formatters" then
+				status = status .. (mode == "fallback" and "  /  FIRST AVAILABLE" or "  /  RUN ALL IN ORDER")
+			end
+			local divider = "  +" .. string.rep("-", math.max(0, width - 6)) .. "+"
 			local lines = {
-				scope .. (key == "formatters" and "  /  " .. mode or ""),
-				"Space toggle   o only   K/J priority   e edit   c filenames",
-				"r reset   q back" .. (key == "formatters" and "   m mode" or "   g project/global"),
-				"",
+				"  " .. status,
+				divider,
+				"  PRIO   TOOL",
+				divider,
 			}
-			for _, name in ipairs(rows) do
+			local enabled_rows = {}
+			for row, name in ipairs(rows) do
 				local index = vim.fn.index(selected, name)
-				lines[#lines + 1] = index >= 0 and (" [%d] %s"):format(index + 1, name) or (" [ ] " .. name)
+				lines[#lines + 1] = ("  [%s]  %s"):format(index >= 0 and ("%02d"):format(index + 1) or "  ", name)
+				if index >= 0 then
+					enabled_rows[#enabled_rows + 1] = first_tool_row + row - 2
+				end
 			end
 			if #rows == 0 then
-				lines[#lines + 1] = " No tools registered for " .. ctx.ft
+				lines[#lines + 1] = "  No tools registered for " .. ctx.ft
 			end
+			lines[#lines + 1] = divider
+			local hints_start = #lines
+			local mode_key = key == "formatters" and "[m] Format mode" or "[g] Project / Global"
+			local hints = width >= 64
+					and {
+						"  [Space] Toggle     [o] Only this    [K/J] Priority",
+						"  [e] Edit          [c] Filenames    " .. mode_key,
+						"  [r] Reset         [q] Back",
+					}
+				or {
+					"  [Space] Toggle   [o] Only this",
+					"  [K/J] Priority   [e] Edit",
+					"  [c] Filenames    [r] Reset",
+					"  " .. mode_key .. "   [q] Back",
+				}
+			vim.list_extend(lines, hints)
+			local height = math.max(1, math.min(#lines, vim.o.lines - 4))
+			local row, col = ui.center(width, height)
+			vim.api.nvim_win_set_config(win, { relative = "editor", width = width, height = height, row = row, col = col })
 			vim.bo[list].modifiable = true
 			vim.api.nvim_buf_set_lines(list, 0, -1, false, lines)
 			vim.bo[list].modifiable = false
-			vim.api.nvim_win_set_cursor(win, { math.min(#lines, cursor or 5), 0 })
+			vim.api.nvim_buf_clear_namespace(list, list_highlights, 0, -1)
+			vim.api.nvim_buf_set_extmark(list, list_highlights, 0, 0, { end_col = #lines[1], hl_group = "Title" })
+			for _, enabled_row in ipairs(enabled_rows) do
+				vim.api.nvim_buf_set_extmark(list, list_highlights, enabled_row, 2, { end_col = 6, hl_group = "DiagnosticOk" })
+			end
+			for line = hints_start, #lines - 1 do
+				for start_col, end_col in lines[line + 1]:gmatch("()%[[^%]]+%]()") do
+					vim.api.nvim_buf_set_extmark(list, list_highlights, line, start_col - 1, {
+						end_col = end_col - 1,
+						hl_group = "Special",
+					})
+				end
+			end
+			local focus_index = focused and vim.fn.index(rows, focused) or -1
+			vim.api.nvim_win_set_cursor(win, { first_tool_row + math.max(0, focus_index), 0 })
 		end
 		local function current()
-			local line = vim.api.nvim_win_get_cursor(win)[1]
-			return rows[line - 4], line
+			return rows[vim.api.nvim_win_get_cursor(win)[1] - first_tool_row + 1]
 		end
-		local function save(field, value, line, restart)
+		local function save(field, value, focused, restart)
 			local ok, err = toolchain.save(target(), field, value)
 			if not ok then
 				vim.notify(err, vim.log.levels.ERROR)
@@ -145,10 +203,10 @@ local function open()
 			if key ~= "formatters" then
 				toolchain.refresh(ctx, restart, scope == "Global")
 			end
-			draw(line)
+			draw(focused)
 		end
 		local function choose(only)
-			local name, line = current()
+			local name = current()
 			if not name then
 				return
 			end
@@ -161,15 +219,15 @@ local function open()
 					choices[#choices + 1] = name
 				end
 			end
-			save(key, choices, only and 5 or line)
+			save(key, choices, name)
 		end
 		local function move(delta)
-			local name, line = current()
+			local name = current()
 			local at = name and vim.fn.index(selected, name) + 1 or 0
 			local to = at + delta
 			if at > 0 and to >= 1 and to <= #selected then
 				selected[at], selected[to] = selected[to], selected[at]
-				save(key, selected, line + delta)
+				save(key, selected, name)
 			end
 		end
 		local function back()
@@ -197,13 +255,13 @@ local function open()
 			g = function()
 				if key ~= "formatters" then
 					scope = scope == "Global" and "Project" or "Global"
-					draw()
+					draw(current())
 				end
 			end,
 			m = function()
 				if key == "formatters" then
 					local mode = state.formatter_mode or (candidates.fallback and "fallback" or "pipeline")
-					save("formatter_mode", mode == "fallback" and "pipeline" or "fallback")
+					save("formatter_mode", mode == "fallback" and "pipeline" or "fallback", current())
 				end
 			end,
 			e = function()
@@ -213,7 +271,7 @@ local function open()
 				end
 			end,
 			c = function()
-				local name, line = current()
+				local name = current()
 				if not name then
 					return
 				end
@@ -235,17 +293,31 @@ local function open()
 						local overrides = toolchain.read(target(), true).markers
 						overrides = type(overrides) == "table" and overrides or {}
 						overrides[key .. "/" .. name] = names
-						save("markers", overrides, line, candidates.servers[name] and name or nil)
+						save("markers", overrides, name, candidates.servers[name] and name or nil)
 					end
 				)
+			end,
+		})
+		local resize = vim.api.nvim_create_autocmd("VimResized", {
+			callback = function()
+				if vim.api.nvim_win_is_valid(win) then
+					draw(current())
+				end
+			end,
+		})
+		vim.api.nvim_create_autocmd("BufWipeout", {
+			buffer = list,
+			once = true,
+			callback = function()
+				vim.api.nvim_del_autocmd(resize)
 			end,
 		})
 		draw()
 	end
 	show_cards = function()
-		menu.open("Configure current " .. ctx.ft, categories, function(index)
+		menu.open("Language Configure / " .. ctx.ft, categories, function(index)
 			show_list(categories[index])
-		end)
+		end, nil, 3)
 	end
 	show_cards()
 end

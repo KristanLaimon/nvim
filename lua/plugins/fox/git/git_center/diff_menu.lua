@@ -1,7 +1,7 @@
 local M = {}
 local ns = vim.api.nvim_create_namespace("fox_git_diff_menu")
 
-function M.open(title, cards, confirm, back)
+function M.open(title, cards, confirm, back, preferred_columns)
 	local presence = package.loaded["fox.discord"]
 	local _, root
 	if presence then
@@ -17,12 +17,16 @@ function M.open(title, cards, confirm, back)
 		local width = math.max(1, math.min(150, vim.o.columns - 4))
 		local wide = width >= 132 and #cards == 5
 		local columns = wide and 4 or width >= 72 and 2 or 1
+		if preferred_columns and width >= preferred_columns * 30 then
+			columns = preferred_columns
+		end
 		local card_width = math.floor((width - columns + 1) / columns)
 		local height = 8
 		for _, card in ipairs(cards) do
 			height = math.max(height, #(card.lines or {}) + 4)
 		end
-		local lines = { "Choose a card: 1-" .. #cards .. " / arrows / Tab. Enter confirms; Esc cancels.", "" }
+		local lines = preferred_columns and { ("  1-%d / arrows / Tab"):format(#cards), "  Enter: Open   Esc: Close" }
+			or { "Choose a card: 1-" .. #cards .. " / arrows / Tab. Enter confirms; Esc cancels.", "" }
 		regions = {}
 		for index, card in ipairs(cards) do
 			local column = wide and math.min(index, 4) - 1 or (index - 1) % columns

@@ -65,4 +65,13 @@ function M.setup()
 	})
 end
 
+M.toolchain = {
+	rustfmt = {
+		files = { "rustfmt.toml", ".rustfmt.toml" },
+		template = "max_width = 100",
+		config_args = { "--config-path", "$CONFIG" },
+	},
+	rust_analyzer = { files = { "Cargo.toml", "rust-project.json" } },
+}
+
 return M

@@ -106,6 +106,20 @@ M.conform_formatters = {
 
 M.formatter_configs = {}
 
+M.toolchain = {
+	prettier_astro = {
+		files = { ".prettierrc.astro.json", ".prettierrc.json", ".prettierrc" },
+		template = '{\n  "printWidth": 80\n}',
+	},
+	biome_astro = {
+		files = { "biome.json", "biome.jsonc" },
+		template = '{\n  "formatter": { "lineWidth": 80 }\n}',
+		config_args = { "--config-path", "$CONFIG" },
+		config_after_subcommand = true,
+		replace_append_args = true,
+	},
+}
+
 local function build_formatter_configs()
 	local ts = require("fox.langs.typescript")
 	vim.list_extend(M.formatter_configs, ts.PRETTIER_CONFIG_FILES)

@@ -325,4 +325,19 @@ function M.setup()
 	})
 end
 
+M.toolchain = {
+	pint = { files = { "pint.json" }, template = '{\n  "preset": "laravel"\n}', config_args = { "--config", "$CONFIG" } },
+	php_cs_fixer = {
+		files = { ".php-cs-fixer.dist.php", ".php-cs-fixer.php" },
+		template = "<?php\nreturn (new PhpCsFixer\\Config())->setRules(['@PSR12' => true]);",
+		config_args = { "--config", "$CONFIG" },
+		config_after_subcommand = true,
+	},
+	["blade-formatter"] = {
+		files = { ".bladeformatterrc.json", ".bladeformatterrc" },
+		template = '{\n  "wrapLineLength": 120\n}',
+		config_args = { "--config", "$CONFIG" },
+	},
+}
+
 return M

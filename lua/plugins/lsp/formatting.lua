@@ -64,26 +64,56 @@ return {
 				formatters = build_conform_formatters(),
 				format_on_save = {
 					timeout_ms = 1000,
-					lsp_fallback = true,
 				},
 				default_format_opts = {
 					lsp_format = "fallback",
 					-- Svelte keeps its language-server formatting fallback.
 					filter = function(client)
 						return not (client.name == "biome" and vim.bo.filetype == "svelte")
+							and require("fox.langs.toolchain").allow_lsp_format(vim.api.nvim_get_current_buf(), client)
 					end,
 				},
 			}
 		end,
 		config = function(_, opts)
+			local toolchain = require("fox.langs.toolchain")
+			for ft, defaults in pairs(opts.formatters_by_ft) do
+				opts.formatters_by_ft[ft] = function(buf)
+					local state = toolchain.read(toolchain.context(buf == 0 and vim.api.nvim_get_current_buf() or buf))
+					local selected = toolchain.selection(state, "formatters", defaults)
+					local result = vim.tbl_filter(function(name)
+						return vim.tbl_contains(defaults, name)
+					end, selected)
+					result.stop_after_first = state.formatter_mode ~= "pipeline"
+						and (state.formatter_mode == "fallback" or defaults.stop_after_first)
+					if #result == 0 then
+						result.lsp_format = "never"
+					end
+					return result
+				end
+			end
+			local seen = {}
+			for _, lang in pairs(require("fox.langs").langs) do
+				for _, names in pairs(lang.formatters_by_ft or {}) do
+					for _, name in ipairs(names) do
+						seen[name] = true
+					end
+				end
+			end
+			for name in pairs(seen) do
+				local base = opts.formatters[name] or {}
+				opts.formatters[name] = function(buf)
+					return toolchain.formatter_override(buf, name, base)
+				end
+			end
 			require("conform").setup(opts)
 
 			vim.api.nvim_create_user_command("FormatDocument", function()
-				require("conform").format({ async = true, lsp_fallback = true })
+				require("conform").format({ async = true })
 			end, { desc = "Format current buffer using Pint / PHP-CS-Fixer / blade-formatter / project formatter" })
 
 			vim.api.nvim_create_user_command("ConformFormat", function()
-				require("conform").format({ async = true, lsp_fallback = true })
+				require("conform").format({ async = true })
 			end, { desc = "Format current buffer using Pint / PHP-CS-Fixer / blade-formatter / project formatter" })
 		end,
 	},

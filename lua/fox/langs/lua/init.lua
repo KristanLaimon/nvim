@@ -161,4 +161,13 @@ function M.setup()
 	})
 end
 
+M.toolchain = {
+	lua_ls = { files = { ".luarc.json", ".luarc.jsonc" } },
+	stylua = {
+		files = { "stylua.toml", ".stylua.toml" },
+		template = "column_width = 120",
+		config_args = { "--config-path", "$CONFIG" },
+	},
+}
+
 return M

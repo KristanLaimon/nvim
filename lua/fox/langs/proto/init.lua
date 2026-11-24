@@ -41,11 +41,6 @@ M.bundle_name = "📜 Protocol Buffers"
 M.requires = {} -- buf, protols & protolint are standalone Mason binaries
 M.treesitter = { "proto" }
 
---- conform.nvim formatter list per filetype.
-M.formatters_by_ft = {
-	proto = { "protolint" },
-}
-
 --- Standard defaults for Protobuf (2 spaces).
 M.defaults = {
 	expandtab = true,
@@ -75,5 +70,18 @@ function M.setup()
 		end,
 	})
 end
+
+M.toolchain = {
+	protolint = {
+		files = { ".protolint.yaml", ".protolint.yml" },
+		lint = {
+			filetypes = { "proto" },
+			args = { "lint" },
+			config_args = { "-config_path", "$CONFIG" },
+			efm = "[%f:%l:%c] %m",
+		},
+	},
+	buf_ls = { files = { "buf.yaml", "buf.work.yaml" } },
+}
 
 return M

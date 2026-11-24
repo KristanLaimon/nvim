@@ -75,4 +75,27 @@ function M.setup()
 	})
 end
 
+M.toolchain = {
+	luacheck = {
+		files = { ".luacheckrc" },
+		template = 'std = "luajit"',
+		lint = {
+			filetypes = { "lua" },
+			args = { "--formatter", "plain", "--codes" },
+			config_args = { "--config", "$CONFIG" },
+			efm = "%f:%l:%c: %m",
+		},
+	},
+	selene = {
+		files = { "selene.toml" },
+		template = 'std = "lua51"',
+		lint = {
+			filetypes = { "lua" },
+			args = { "--display-style", "quiet" },
+			config_args = { "--config", "$CONFIG" },
+			efm = "%f:%l:%c: %m",
+		},
+	},
+}
+
 return M

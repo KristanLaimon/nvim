@@ -87,4 +87,13 @@ function M.setup()
 	})
 end
 
+M.toolchain = {
+	fourmolu = { files = { "fourmolu.yaml" }, template = "indentation: 4" },
+	hlint = {
+		files = { ".hlint.yaml" },
+		template = "[]",
+		lint = { filetypes = { "haskell" }, config_args = { "--hint", "$CONFIG" }, efm = "%f:%l:%c: %m" },
+	},
+}
+
 return M

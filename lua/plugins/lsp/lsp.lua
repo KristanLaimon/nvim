@@ -253,7 +253,13 @@ return {
 					end
 
 					cfg.cmd = require("fox.lsp.tooling").resolve_command(cfg.cmd or (vim.lsp.config[server_name] or {}).cmd)
+					local native = vim.tbl_deep_extend("force", {}, vim.lsp.config[server_name] or {}, cfg)
+					local toolchain = require("fox.langs.toolchain")
+					cfg.root_dir = toolchain.wrap_root(server_name, native)
+					cfg.settings = native.settings or vim.empty_dict()
+					cfg.before_init = toolchain.wrap_init(server_name, native.before_init)
 					vim.lsp.config(server_name, cfg)
+					toolchain.register_server(server_name)
 					vim.lsp.enable(server_name)
 				end
 			end

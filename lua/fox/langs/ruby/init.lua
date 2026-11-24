@@ -80,4 +80,18 @@ function M.setup()
 	})
 end
 
+M.toolchain = {
+	rubocop = {
+		files = { ".rubocop.yml" },
+		template = "Layout/LineLength:\n  Max: 120",
+		config_args = { "--config", "$CONFIG" },
+		lint = {
+			filetypes = { "ruby" },
+			args = { "--format", "emacs" },
+			config_args = { "--config", "$CONFIG" },
+			efm = "%f:%l:%c: %m",
+		},
+	},
+}
+
 return M

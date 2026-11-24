@@ -78,6 +78,7 @@
 ---@field mason_order? string[] Preferred Mason install/display order for this language's tools.
 ---@field formatters_by_ft? table<string, table> conform.nvim formatter list, keyed by filetype.
 ---@field conform_formatters? table<string, FoxConformFormatterOpts> conform.nvim per-formatter option overrides, keyed by formatter name.
+---@field toolchain? table<string, table> Native config metadata and linter adapters for Configure current LANGUAGE.
 ---@field formatter_configs? string[] Formatter/tool config filenames that indicate a project-managed code style.
 ---@field defaults? table<string, any> Fallback `vim.bo` options applied when no project formatter config exists.
 ---@field apply_defaults? fun(buf: integer) Applies `defaults` to `buf` unless a project config overrides them.

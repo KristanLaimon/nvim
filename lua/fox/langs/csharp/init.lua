@@ -586,4 +586,11 @@ function M.setup()
 	})
 end
 
+M.toolchain = {
+	csharpier = {
+		files = { ".csharpierrc.json", ".csharpierrc.yaml", ".csharpierrc" },
+		template = '{\n  "printWidth": 100\n}',
+	},
+}
+
 return M

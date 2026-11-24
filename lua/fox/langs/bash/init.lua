@@ -148,4 +148,17 @@ function M.setup()
 	})
 end
 
+M.toolchain = {
+	shellcheck = {
+		files = { ".shellcheckrc" },
+		template = "# ShellCheck configuration",
+		lint = {
+			filetypes = { "sh", "bash" },
+			args = { "--format=gcc" },
+			config_args = { "--rcfile", "$CONFIG" },
+			efm = "%f:%l:%c: %m",
+		},
+	},
+}
+
 return M

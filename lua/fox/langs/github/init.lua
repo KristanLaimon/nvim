@@ -36,18 +36,6 @@ M.requires = {
 }
 M.treesitter = { "yaml" }
 
-M.formatters_by_ft = {
-	["yaml.github"] = { "actionlint" },
-}
-
-M.conform_formatters = {
-	actionlint = {
-		condition = function()
-			return vim.fn.executable("actionlint") == 1
-		end,
-	},
-}
-
 M.defaults = {
 	expandtab = true,
 	shiftwidth = 2,
@@ -79,5 +67,16 @@ function M.setup()
 		end,
 	})
 end
+
+M.toolchain = {
+	actionlint = {
+		lint = {
+			filetypes = { "yaml.github" },
+			args = { "-no-color" },
+			config_args = { "-config-file", "$CONFIG" },
+			efm = "%f:%l:%c: %m",
+		},
+	},
+}
 
 return M

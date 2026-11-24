@@ -452,4 +452,14 @@ function M.setup()
 	end, { desc = "Select Python Interpreter (Virtualenv / System)" })
 end
 
+local ruff_files = { "ruff.toml", ".ruff.toml", "pyproject.toml" }
+local ruff_format_config =
+	{ files = ruff_files, template = "line-length = 88", config_args = { "--config", "$CONFIG" } }
+M.toolchain = {
+	ruff = { files = ruff_files, template = "line-length = 88", diagnostics = true },
+	ruff_fix = ruff_format_config,
+	ruff_format = ruff_format_config,
+	basedpyright = { files = { "pyrightconfig.json", "pyproject.toml" } },
+}
+
 return M

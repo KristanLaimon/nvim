@@ -55,4 +55,8 @@ function M.setup()
 	})
 end
 
+M.toolchain = {
+	latexindent = { files = { "localSettings.yaml", ".latexindent.yaml" } },
+}
+
 return M

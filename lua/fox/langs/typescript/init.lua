@@ -458,13 +458,34 @@ function M.setup()
 				end
 			end
 			if M.has_inline_script(buf) then
-				local ok_lsp, lspconfig = pcall(require, "lspconfig")
-				if ok_lsp and lspconfig[server_name] and lspconfig[server_name].manager then
-					lspconfig[server_name].manager:try_add(buf)
-				end
+				pcall(vim.api.nvim_exec_autocmds, "FileType", { buffer = buf, group = "nvim.lsp.enable" })
 			end
 		end,
 	})
 end
+
+M.toolchain = {
+	prettier = {
+		files = M.PRETTIER_CONFIG_FILES,
+		create = ".prettierrc.json",
+		template = '{\n  "printWidth": 80\n}',
+		config_args = { "--config", "$CONFIG" },
+	},
+	prettierd = {
+		files = M.PRETTIER_CONFIG_FILES,
+		create = ".prettierrc.json",
+		template = '{\n  "printWidth": 80\n}',
+		config_env = "PRETTIERD_DEFAULT_CONFIG",
+	},
+	biome = {
+		files = M.BIOME_CONFIG_FILES,
+		template = '{\n  "formatter": { "lineWidth": 80 }\n}',
+		config_args = { "--config-path", "$CONFIG" },
+		config_after_subcommand = true,
+	},
+	eslint = { files = M.ESLINT_CONFIG_FILES, diagnostics = true },
+	jsonls = {},
+}
+M.toolchain[M.lsp_server[1]] = { files = { "tsconfig.json", "jsconfig.json" } }
 
 return M

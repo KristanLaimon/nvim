@@ -28,9 +28,9 @@ t.describe("immediate terminal input", function()
 			)
 			assert(
 				vim.wait(3000, function()
-					return call("nvim_get_mode").mode == "t"
+					return call("nvim_get_mode").mode == "t" and call("nvim_buf_get_lines", buf, 0, 1, false)[1] == "hello world"
 				end, 10),
-				"terminal did not enter input mode"
+				"terminal did not enter input mode and display the fixture output"
 			)
 			call("nvim_input", "<C-Space>0v4ly")
 			assert(

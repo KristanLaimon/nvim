@@ -164,4 +164,21 @@ end
 cmeta.setup_commands()
 cmeta.register_palette()
 
+M.toolchain = {
+	["clang-format"] = { files = { ".clang-format", "_clang-format" }, template = "BasedOnStyle: LLVM\nColumnLimit: 80" },
+	clangd = { files = { ".clangd", "compile_commands.json" } },
+	cpplint = {
+		files = { "CPPLINT.cfg" },
+		template = "linelength=80",
+		lint = { filetypes = { "c", "cpp" }, efm = "%f:%l: %m" },
+	},
+	cppcheck = {
+		lint = {
+			filetypes = { "c", "cpp" },
+			args = { "--template={file}:{line}:{column}: {message}" },
+			efm = "%f:%l:%c: %m",
+		},
+	},
+}
+
 return M

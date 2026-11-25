@@ -113,6 +113,7 @@ M.commands = {
 	-- 	category = "Query",
 	-- },
 	-- { name = "Query: New SQL Console", cmd = "FoxQueryNew", category = "Query" },
+	{ name = "Query: Open SQL Tab in Right Split", cmd = "FoxQuerySplit", category = "Query" },
 	-- { name = "Query: Open Saved / Active SQL", cmd = "FoxQueryOpen", category = "Query" },
 	-- { name = "Query: SQL Files", cmd = "FoxQueryFiles", category = "Query" },
 	-- { name = "Query: Create SQL File", cmd = "FoxQueryFiles create", category = "Query" },

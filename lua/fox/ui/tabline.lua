@@ -84,7 +84,7 @@ local function clip(text, width)
 	return result .. "…"
 end
 M.clip = clip
-function M.visible(buf)
+function M.visible(buf, win)
 	if not vim.api.nvim_buf_is_valid(buf) or not vim.bo[buf].buflisted then
 		return false
 	end
@@ -93,6 +93,9 @@ function M.visible(buf)
 		return false
 	end
 	local query = package.loaded["fox.query"]
+	if query and query.inline_buffer_visible and query.inline_buffer_visible(buf, win or group_window()) then
+		return true
+	end
 	local visible = query and query.buffer_visible(buf)
 	if visible ~= nil then
 		return visible
@@ -142,10 +145,10 @@ local function save_order()
 	end
 	vim.g.BufferlinePositions = vim.json.encode(paths)
 end
-local function visible_buffers(candidates)
+local function visible_buffers(candidates, win)
 	local selected, ordinary, previews, sources = {}, {}, {}, {}
 	for _, buf in ipairs(candidates) do
-		if M.visible(buf) and not sources[source(buf)] then
+		if M.visible(buf, win) and not sources[source(buf)] then
 			sources[source(buf)] = true
 			local list = M.is_pinned(buf) and selected or vim.b[buf].fox_preview_owner and previews or ordinary
 			list[#list + 1] = buf
@@ -156,7 +159,7 @@ end
 function M.buffers(win)
 	win = win or group_window()
 	if win then
-		return visible_buffers(window_groups[win] or {})
+		return visible_buffers(window_groups[win] or {}, win)
 	end
 	local seen, valid = {}, {}
 	for _, buf in ipairs(order) do
@@ -175,6 +178,12 @@ function M.buffers(win)
 	order = valid
 	return visible_buffers(order)
 end
+function M.start_group(win, buf)
+	window_groups[win] = { buf }
+	grouped_pages[vim.api.nvim_win_get_tabpage(win)] = true
+	M.refresh()
+end
+
 function M.get_elements()
 	local elements = {}
 	for _, buf in ipairs(M.buffers()) do
@@ -196,7 +205,7 @@ function M.label(buf)
 	return (_G.Is_File_Deleted and _G.Is_File_Deleted(source(buf)) and "[D] " or "") .. (name:match("[^/]+$") or name)
 end
 function M.focus(buf, win)
-	if not vim.api.nvim_buf_is_valid(buf) or not M.visible(buf) then
+	if not vim.api.nvim_buf_is_valid(buf) or not M.visible(buf, win) then
 		return
 	end
 	win = win or group_window()
@@ -251,17 +260,20 @@ function M.close(buf, win, force)
 		if index == 0 then
 			return
 		end
-		local shared = vim.iter(vim.api.nvim_list_wins()):any(function(other)
-			if other == win then
-				return false
-			end
-			if source(vim.api.nvim_win_get_buf(other)) == buf then
-				return true
-			end
-			return vim.iter(window_groups[other] or {}):any(function(candidate)
-				return vim.api.nvim_buf_is_valid(candidate) and source(candidate) == buf and vim.bo[candidate].buflisted
+		local query = package.loaded["fox.query"]
+		local query_tab = query and query.inline_buffer_visible and query.inline_buffer_visible(buf, win)
+		local shared = query_tab
+			or vim.iter(vim.api.nvim_list_wins()):any(function(other)
+				if other == win then
+					return false
+				end
+				if source(vim.api.nvim_win_get_buf(other)) == buf then
+					return true
+				end
+				return vim.iter(window_groups[other] or {}):any(function(candidate)
+					return vim.api.nvim_buf_is_valid(candidate) and source(candidate) == buf and vim.bo[candidate].buflisted
+				end)
 			end)
-		end)
 		vim.api.nvim_set_current_win(win)
 		if shared then
 			if vim.api.nvim_win_get_buf(win) == closed_tab then
@@ -277,6 +289,9 @@ function M.close(buf, win, force)
 				end
 			end
 			table.remove(group, index)
+			if query_tab then
+				query.close_inline_buffer(buf, win)
+			end
 			M.refresh()
 			return
 		end
@@ -355,7 +370,7 @@ function M.pick(close)
 	local win = group_window()
 	local buffers = M.buffers(win)
 	vim.ui.select(buffers, { prompt = close and "Close buffer:" or "Go to buffer:", format_item = M.label }, function(buf)
-		if buf and M.visible(buf) and (not win or vim.api.nvim_win_is_valid(win)) then
+		if buf and (not win or vim.api.nvim_win_is_valid(win)) and M.visible(buf, win) then
 			if close then
 				M.close(buf, win)
 			else
@@ -417,9 +432,12 @@ local function badge(width)
 	local pages = vim.api.nvim_list_tabpages()
 	if #pages > 1 then
 		for index, page in ipairs(pages) do
+			local root = vim.t[page].fox_query_root
+			local query = package.loaded["fox.query"]
+			local parked = root and query and query.states and query.states[root] and query.states[root].parked
 			local label = " [" .. index .. "] "
 			local length = vim.fn.strdisplaywidth(label)
-			if size + length <= width then
+			if not parked and size + length <= width then
 				local group = page == vim.api.nvim_get_current_tabpage() and "BufferLineBufferSelected"
 					or "BufferLineBackground"
 				result[#result + 1] = hl(group) .. "%" .. index .. "T" .. label .. "%T"

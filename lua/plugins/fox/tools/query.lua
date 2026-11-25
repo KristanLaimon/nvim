@@ -5,6 +5,7 @@ local commands = {
 	"FoxQueryConnections",
 	"FoxQueryNew",
 	"FoxQueryOpen",
+	"FoxQuerySplit",
 	"FoxQueryFiles",
 	"FoxQueryRun",
 	"FoxQueryRunPopup",
@@ -48,6 +49,9 @@ return {
 		local function command(name, callback, opts)
 			vim.api.nvim_create_user_command(name, callback, opts or {})
 		end
+		command("FoxQuerySplit", function()
+			query.open_split("rightbelow vsplit")
+		end, { desc = "Open a Query SQL tab in a split to the right" })
 		command("FoxModeToggle", function()
 			local state = query.state()
 			if state.mode == "query" and state.tab == vim.api.nvim_get_current_tabpage() then

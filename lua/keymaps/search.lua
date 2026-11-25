@@ -203,6 +203,7 @@ local function choose_split(direction)
 		divider,
 		"  [1]   Open current buffer",
 		"  [2]   Select a file",
+		"  [3]   SQL Tab",
 		divider,
 	}
 	vim.list_extend(
@@ -219,13 +220,13 @@ local function choose_split(direction)
 	})
 	vim.wo[win].cursorline = true
 	vim.wo[win].wrap = false
-	local first_choice, last_choice = 5, 6
+	local first_choice, last_choice = 5, 7
 	local function move(offset)
 		local row = vim.api.nvim_win_get_cursor(win)[1]
 		vim.api.nvim_win_set_cursor(win, { math.max(first_choice, math.min(last_choice, row + offset)), 0 })
 	end
 	local function open(row)
-		if row ~= first_choice and row ~= last_choice then
+		if row < first_choice or row > last_choice then
 			return
 		end
 		ui.close(win)
@@ -233,8 +234,11 @@ local function choose_split(direction)
 			vim.api.nvim_set_current_win(origin)
 			if row == first_choice then
 				vim.cmd(split.command)
-			else
+			elseif row == first_choice + 1 then
 				open_find_files_split(direction)
+			else
+				require("lazy").load({ plugins = { "fox_query" } })
+				require("fox.query").open_split(split.command)
 			end
 		end
 	end
@@ -243,6 +247,9 @@ local function choose_split(direction)
 			open(first_choice)
 		end,
 		["2"] = function()
+			open(first_choice + 1)
+		end,
+		["3"] = function()
 			open(last_choice)
 		end,
 		["<CR>"] = function()

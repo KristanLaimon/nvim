@@ -27,6 +27,12 @@ Query panes display connection/view/help hints. **Shift+F3** toggles the diagram
 
 Automatic execution is disabled by default. If explicitly enabled with `:FoxQueryAutoRun`, it considers only the statement at the cursor. It never submits UPDATE/DELETE/INSERT, WITH, or EXPLAIN automatically. The worker independently validates SQL and enforces read-only access; SELECT INTO is rejected. Unchanged SQL is not repeatedly submitted, requests are serialized, hidden projects do not auto-run, and bound parameters require a manual run. `:FoxQueryAutoRun` toggles automatic execution for the project in RAM. SELECT can still do expensive work or invoke server functions; use restricted credentials and disable auto-run when appropriate.
 
+## SQL tabs in the editor
+
+Press **Ctrl+Shift+H/J/K/L** and choose **SQL Tab** to open a saved or already open Query SQL document in that direction. The split uses the same document, connection, schema completion, and SQL hover as Query Mode. **gC** chooses an existing connection and **Ctrl+Space** opens completion.
+
+**Ctrl+Enter** or **F5** runs the statement at the cursor and opens results along the bottom of that SQL pane. **gR** focuses the results and **q** closes them. **Ctrl+Shift+Enter** also opens the large results popup. Switching environments restores an open Query view or SQL split and its open Query popups when you return.
+
 ## Profiles and local files
 
 Profiles live in `.foxnvim/query/connections.json`:

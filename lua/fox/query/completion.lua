@@ -64,7 +64,9 @@ function M.get_completions(_, context, callback)
 		for _, line in ipairs(vim.api.nvim_buf_get_lines(context.bufnr, 0, cursor[1] - 1, false)) do
 			offset = offset + #line + 1
 		end
-		local metadata = vim.tbl_extend("force", state.metadata, { syntax = engine or state.metadata.syntax })
+		local console = state.consoles and state.consoles[context.bufnr]
+		local schema = console and (console.metadata or { tables = {}, relations = {} }) or state.metadata
+		local metadata = vim.tbl_extend("force", schema, { syntax = engine or schema.syntax })
 		local statement = sql.scope(text, offset, "statement", nil, metadata.syntax or metadata.engine)
 		local statement_offset = offset
 		for _, scope in ipairs(sql.statements(text, metadata.syntax or metadata.engine) or {}) do

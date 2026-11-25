@@ -5,6 +5,7 @@ local render = require("fox.query.render")
 local client = require("fox.query.client")
 local layout = require("fox.query.layout")
 local parameters = require("fox.query.parameters")
+local inline = require("fox.query.inline")
 local ns = vim.api.nvim_create_namespace("fox_query")
 local statement_ns = vim.api.nvim_create_namespace("fox_query_statement")
 local parameter_ns = vim.api.nvim_create_namespace("fox_query_parameters")
@@ -51,6 +52,14 @@ local function valid(handle, kind)
 		)
 end
 
+local function run_state(state)
+	return state or inline.current() or M.state()
+end
+
+local function owns_state(state)
+	return M.states[state.root] == (state.workspace or state)
+end
+
 local function query_keys(buf)
 	vim.keymap.set({ "n", "i", "v" }, "<LeftMouse>", function()
 		local mouse = vim.fn.getmousepos()
@@ -63,11 +72,17 @@ local function query_keys(buf)
 	end, { buffer = buf, silent = true })
 	for key, direction in pairs({ ["<A-h>"] = -1, ["<A-l>"] = 1, ["<A-Left>"] = -1, ["<A-Right>"] = 1 }) do
 		vim.keymap.set("n", key, function()
-			M.cycle(direction)
+			if inline.current() then
+				require("fox.ui.tabline").cycle(direction)
+			else
+				M.cycle(direction)
+			end
 		end, { buffer = buf, silent = true, desc = "Query: switch SQL tab" })
 	end
 	vim.keymap.set({ "n", "i", "v" }, "<S-F3>", function()
-		M.show(M.state().view == "visual" and "standard" or "visual")
+		if not inline.current() then
+			M.show(M.state().view == "visual" and "standard" or "visual")
+		end
 	end, { buffer = buf, silent = true, desc = "Query: toggle live diagram" })
 	for _, direction in ipairs({ "h", "j", "k", "l" }) do
 		vim.keymap.set({ "n", "i", "v" }, "<C-" .. direction .. ">", function()
@@ -83,7 +98,9 @@ local function query_keys(buf)
 		},
 		gV = {
 			function()
-				M.show(M.state().view == "visual" and "standard" or "visual")
+				if not inline.current() then
+					M.show(M.state().view == "visual" and "standard" or "visual")
+				end
 			end,
 			"Standard / Visual",
 		},
@@ -100,12 +117,17 @@ local function query_keys(buf)
 		},
 		gE = {
 			function()
-				M.focus_panel("side")
+				if not inline.current() then
+					M.focus_panel("side")
+				end
 			end,
 			"Explorer / diagram",
 		},
 		gN = {
 			function()
+				if inline.current() then
+					return
+				end
 				local state = M.states[vim.b[buf].fox_query_root]
 				if state and state.side_buf == buf then
 					M.notes()
@@ -199,7 +221,14 @@ function M.select(items, opts, callback)
 		width = math.max(width, vim.fn.strdisplaywidth(label))
 	end
 	width = math.max(1, math.min(math.max(24, width), 90, vim.o.columns - 4))
-	lines[2] = string.rep("-", width)
+	local first, last = 3, #lines
+	if opts.split_style then
+		local divider = "+" .. string.rep("-", math.max(0, width - 2)) .. "+"
+		lines[2] = divider
+		vim.list_extend(lines, { divider, "[Enter] Open  [j/k] Move  [q] Back" })
+	else
+		lines[2] = string.rep("-", width)
+	end
 	local height = 0
 	for _, line in ipairs(lines) do
 		height = height + math.max(1, math.ceil(vim.fn.strdisplaywidth(line) / width))
@@ -209,10 +238,11 @@ function M.select(items, opts, callback)
 		lines = lines,
 		width = width,
 		height = math.max(1, math.min(height, vim.o.lines - 6)),
+		border = opts.split_style and { "+", "-", "+", "|", "+", "-", "+", "|" } or nil,
 	})
 	vim.b[buf].fox_query_root = M.state().root
 	vim.wo[win].wrap, vim.wo[win].cursorline = true, true
-	vim.api.nvim_win_set_cursor(win, { 3, 0 })
+	vim.api.nvim_win_set_cursor(win, { first, 0 })
 	local resolved = false
 	local function finish(item, index)
 		if resolved then
@@ -241,14 +271,14 @@ function M.select(items, opts, callback)
 		end, { buffer = buf, silent = true, nowait = true })
 	end
 	vim.keymap.set("n", "<CR>", function()
-		local index = vim.api.nvim_win_get_cursor(win)[1] - 2
+		local index = vim.api.nvim_win_get_cursor(win)[1] - first + 1
 		if items[index] then
 			finish(items[index], index)
 		end
 	end, { buffer = buf, silent = true })
 	for key, direction in pairs({ j = 1, k = -1, ["<Down>"] = 1, ["<Up>"] = -1, ["<C-n>"] = 1, ["<C-p>"] = -1 }) do
 		vim.keymap.set("n", key, function()
-			local row = math.max(3, math.min(#lines, vim.api.nvim_win_get_cursor(win)[1] + direction))
+			local row = math.max(first, math.min(last, vim.api.nvim_win_get_cursor(win)[1] + direction))
 			vim.api.nvim_win_set_cursor(win, { row, 0 })
 		end, { buffer = buf, silent = true })
 	end
@@ -698,7 +728,11 @@ local function result_header(state)
 end
 
 function M.refresh_view(state)
-	state = state or M.state()
+	state = run_state(state)
+	if state.inline then
+		inline.refresh(state)
+		return
+	end
 	if state.building_layout or not valid(state.tab, "tab") or vim.api.nvim_get_current_tabpage() ~= state.tab then
 		return
 	end
@@ -840,7 +874,7 @@ end
 
 function M.hover(buf)
 	buf = buf or vim.api.nvim_get_current_buf()
-	local state = M.states[vim.b[buf].fox_query_root or ""]
+	local state = inline.current() or M.states[vim.b[buf].fox_query_root or ""]
 	if not state or not state.consoles[buf] or vim.api.nvim_get_current_buf() ~= buf then
 		return false
 	end
@@ -989,7 +1023,7 @@ function M.hide(state)
 			end
 		end
 	end
-	state.mode = "editor"
+	state.mode, state.parked = "editor", nil
 	M.privacy_leave(state)
 end
 
@@ -1001,6 +1035,8 @@ function M.show(view)
 	end
 	if valid(state.tab, "tab") then
 		if not view or view == state.view then
+			state.mode, state.parked = "query", nil
+			M.privacy_enter(state)
 			vim.api.nvim_set_current_tabpage(state.tab)
 			return
 		end
@@ -1359,7 +1395,7 @@ function M.syntax_check()
 	)
 end
 
-function M.new(relative, dialect, restore_connection)
+function M.new(relative, dialect, restore_connection, background)
 	local state = M.state()
 	if relative and (not relative:match("%.sql$") or not require("fox.query.files").path(state.root, relative)) then
 		notify("Use a relative .sql path inside the queries folder", vim.log.levels.ERROR)
@@ -1377,14 +1413,6 @@ function M.new(relative, dialect, restore_connection)
 	require("fox.langs.sql").attach(buf, state.root)
 	state.consoles[buf] = state.consoles[buf] or { status = "idle", params = {} }
 	require("fox.ui.tabline").set_pin(buf, vim.tbl_contains(state.tab_pins, relative))
-	state.active = buf
-	if state.consoles[buf].metadata then
-		state.metadata = state.consoles[buf].metadata
-	end
-	if valid(state.sql_win, "win") then
-		vim.api.nvim_set_current_win(state.sql_win)
-		vim.api.nvim_win_set_buf(state.sql_win, buf)
-	end
 	vim.b[buf].fox_env_slot = _G._fox_active_env_slot or 1
 	query_keys(buf)
 	for _, key in ipairs({ "<C-CR>", "<F5>", "\27[13;5u", "\27[27;5;13~" }) do
@@ -1399,6 +1427,17 @@ function M.new(relative, dialect, restore_connection)
 	end
 	for _, key in ipairs({ "<C-Space>", "<C-@>", "<C-x><C-o>", "\27[32;5u", "\27[27;5;32~" }) do
 		vim.keymap.set("i", key, M.complete, { buffer = buf, silent = true, desc = "Query: database completion" })
+	end
+	if background then
+		return buf
+	end
+	state.active = buf
+	if state.consoles[buf].metadata then
+		state.metadata = state.consoles[buf].metadata
+	end
+	if valid(state.sql_win, "win") then
+		vim.api.nvim_set_current_win(state.sql_win)
+		vim.api.nvim_win_set_buf(state.sql_win, buf)
 	end
 	M.refresh_view(state)
 	if restore_connection ~= false then
@@ -1417,8 +1456,61 @@ function M.open()
 	end)
 end
 
+function M.inline_buffer_visible(buf, win)
+	return inline.owns(win, buf)
+end
+
+function M.close_inline_buffer(buf, win)
+	if inline.owns(win, buf) then
+		inline.detach(win)
+	end
+end
+
+function M.open_split(command)
+	if vim.t.fox_query_root then
+		notify("Open an SQL split from the editor")
+		return
+	end
+	local state, origin = M.state(), vim.api.nvim_get_current_win()
+	local files = {}
+	for _, entry in ipairs(require("fox.query.files").list(state)) do
+		if not entry.directory then
+			files[#files + 1] = entry.relative
+		end
+	end
+	if #files == 0 then
+		notify("Create an SQL document in Query Mode first")
+		return
+	end
+	M.select(files, { prompt = "QUERY / OPEN SQL TAB", split_style = true }, function(file)
+		if not file or not valid(origin, "win") then
+			return
+		end
+		vim.api.nvim_set_current_win(origin)
+		if storage.root() ~= state.root then
+			return
+		end
+		local buf = M.new(file, nil, false, true)
+		if not buf then
+			return
+		end
+		local split_command = command:gsub("vsplit$", "vnew"):gsub(" split$", " new")
+		vim.cmd(split_command)
+		local win = vim.api.nvim_get_current_win()
+		local view = inline.attach(state, win, buf)
+		vim.api.nvim_win_set_buf(win, buf)
+		require("fox.ui.tabline").start_group(win, buf)
+		local excluded = "r" .. storage.path(state.root, "")
+		if not vim.tbl_contains(vim.opt.shada:get(), excluded) then
+			vim.opt.shada:append(excluded)
+		end
+		M.restore_connection(view)
+		inline.refresh(view)
+	end)
+end
+
 function M.profile(action)
-	local state = M.state()
+	local state = run_state()
 	local active = console(state)
 	if action == "disconnect" then
 		if active and active.client then
@@ -1428,6 +1520,25 @@ function M.profile(action)
 			active.status = "disconnected"
 			M.refresh_view(state)
 		end
+		return
+	end
+	if state.inline then
+		local profiles, err = storage.profiles(state.root)
+		if not profiles or #profiles == 0 then
+			notify(err or "Add a connection in Query Mode first", vim.log.levels.WARN)
+			return
+		end
+		M.select(profiles, {
+			prompt = "QUERY / CHOOSE CONNECTION",
+			split_style = true,
+			format_item = function(profile)
+				return profile.id
+			end,
+		}, function(profile)
+			if profile and inline.owns(state.sql_win, state.active) then
+				M.connect(profile, state)
+			end
+		end)
 		return
 	end
 	if not valid(state.tab, "tab") then
@@ -1763,7 +1874,7 @@ end
 
 function M.connect(profile, state)
 	state = state or M.state()
-	if M.states[state.root] ~= state or state.root ~= storage.root() then
+	if not owns_state(state) or state.root ~= storage.root() then
 		notify("Project changed; choose the connection again", vim.log.levels.WARN)
 		return
 	end
@@ -1843,20 +1954,23 @@ function M.connect(profile, state)
 			item.pending_run = nil
 			item.status = err
 			state.connection_status[profile.id] = "failed"
-			local error_buf, error_win = require("fox.core.ui").float({
-				title = " Connection failed ",
-				width = math.min(72, vim.o.columns - 4),
-				height = 6,
-				lines = {
-					"Can't connect: " .. profile.id,
-					tostring(err),
-					"",
-					"",
-					"Connection sidebar: e edit, Enter retry; q closes this message.",
-				},
-			})
-			vim.b[error_buf].fox_query_root = state.root
-			require("fox.core.ui").close_on_keys(error_buf, error_win)
+			if not state.parked and state.root == storage.root() then
+				local error_buf, error_win = require("fox.core.ui").float({
+					title = " Connection failed ",
+					width = math.min(72, vim.o.columns - 4),
+					height = 6,
+					lines = {
+						"Can't connect: " .. profile.id,
+						tostring(err),
+						"",
+						"",
+						state.inline and "gC chooses a connection; q closes this message."
+							or "Connection sidebar: e edit, Enter retry; q closes this message.",
+					},
+				})
+				vim.b[error_buf].fox_query_root = state.root
+				require("fox.core.ui").close_on_keys(error_buf, error_win)
+			end
 		else
 			connection.connected, item.status = true, "connected | " .. result.engine .. " " .. result.version
 			state.connection_status[profile.id] = "connected"
@@ -1964,12 +2078,12 @@ function M.autorun(state)
 	M.run("statement", statement, nil, nil, true)
 end
 
-function M.run(kind, supplied_sql, supplied_params, source_table, automatic, popup)
+function M.run(kind, supplied_sql, supplied_params, source_table, automatic, popup, state)
 	if kind and not vim.tbl_contains({ "statement", "selection", "section", "file" }, kind) then
 		notify("Choose statement, selection, section, or file", vim.log.levels.WARN)
 		return
 	end
-	local state = M.state()
+	state = run_state(state)
 	local item, buf = console(state)
 	local connected = item and item.client and item.client.connected
 	if not connected and automatic then
@@ -2021,7 +2135,8 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 	if not connected then
 		item.pending_run = function()
 			if
-				M.states[state.root] == state
+				owns_state(state)
+				and (not state.inline or inline.owns(state.sql_win, buf))
 				and storage.root() == state.root
 				and console(state) == item
 				and valid(buf, "buf")
@@ -2029,7 +2144,7 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 				and item.client.connected
 				and storage.fingerprint(item.profile) == storage.fingerprint(profile)
 			then
-				M.run(kind, query, supplied_params, source_table, automatic, popup)
+				M.run(kind, query, supplied_params, source_table, automatic, popup, state)
 			end
 		end
 		if not (item.client and item.client.connecting) then
@@ -2129,7 +2244,11 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 			item.status = binding_err or "Placeholder detection differs from the database; SQL was not executed"
 			notify(item.status, vim.log.levels.WARN)
 			M.refresh_view(state)
-			M.draw_parameters(state, true)
+			if state.inline then
+				notify("Set missing parameter values in Query Mode")
+			else
+				M.draw_parameters(state, true)
+			end
 			return
 		end
 		params = bound
@@ -2139,7 +2258,8 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 end
 
 function M.cancel()
-	local state, item = M.state(), console(M.state())
+	local state = run_state()
+	local item = console(state)
 	if item and item.client and item.client.busy then
 		item.auto_pending = nil
 		item.auto_revision = (item.auto_revision or 0) + 1
@@ -2399,8 +2519,14 @@ function M.graph(all)
 end
 
 function M.results_popup(state, item)
-	state = state or M.state()
+	state = run_state(state)
 	item = item or console(state)
+	if state.inline then
+		if item and item.result then
+			inline.popup(state)
+		end
+		return
+	end
 	if
 		not valid(state.tab, "tab")
 		or vim.api.nvim_get_current_tabpage() ~= state.tab
@@ -2425,7 +2551,11 @@ function M.results_popup(state, item)
 end
 
 function M.results()
-	local state = M.state()
+	local state = run_state()
+	if state.inline then
+		inline.focus_results(state)
+		return
+	end
 	if not valid(state.sql_win, "win") then
 		M.show()
 		state = M.state()
@@ -2744,6 +2874,66 @@ function M.privacy_leave(state)
 	end
 end
 
+-- Keep the Query tab and its floating windows alive when changing environments.
+-- Reopening floats would invalidate their buffer-local callbacks and pending choices.
+function M.leave_environment()
+	local root = storage.root()
+	local state = M.states[root]
+	local current_win = vim.api.nvim_get_current_win()
+	local view = inline.current()
+	local resume = {
+		root = root,
+		popups = {},
+		focus = current_win,
+		inline_focus = view and view.result_win == current_win and view or nil,
+	}
+	if state and valid(state.tab, "tab") then
+		if vim.api.nvim_get_current_tabpage() == state.tab then
+			resume.query = state
+			state.mode, state.parked = "editor", true
+			M.privacy_leave(state)
+			if valid(state.editor_tab, "tab") then
+				vim.api.nvim_set_current_tabpage(state.editor_tab)
+			else
+				vim.cmd.tabnew()
+				state.editor_tab = vim.api.nvim_get_current_tabpage()
+			end
+		else
+			state.parked = true
+		end
+	end
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+		local config = vim.api.nvim_win_get_config(win)
+		if config.relative ~= "" and not config.hide and vim.b[vim.api.nvim_win_get_buf(win)].fox_query_root == root then
+			if config.relative == "editor" then
+				resume.popups[#resume.popups + 1] = win
+				vim.api.nvim_win_set_config(win, { hide = true })
+			end
+		end
+	end
+	resume.inline = inline.leave_environment(root)
+	return resume
+end
+
+function M.enter_environment(resume)
+	if not resume or resume.root ~= storage.root() then
+		return
+	end
+	inline.enter_environment(resume.inline)
+	for _, win in ipairs(resume.popups) do
+		if valid(win, "win") and vim.api.nvim_win_get_tabpage(win) == vim.api.nvim_get_current_tabpage() then
+			vim.api.nvim_win_set_config(win, { hide = false })
+		end
+	end
+	if resume.query and valid(resume.query.tab, "tab") then
+		M.show(resume.query.view)
+	end
+	local win = resume.inline_focus and resume.inline_focus.result_win or resume.focus
+	if valid(win, "win") and vim.api.nvim_win_get_tabpage(win) == vim.api.nvim_get_current_tabpage() then
+		vim.api.nvim_set_current_win(win)
+	end
+end
+
 function M.suspend()
 	local restore, buffers = {}, {}
 	for _, state in pairs(M.states) do
@@ -2901,6 +3091,15 @@ function M.close_root(root)
 			item.client:close()
 		end
 	end
+	inline.close_root(state.root)
+	for _, win in ipairs(vim.api.nvim_list_wins()) do
+		if
+			vim.api.nvim_win_get_config(win).relative ~= ""
+			and vim.b[vim.api.nvim_win_get_buf(win)].fox_query_root == state.root
+		then
+			vim.api.nvim_win_close(win, true)
+		end
+	end
 	M.states[state.root] = nil
 	return true
 end
@@ -2930,6 +3129,26 @@ end
 
 function M.setup()
 	vim.api.nvim_clear_autocmds({ group = group })
+	local update_inline = vim.schedule_wrap(inline.update)
+	vim.api.nvim_create_autocmd({ "BufWinEnter", "BufWinLeave", "WinClosed", "WinResized", "TabEnter" }, {
+		group = group,
+		callback = update_inline,
+	})
+
+	vim.api.nvim_create_autocmd("TabEnter", {
+		group = group,
+		callback = function()
+			local tab = vim.api.nvim_get_current_tabpage()
+			local state = M.states[vim.t[tab].fox_query_root or ""]
+			if state and state.parked then
+				vim.schedule(function()
+					if state.parked and vim.api.nvim_get_current_tabpage() == tab and valid(state.editor_tab, "tab") then
+						vim.api.nvim_set_current_tabpage(state.editor_tab)
+					end
+				end)
+			end
+		end,
+	})
 	vim.api.nvim_create_autocmd("BufEnter", {
 		group = group,
 		callback = function(args)
@@ -3063,7 +3282,12 @@ function M.setup()
 		group = group,
 		callback = function()
 			for _, state in pairs(M.states) do
-				if state.root ~= storage.root() and valid(state.tab, "tab") then
+				if
+					not state.parked
+					and not vim.g._fox_environment_switching
+					and state.root ~= storage.root()
+					and valid(state.tab, "tab")
+				then
 					M.hide(state)
 				end
 			end

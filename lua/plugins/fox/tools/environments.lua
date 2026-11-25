@@ -673,12 +673,8 @@ function M.switch_environment(target_slot, callback)
 	ensure_current_slot_initialized()
 	local cur_env = _G._fox_environments[cur_slot]
 	local query = package.loaded["fox.query"]
-	if query then
-		local state = query.states[require("fox.query.storage").root(vim.fn.getcwd())]
-		if state then
-			state.resume_query = state.mode == "query"
-			query.hide(state)
-		end
+	if query and cur_env then
+		cur_env.query_ui = query.leave_environment()
 	end
 	if cur_env then
 		snapshot_active_environment(cur_env, previous_restore and previous_restore.terminal_env == cur_env)
@@ -931,10 +927,8 @@ function M.switch_environment(target_slot, callback)
 
 	notify(string.format("🌿 Active Environment: #%d (%s)", target_slot, target_env.name or target_env.cwd_name))
 	if query then
-		local state = query.states[require("fox.query.storage").root(target_env.cwd)]
-		if state and state.resume_query then
-			query.show(state.view)
-		end
+		query.enter_environment(target_env.query_ui)
+		target_env.query_ui = nil
 	end
 	if callback then
 		callback()

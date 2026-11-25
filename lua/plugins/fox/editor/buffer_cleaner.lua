@@ -513,7 +513,13 @@ function M.setup()
 	end, { bang = true, desc = "Smart quit (bang = force)" })
 
 	vim.api.nvim_create_user_command("FoxBd", function(opts)
-		_G.Smart_Close_Buffer(vim.api.nvim_get_current_buf(), opts.bang)
+		local buf, win = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
+		local query = package.loaded["fox.query"]
+		if query and query.inline_buffer_visible and query.inline_buffer_visible(buf, win) then
+			require("fox.ui.tabline").close(buf, win, opts.bang)
+		else
+			_G.Smart_Close_Buffer(buf, opts.bang)
+		end
 	end, { bang = true, desc = "Smart close buffer (bang = force)" })
 
 	-- `cnoreabbrev` with a guard, so the reroute only fires for the bare command

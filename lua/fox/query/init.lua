@@ -2610,7 +2610,9 @@ end
 function M.copy_row()
 	local _, row = M.row()
 	if row then
-		vim.fn.setreg('"', vim.json.encode(row))
+		local text = vim.json.encode(row)
+		vim.fn.setreg('"', text)
+		vim.fn.setreg("+", text)
 	end
 end
 
@@ -2693,8 +2695,13 @@ function M.privacy_enter(state)
 	if state.privacy then
 		return
 	end
-	state.privacy = { shada = vim.o.shada, registers = {}, histories = {} }
-	for name in ('"0123456789abcdefghijklmnopqrstuvwxyz-/'):gmatch(".") do
+	state.privacy = {
+		shada = vim.o.shada,
+		registers = {},
+		unnamed_target = vim.fn.getreginfo('"').points_to or "0",
+		histories = {},
+	}
+	for name in ("0123456789abcdefghijklmnopqrstuvwxyz-/"):gmatch(".") do
 		state.privacy.registers[name] = vim.fn.getreginfo(name)
 	end
 	for _, kind in ipairs({ "cmd", "search", "input", "expr" }) do
@@ -2718,6 +2725,8 @@ function M.privacy_leave(state)
 	for name, value in pairs(privacy.registers) do
 		pcall(vim.fn.setreg, name, value)
 	end
+	-- Restore the alias without writing through it to a clipboard register.
+	vim.fn.setreg('"', { points_to = privacy.unnamed_target })
 	for kind, entries in pairs(privacy.histories) do
 		vim.fn.histdel(kind)
 		for _, entry in ipairs(entries) do

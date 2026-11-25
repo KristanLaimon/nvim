@@ -4,6 +4,59 @@ local query = require("fox.query")
 local storage = require("fox.query.storage")
 
 describe("FoxQuerier UI and session integration", function()
+	it("keeps text and result row copies on the clipboard across mode switches", function()
+		local root = vim.fn.tempname()
+		vim.fn.mkdir(root, "p")
+		local channel = vim.fn.jobstart({ vim.v.progpath, "--embed", "--headless", "-u", "NONE", "-i", "NONE" }, {
+			cwd = root,
+			rpc = true,
+		})
+		assert(channel > 0)
+		local ok, err = pcall(
+			vim.rpcrequest,
+			channel,
+			"nvim_exec_lua",
+			[[
+			local config, root = ...
+			vim.opt.rtp:prepend(config)
+			require("fox.query.layout").path = root .. "/layout.json"
+			local clipboard
+			vim.g.clipboard = {
+				name = "Query test clipboard", cache_enabled = 0,
+				copy = { ["+"] = function(lines, kind) clipboard = { lines, kind } end },
+				paste = { ["+"] = function() return clipboard end },
+			}
+			local query = require("fox.query")
+			require("plugins.fox.tools.query").config()
+			vim.fn.setreg("a", "editor register")
+			vim.api.nvim_set_current_line("editor clipboard")
+			vim.cmd.normal({ '"+yy', bang = true })
+			vim.cmd.FoxModeToggle()
+			assert(vim.fn.getreg("+", 1, true)[1] == "editor clipboard")
+			vim.fn.setreg("a", "query register")
+			vim.api.nvim_set_current_line("SELECT 42;")
+			vim.cmd.normal({ '"+yy', bang = true })
+			vim.cmd.FoxModeToggle()
+			assert(vim.fn.getreg("+", 1, true)[1] == "SELECT 42;", "Query text should survive returning to Editor")
+			assert(vim.fn.getreg("a") == "editor register")
+
+			vim.cmd.FoxModeToggle()
+			local state = query.state()
+			state.consoles[state.active].result = { sets = { { columns = { "answer" }, rows = { { 42 } } } } }
+			query.refresh_view(state)
+			vim.api.nvim_set_current_win(state.result_win)
+			query.move_cell("down")
+			vim.fn.maparg("y", "n", false, true).callback()
+			vim.cmd.FoxModeToggle()
+			assert(vim.fn.getreg("+") == "[42]", "Query row JSON should survive returning to Editor")
+		]],
+			{ vim.fn.stdpath("config"), root }
+		)
+		vim.fn.jobstop(channel)
+		vim.fn.delete(root, "rf")
+		assert(ok, err)
+	end)
+
 	it("switches layouts without losing SQL and excludes SQL from generic sessions", function()
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
 		vim.fn.mkdir(root, "p")

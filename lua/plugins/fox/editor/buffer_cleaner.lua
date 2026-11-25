@@ -276,6 +276,7 @@ end
 --- Closes the current tab/buffer, matching VS Code / browser tab close semantics (<C-w>).
 --- If inside neo-tree, focuses the code window instead of closing neo-tree.
 --- If inside a terminal, closes the terminal window (unless in terminal insert mode).
+--- If inside a float, closes the floating window.
 --- If inside the dashboard, does nothing (never exits Neovim; use <C-q> or :q to quit).
 --- If inside a code buffer, closes the buffer tab (landing on the next tab, previous tab if last, or dashboard if only 1 tab).
 --- Never closes the code window and never lets neo-tree expand to full width.
@@ -341,6 +342,11 @@ function _G.Smart_Close_Tab(force)
 		return
 	end
 
+	if vim.api.nvim_win_get_config(0).relative ~= "" then
+		vim.cmd(force and "close!" or "close")
+		return
+	end
+
 	-- In normal code buffers, close the buffer tab. Never close the window!
 	_G.Smart_Close_Buffer(cur_buf, force)
 end
@@ -378,7 +384,7 @@ function _G.Neotree_Smart_Quit(force)
 		end
 	end
 
-	if ft == "neo-tree" or ft == "NvimTree" or buftype == "terminal" then
+	if ft == "neo-tree" or ft == "NvimTree" or buftype == "terminal" or vim.api.nvim_win_get_config(0).relative ~= "" then
 		return _G.Smart_Close_Tab(force)
 	end
 

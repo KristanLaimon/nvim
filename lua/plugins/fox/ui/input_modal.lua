@@ -272,6 +272,66 @@ function M.open(opts)
 	})
 end
 
+--- Reads a single-line secret. Only its mask is written to the buffer.
+--- @return string|nil secret Nil when cancelled.
+function M.secret(label)
+	-- getcharstr would otherwise record typed characters in the active macro.
+	if vim.fn.reg_recording() ~= "" then
+		vim.cmd.normal({ "q", bang = true })
+	end
+	local ui = require("fox.core.ui")
+	local buf, win = ui.float({
+		title = " " .. label .. " ",
+		width = math.min(vim.o.columns - 4, math.max(M.settings.min_width, vim.fn.strdisplaywidth(label) + 4)),
+		height = 1,
+		border = M.settings.border,
+	})
+	vim.wo[win].wrap = false
+	local secret = ""
+	local function draw()
+		local mask = string.rep("•", vim.fn.strchars(secret))
+		vim.bo[buf].modifiable = true
+		vim.api.nvim_buf_set_lines(buf, 0, -1, false, { mask })
+		vim.bo[buf].modifiable = false
+		vim.api.nvim_win_set_cursor(win, { 1, math.max(0, #mask - #"•") })
+		vim.cmd.redraw()
+	end
+	local previous_paste = vim.paste
+	vim.paste = function(lines, phase)
+		if vim.api.nvim_get_current_win() ~= win then
+			return previous_paste(lines, phase)
+		end
+		-- nvim_paste records accepted input for dot-repeat.
+		return false
+	end
+	local ok, value = pcall(function()
+		draw()
+		while vim.api.nvim_get_current_win() == win do
+			local key = vim.fn.getcharstr(-1, { cursor = "keep" })
+			if vim.api.nvim_get_current_win() ~= win or key == "\27" or key == "\3" then
+				return nil
+			end
+			if key == "\r" then
+				return secret
+			end
+			if key == vim.keycode("<BS>") or key == "\127" or key == "\8" then
+				secret = vim.fn.strcharpart(secret, 0, math.max(0, vim.fn.strchars(secret) - 1))
+			elseif key == "\22" then
+				local lines = vim.fn.getreg("+", 1, true)
+				if #lines == 1 and not lines[1]:find("%c") then
+					secret = secret .. lines[1]
+				end
+			elseif key ~= "" and key:byte() ~= 128 and not key:find("%c") then
+				secret = secret .. key
+			end
+			draw()
+		end
+	end)
+	vim.paste = previous_paste
+	ui.close(win)
+	return ok and value or nil
+end
+
 --- Replaces `vim.ui.input` with this modal, so every prompt in the editor -- ours
 --- and third-party -- shares one look.
 function M.setup_ui_input_override()

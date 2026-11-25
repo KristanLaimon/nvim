@@ -80,11 +80,7 @@ return {
 		{
 			"<C-k>",
 			function()
-				if _G.FindFilesGitignore then
-					_G.FindFilesGitignore()
-				else
-					vim.cmd("TelescopeFindFilesGitignore")
-				end
+				require("keymaps.search").find_files_or_window_up()
 			end,
 			mode = { "n", "i" },
 			desc = "Telescope find files (excludes .gitignore)",
@@ -92,11 +88,7 @@ return {
 		{
 			"<C-K>",
 			function()
-				if _G.FindFilesGitignore then
-					_G.FindFilesGitignore()
-				else
-					vim.cmd("TelescopeFindFilesGitignore")
-				end
+				require("keymaps.search").find_files_or_window_up()
 			end,
 			mode = { "n", "i" },
 			desc = "Telescope find files (excludes .gitignore)",

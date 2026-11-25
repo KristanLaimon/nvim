@@ -145,16 +145,26 @@ local function ensure_code_window()
 	end
 end
 
+function M.find_files_or_window_up()
+	local current = vim.fn.winnr()
+	local above = vim.fn.winnr("k")
+	if above ~= current then
+		vim.cmd("wincmd k")
+		return
+	end
+	ensure_code_window()
+	if _G.FindFilesGitignore then
+		_G.FindFilesGitignore()
+	else
+		vim.cmd("TelescopeFindFilesGitignore")
+	end
+end
+
 -- The telescope plugin installs `_G.FindFiles*` with the project's own defaults;
 -- the fallbacks keep these keys working before it has loaded.
 for _, key in ipairs(M.settings.keys.find_files) do
 	vim.keymap.set({ "n", "i" }, key, function()
-		ensure_code_window()
-		if _G.FindFilesGitignore then
-			_G.FindFilesGitignore()
-		else
-			vim.cmd("TelescopeFindFilesGitignore")
-		end
+		M.find_files_or_window_up()
 	end, opts("Find files (respecting .gitignore)"))
 end
 
@@ -176,7 +186,15 @@ for direction, keys in pairs(M.settings.keys.split) do
 			if direction == "j" and debug_keymaps.toggle_repl() then
 				return
 			end
-			open_find_files_split(direction)
+			vim.ui.select({ "Open another file", "Open current buffer" }, {
+				prompt = "Open split " .. M.settings.splits[direction].label,
+			}, function(choice)
+				if choice == "Open another file" then
+					open_find_files_split(direction)
+				elseif choice == "Open current buffer" then
+					vim.cmd(M.settings.splits[direction].command)
+				end
+			end)
 		end, opts("Find file and open in split (" .. direction .. ")"))
 	end
 end

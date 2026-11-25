@@ -365,8 +365,9 @@ describe("FoxQuerier usability", function()
 
 	it("creates a MariaDB profile from the default view connection sidebar", function()
 		local storage = require("fox.query.storage")
+		local modal = require("plugins.fox.ui.input_modal")
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
-		local old_input, old_connect = vim.ui.input, query.connect
+		local old_input, old_secret, old_connect = vim.ui.input, modal.secret, query.connect
 		vim.fn.mkdir(root, "p")
 		vim.api.nvim_set_current_dir(root)
 		local connected
@@ -376,8 +377,8 @@ describe("FoxQuerier usability", function()
 			vim.fn.maparg("a", "n", false, true).callback()
 			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 			expect(lines[4]).toBe("MySQL / MariaDB")
-			local values = { "local-mariadb", "127.0.0.1", "3306", "app", "reader", "FOXQUERY_TEST_PASSWORD" }
-			local index = 0
+			local values = { "local-mariadb", "127.0.0.1", "3306", "app", "reader" }
+			local index, password_prompts = 0, 0
 			vim.ui.input = function(opts, callback)
 				index = index + 1
 				if index == 3 then
@@ -385,22 +386,29 @@ describe("FoxQuerier usability", function()
 				end
 				callback(values[index])
 			end
+			modal.secret = function(label)
+				expect(label).toBe("Database password")
+				password_prompts = password_prompts + 1
+				return "test-secret"
+			end
 			query.connect = function(profile)
 				connected = profile
 			end
 			vim.fn.maparg("j", "n", false, true).callback()
 			vim.fn.maparg("<CR>", "n", false, true).callback()
-			expect(index).toBe(6)
+			expect(index).toBe(5)
+			expect(password_prompts).toBe(1)
 			expect(connected.engine).toBe("mysql")
 			expect(connected.port).toBe(3306)
 			local profiles = assert(storage.profiles(root))
 			expect(#profiles).toBe(1)
 			expect(profiles[1].id).toBe("local-mariadb")
 			expect(profiles[1].engine).toBe("mysql")
-			expect(profiles[1].password_env).toBe("FOXQUERY_TEST_PASSWORD")
+			expect(profiles[1].password).toBeNil()
+			expect(storage.password(root, profiles[1])).toBe("test-secret")
 			query.hide()
 		end)
-		vim.ui.input, query.connect = old_input, old_connect
+		vim.ui.input, modal.secret, query.connect = old_input, old_secret, old_connect
 		query.close_root(root)
 		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 			if vim.b[buf].fox_query_root == storage.root(root) then

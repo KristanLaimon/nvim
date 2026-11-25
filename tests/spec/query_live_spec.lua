@@ -1616,14 +1616,14 @@ describe("FoxQuerier live workflow", function()
 
 	it("saves a masked password once and reuses it when retrying a failed connection", function()
 		project(function(root)
-			query.show()
 			local client = require("fox.query.client")
-			local old_new, old_input = client.new, vim.fn.inputsecret
+			local modal = require("plugins.fox.ui.input_modal")
+			local old_new, old_secret = client.new, modal.secret
 			local old_refresh = query.refresh_metadata
 			local prompts, attempts = 0, 0
 			local profile = { id = "mysql", engine = "mysql", host = "localhost", port = 3306, database = "db", user = "me" }
 			local ok, err = pcall(function()
-				vim.fn.inputsecret = function()
+				modal.secret = function()
 					prompts = prompts + 1
 					return "saved-secret"
 				end
@@ -1644,6 +1644,7 @@ describe("FoxQuerier live workflow", function()
 				end
 				query.refresh_metadata = function() end
 				local state = query.state()
+				storage.save(root, "connections.json", { profiles = { profile } })
 				query.connect(profile, state)
 				expect(storage.password(root, profile)).toBe("saved-secret")
 				expect(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")).toContain("Database connection failed")
@@ -1656,7 +1657,7 @@ describe("FoxQuerier live workflow", function()
 				expect(prompts).toBe(1)
 				expect(profile.password).toBeNil()
 			end)
-			client.new, vim.fn.inputsecret = old_new, old_input
+			client.new, modal.secret = old_new, old_secret
 			query.refresh_metadata = old_refresh
 			if not ok then
 				error(err)
@@ -1666,8 +1667,8 @@ describe("FoxQuerier live workflow", function()
 
 	it("keeps or replaces private passwords when editing a connection", function()
 		project(function(root)
-			local old_select, old_input, old_secret, old_connect =
-				query.select, vim.ui.input, vim.fn.inputsecret, query.connect
+			local modal = require("plugins.fox.ui.input_modal")
+			local old_select, old_input, old_secret, old_connect = query.select, vim.ui.input, modal.secret, query.connect
 			local profile = { id = "mysql", engine = "mysql", host = "localhost", port = 3306, database = "db", user = "me" }
 			local password = ""
 			local ok, err = pcall(function()
@@ -1679,7 +1680,7 @@ describe("FoxQuerier live workflow", function()
 				vim.ui.input = function(opts, callback)
 					callback(opts.default or "")
 				end
-				vim.fn.inputsecret = function()
+				modal.secret = function()
 					return password
 				end
 				query.connect = function(value)
@@ -1693,7 +1694,7 @@ describe("FoxQuerier live workflow", function()
 				expect(storage.profiles(root)[1].password).toBeNil()
 				expect(storage.read(root, "connections.json"):find(password, 1, true)).toBeNil()
 			end)
-			query.select, vim.ui.input, vim.fn.inputsecret, query.connect = old_select, old_input, old_secret, old_connect
+			query.select, vim.ui.input, modal.secret, query.connect = old_select, old_input, old_secret, old_connect
 			if not ok then
 				error(err)
 			end

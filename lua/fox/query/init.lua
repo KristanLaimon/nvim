@@ -1359,7 +1359,7 @@ function M.syntax_check()
 	)
 end
 
-function M.new(relative, dialect)
+function M.new(relative, dialect, restore_connection)
 	local state = M.state()
 	if relative and (not relative:match("%.sql$") or not require("fox.query.files").path(state.root, relative)) then
 		notify("Use a relative .sql path inside the queries folder", vim.log.levels.ERROR)
@@ -1401,7 +1401,9 @@ function M.new(relative, dialect)
 		vim.keymap.set("i", key, M.complete, { buffer = buf, silent = true, desc = "Query: database completion" })
 	end
 	M.refresh_view(state)
-	M.restore_connection(state)
+	if restore_connection ~= false then
+		M.restore_connection(state)
+	end
 	return buf
 end
 
@@ -1641,8 +1643,7 @@ function M.add_profile(existing)
 			return
 		end
 		profile.engine = engine
-		local fields = engine == "sqlite" and { "id", "path" }
-			or { "id", "host", "port", "database", "user", "password_env", "password" }
+		local fields = engine == "sqlite" and { "id", "path" } or { "id", "host", "port", "database", "user", "password" }
 		local defaults = { host = "127.0.0.1", port = engine == "mysql" and "3306" or "5432" }
 		if existing then
 			profile = vim.tbl_extend("force", existing, { engine = engine })
@@ -1721,8 +1722,9 @@ function M.add_profile(existing)
 			end
 			if key == "password" then
 				if not profile.password_env then
-					local ok, value = pcall(vim.fn.inputsecret, "Password (saved locally; blank keeps existing): ")
-					if not ok then
+					local label = existing and "Password (blank keeps existing)" or "Database password"
+					local value = require("plugins.fox.ui.input_modal").secret(label)
+					if value == nil then
 						return
 					end
 					if value == "" and existing then
@@ -1732,6 +1734,7 @@ function M.add_profile(existing)
 							notify(load_err, vim.log.levels.ERROR)
 							return
 						end
+						password = password or ""
 					else
 						password = value
 					end
@@ -1740,8 +1743,7 @@ function M.add_profile(existing)
 				return
 			end
 			vim.ui.input({
-				prompt = key == "password_env" and "Password environment variable (blank: save password locally): "
-					or key .. ": ",
+				prompt = key .. ": ",
 				default = defaults[key] ~= nil and tostring(defaults[key]) or nil,
 			}, function(value)
 				if value == nil then
@@ -1772,17 +1774,38 @@ function M.connect(profile, state)
 		end
 	end
 	local item, buf = console(state)
-	if not item then
-		M.new()
-		item, buf = console(state)
-	end
-	if item.client and item.client.busy then
+	if item and item.client and item.client.busy then
 		notify("Console is busy; cancel or wait before changing connections", vim.log.levels.WARN)
 		return
 	end
-	if count >= 4 and not (item.client and item.client.connected) then
+	if count >= 4 and not (item and item.client and item.client.connected) then
 		notify("Project limit: four database sessions; disconnect an idle console first", vim.log.levels.WARN)
 		return
+	end
+	local secret = profile.password_env and vim.env[profile.password_env]
+	if profile.engine ~= "sqlite" and secret == nil then
+		local load_err
+		secret, load_err = storage.password(state.root, profile)
+		if load_err then
+			notify(load_err, vim.log.levels.ERROR)
+			return
+		end
+	end
+	if profile.engine ~= "sqlite" and secret == nil then
+		local value = require("plugins.fox.ui.input_modal").secret("Database password")
+		if value == nil then
+			return
+		end
+		local saved, save_err = storage.password(state.root, profile, value)
+		if not saved then
+			notify(save_err, vim.log.levels.ERROR)
+			return
+		end
+		secret = value
+	end
+	if not item then
+		M.new(nil, nil, false)
+		item, buf = console(state)
 	end
 	if item.client then
 		item.client:close()
@@ -1801,27 +1824,6 @@ function M.connect(profile, state)
 	state.metadata = cached or { tables = {}, relations = {} }
 	item.metadata = state.metadata
 	M.note_badges(state, profile)
-	local secret = profile.password_env and vim.env[profile.password_env]
-	if profile.engine ~= "sqlite" and secret == nil then
-		local load_err
-		secret, load_err = storage.password(state.root, profile)
-		if load_err then
-			notify(load_err, vim.log.levels.ERROR)
-			return
-		end
-	end
-	if profile.engine ~= "sqlite" and secret == nil then
-		local ok, value = pcall(vim.fn.inputsecret, "Database password (saved locally in .foxnvim/query/private/): ")
-		if not ok then
-			return
-		end
-		local saved, save_err = storage.password(state.root, profile, value)
-		if not saved then
-			notify(save_err, vim.log.levels.ERROR)
-			return
-		end
-		secret = value
-	end
 	local bridge_profile = vim.tbl_extend("force", profile, { password = secret })
 	item.status = "connecting"
 	item.client = client.new(state.root, function(response)

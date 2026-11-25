@@ -2,9 +2,9 @@
 -- KEYMAPS: Search -- finding files, opening them in splits, following URLs.
 -- ============================================================================
 -- KEYS
---   <C-k>            Find files, respecting .gitignore
+--   <C-k>            Focus the window above, or find files when there is none
 --   <C-S-/> / <C-?>  Find files, including ignored and hidden ones
---   <C-S-h/j/k/l>    Find a file and open it in a split in that direction
+--   <C-S-h/j/k/l>    Choose a file or current buffer for a directional split
 --   <C-LeftMouse>    Open the URL under the mouse in the browser
 --
 -- SPECIAL CASE

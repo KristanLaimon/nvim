@@ -72,7 +72,7 @@ host terminal rather than the shell profile.
 | :--- | :---: | :--- |
 | `<C-h>` / `<C-l>` | n, t | Focus left / right window |
 | `<C-j>` / `<C-k>` / `<C-S-A-k>` | n, t | Focus lower / upper window |
-| `<C-S-h>` / `<C-S-j>` / `<C-S-k>` / `<C-S-l>` | n, i, v | Find a file and open it in a split (left / down / up / right) |
+| `<C-S-h>` / `<C-S-j>` / `<C-S-k>` / `<C-S-l>` | n, i, v | Choose another file or the current buffer for a new split (left / down / up / right) |
 | `<C-Left>` / `<C-Right>` | n, i, v, t | Widen / narrow the window |
 | `<C-Up>` / `<C-Down>` | n, i, v, t | Taller / shorter |
 | `gt` / `<A-l>` / `<M-l>` / `<A-Right>` / `<M-Right>` | n | Next buffer |
@@ -147,7 +147,7 @@ host terminal rather than the shell profile.
 
 | Shortcut | Mode | Action |
 | :--- | :---: | :--- |
-| `<C-k>` / `<C-K>` / `<C-/>` / `<C-_>` | n, i | Find files, respecting `.gitignore` |
+| `<C-k>` / `<C-K>` / `<C-/>` / `<C-_>` | n, i | Focus the window above with `<C-k>` / `<C-K>` when available; otherwise find files, respecting `.gitignore` |
 | `<C-A-k>` / `<C-S-/>` / `<C-?>` | n, i, v | Find files, ignoring `.gitignore` |
 | `<C-f>` | n, i, v | Project search right sidebar; sections 1 Search, 2 Replace, 3 Files, 4 Results; passed through in terminal mode |
 | `<C-S-m>` / `<F9>` / `<C-A-r>` | n, i, v, t | Preview and replace text across project files; prefer Ctrl+Shift+M or F9 in Neovide |

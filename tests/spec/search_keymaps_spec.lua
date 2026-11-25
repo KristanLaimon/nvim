@@ -24,6 +24,25 @@ describe("search keymaps configuration", function()
 		expect(has_ck_upper).toBe(true)
 	end)
 
+	it("focuses the upper window or opens the file picker", function()
+		local search = require("keymaps.search")
+		local original = _G.FindFilesGitignore
+		local opened = false
+		_G.FindFilesGitignore = function()
+			opened = true
+		end
+		vim.cmd("only")
+		local upper = vim.api.nvim_get_current_win()
+		vim.cmd("belowright split")
+		search.find_files_or_window_up()
+		expect(vim.api.nvim_get_current_win()).toBe(upper)
+		expect(opened).toBe(false)
+		search.find_files_or_window_up()
+		expect(opened).toBe(true)
+		vim.cmd("only")
+		_G.FindFilesGitignore = original
+	end)
+
 	it("configures <C-A-k> and <C-A-K> for find_all_files (ignoring .gitignore)", function()
 		local search = require("keymaps.search")
 		local find_all = search.settings.keys.find_all_files

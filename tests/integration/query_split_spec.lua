@@ -31,7 +31,13 @@ t.describe("Query SQL editor split", function()
 			assert(storage.save(root, "connections.json", {
 				profiles = { { id = "local", engine = "sqlite", path = "fixture.db" } },
 			}))
-			assert(storage.write(root, "queries/example.sql", "SELECT name FROM things WHERE id = 1;"))
+			assert(
+				storage.write(
+					root,
+					"queries/example.sql",
+					"SELECT name, id FROM things WHERE id = 1 UNION ALL SELECT 'second', 2;\n\nSELECT 42;"
+				)
+			)
 			local sql = query.new("example.sql", "sqlite", false)
 			local origin = vim.api.nvim_get_current_buf()
 			key("<C-S-l>")
@@ -48,22 +54,74 @@ t.describe("Query SQL editor split", function()
 			wait_until(function()
 				return item.metadata and item.client.connected and not item.client.busy
 			end, "SQLite metadata unavailable")
-			local entries
+			local lines = vim.api.nvim_buf_get_lines(sql, 0, -1, false)
+			local first_statement = assert(vim.fn.search("SELECT name", "w"))
+			local second_statement = assert(vim.fn.search("SELECT 42", "w"))
+			local namespace = vim.api.nvim_get_namespaces().fox_query_statement
+			local function check_outline(row)
+				vim.api.nvim_win_set_cursor(owner, { row, 0 })
+				vim.api.nvim_exec_autocmds("CursorMoved", { buffer = sql })
+				wait_until(function()
+					local marks = vim.api.nvim_buf_get_extmarks(sql, namespace, 0, -1, { details = true })
+					return #marks == 2
+						and marks[1][2] == row - 1
+						and marks[2][2] == row - 1
+						and marks[1][4].virt_lines_above
+						and marks[2][4].virt_lines ~= nil
+				end, "Statement outline did not follow the SQL cursor")
+			end
+			check_outline(first_statement)
+			check_outline(second_statement)
+			check_outline(first_statement)
 			local completion = require("fox.query.completion").new()
-			completion:get_completions({ bufnr = sql, cursor = { 1, 8 } }, function(result)
-				entries = result.items
-			end)
-			t.expect(vim.iter(entries):any(function(entry)
-				return entry.label == "name"
-			end)).toBe(true)
+			local function labels()
+				local names = {}
+				completion:get_completions({ bufnr = sql, cursor = { first_statement, 8 } }, function(result)
+					for _, entry in ipairs(result.items) do
+						names[entry.label] = true
+					end
+				end)
+				return names
+			end
+			t.expect(labels().name).toBe(true)
+			local workspace = query.state()
+			local metadata = workspace.metadata
+			workspace.metadata = { tables = { { key = "unrelated", name = "unrelated" } }, relations = {} }
+			vim.api.nvim_buf_set_lines(sql, -1, -1, false, { "-- " .. string.rep("x", 129 * 1024) })
+			local large = labels()
+			t.expect(large.SELECT).toBe(true)
+			t.expect(large.things).toBe(true)
+			t.expect(large.unrelated).toBe(nil)
+			vim.api.nvim_buf_set_lines(sql, 0, -1, false, lines)
+			workspace.metadata = metadata
+			vim.api.nvim_win_set_cursor(owner, { first_statement, 0 })
 
 			key("<C-CR>")
 			wait_until(function()
 				return view.result_win and item.result
 			end, "Bottom results did not open")
-			t.expect(item.result.sets[1].rows[1]).toEqual({ "fox" })
+			t.expect(item.result.sets[1].rows[1]).toEqual({ "fox", "1" })
 			t.expect(vim.api.nvim_win_get_config(view.result_win).win).toBe(owner)
 			t.expect(vim.api.nvim_win_get_config(view.result_win).anchor).toBe("SW")
+			t.expect(vim.api.nvim_get_current_win()).toBe(owner)
+			vim.api.nvim_set_current_win(editor)
+			key("<C-l>")
+			t.expect(vim.api.nvim_get_current_win()).toBe(owner)
+			key("<C-j>")
+			t.expect(vim.api.nvim_get_current_win()).toBe(view.result_win)
+			key("J")
+			local first_cell = vim.api.nvim_win_get_cursor(0)
+			key("L")
+			local next_cell = vim.api.nvim_win_get_cursor(0)
+			t.expect(next_cell[1]).toBe(first_cell[1])
+			t.expect(next_cell[2] > first_cell[2]).toBe(true)
+			key("J")
+			t.expect(vim.api.nvim_win_get_cursor(0)[1]).toBe(first_cell[1] + 1)
+			key("K")
+			t.expect(vim.api.nvim_win_get_cursor(0)).toEqual(next_cell)
+			key("H")
+			t.expect(vim.api.nvim_win_get_cursor(0)).toEqual(first_cell)
+			key("<C-k>")
 			t.expect(vim.api.nvim_get_current_win()).toBe(owner)
 			key("<C-S-CR>")
 			wait_until(function()

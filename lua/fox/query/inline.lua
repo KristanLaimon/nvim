@@ -52,13 +52,26 @@ function M.refresh(view)
 	end
 	if view.result_seen ~= item.result then
 		view.result_seen, view.results_hidden = item.result, false
-		local lines = { "  QUERY / RESULTS  |  " .. (item.result_label or item.status), "  [q] Back to SQL", "" }
-		local rows = render.results(item.result)
-		vim.list_extend(lines, rows)
+		item.result_lines, item.result_rows, item.result_headers = render.results(item.result)
+		local lines = vim.list_extend({}, item.result_lines)
+		vim.list_extend(lines, {
+			"  QUERY / RESULTS  |  " .. (item.result_label or item.status),
+			"  [Shift+H/J/K/L] Move cell   [Ctrl+K] Back to SQL   [q] Hide",
+		})
 		if not view.result_buf or not vim.api.nvim_buf_is_valid(view.result_buf) then
 			view.result_buf = ui.scratch_buffer({ filetype = "foxquery" })
 			vim.bo[view.result_buf].bufhidden = "hide"
 			vim.b[view.result_buf].fox_query_root = view.root
+			view.bind_result_cells(view.result_buf)
+			vim.keymap.set({ "n", "i", "v" }, "<C-k>", function()
+				if vim.api.nvim_get_current_win() == view.result_popup then
+					ui.close(view.result_popup)
+					view.result_popup = nil
+				end
+				if shown(view) then
+					vim.api.nvim_set_current_win(view.sql_win)
+				end
+			end, { buffer = view.result_buf, silent = true, desc = "Query: focus SQL" })
 			for _, key in ipairs(ui.close_keys) do
 				vim.keymap.set("n", key, function()
 					if vim.api.nvim_get_current_win() == view.result_popup then
@@ -93,6 +106,8 @@ function M.refresh(view)
 		height = math.min(12, math.max(2, math.floor(height / 3))),
 		style = "minimal",
 		border = "none",
+		focusable = false,
+		mouse = false,
 		zindex = 45,
 	}
 	if view.result_win and vim.api.nvim_win_is_valid(view.result_win) then
@@ -118,19 +133,23 @@ function M.popup(view)
 end
 
 function M.focus_results(view)
-	view.result_seen, view.results_hidden = nil, false
+	view.results_hidden = false
 	M.refresh(view)
 	if view.result_win then
+		vim.cmd.stopinsert()
 		vim.api.nvim_set_current_win(view.result_win)
+		return true
 	end
+	return false
 end
 
-function M.attach(workspace, win, buf)
+function M.attach(workspace, win, buf, bind_result_cells)
 	local view = {
 		inline = true,
 		workspace = workspace,
 		root = workspace.root,
 		active = buf,
+		bind_result_cells = bind_result_cells,
 		sql_win = win,
 		consoles = workspace.consoles,
 		connection_status = workspace.connection_status,

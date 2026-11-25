@@ -17,10 +17,15 @@ function M.compare(a, b)
 end
 
 function M.get_completions(_, context, callback)
+	local buf = context.bufnr
+	if not vim.api.nvim_buf_is_loaded(buf) then
+		callback({ items = {} })
+		return function() end
+	end
 	local query = package.loaded["fox.query"]
-	local state = query and query.states[vim.b[context.bufnr].fox_query_root or ""]
+	local state = query and query.states[vim.b[buf].fox_query_root or ""]
 	local items, seen = {}, {}
-	local engine = require("fox.langs.sql.dialect").read(context.bufnr) or vim.b[context.bufnr].fox_sql_dialect
+	local engine = require("fox.langs.sql.dialect").read(buf) or vim.b[buf].fox_sql_dialect
 	if engine then
 		for _, item in ipairs(require("fox.langs.sql.functions").items(engine)) do
 			items[#items + 1], seen[item.label] = item, true
@@ -52,32 +57,32 @@ function M.get_completions(_, context, callback)
 		items[#items + 1] = { label = keyword, kind = 14, detail = engine or "SQL" }
 		seen[keyword] = true
 	end
+	local console = state and state.consoles and state.consoles[buf]
+	local schema = console and console.metadata or not console and state and state.metadata
 	if state then
-		local text = table.concat(vim.api.nvim_buf_get_lines(context.bufnr, 0, -1, false), "\n")
-		if #text > 128 * 1024 then
-			callback({ items = {} })
-			return function() end
-		end
-		local sql = require("fox.query.sql")
-		local cursor = context.cursor or vim.api.nvim_win_get_cursor(0)
-		local offset = cursor[2] + 1
-		for _, line in ipairs(vim.api.nvim_buf_get_lines(context.bufnr, 0, cursor[1] - 1, false)) do
-			offset = offset + #line + 1
-		end
-		local console = state.consoles and state.consoles[context.bufnr]
-		local schema = console and (console.metadata or { tables = {}, relations = {} }) or state.metadata
+		schema = schema or { tables = {}, relations = {} }
 		local metadata = vim.tbl_extend("force", schema, { syntax = engine or schema.syntax })
-		local statement = sql.scope(text, offset, "statement", nil, metadata.syntax or metadata.engine)
-		local statement_offset = offset
-		for _, scope in ipairs(sql.statements(text, metadata.syntax or metadata.engine) or {}) do
-			if offset >= scope.first and offset <= scope.last then
-				statement_offset = offset - scope.first + 1
-				break
+		local cursor = context.cursor or vim.api.nvim_win_get_cursor(0)
+		local count = vim.api.nvim_buf_line_count(buf)
+		local row = math.max(0, math.min(count - 1, cursor[1] - 1))
+		local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
+		local prefix = line:sub(1, cursor[2])
+		local alias = prefix:match("([%w_]+)%.[%w_]*$")
+		local nodes = {}
+		-- Keep schema and keyword completions available when statement analysis is too expensive.
+		if vim.api.nvim_buf_get_offset(buf, count) <= 128 * 1024 then
+			local sql = require("fox.query.sql")
+			local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+			local offset = vim.api.nvim_buf_get_offset(buf, row) + #prefix + 1
+			local statement, statement_offset = text, offset
+			for _, scope in ipairs(sql.statements(text, metadata.syntax or metadata.engine) or {}) do
+				if offset >= scope.first and offset <= scope.last then
+					statement, statement_offset = scope.sql, offset - scope.first + 1
+					break
+				end
 			end
+			nodes = sql.completion_graph(statement, statement_offset, metadata).nodes
 		end
-		local graph = sql.completion_graph(statement or text, statement_offset, metadata)
-		local line = (vim.api.nvim_buf_get_lines(context.bufnr, cursor[1] - 1, cursor[1], false)[1] or ""):sub(1, cursor[2])
-		local alias = line:match("([%w_]+)%.[%w_]*$")
 		local function add(label, kind, detail, priority)
 			if not seen[label] then
 				items[#items + 1] = {
@@ -90,12 +95,12 @@ function M.get_completions(_, context, callback)
 			end
 		end
 		if alias then
-			for _, item in ipairs(state.metadata.tables or {}) do
+			for _, item in ipairs(metadata.tables or {}) do
 				if item.schema == alias then
 					add(item.name, 7, item.key)
 				end
 			end
-			for _, node in ipairs(graph.nodes) do
+			for _, node in ipairs(nodes) do
 				if not node.nested and node.alias:lower() == alias:lower() and node.table then
 					for _, column in ipairs(node.table.columns) do
 						add(column.name, 5, node.table.key .. " | " .. tostring(column.type))
@@ -103,11 +108,11 @@ function M.get_completions(_, context, callback)
 				end
 			end
 		else
-			for _, table in ipairs(state.metadata.tables or {}) do
+			for _, table in ipairs(metadata.tables or {}) do
 				add(metadata.engine == "mysql" and table.name or table.key, 7, "table/view")
 			end
 			local columns = {}
-			for _, node in ipairs(graph.nodes) do
+			for _, node in ipairs(nodes) do
 				if node.table and not node.nested then
 					if node.table.cte then
 						add(node.table.name, 7, "WITH table (query only)")
@@ -132,7 +137,8 @@ function M.get_completions(_, context, callback)
 			end
 		end
 	end
-	callback({ items = items, is_incomplete_forward = false, is_incomplete_backward = false })
+	local awaiting_schema = console ~= nil and console.metadata == nil
+	callback({ items = items, is_incomplete_forward = awaiting_schema, is_incomplete_backward = awaiting_schema })
 	return function() end
 end
 

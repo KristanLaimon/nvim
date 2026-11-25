@@ -31,7 +31,7 @@ Automatic execution is disabled by default. If explicitly enabled with `:FoxQuer
 
 Press **Ctrl+Shift+H/J/K/L** and choose **SQL Tab** to open a saved or already open Query SQL document in that direction. The split uses the same document, connection, schema completion, and SQL hover as Query Mode. **gC** chooses an existing connection and **Ctrl+Space** opens completion.
 
-**Ctrl+Enter** or **F5** runs the statement at the cursor and opens results along the bottom of that SQL pane. **gR** focuses the results and **q** closes them. **Ctrl+Shift+Enter** also opens the large results popup. Switching environments restores an open Query view or SQL split and its open Query popups when you return.
+**Ctrl+Enter** or **F5** runs the statement at the cursor and opens results along the bottom of that SQL pane. Accent lines mark the current SQL statement. **Ctrl+J** or **gR** focuses results from SQL, **Shift+H/J/K/L** moves between cells, and **Ctrl+K** returns to SQL. **q** hides results. Pane navigation from elsewhere lands in the SQL editor. **Ctrl+Shift+Enter** also opens the large results popup. Switching environments restores an open Query view or SQL split and its open Query popups when you return.
 
 ## Profiles and local files
 

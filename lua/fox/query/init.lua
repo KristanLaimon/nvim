@@ -86,7 +86,10 @@ local function query_keys(buf)
 	end, { buffer = buf, silent = true, desc = "Query: toggle live diagram" })
 	for _, direction in ipairs({ "h", "j", "k", "l" }) do
 		vim.keymap.set({ "n", "i", "v" }, "<C-" .. direction .. ">", function()
-			vim.cmd("wincmd " .. direction)
+			local view = direction == "j" and inline.current()
+			if not view or not inline.focus_results(view) then
+				vim.cmd("wincmd " .. direction)
+			end
 		end, { buffer = buf, silent = true, desc = "Query: focus " .. direction })
 	end
 	local actions = {
@@ -151,8 +154,21 @@ end
 
 function M.complete()
 	if vim.api.nvim_get_mode().mode:sub(1, 1) ~= "i" then
-		vim.cmd("startinsert")
-		vim.schedule(M.complete)
+		local win, buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
+		vim.api.nvim_create_autocmd("InsertEnter", {
+			buffer = buf,
+			once = true,
+			callback = vim.schedule_wrap(function()
+				if
+					vim.api.nvim_get_current_win() == win
+					and vim.api.nvim_get_current_buf() == buf
+					and vim.api.nvim_get_mode().mode:sub(1, 1) == "i"
+				then
+					M.complete()
+				end
+			end),
+		})
+		vim.cmd.startinsert()
 		return
 	end
 	local ok, lazy = pcall(require, "lazy")
@@ -676,7 +692,8 @@ local function mark_statement(state)
 		or active.profile and active.profile.engine
 	for _, statement in ipairs(sql.statements(text, engine) or {}) do
 		if offset >= statement.first and offset <= statement.last then
-			local first = statement.first + (statement.sql:find("%S") or 1) - 1
+			local token = sql.tokens(statement.sql, engine)[1]
+			local first = statement.first + (token and token.first or 1) - 1
 			local last = math.min(#text, statement.last)
 			last = first + (text:sub(first, last):find("%s*$") or 1) - 2
 			local first_row = select(2, text:sub(1, first - 1):gsub("\n", ""))
@@ -730,6 +747,9 @@ end
 function M.refresh_view(state)
 	state = run_state(state)
 	if state.inline then
+		if vim.api.nvim_get_current_win() == state.sql_win and vim.api.nvim_get_current_buf() == state.active then
+			mark_statement(state)
+		end
 		inline.refresh(state)
 		return
 	end
@@ -845,6 +865,14 @@ end
 
 local function map(buf, key, action)
 	vim.keymap.set("n", key, action, { buffer = buf, silent = true })
+end
+
+local function bind_result_cells(buf)
+	for key, direction in pairs({ H = "left", L = "right", J = "down", K = "up" }) do
+		map(buf, key, function()
+			M.move_cell(direction)
+		end)
+	end
 end
 
 local function selected_object(state)
@@ -1174,11 +1202,7 @@ function M.show(view)
 			state.result_popup = nil
 		end
 	end)
-	for key, direction in pairs({ H = "left", L = "right", J = "down", K = "up" }) do
-		map(state.result_buf, key, function()
-			M.move_cell(direction)
-		end)
-	end
+	bind_result_cells(state.result_buf)
 	vim.api.nvim_set_current_win(state.sql_win)
 	local active = console(state)
 	if active and active.cursor then
@@ -1506,7 +1530,7 @@ function M.open_split(command)
 		local split_command = command:gsub("vsplit$", "vnew"):gsub(" split$", " new")
 		vim.cmd(split_command)
 		local win = vim.api.nvim_get_current_win()
-		local view = inline.attach(state, win, buf)
+		local view = inline.attach(state, win, buf, bind_result_cells)
 		vim.api.nvim_win_set_buf(win, buf)
 		require("fox.ui.tabline").start_group(win, buf)
 		local excluded = "r" .. storage.path(state.root, "")
@@ -1514,7 +1538,7 @@ function M.open_split(command)
 			vim.opt.shada:append(excluded)
 		end
 		M.restore_connection(view)
-		inline.refresh(view)
+		M.refresh_view(view)
 	end)
 end
 
@@ -1930,19 +1954,20 @@ function M.connect(profile, state)
 	if item.client then
 		item.client:close()
 	end
+	local fingerprint = storage.fingerprint(profile)
+	local remembered = item.profile and storage.fingerprint(item.profile) == fingerprint and item.metadata
 	item.params, item.profile, item.restore_attempted = {}, vim.deepcopy(profile), true
 	item.error_detail = nil
 	state.restore_disconnected = false
 	item.auto_sql, item.auto_connection = nil, nil
 	state.connection_status[profile.id] = "connecting"
 	item.result, item.result_lines, item.result_label, item.result_table, item.executed_sql = nil, nil, nil, nil, nil
-	local fingerprint = storage.fingerprint(profile)
 	local cached, cache_err = storage.cache(state.root, fingerprint)
 	if cache_err then
 		notify(cache_err, vim.log.levels.WARN)
 	end
-	state.metadata = cached or { tables = {}, relations = {} }
-	item.metadata = state.metadata
+	item.metadata = cached or remembered or nil
+	state.metadata = item.metadata or { tables = {}, relations = {} }
 	M.note_badges(state, profile)
 	local bridge_profile = vim.tbl_extend("force", profile, { password = secret })
 	item.status = "connecting"
@@ -2671,7 +2696,7 @@ function M.row()
 end
 
 function M.move_cell(direction)
-	local state = M.state()
+	local state = run_state()
 	local item = console(state)
 	if not item or not item.result or vim.api.nvim_get_current_buf() ~= state.result_buf then
 		return
@@ -3144,6 +3169,15 @@ function M.setup()
 		callback = update_inline,
 	})
 
+	vim.api.nvim_create_autocmd({ "WinEnter", "WinResized" }, {
+		group = group,
+		callback = function()
+			local view = inline.current()
+			if view and vim.api.nvim_get_current_win() == view.sql_win then
+				mark_statement(view)
+			end
+		end,
+	})
 	vim.api.nvim_create_autocmd("TabEnter", {
 		group = group,
 		callback = function()
@@ -3245,6 +3279,21 @@ function M.setup()
 	vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "CursorMoved", "CursorMovedI" }, {
 		group = group,
 		callback = function(args)
+			local view = inline.current()
+			if view and args.buf == view.active then
+				view.revision = (view.revision or 0) + 1
+				local revision = view.revision
+				vim.defer_fn(function()
+					if
+						view.revision == revision
+						and vim.api.nvim_get_current_win() == view.sql_win
+						and vim.api.nvim_get_current_buf() == view.active
+					then
+						mark_statement(view)
+					end
+				end, 200)
+				return
+			end
 			local root = vim.b[args.buf].fox_query_root
 			local state = root and M.states[root]
 			if not state or state.mode ~= "query" or not state.consoles[args.buf] then

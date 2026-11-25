@@ -1281,6 +1281,15 @@ function M.close_buffer(buf, force)
 		)
 		return
 	end
+	if buf == state.empty_buf and not vim.t.fox_query_root and vim.api.nvim_get_current_buf() == buf then
+		local win = vim.api.nvim_get_current_win()
+		if vim.api.nvim_win_get_config(win).relative ~= "" or require("fox.core.dock").find_code_win() then
+			vim.api.nvim_win_close(win, false)
+		else
+			vim.cmd.Alpha()
+		end
+		return
+	end
 	if not vim.b[buf].fox_query_document then
 		if valid(state.sql_win, "win") then
 			vim.api.nvim_set_current_win(state.sql_win)

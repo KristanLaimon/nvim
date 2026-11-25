@@ -155,7 +155,12 @@ function _G.Smart_Close_Buffer(target_buf, force, tab_win)
 	end
 	local query = package.loaded["fox.query"]
 	if query and vim.b[target_buf].fox_query_root then
-		query.close_buffer(target_buf, force)
+		local win = tab_win or vim.api.nvim_get_current_win()
+		if query.inline_buffer_visible and query.inline_buffer_visible(target_buf, win) then
+			require("fox.ui.tabline").close(target_buf, win, force)
+		else
+			query.close_buffer(target_buf, force)
+		end
 		return
 	end
 
@@ -364,7 +369,7 @@ function _G.Neotree_Smart_Quit(force)
 	local cur_buf = vim.api.nvim_get_current_buf()
 	local query = package.loaded["fox.query"]
 	if query and vim.b[cur_buf].fox_query_root then
-		query.close_buffer(cur_buf, force)
+		_G.Smart_Close_Buffer(cur_buf, force)
 		return
 	end
 	local ft = vim.bo[cur_buf].filetype
@@ -513,13 +518,7 @@ function M.setup()
 	end, { bang = true, desc = "Smart quit (bang = force)" })
 
 	vim.api.nvim_create_user_command("FoxBd", function(opts)
-		local buf, win = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
-		local query = package.loaded["fox.query"]
-		if query and query.inline_buffer_visible and query.inline_buffer_visible(buf, win) then
-			require("fox.ui.tabline").close(buf, win, opts.bang)
-		else
-			_G.Smart_Close_Buffer(buf, opts.bang)
-		end
+		_G.Smart_Close_Buffer(vim.api.nvim_get_current_buf(), opts.bang)
 	end, { bang = true, desc = "Smart close buffer (bang = force)" })
 
 	-- `cnoreabbrev` with a guard, so the reroute only fires for the bare command

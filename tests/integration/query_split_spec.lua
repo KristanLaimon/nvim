@@ -98,9 +98,27 @@ t.describe("Query SQL editor split", function()
 			t.expect(state.mode).toBe("query")
 			query.hide()
 			vim.api.nvim_set_current_win(owner)
-			tabs.close(sql)
+			vim.cmd.FoxQ()
 			t.expect(vim.api.nvim_win_is_valid(owner)).toBe(false)
 			t.expect(vim.api.nvim_buf_is_valid(sql)).toBe(true)
+			t.expect(not vim.t.fox_query_root).toBe(true)
+
+			-- Recover a pane left on Query's placeholder by an older close path.
+			vim.cmd("rightbelow vsplit")
+			local stranded = vim.api.nvim_get_current_win()
+			local placeholder = query.empty(state)
+			vim.api.nvim_win_set_buf(stranded, placeholder)
+			vim.cmd.FoxQ()
+			t.expect(vim.api.nvim_win_is_valid(stranded)).toBe(false)
+
+			query.show()
+			vim.api.nvim_set_current_win(state.sql_win)
+			vim.cmd.write()
+			vim.cmd.FoxQ()
+			t.expect(vim.api.nvim_win_is_valid(state.sql_win)).toBe(true)
+			t.expect(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(state.sql_win), 0, 1, false)[1])
+				.toContain("Select a SQL tab")
+			query.hide()
 		end, debug.traceback)
 
 		if environments.get_active_slot() ~= first then

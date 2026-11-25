@@ -25,8 +25,8 @@ M.settings = {
 	keys = {
 		--- Fuzzy find, honouring .gitignore.
 		find_files = { "<C-k>", "<C-K>" },
-		--- Fuzzy find everything, ignored and hidden files included.
-		find_all_files = {
+		--- Find files in the current code window, even when a window is above it.
+		find_here = {
 			"<C-A-k>",
 			"<C-A-K>",
 			"<C-M-k>",
@@ -35,6 +35,9 @@ M.settings = {
 			"<A-C-K>",
 			"<M-C-k>",
 			"<M-C-K>",
+		},
+		--- Fuzzy find everything, ignored and hidden files included.
+		find_all_files = {
 			"<C-S-/>",
 			"<C-?>",
 		},
@@ -145,13 +148,7 @@ local function ensure_code_window()
 	end
 end
 
-function M.find_files_or_window_up()
-	local current = vim.fn.winnr()
-	local above = vim.fn.winnr("k")
-	if above ~= current then
-		vim.cmd("wincmd k")
-		return
-	end
+function M.find_files_here()
 	ensure_code_window()
 	if _G.FindFilesGitignore then
 		_G.FindFilesGitignore()
@@ -160,12 +157,26 @@ function M.find_files_or_window_up()
 	end
 end
 
+function M.find_files_or_window_up()
+	local current = vim.fn.winnr()
+	local above = vim.fn.winnr("k")
+	if above ~= current then
+		vim.cmd("wincmd k")
+		return
+	end
+	M.find_files_here()
+end
+
 -- The telescope plugin installs `_G.FindFiles*` with the project's own defaults;
 -- the fallbacks keep these keys working before it has loaded.
 for _, key in ipairs(M.settings.keys.find_files) do
 	vim.keymap.set({ "n", "i" }, key, function()
 		M.find_files_or_window_up()
 	end, opts("Find files (respecting .gitignore)"))
+end
+
+for _, key in ipairs(M.settings.keys.find_here) do
+	vim.keymap.set({ "n", "i" }, key, M.find_files_here, opts("Find files in current window"))
 end
 
 for _, key in ipairs(M.settings.keys.find_all_files) do
@@ -179,6 +190,81 @@ for _, key in ipairs(M.settings.keys.find_all_files) do
 	end, opts("Find all files (ignoring .gitignore)"))
 end
 
+local function choose_split(direction)
+	local origin = vim.api.nvim_get_current_win()
+	local split = M.settings.splits[direction]
+	local ui = require("fox.core.ui")
+	local width = math.max(1, math.min(76, vim.o.columns - 4))
+	local divider = "  +" .. string.rep("-", math.max(0, width - 6)) .. "+"
+	local lines = {
+		"  EDITOR  /  OPEN SPLIT " .. split.label:upper(),
+		divider,
+		"  KEY   ACTION",
+		divider,
+		"  [1]   Open current buffer",
+		"  [2]   Select a file",
+		divider,
+	}
+	vim.list_extend(
+		lines,
+		width >= 38 and { "  [Enter] Open   [j/k] Move   [q] Back" } or { "  [Enter] Open   [j/k] Move", "  [q] Back" }
+	)
+	local buf, win = ui.float({
+		title = " Open Split ",
+		lines = lines,
+		width = width,
+		height = math.max(1, math.min(#lines, vim.o.lines - 4)),
+		border = { "+", "-", "+", "|", "+", "-", "+", "|" },
+		close_keys = ui.close_keys,
+	})
+	vim.wo[win].cursorline = true
+	vim.wo[win].wrap = false
+	local first_choice, last_choice = 5, 6
+	local function move(offset)
+		local row = vim.api.nvim_win_get_cursor(win)[1]
+		vim.api.nvim_win_set_cursor(win, { math.max(first_choice, math.min(last_choice, row + offset)), 0 })
+	end
+	local function open(row)
+		if row ~= first_choice and row ~= last_choice then
+			return
+		end
+		ui.close(win)
+		if vim.api.nvim_win_is_valid(origin) then
+			vim.api.nvim_set_current_win(origin)
+			if row == first_choice then
+				vim.cmd(split.command)
+			else
+				open_find_files_split(direction)
+			end
+		end
+	end
+	local bindings = {
+		["1"] = function()
+			open(first_choice)
+		end,
+		["2"] = function()
+			open(last_choice)
+		end,
+		["<CR>"] = function()
+			open(vim.api.nvim_win_get_cursor(win)[1])
+		end,
+	}
+	for _, key in ipairs({ "j", "<Down>" }) do
+		bindings[key] = function()
+			move(1)
+		end
+	end
+	for _, key in ipairs({ "k", "<Up>" }) do
+		bindings[key] = function()
+			move(-1)
+		end
+	end
+	for key, action in pairs(bindings) do
+		vim.keymap.set("n", key, action, { buffer = buf, silent = true, nowait = true })
+	end
+	vim.api.nvim_win_set_cursor(win, { first_choice, 0 })
+end
+
 for direction, keys in pairs(M.settings.keys.split) do
 	for _, key in ipairs(keys) do
 		vim.keymap.set({ "n", "i", "v" }, key, function()
@@ -186,15 +272,7 @@ for direction, keys in pairs(M.settings.keys.split) do
 			if direction == "j" and debug_keymaps.toggle_repl() then
 				return
 			end
-			vim.ui.select({ "Open another file", "Open current buffer" }, {
-				prompt = "Open split " .. M.settings.splits[direction].label,
-			}, function(choice)
-				if choice == "Open another file" then
-					open_find_files_split(direction)
-				elseif choice == "Open current buffer" then
-					vim.cmd(M.settings.splits[direction].command)
-				end
-			end)
+			choose_split(direction)
 		end, opts("Find file and open in split (" .. direction .. ")"))
 	end
 end

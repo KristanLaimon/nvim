@@ -139,7 +139,8 @@ end
 --- Closes one buffer, keeping the editor in a usable state.
 --- @param target_buf integer|nil Buffer to close. Defaults to the current one.
 --- @param force boolean|nil Discard unsaved changes.
-function _G.Smart_Close_Buffer(target_buf, force)
+--- @param tab_win integer|nil Owner of a tab in a code split.
+function _G.Smart_Close_Buffer(target_buf, force, tab_win)
 	local cur_buf = vim.api.nvim_get_current_buf()
 	target_buf = target_buf or cur_buf
 
@@ -148,7 +149,7 @@ function _G.Smart_Close_Buffer(target_buf, force)
 	end
 	if not force and vim.bo[target_buf].buftype == "" and vim.bo[target_buf].modified then
 		require("fox.ui.unsaved_changes").confirm(target_buf, function()
-			_G.Smart_Close_Buffer(target_buf, true)
+			_G.Smart_Close_Buffer(target_buf, true, tab_win)
 		end)
 		return
 	end
@@ -209,14 +210,15 @@ function _G.Smart_Close_Buffer(target_buf, force)
 			end,
 		}, function(choice)
 			if choice and choice:find("Close") then
-				_G.Smart_Close_Buffer(target_buf, true)
+				_G.Smart_Close_Buffer(target_buf, true, tab_win)
 			end
 		end)
 		return
 	end
 
 	-- 1. Identify the visually next/prev buffer to land on
-	local tabs = get_visual_tabs()
+	local tabline = tab_win and require("fox.ui.tabline")
+	local tabs = tabline and vim.api.nvim_win_is_valid(tab_win) and tabline.buffers(tab_win) or get_visual_tabs()
 	local next_buf = nil
 	local idx = nil
 	for i, b in ipairs(tabs) do
@@ -252,7 +254,7 @@ function _G.Smart_Close_Buffer(target_buf, force)
 		if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == target_buf then
 			if next_buf and vim.api.nvim_buf_is_valid(next_buf) then
 				pcall(vim.api.nvim_win_set_buf, win, next_buf)
-			else
+			elseif not (tabline and win == tab_win and tabline.close_empty_split(win)) then
 				vim.api.nvim_win_call(win, function()
 					if not pcall(vim.cmd, M.settings.dashboard_command) then
 						pcall(vim.cmd, "enew")
@@ -348,7 +350,12 @@ function _G.Smart_Close_Tab(force)
 	end
 
 	-- In normal code buffers, close the buffer tab. Never close the window!
-	_G.Smart_Close_Buffer(cur_buf, force)
+	local tabs = package.loaded["fox.ui.tabline"]
+	if tabs and tabs.has_window_tab(cur_buf) then
+		tabs.close(cur_buf, nil, force)
+	else
+		_G.Smart_Close_Buffer(cur_buf, force)
+	end
 end
 
 --- Smart quit: closes the smallest sensible thing (see the header for the ladder).

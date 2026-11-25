@@ -63,6 +63,59 @@ t.describe("native tab bar integration", function()
 		vim.fn.delete(file)
 		assert(ok, err)
 	end)
+	t.it("closes an empty split and shows the dashboard after closing the last editor tab", function()
+		require("lazy").load({ plugins = { "fox_tabline" } })
+		require("plugins.fox.editor.buffer_cleaner")
+		vim.cmd.tabnew()
+		local upper = vim.api.nvim_get_current_win()
+		local files = { vim.fn.tempname() .. ".lua", vim.fn.tempname() .. ".lua" }
+		for _, file in ipairs(files) do
+			vim.fn.writefile({ "" }, file)
+		end
+		local a = vim.api.nvim_create_buf(true, false)
+		vim.api.nvim_buf_set_name(a, files[1])
+		vim.api.nvim_win_set_buf(upper, a)
+		local ok, err = pcall(function()
+			local action = vim.fn.maparg("<C-S-j>", "n", false, true).callback
+			action()
+			local menu = vim.api.nvim_get_current_win()
+			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+			t.expect(lines[1]).toContain("EDITOR  /  OPEN SPLIT")
+			t.expect(lines[5]).toContain("Open current buffer")
+			t.expect(lines[6]).toContain("Select a file")
+			vim.fn.maparg("q", "n", false, true).callback()
+			t.expect(vim.api.nvim_win_is_valid(menu)).toBe(false)
+			t.expect(vim.api.nvim_get_current_win()).toBe(upper)
+			action()
+			vim.fn.maparg("<CR>", "n", false, true).callback()
+			local lower = vim.api.nvim_get_current_win()
+			t.expect(lower ~= upper).toBe(true)
+			t.expect(vim.api.nvim_win_get_buf(lower)).toBe(a)
+			tabs.close(a)
+			t.expect(vim.api.nvim_win_is_valid(lower)).toBe(false)
+			t.expect(vim.api.nvim_win_get_buf(upper)).toBe(a)
+
+			local b = vim.api.nvim_create_buf(true, false)
+			vim.api.nvim_buf_set_name(b, files[2])
+			vim.cmd("belowright split")
+			lower = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_buf(lower, b)
+			tabs.close(a)
+			t.expect(vim.api.nvim_win_get_buf(lower)).toBe(b)
+			tabs.close(b)
+			t.expect(vim.api.nvim_win_is_valid(lower)).toBe(false)
+			t.expect(vim.api.nvim_buf_is_valid(b)).toBe(false)
+			tabs.close(a)
+			t.expect(vim.api.nvim_win_is_valid(upper)).toBe(true)
+			t.expect(vim.bo[vim.api.nvim_win_get_buf(upper)].filetype).toBe("alpha")
+		end)
+		vim.cmd.tabclose()
+		for _, file in ipairs(files) do
+			vim.fn.delete(file)
+		end
+		assert(ok, err)
+	end)
+
 	t.it("routes actual UI mouse targets and protects modified files on close", function()
 		local channel = vim.fn.jobstart({ "nvim", "--embed", "--headless", "-u", "NONE" }, { rpc = true })
 		assert(channel > 0)
@@ -141,6 +194,32 @@ t.describe("native tab bar integration", function()
 			t.expect(vim.wait(1000, function()
 				return call("nvim_exec_lua", "return _G.closed and _G.closed[1]", {}) == ids[2]
 			end)).toBe(true)
+			local split = call(
+				"nvim_exec_lua",
+				[[
+				local a, b = ...
+				local upper = vim.api.nvim_get_current_win()
+				vim.cmd("belowright split")
+				local lower = vim.api.nvim_get_current_win()
+				vim.api.nvim_win_set_buf(lower, a)
+				assert(vim.wait(1000, function() return vim.wo[lower].winbar ~= "" end))
+				vim.api.nvim_set_current_win(upper)
+				vim.cmd.redraw()
+				local tabs = require("fox.ui.tabline")
+				local line = vim.api.nvim_eval_statusline(tabs.render(100, lower),
+					{ winid = lower, use_winbar = true, maxwidth = 100 }).str
+				local pos = assert(line:find("two.lua", 1, true))
+				local row, col = unpack(vim.api.nvim_win_get_position(lower))
+				return { lower, upper, row, col + vim.fn.strdisplaywidth(line:sub(1, pos - 1)) }
+			]],
+				ids
+			)
+			call("nvim_input_mouse", "left", "press", "", 0, split[3], split[4])
+			call("nvim_input_mouse", "left", "release", "", 0, split[3], split[4])
+			t.expect(vim.wait(1000, function()
+				return call("nvim_get_current_win") == split[1] and call("nvim_get_current_buf") == ids[2]
+			end)).toBe(true)
+			t.expect(call("nvim_win_get_buf", split[2])).toBe(ids[2])
 		end)
 		vim.fn.jobstop(channel)
 		vim.fn.delete(dir, "rf")

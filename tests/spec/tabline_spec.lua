@@ -13,7 +13,8 @@ t.describe("native buffer tab bar", function()
 	end
 	t.beforeEach(function()
 		created = {}
-		previous = vim.api.nvim_get_current_buf()
+		previous = vim.api.nvim_get_current_tabpage()
+		vim.cmd.tabnew()
 		saved = {
 			query = package.loaded["fox.query"],
 			env = _G.Environments,
@@ -41,7 +42,8 @@ t.describe("native buffer tab bar", function()
 	end)
 	t.afterEach(function()
 		vim.o.tabline, vim.o.showtabline = saved.tabline, saved.show
-		vim.api.nvim_set_current_buf(previous)
+		vim.cmd.tabclose()
+		vim.api.nvim_set_current_tabpage(previous)
 		for _, buf in ipairs(created) do
 			if vim.api.nvim_buf_is_valid(buf) then
 				vim.api.nvim_buf_delete(buf, { force = true })
@@ -86,6 +88,44 @@ t.describe("native buffer tab bar", function()
 		t.expect(tabs.visible(editor)).toBe(false)
 		t.expect(text()).toContain("db%/query.sql")
 	end)
+	t.it("keeps the Query console group and its SQL controls separate from code splits", function()
+		local editor, sql = buffer("editor.lua"), buffer("console.sql")
+		vim.api.nvim_set_current_buf(editor)
+		vim.cmd("belowright split")
+		t.expect(tabs.buffers()).toEqual({ editor })
+		vim.cmd.tabnew()
+		local query_tab = vim.api.nvim_get_current_tabpage()
+		vim.t.fox_query_root = "test"
+		vim.bo[sql].buftype = "nofile"
+		local sql_win = vim.api.nvim_get_current_win()
+		vim.api.nvim_win_set_buf(sql_win, sql)
+		vim.wo[sql_win].winbar = "Run query"
+		vim.cmd("belowright new")
+		local side = vim.api.nvim_get_current_win()
+		local panel = vim.api.nvim_get_current_buf()
+		created[#created + 1] = panel
+		package.loaded["fox.query"] = {
+			states = { test = { sql_win = sql_win } },
+			buffer_visible = function(buf)
+				if vim.api.nvim_get_current_tabpage() == query_tab then
+					return buf == sql
+				end
+				if buf == sql then
+					return false
+				end
+			end,
+		}
+		local ok, err = pcall(function()
+			t.expect(tabs.buffers()).toEqual({ sql })
+			tabs.focus(sql)
+			t.expect(vim.api.nvim_get_current_win()).toBe(sql_win)
+			t.expect(vim.api.nvim_win_get_buf(side)).toBe(panel)
+			t.expect(vim.wo[sql_win].winbar).toBe("Run query")
+		end)
+		vim.cmd.tabclose()
+		assert(ok, err)
+	end)
+
 	t.it("anchors pins, reorders within groups and restores the session's existing path order", function()
 		local a, b, c = buffer("a.lua"), buffer("b.lua"), buffer("c.lua")
 		tabs.set_pin(c, true)
@@ -129,8 +169,9 @@ t.describe("native buffer tab bar", function()
 		local icons = require("fox.ui.icons")
 		local glyph, icon_group = icons.get("file", vim.api.nvim_buf_get_name(a))
 		local original = vim.api.nvim_get_hl(0, { name = icon_group, link = false })
-		local function check(buf, group)
-			text(200)
+		local function check(buf, group, win)
+			local rendered = tabs.render(200, win)
+			vim.api.nvim_eval_statusline(rendered, { use_tabline = true, maxwidth = 200 })
 			local name = "FoxTabIcon" .. group .. icon_group
 			local actual = vim.api.nvim_get_hl(0, { name = name, link = false })
 			local tab = vim.api.nvim_get_hl(0, { name = group, link = false })
@@ -138,7 +179,7 @@ t.describe("native buffer tab bar", function()
 			t.expect(actual.fg).toBe(icon.fg)
 			t.expect(actual.bg).toBe(tab.bg)
 			local evaluated =
-				vim.api.nvim_eval_statusline(tabs.render(), { use_tabline = true, maxwidth = 200, highlights = true })
+				vim.api.nvim_eval_statusline(rendered, { use_tabline = true, maxwidth = 200, highlights = true })
 			local colored = false
 			for _, span in ipairs(evaluated.highlights) do
 				if span.group == name and evaluated.str:sub(span.start + 1, span.start + #glyph) == glyph then
@@ -154,15 +195,38 @@ t.describe("native buffer tab bar", function()
 			vim.cmd.vsplit()
 			local split = vim.api.nvim_get_current_win()
 			vim.api.nvim_win_set_buf(split, b)
-			check(a, "BufferLineBufferVisible")
+			check(a, "BufferLineBufferVisible", split)
 			vim.api.nvim_win_close(split, true)
 			vim.api.nvim_set_current_buf(a)
 			vim.api.nvim_set_hl(0, icon_group, { fg = "#123456" })
-			check(a, "BufferLineBufferSelected")
+			check(a, "BufferLineBufferSelected", vim.api.nvim_get_current_win())
 		end)
 		vim.api.nvim_set_hl(0, icon_group, original)
 		assert(ok, err)
 	end)
+	t.it("keeps split navigation, rendering and shared file closure local", function()
+		local a, shared = buffer("upper.lua"), buffer("shared.lua")
+		vim.api.nvim_set_current_buf(a)
+		vim.api.nvim_set_current_buf(shared)
+		local upper = vim.api.nvim_get_current_win()
+		vim.cmd("belowright split")
+		local lower = vim.api.nvim_get_current_win()
+		local b = buffer("lower.lua")
+		vim.api.nvim_set_current_buf(b)
+		t.expect(tabs.buffers(upper)).toEqual({ a, shared })
+		t.expect(tabs.buffers(lower)).toEqual({ shared, b })
+		t.expect(tabs.render(80, lower)).toContain("lower.lua")
+		t.expect(tabs.render(80, lower):find("upper.lua", 1, true)).toBe(nil)
+		tabs.cycle(1)
+		t.expect(vim.api.nvim_get_current_buf()).toBe(shared)
+		vim.api.nvim_buf_set_lines(shared, 0, -1, false, { "unsaved" })
+		tabs.close(shared, lower)
+		t.expect(vim.api.nvim_win_get_buf(lower)).toBe(b)
+		t.expect(vim.api.nvim_win_get_buf(upper)).toBe(shared)
+		t.expect(vim.bo[shared].modified).toBe(true)
+		t.expect(tabs.buffers(lower)).toEqual({ b })
+	end)
+
 	t.it("keeps the active tab visible through overflow and very small widths", function()
 		local last
 		for i = 1, 25 do

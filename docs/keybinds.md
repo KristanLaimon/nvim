@@ -79,6 +79,8 @@ host terminal rather than the shell profile.
 | `gT` / `<A-h>` / `<M-h>` / `<A-Left>` / `<M-Left>` | n | Previous buffer |
 | `<C-A-Left>` / `<C-A-Right>` | n | Move the current tab left / right |
 
+Each code split has its own file tabs. File search adds a tab to the active split, and tab navigation and close act on that split. Query Mode keeps a separate group for its SQL consoles.
+
 ---
 
 ## 💡 LSP, Diagnostics & Completion
@@ -147,7 +149,9 @@ host terminal rather than the shell profile.
 
 | Shortcut | Mode | Action |
 | :--- | :---: | :--- |
-| `<C-k>` / `<C-K>` / `<C-/>` / `<C-_>` | n, i | Focus the window above with `<C-k>` / `<C-K>` when available; otherwise find files, respecting `.gitignore` |
+| `<C-k>` / `<C-K>` | n, i | Focus the window above when available; otherwise find files, respecting `.gitignore` |
+| `<C-A-k>` | n, i | Find files in the current code window, respecting `.gitignore` |
+| `<C-/>` / `<C-_>` | n, i | Find files, respecting `.gitignore` |
 | `<C-A-k>` / `<C-S-/>` / `<C-?>` | n, i, v | Find files, ignoring `.gitignore` |
 | `<C-f>` | n, i, v | Project search right sidebar; sections 1 Search, 2 Replace, 3 Files, 4 Results; passed through in terminal mode |
 | `<C-S-m>` / `<F9>` / `<C-A-r>` | n, i, v, t | Preview and replace text across project files; prefer Ctrl+Shift+M or F9 in Neovide |

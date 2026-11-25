@@ -1,7 +1,61 @@
 -- FOX buffer tabs: ordered buffers, native mouse targets and bounded rendering.
 local M = {}
 local order, pins, last_active = {}, {}, {}
+local window_groups, grouped_pages = {}, {}
+local window_bar = "%!v:lua.require'fox.ui.tabline'.render_window()"
+local dock = require("fox.core.dock")
 local scheduled
+
+local function code_window(win)
+	return vim.api.nvim_win_is_valid(win)
+		and not vim.t[vim.api.nvim_win_get_tabpage(win)].fox_query_root
+		and not vim.wo[win].diff
+		and not vim.wo[win].winfixbuf
+		and (
+			dock.is_code_win(win)
+			or (
+				vim.api.nvim_win_get_config(win).relative == ""
+				and vim.b[vim.api.nvim_win_get_buf(win)].fox_media_source ~= nil
+			)
+		)
+end
+
+local function code_windows()
+	local windows = {}
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+		if code_window(win) then
+			windows[#windows + 1] = win
+		end
+	end
+	return windows
+end
+
+local function remember_window(win)
+	if not code_window(win) then
+		return
+	end
+	local buf = vim.api.nvim_win_get_buf(win)
+	local group = window_groups[win] or {}
+	window_groups[win] = group
+	if vim.bo[buf].buflisted and vim.api.nvim_buf_get_name(buf) ~= "" and not vim.tbl_contains(group, buf) then
+		group[#group + 1] = buf
+	end
+end
+
+local function group_window()
+	local tab = vim.api.nvim_get_current_tabpage()
+	if vim.t[tab].fox_query_root then
+		return nil
+	end
+	local current = vim.api.nvim_get_current_win()
+	local windows = code_windows()
+	if #windows > 1 then
+		grouped_pages[tab] = true
+	end
+	if grouped_pages[tab] then
+		return code_window(current) and current or windows[1]
+	end
+end
 local icon_styles = {}
 local function source(buf)
 	return vim.b[buf].fox_media_source or buf
@@ -88,7 +142,22 @@ local function save_order()
 	end
 	vim.g.BufferlinePositions = vim.json.encode(paths)
 end
-function M.buffers()
+local function visible_buffers(candidates)
+	local selected, ordinary, previews, sources = {}, {}, {}, {}
+	for _, buf in ipairs(candidates) do
+		if M.visible(buf) and not sources[source(buf)] then
+			sources[source(buf)] = true
+			local list = M.is_pinned(buf) and selected or vim.b[buf].fox_preview_owner and previews or ordinary
+			list[#list + 1] = buf
+		end
+	end
+	return vim.list_extend(vim.list_extend(selected, ordinary), previews)
+end
+function M.buffers(win)
+	win = win or group_window()
+	if win then
+		return visible_buffers(window_groups[win] or {})
+	end
 	local seen, valid = {}, {}
 	for _, buf in ipairs(order) do
 		if vim.api.nvim_buf_is_valid(buf) then
@@ -104,15 +173,7 @@ function M.buffers()
 		end
 	end
 	order = valid
-	local selected, ordinary, previews, sources = {}, {}, {}, {}
-	for _, buf in ipairs(order) do
-		if M.visible(buf) and not sources[source(buf)] then
-			sources[source(buf)] = true
-			local list = M.is_pinned(buf) and selected or vim.b[buf].fox_preview_owner and previews or ordinary
-			list[#list + 1] = buf
-		end
-	end
-	return vim.list_extend(vim.list_extend(selected, ordinary), previews)
+	return visible_buffers(order)
 end
 function M.get_elements()
 	local elements = {}
@@ -134,12 +195,17 @@ function M.label(buf)
 	local name = vim.api.nvim_buf_get_name(source(buf)):gsub("\\", "/")
 	return (_G.Is_File_Deleted and _G.Is_File_Deleted(source(buf)) and "[D] " or "") .. (name:match("[^/]+$") or name)
 end
-function M.focus(buf)
+function M.focus(buf, win)
 	if not vim.api.nvim_buf_is_valid(buf) or not M.visible(buf) then
 		return
 	end
-	local dock = require("fox.core.dock")
-	local win = dock.find_code_win()
+	win = win or group_window()
+	if win and not vim.tbl_contains(M.buffers(win), buf) then
+		return
+	end
+	local query = package.loaded["fox.query"]
+	local state = vim.t.fox_query_root and query and query.states and query.states[vim.t.fox_query_root]
+	win = win or (state and state.sql_win) or dock.find_code_win()
 	if not win then
 		for _, candidate in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 			local ft = vim.bo[vim.api.nvim_win_get_buf(candidate)].filetype
@@ -159,19 +225,67 @@ function M.focus(buf)
 		end
 	end
 end
-function M.close(buf)
+function M.close_empty_split(win)
+	if code_window(win) and #code_windows() > 1 then
+		vim.api.nvim_win_call(win, function()
+			vim.cmd("hide close")
+		end)
+		return true
+	end
+	return false
+end
+
+function M.close(buf, win, force)
 	if not vim.api.nvim_buf_is_valid(buf) then
 		return
 	end
+	win = win or group_window()
+	local closed_tab = buf
 	buf = source(buf)
 	if not vim.api.nvim_buf_is_valid(buf) then
 		return
+	end
+	if win then
+		local group = window_groups[win] or {}
+		local index = vim.fn.index(group, closed_tab) + 1
+		if index == 0 then
+			return
+		end
+		local shared = vim.iter(vim.api.nvim_list_wins()):any(function(other)
+			if other == win then
+				return false
+			end
+			if source(vim.api.nvim_win_get_buf(other)) == buf then
+				return true
+			end
+			return vim.iter(window_groups[other] or {}):any(function(candidate)
+				return vim.api.nvim_buf_is_valid(candidate) and source(candidate) == buf and vim.bo[candidate].buflisted
+			end)
+		end)
+		vim.api.nvim_set_current_win(win)
+		if shared then
+			if vim.api.nvim_win_get_buf(win) == closed_tab then
+				local tabs = M.buffers(win)
+				local at = vim.fn.index(tabs, closed_tab) + 1
+				local replacement = tabs[at + 1] or tabs[at - 1]
+				if replacement then
+					vim.cmd("hide buffer " .. replacement)
+				elseif not M.close_empty_split(win) then
+					if not pcall(vim.cmd, "Alpha") then
+						vim.cmd("hide enew")
+					end
+				end
+			end
+			table.remove(group, index)
+			M.refresh()
+			return
+		end
 	end
 	if not _G.Smart_Close_Buffer then
 		pcall(require, "plugins.fox.editor.buffer_cleaner")
 	end
 	if _G.Smart_Close_Buffer then
-		_G.Smart_Close_Buffer(buf, false)
+		_G.Smart_Close_Buffer(buf, force or false, win)
 	else
 		local ok, err = pcall(vim.api.nvim_buf_delete, buf, { force = false })
 		if not ok then
@@ -180,15 +294,22 @@ function M.close(buf)
 	end
 	M.refresh()
 end
+local function clicked_window()
+	local win = vim.fn.getmousepos().winid
+	if win ~= 0 and vim.wo[win].winbar == window_bar and group_window() then
+		return win
+	end
+end
+
 function M.click(buf, _, button)
 	if button == "m" or button == "r" then
-		M.close(buf)
+		M.close(buf, clicked_window())
 	elseif button == "l" then
-		M.focus(buf)
+		M.focus(buf, clicked_window())
 	end
 end
 function M.close_click(buf)
-	M.close(buf)
+	M.close(buf, clicked_window())
 end
 function M.cycle(direction)
 	local buffers, current = M.buffers(), vim.api.nvim_get_current_buf()
@@ -205,9 +326,13 @@ function M.move(direction)
 	if not target or index == 0 or M.is_pinned(target) ~= M.is_pinned(current) then
 		return
 	end
-	local a, b = vim.fn.index(order, current) + 1, vim.fn.index(order, target) + 1
-	order[a], order[b] = order[b], order[a]
-	save_order()
+	local win = group_window()
+	local tab_order = win and window_groups[win] or order
+	local a, b = vim.fn.index(tab_order, current) + 1, vim.fn.index(tab_order, target) + 1
+	tab_order[a], tab_order[b] = tab_order[b], tab_order[a]
+	if not win then
+		save_order()
+	end
 	M.refresh()
 end
 function M.close_others(direction)
@@ -227,13 +352,14 @@ function M.close_others(direction)
 	end
 end
 function M.pick(close)
-	local buffers = M.buffers()
+	local win = group_window()
+	local buffers = M.buffers(win)
 	vim.ui.select(buffers, { prompt = close and "Close buffer:" or "Go to buffer:", format_item = M.label }, function(buf)
-		if buf and M.visible(buf) then
+		if buf and M.visible(buf) and (not win or vim.api.nvim_win_is_valid(win)) then
 			if close then
-				M.close(buf)
+				M.close(buf, win)
 			else
-				M.focus(buf)
+				M.focus(buf, win)
 			end
 		end
 	end)
@@ -314,12 +440,12 @@ local function icon_highlight(group, icon_group)
 	end
 	return hl(name)
 end
-local function card(buf, name, width)
+local function card(buf, name, width, active)
 	if width < 8 then
 		local text = clip(name, width)
 		return hl("BufferLineBufferSelected") .. target(buf, "click", escape(text)), vim.fn.strdisplaywidth(text)
 	end
-	local group = buf == vim.api.nvim_get_current_buf() and "BufferLineBufferSelected"
+	local group = buf == active and "BufferLineBufferSelected"
 		or vim.fn.bufwinid(buf) ~= -1 and "BufferLineBufferVisible"
 		or "BufferLineBackground"
 	local base = hl(group)
@@ -352,12 +478,16 @@ local function card(buf, name, width)
 	result = result .. target(buf, "close_click", " 󰅖 ") .. hl("FoxTabSep" .. group) .. ""
 	return result, vim.fn.strdisplaywidth(body .. diagnostic .. " 󰅖 ") + 2
 end
-function M.render(width)
+function M.render(width, win)
 	width = width or vim.o.columns
-	local left, offset = sidebar(width)
-	local right, badge_width = badge(math.max(0, math.floor((width - offset) / 3)))
+	local left, offset, right, badge_width = "", 0, "", 0
+	if not win then
+		left, offset = sidebar(width)
+		right, badge_width = badge(math.max(0, math.floor((width - offset) / 3)))
+	end
 	local budget = math.max(1, width - offset - badge_width)
-	local buffers, labels, counts = M.buffers(), {}, {}
+	local buffers = not win and group_window() and {} or M.buffers(win)
+	local labels, counts = {}, {}
 	for _, buf in ipairs(buffers) do
 		local name = M.label(buf)
 		labels[buf] = name
@@ -370,12 +500,14 @@ function M.render(width)
 			labels[buf] = deleted .. (name:match("([^/]+/[^/]+)$") or name)
 		end
 	end
-	local tab, active = vim.api.nvim_get_current_tabpage(), vim.api.nvim_get_current_buf()
+	local tab = vim.api.nvim_get_current_tabpage()
+	local active = win and vim.api.nvim_win_get_buf(win) or vim.api.nvim_get_current_buf()
+	local group = win or tab
 	local current = vim.fn.index(buffers, active) + 1
 	if current > 0 then
-		last_active[tab] = active
+		last_active[group] = active
 	else
-		current = math.max(1, vim.fn.index(buffers, last_active[tab] or -1) + 1)
+		current = math.max(1, vim.fn.index(buffers, last_active[group] or -1) + 1)
 	end
 	local cards, sizes, chosen, used = {}, {}, {}, 0
 	-- Reserve room for overflow markers. The active tab is allocated first.
@@ -383,7 +515,7 @@ function M.render(width)
 	local overflow = #buffers > 1 and budget > reserve + 4
 	local room = overflow and budget - reserve or budget
 	for i, buf in ipairs(buffers) do
-		cards[i], sizes[i] = card(buf, labels[buf], room)
+		cards[i], sizes[i] = card(buf, labels[buf], room, active)
 	end
 	local function add(i)
 		if chosen[i] then
@@ -428,6 +560,16 @@ function M.render(width)
 	end
 	return left .. table.concat(result) .. hl("BufferLineFill") .. "%<%=" .. right
 end
+function M.render_window()
+	local win = tonumber(vim.g.statusline_winid) or vim.api.nvim_get_current_win()
+	return M.render(vim.api.nvim_win_get_width(win), win)
+end
+
+function M.has_window_tab(buf)
+	local win = group_window()
+	return win ~= nil and vim.tbl_contains(M.buffers(win), buf)
+end
+
 function M.refresh()
 	if scheduled then
 		return
@@ -435,7 +577,20 @@ function M.refresh()
 	scheduled = true
 	vim.schedule(function()
 		scheduled = false
+		local grouped = group_window() ~= nil
+		for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+			remember_window(win)
+			local bar = vim.wo[win].winbar
+			if grouped and code_window(win) and bar == "" then
+				vim.wo[win].winbar = window_bar
+			elseif bar == window_bar and (not grouped or not code_window(win)) then
+				vim.wo[win].winbar = ""
+			end
+		end
 		vim.cmd.redrawtabline()
+		if grouped then
+			vim.cmd.redrawstatus()
+		end
 	end)
 end
 function M.setup()
@@ -455,17 +610,48 @@ function M.setup()
 	vim.api.nvim_create_autocmd({
 		"BufAdd",
 		"BufDelete",
-		"BufEnter",
 		"BufFilePost",
 		"BufModifiedSet",
 		"DiagnosticChanged",
-		"WinEnter",
-		"WinClosed",
 		"VimResized",
 		"DirChanged",
 		"SessionLoadPost",
 	}, { group = group, callback = M.refresh })
+	vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
+		group = group,
+		callback = function()
+			remember_window(vim.api.nvim_get_current_win())
+			M.refresh()
+		end,
+	})
+	vim.api.nvim_create_autocmd("BufWinEnter", { group = group, callback = M.refresh })
+	vim.api.nvim_create_autocmd("TabNew", {
+		group = group,
+		callback = function()
+			-- WinEnter fires before :tabnew replaces its inherited buffer.
+			window_groups[vim.api.nvim_get_current_win()] = nil
+		end,
+	})
+	vim.api.nvim_create_autocmd("WinClosed", {
+		group = group,
+		callback = function(args)
+			local win = tonumber(args.match)
+			window_groups[win], last_active[win] = nil, nil
+			M.refresh()
+		end,
+	})
+	vim.api.nvim_create_autocmd("TabClosed", {
+		group = group,
+		callback = function()
+			for tab in pairs(grouped_pages) do
+				if not vim.api.nvim_tabpage_is_valid(tab) then
+					grouped_pages[tab], last_active[tab] = nil, nil
+				end
+			end
+		end,
+	})
 	vim.api.nvim_create_autocmd("SessionLoadPost", { group = group, callback = restore_order })
+	remember_window(vim.api.nvim_get_current_win())
 	for name, fn in pairs({
 		BufferLineCycleNext = function()
 			M.cycle(1)

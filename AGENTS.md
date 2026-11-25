@@ -58,6 +58,11 @@ When adding support for a new programming language (or updating an existing one)
 * **Command Registration**: Add user-facing features to `M.commands` in `lua/plugins/fox/command_palette.lua` with descriptive names and categories.
 * **Ex Commands**: Provide explicit User Commands (e.g., `:FormatDocument`, `:BladeNavClearCache`) so actions are discoverable via Neovim command-line completion and palette search.
 
+
+### 1.4 FoxVim Menu Style
+
+Use the **Language Configure / Formatters / Run All in Order** screen in [configure_language.lua](lua/plugins/fox/tools/configure_language.lua) as the visual reference for new or revised FoxVim action menus. Use a centered float with an uppercase context and action header, ASCII `+---+` dividers, aligned rows, a highlighted selection, and a footer that lists the available keys. Support `j/k`, Enter, and `q`/Escape where applicable. Never use the generic top-of-screen selector or `vim.ui.select` for these action menus. Use dedicated search pickers for searchable file lists.
+
 ---
 
 ## 🏛️ 2. Neovim Architecture Summary

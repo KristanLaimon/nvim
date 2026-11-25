@@ -43,9 +43,9 @@ describe("search keymaps configuration", function()
 		_G.FindFilesGitignore = original
 	end)
 
-	it("configures <C-A-k> and <C-A-K> for find_all_files (ignoring .gitignore)", function()
+	it("configures <C-A-k> and <C-A-K> for finding files in the current window", function()
 		local search = require("keymaps.search")
-		local find_all = search.settings.keys.find_all_files
+		local find_all = search.settings.keys.find_here
 
 		local has_cak, has_cak_upper = false, false
 		for _, key in ipairs(find_all) do

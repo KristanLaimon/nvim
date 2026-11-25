@@ -36,6 +36,7 @@ require("fox.core.keymap_registry").install()
 require("keymaps")
 require("lazy_init")
 require("fox.core.plain_editing").setup()
+require("fox.core.split_proportions").setup()
 
 -- Reload the configuration without restarting. Only top-level config modules are
 -- dropped from the cache; plugins keep their state, which is what makes this

@@ -4,7 +4,7 @@
 -- WHAT THIS FILE ADDS ON TOP OF TELESCOPE
 --   1. Two file finders with a sensible search strategy per project:
 --        <C-k>           respect .gitignore (git ls-files inside a repo)
---        <C-A-k> / <C-?> ignore it entirely (everything, including hidden)
+--        <C-?>             ignore it entirely (everything, including hidden)
 --      Both are also exported as `_G.FindFilesGitignore` / `_G.FindFilesNoIgnore`,
 --      which is what the keymaps in lua/keymaps/search.lua call.
 --   2. `:TelescopeOpenFolder` -- browse directories and ADOPT one as the project:
@@ -23,23 +23,6 @@
 -- ============================================================================
 
 local settings = {
-	--- Find files, honouring .gitignore.
-	find_keys = { "<C-k>", "<C-K>" },
-
-	--- Find files, ignoring .gitignore. Several aliases: Alt/Meta combinations
-	--- arrive differently depending on terminal and GUI.
-	find_all_keys = {
-		"<C-A-k>",
-		"<C-A-K>",
-		"<C-M-k>",
-		"<C-M-K>",
-		"<A-C-k>",
-		"<A-C-K>",
-		"<M-C-k>",
-		"<M-C-K>",
-		"<C-S-/>",
-		"<C-?>",
-	},
 	live_grep_key = nil,
 	help_tags_key = nil,
 	desktop_explorer_key = "<C-/>",
@@ -119,51 +102,67 @@ return {
 		},
 		{
 			"<C-A-k>",
-			"<cmd>TelescopeFindFilesNoIgnore<CR>",
+			function()
+				require("keymaps.search").find_files_here()
+			end,
 			mode = { "n", "i" },
-			desc = "Telescope find files (ignoring .gitignore)",
+			desc = "Find files in current window",
 		},
 		{
 			"<C-A-K>",
-			"<cmd>TelescopeFindFilesNoIgnore<CR>",
+			function()
+				require("keymaps.search").find_files_here()
+			end,
 			mode = { "n", "i" },
-			desc = "Telescope find files (ignoring .gitignore)",
+			desc = "Find files in current window",
 		},
 		{
 			"<C-M-k>",
-			"<cmd>TelescopeFindFilesNoIgnore<CR>",
+			function()
+				require("keymaps.search").find_files_here()
+			end,
 			mode = { "n", "i" },
-			desc = "Telescope find files (ignoring .gitignore)",
+			desc = "Find files in current window",
 		},
 		{
 			"<C-M-K>",
-			"<cmd>TelescopeFindFilesNoIgnore<CR>",
+			function()
+				require("keymaps.search").find_files_here()
+			end,
 			mode = { "n", "i" },
-			desc = "Telescope find files (ignoring .gitignore)",
+			desc = "Find files in current window",
 		},
 		{
 			"<A-C-k>",
-			"<cmd>TelescopeFindFilesNoIgnore<CR>",
+			function()
+				require("keymaps.search").find_files_here()
+			end,
 			mode = { "n", "i" },
-			desc = "Telescope find files (ignoring .gitignore)",
+			desc = "Find files in current window",
 		},
 		{
 			"<A-C-K>",
-			"<cmd>TelescopeFindFilesNoIgnore<CR>",
+			function()
+				require("keymaps.search").find_files_here()
+			end,
 			mode = { "n", "i" },
-			desc = "Telescope find files (ignoring .gitignore)",
+			desc = "Find files in current window",
 		},
 		{
 			"<M-C-k>",
-			"<cmd>TelescopeFindFilesNoIgnore<CR>",
+			function()
+				require("keymaps.search").find_files_here()
+			end,
 			mode = { "n", "i" },
-			desc = "Telescope find files (ignoring .gitignore)",
+			desc = "Find files in current window",
 		},
 		{
 			"<M-C-K>",
-			"<cmd>TelescopeFindFilesNoIgnore<CR>",
+			function()
+				require("keymaps.search").find_files_here()
+			end,
 			mode = { "n", "i" },
-			desc = "Telescope find files (ignoring .gitignore)",
+			desc = "Find files in current window",
 		},
 		{ "<C-S-y>", "<cmd>TelescopeOpenFolder<CR>", mode = { "n", "i" }, desc = "Telescope open folder" },
 		{ "<C-/>", "<cmd>TelescopeFileBrowserDesktop<CR>", mode = { "n", "i", "v" }, desc = "Open Desktop File Explorer" },
@@ -314,21 +313,6 @@ return {
 		vim.api.nvim_create_user_command("TelescopeFindFilesNoIgnore", find_files_no_ignore, {
 			desc = "Find files ignoring .gitignore",
 		})
-
-		for _, key in ipairs(settings.find_keys) do
-			vim.keymap.set({ "n", "i" }, key, find_files_gitignore, {
-				noremap = true,
-				silent = true,
-				desc = "Telescope find files (excludes .gitignore)",
-			})
-		end
-		for _, key in ipairs(settings.find_all_keys) do
-			vim.keymap.set({ "n", "i" }, key, find_files_no_ignore, {
-				noremap = true,
-				silent = true,
-				desc = "Telescope find files (ignoring .gitignore)",
-			})
-		end
 
 		if settings.live_grep_key then
 			vim.keymap.set({ "n", "i" }, settings.live_grep_key, builtin.live_grep, { desc = "Telescope live grep" })

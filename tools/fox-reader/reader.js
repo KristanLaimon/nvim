@@ -142,7 +142,10 @@ function renderFiles() {
 async function openDocument(path, push = true, anchor = "") {
   clearTimeout(scrollTimer);
   savePosition();
+  closeMarkdownEditor();
   current = path;
+  document.querySelector("#markdown-status").textContent = "";
+  document.querySelector("#edit-markdown").hidden = !path.toLowerCase().endsWith(".md");
   document.querySelector("#code-panel").hidden = true;
   document.querySelector("#reading-area").hidden = false;
   renderFiles();
@@ -177,7 +180,7 @@ async function openDocument(path, push = true, anchor = "") {
 }
 /** @returns {Promise<void>} */
 async function refresh() {
-  if (!current) return;
+  if (!current || markdownEditing) return;
   const path = current;
   const revision = navigation;
   try {
@@ -547,6 +550,111 @@ for (const [id, property, side] of [["library-resizer", "--library-width", 1], [
     resize(sidebar.offsetWidth + side * (event.key === "ArrowRight" ? 10 : -10));
   });
 }
+
+let markdownEditor;
+let markdownEditing = false;
+let markdownRevision = 0;
+const markdownDrafts = new Map();
+/** @returns {void} */
+function closeMarkdownEditor() {
+  markdownRevision++;
+  const draft = markdownDrafts.get(current);
+  if (markdownEditor && draft) {
+    const markdown = markdownEditor.getMarkdown();
+    draft.source = markdown === draft.baseline ? draft.initialSource : draft.frontmatter + markdown;
+  }
+  markdownEditing = false;
+  if (markdownEditor) { markdownEditor.destroy(); markdownEditor = null; }
+  document.querySelector("#markdown-edit").replaceChildren();
+  document.querySelector("#markdown-edit").hidden = true;
+  article.hidden = false;
+  document.querySelector("#save-markdown").hidden = true;
+  document.querySelector("#close-markdown").hidden = true;
+  document.querySelector("#edit-markdown").hidden = !current.toLowerCase().endsWith(".md");
+}
+/** @param {string} source @returns {[string, string]} */
+function splitMarkdownFrontmatter(source) {
+  const match = source.match(/^(---\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*\r?\n)/);
+  return match ? [match[1], source.slice(match[1].length)] : ["", source];
+}
+document.querySelector("#edit-markdown").onclick = async () => {
+  const path = current;
+  const revision = ++markdownRevision;
+  const markdownStatus = document.querySelector("#markdown-status");
+  try {
+    const response = await fetch("markdown-source?path=" + encodeURIComponent(path), { cache: "no-store" });
+    if (!response.ok) throw new Error(await response.text());
+    const original = await response.text();
+    if (revision !== markdownRevision || current !== path) return;
+    const existing = markdownDrafts.get(path);
+    const source = existing ? existing.source : original;
+    const [frontmatter, body] = splitMarkdownFrontmatter(source);
+    // Raw HTML is not supported by the visual editor and must not be discarded.
+    const withoutFences = body.replace(/^ {0,3}([\x60]{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[ \t]*$/gm, "");
+    if (/<\/?[a-zA-Z][^>]*>|<!--[\s\S]*?-->/.test(withoutFences)) throw new Error("Visual editing is unavailable for Markdown containing HTML.");
+    const root = document.querySelector("#markdown-edit");
+    const editor = new FoxMarkdownEditor({ root, defaultValue: body });
+    await editor.create();
+    if (revision !== markdownRevision || current !== path) { await editor.destroy(); return; }
+    markdownEditor = editor;
+    const baseline = editor.getMarkdown();
+    const draft = existing || { original, source, baseline };
+    draft.baseline = baseline;
+    draft.frontmatter = frontmatter;
+    draft.initialSource = source;
+    markdownDrafts.set(path, draft);
+    editor.on(listener => listener.markdownUpdated((_ctx, markdown) => {
+      draft.source = markdown === draft.baseline ? source : frontmatter + markdown;
+      markdownStatus.textContent = draft.source === draft.original ? "" : "Unsaved changes";
+    }));
+    markdownEditing = true;
+    article.hidden = true;
+    root.hidden = false;
+    document.querySelector("#edit-markdown").hidden = true;
+    document.querySelector("#save-markdown").hidden = false;
+    document.querySelector("#close-markdown").hidden = false;
+    markdownStatus.textContent = draft.source === draft.original ? "" : "Unsaved changes";
+    root.querySelector('[contenteditable="true"]')?.focus();
+  } catch (error) { markdownStatus.textContent = String(error); }
+};
+document.querySelector("#save-markdown").onclick = async () => {
+  const path = current;
+  const draft = markdownDrafts.get(path);
+  if (draft && markdownEditor) {
+    const markdown = markdownEditor.getMarkdown();
+    draft.source = markdown === draft.baseline ? draft.initialSource : draft.frontmatter + markdown;
+  }
+  if (!draft || draft.source === draft.original) return true;
+  const source = draft.source;
+  try {
+    const result = await postScript("save-markdown", { path, code: source, original: draft.original });
+    if (!result.ok) throw new Error(await result.text());
+    draft.original = source;
+    document.querySelector("#markdown-status").textContent = draft.source === source ? "Saved" : "Unsaved changes";
+    return true;
+  } catch (error) { document.querySelector("#markdown-status").textContent = String(error); return false; }
+};
+document.querySelector("#close-markdown").onclick = async () => {
+  if (!(await document.querySelector("#save-markdown").onclick())) return;
+  closeMarkdownEditor();
+  document.querySelector("#markdown-status").textContent = "";
+  lastHtml = "";
+  await refresh();
+};
+document.addEventListener("keydown", event => {
+  if (markdownEditing && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+    event.preventDefault();
+    document.querySelector("#save-markdown").click();
+  }
+});
+window.addEventListener("beforeunload", event => {
+  const draft = markdownDrafts.get(current);
+  if (draft && markdownEditor) {
+    const markdown = markdownEditor.getMarkdown();
+    draft.source = markdown === draft.baseline ? draft.initialSource : draft.frontmatter + markdown;
+  }
+  if ([...markdownDrafts.values()].some(draft => draft.source !== draft.original)) event.preventDefault();
+});
 
 let scriptEditor;
 let outputEditor;

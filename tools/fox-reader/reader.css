@@ -109,3 +109,9 @@ body.library-hidden #library, body.library-hidden #library-resizer { display: no
 #panes.split-top > main, #panes.split-bottom > main { min-height: 0; overflow-y: auto; }
 #panes.split-top #split-pane:not([hidden]), #panes.split-bottom #split-pane:not([hidden]) { flex: none; height: 50vh; position: relative; top: auto; border: 0; border-top: 1px solid var(--muted); }
 #panes.split-top #split-pane:not([hidden]) { order: -1; border-top: 0; border-bottom: 1px solid var(--muted); }
+
+#markdown-edit { margin: 0; padding: 0 2rem 6rem; font: var(--reading-size, 18px)/var(--reading-spacing, 1.8) var(--reading-font, "Trebuchet MS"), sans-serif; overflow-wrap: anywhere; }
+#markdown-edit .ProseMirror { min-height: 16rem; outline: none; }
+#markdown-edit img { max-width: 100%; }
+#markdown-edit table { display: table; }
+#markdown-status { color: var(--muted); font-size: .8rem; }

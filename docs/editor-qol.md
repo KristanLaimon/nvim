@@ -24,7 +24,14 @@ top or right split. Ctrl+W closes the active document or split when the browser
 allows the shortcut to be intercepted. Ctrl+Shift+click opens a link in the
 right split; Ctrl+Shift+click on a library file also opens it on the right. Hover over a link to preview it. External sites may block embedding. Use the V button to
 enable Vim navigation: j/k scroll and h/l focus the left/right split. Close the
-split with its close button. The library also lists `.js` and `.py` files. These open in a local Monaco editor. Save with the Save button or Ctrl+S; Run saves edits before starting. Type directly in the output panel and press Enter to send a line to a running script. EOF closes standard input; Stop terminates the
+split with its close button. For a .md file, **Edit** opens an inline visual
+editor; Markdown input such as *text* becomes formatted as you type. **Save**
+(or Ctrl+S) writes the file, and **Done** saves and returns to reading.
+Frontmatter is preserved. The editor may normalize Markdown syntax on save and
+does not edit documents containing raw HTML, to prevent losing that content.
+Conflicting disk changes and modified Neovim buffers prevent saving. The local
+editor uses Milkdown CrepeBuilder 7.19.0; its bundle and third-party license
+notices are in tools/fox-reader/. The library also lists `.js` and `.py` files. These open in a local Monaco editor. Save with the Save button or Ctrl+S; Run saves edits before starting. Type directly in the output panel and press Enter to send a line to a running script. EOF closes standard input; Stop terminates the
 process. Runs use the saved file, its directory as the working directory, and `node` or `python` from
 PATH. Install the corresponding runtime before running a script. Monaco 0.52.2
 is bundled locally under `tools/fox-reader/vs` with its MIT license.

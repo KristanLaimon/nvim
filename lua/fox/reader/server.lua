@@ -82,6 +82,21 @@ local function response(session, target)
 		local html, frontmatter = document(content)
 		return 200, vim.json.encode({ html = html, frontmatter = frontmatter, path = path }), "application/json"
 	end
+	local source = route:match("^markdown%-source%?path=(.*)$")
+	if source then
+		source = decode(source)
+		local resolved = source:lower():match("%.md$") and workspace.resolve(session.root, source)
+		if resolved then
+			for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
+				local name = vim.api.nvim_buf_get_name(buffer)
+				if name ~= "" and vim.uv.fs_realpath(name) == vim.uv.fs_realpath(resolved) and vim.bo[buffer].modified then
+					return 409, "Document has unsaved changes in Neovim", "text/plain"
+				end
+			end
+		end
+		local content = resolved and http.read_file(resolved)
+		return content and 200 or 404, content or "Markdown unavailable", "text/plain"
+	end
 	local state_path = route:match("^state%?path=(.*)$")
 	if route == "state" or state_path then
 		return 200, vim.json.encode(state.get(session.root, state_path and decode(state_path))), "application/json"
@@ -141,6 +156,7 @@ local function response(session, target)
 		[""] = { assets .. "index.html", "text/html" },
 		["reader.js"] = { assets .. "reader.js", "text/javascript" },
 		["reader.css"] = { assets .. "reader.css", "text/css" },
+		["markdown-editor.min.js"] = { assets .. "markdown-editor.min.js", "text/javascript" },
 		["fonts/trebuc.ttf"] = { assets .. "fonts/trebuc.ttf", "font/ttf" },
 		["fonts/trebucbd.ttf"] = { assets .. "fonts/trebucbd.ttf", "font/ttf" },
 		["fonts/trebucit.ttf"] = { assets .. "fonts/trebucit.ttf", "font/ttf" },
@@ -190,11 +206,11 @@ function M.start(root)
 			end
 			if
 				method == "POST"
-				and (target == service.prefix .. "state" or target == service.prefix .. "run" or target == service.prefix .. "stop-run" or target == service.prefix .. "run-input" or target == service.prefix .. "save-script")
+				and (target == service.prefix .. "state" or target == service.prefix .. "run" or target == service.prefix .. "stop-run" or target == service.prefix .. "run-input" or target == service.prefix .. "save-script" or target == service.prefix .. "save-markdown")
 				and headers:match("\r\norigin:%s*([^\r\n]+)") == "http://" .. service.origin
 				and headers:match("\r\ncontent%-type:%s*([^\r\n]+)") == "application/json"
 				and length
-				and length <= (target == service.prefix .. "save-script" and 2 * 1024 * 1024 - 4096 or 8192)
+				and length <= ((target == service.prefix .. "save-script" or target == service.prefix .. "save-markdown") and 2 * 1024 * 1024 - 4096 or 8192)
 				and #body == length
 			then
 				local decoded, value = pcall(vim.json.decode, body)
@@ -205,10 +221,13 @@ function M.start(root)
 				if not decoded or type(value) ~= "table" then
 					return 400, "Invalid request", "text/plain"
 				end
-				if target == service.prefix .. "save-script" then
+				if target == service.prefix .. "save-script" or target == service.prefix .. "save-markdown" then
 					local path = type(value.path) == "string" and value.path or ""
-					local resolved = (path:lower():match("%.js$") or path:lower():match("%.py$"))
-						and workspace.resolve(session.root, path)
+					local markdown = target == service.prefix .. "save-markdown"
+					local resolved = (
+						markdown and path:lower():match("%.md$")
+						or not markdown and (path:lower():match("%.js$") or path:lower():match("%.py$"))
+					) and workspace.resolve(session.root, path)
 					if not resolved or type(value.code) ~= "string" or type(value.original) ~= "string" then
 						return 400, "Invalid script", "text/plain"
 					end
@@ -229,6 +248,19 @@ function M.start(root)
 					local closed, close_err = file:close()
 					if not written or not closed then
 						return 500, "Could not save script: " .. tostring(write_err or close_err), "text/plain"
+					end
+					for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
+						local name = vim.api.nvim_buf_get_name(buffer)
+						if
+							vim.api.nvim_buf_is_loaded(buffer)
+							and name ~= ""
+							and vim.uv.fs_realpath(name) == vim.uv.fs_realpath(resolved)
+						then
+							local autoread = vim.bo[buffer].autoread
+							vim.bo[buffer].autoread = true
+							vim.cmd.checktime(tostring(buffer))
+							vim.bo[buffer].autoread = autoread
+						end
 					end
 					return 200, "Saved", "text/plain"
 				end

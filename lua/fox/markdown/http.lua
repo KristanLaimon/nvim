@@ -59,7 +59,7 @@ function M.start(options)
 			local headers = request:sub(1, header_end + 1):lower()
 			local method, target = request:match("^(%u+) ([^ ]+) HTTP/1%.[01]\r\n")
 			local length = tonumber(headers:match("\r\ncontent%-length:%s*(%d+)%s*\r\n"))
-			if method == "POST" and length and length <= 8192 and #request - header_end - 3 < length then
+			if method == "POST" and length and length <= options.max_request and #request - header_end - 3 < length then
 				return
 			end
 			client:read_stop()

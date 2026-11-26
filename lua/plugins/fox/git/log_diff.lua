@@ -359,13 +359,24 @@ end
 --- @return string[] left_kinds
 --- @return string[] right_lines
 --- @return string[] right_kinds
-function M.fetch_file_diff(cwd, commit_hash, filepath, status)
+function M.fetch_file_diff(cwd, commit_hash, filepath, status, full_file)
 	if not filepath or filepath == "" or not commit_hash then
 		return { " [No file selected] " }, { "context" }, { " [No file selected] " }, { "context" }
 	end
 
 	local pathspec = ":(literal)" .. filepath
-	local raw_diff = git.lines({ "show", "--format=", "--color=never", commit_hash, "--", pathspec }, cwd)
+	local raw_diff = git.lines(
+		{
+			"show",
+			"--format=",
+			"--color=never",
+			full_file and "--unified=1000000000" or "--unified=3",
+			commit_hash,
+			"--",
+			pathspec,
+		},
+		cwd
+	)
 
 	if #raw_diff == 0 then
 		-- Try diff against parent explicitly
@@ -400,9 +411,19 @@ function M.fetch_file_diff(cwd, commit_hash, filepath, status)
 		end
 	end
 
-	local is_untracked = status == "A" or status == "?"
+	local is_untracked = not full_file and (status == "A" or status == "?")
 	local left_lines, left_kinds, right_lines, right_kinds =
 		diff.format_side_by_side_dual(raw_diff, is_untracked, filepath)
+	if full_file and not diff.is_binary_diff(raw_diff) and not diff.is_binary_file(filepath) then
+		for i = #left_lines, 1, -1 do
+			if left_kinds[i] == "header" then
+				table.remove(left_lines, i)
+				table.remove(left_kinds, i)
+				table.remove(right_lines, i)
+				table.remove(right_kinds, i)
+			end
+		end
+	end
 	return left_lines, left_kinds, right_lines, right_kinds
 end
 
@@ -665,7 +686,7 @@ function M.render_diff_panes()
 	end
 
 	local l_lines, l_kinds, r_lines, r_kinds =
-		M.fetch_file_diff(M.state.cwd, commit.full_hash, file_item.filepath, file_item.status)
+		M.fetch_file_diff(M.state.cwd, commit.full_hash, file_item.filepath, file_item.status, M.state.history_file ~= nil)
 
 	vim.bo[before_buf].modifiable = true
 	vim.api.nvim_buf_set_lines(before_buf, 0, -1, false, l_lines)

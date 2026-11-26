@@ -581,7 +581,7 @@ function M.open_git_center()
 		style = "minimal",
 		border = "rounded",
 		zindex = base_z,
-		title = " 🐙 Git Center | [H]: Log Diff | [t/T]: Dry-Run | [b]: Branch | [l]: Graph | [v/V]: Diff | [Esc]: Close ",
+		title = " 🐙 Git Center | [F2]: File History | [H]: Log Diff | [t/T]: Dry-Run | [b]: Branch | [l]: Graph | [v/V]: Diff | [Esc]: Close ",
 		title_pos = "center",
 	})
 

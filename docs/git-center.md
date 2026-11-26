@@ -190,7 +190,7 @@ These are inferred merge bases, not recorded parent branches: later merges or
 rebases can change them. Deleted branches cannot be labeled, and remote names
 reflect the last fetch. Press `L` in the graph for the color legend.
 
-In Neo-tree, press `gH` on a file to open its commit history in the existing
+In Neo-tree, press `F2` on a file to open its commit history in the existing
 four-panel Log Diff dashboard. Directories are ignored. In Git Center, `F2`
 opens the same file finder as `Ctrl+k`, rooted at the active repository or
 submodule. Select a file with Enter to open its history.

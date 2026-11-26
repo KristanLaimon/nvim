@@ -227,6 +227,22 @@ describe("file commit history", function()
 		expect(#log_diff.state.commits).toBe(3)
 	end)
 
+	it("shows the complete file on both sides of a history diff", function()
+		local original = { "first", "old", "third", "fourth", "fifth", "sixth", "last" }
+		vim.fn.writefile(original, repo .. "/" .. filename)
+		git({ "commit", "-am", "long file" })
+		original[2] = "new"
+		vim.fn.writefile(original, repo .. "/" .. filename)
+		git({ "commit", "-am", "change near start" })
+		local commit = git({ "rev-parse", "HEAD" })
+		local left, _, right = log_diff.fetch_file_diff(repo, commit, filename, "M", true)
+		expect(table.concat(left, "\n")).toContain("last")
+		expect(table.concat(right, "\n")).toContain("last")
+		expect(table.concat(left, "\n")).toContain("old")
+		expect(table.concat(right, "\n")).toContain("new")
+		expect(left[1]).toBe(" first")
+	end)
+
 	it("rejects directories and does not open a dashboard for uncommitted files", function()
 		log_diff.open_file_history(repo)
 		expect(log_diff.is_open()).toBeFalsy()

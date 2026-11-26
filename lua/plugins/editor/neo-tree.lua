@@ -81,7 +81,7 @@ local settings = {
 		["H"] = "toggle_custom_hidden",
 		["gh"] = "toggle_custom_hidden",
 		["gw"] = "toggle_word_wrap",
-		["gH"] = "file_history",
+		["<F2>"] = "file_history",
 	},
 
 	--- Keys that toggle the sidebar.

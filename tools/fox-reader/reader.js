@@ -49,10 +49,21 @@ function readingScrollTop() { const scroller = readingScroller(); return scrolle
 function readingViewportTop() { const scroller = readingScroller(); return scroller === window ? 0 : scroller.getBoundingClientRect().top; }
 /** @param {number} top @returns {void} */
 function scrollReadingTo(top) { readingScroller().scrollTo(0, top); }
+/** @param {string} path @param {string} source @returns {string} */
+function readerImageURL(path, source) {
+  try {
+    const base = new URL(path.split("/").map(encodeURIComponent).join("/"), "https://workspace.invalid/");
+    const target = new URL(source, base);
+    if (target.origin === base.origin) return "image?path=" + encodeURIComponent(decodeURIComponent(target.pathname.slice(1)));
+    if (target.protocol === "https:" || target.protocol === "http:") return target.href;
+  } catch { /* An invalid image path cannot be displayed. */ }
+  return "";
+}
 /** @returns {void} */
 function savePosition() {
   if (!current || restoring || !lastHtml) return;
-  const headings = [...article.querySelectorAll("h1,h2,h3,h4,h5,h6")];
+  const content = markdownEditing ? document.querySelector("#markdown-edit") : article;
+  const headings = [...content.querySelectorAll("h1,h2,h3,h4,h5,h6")];
   const heading = headings.filter(item => item.getBoundingClientRect().top <= readingViewportTop()).pop();
   saveState({ kind: "position", path: current, value: { heading: heading?.id || "", offset: heading ? heading.getBoundingClientRect().top - readingViewportTop() : 0, scroll: readingScrollTop() } });
 }
@@ -140,12 +151,18 @@ function renderFiles() {
  * @returns {Promise<void>}
  */
 async function openDocument(path, push = true, anchor = "") {
+  if (path !== current) {
+    if (!confirmReaderNavigation()) {
+      if (!push) history.replaceState({ path: current }, "", "?path=" + encodeURIComponent(current));
+      return;
+    }
+  }
   clearTimeout(scrollTimer);
+  hideLinkPreview();
   savePosition();
   closeMarkdownEditor();
   current = path;
   document.querySelector("#markdown-status").textContent = "";
-  document.querySelector("#edit-markdown").hidden = !path.toLowerCase().endsWith(".md");
   document.querySelector("#code-panel").hidden = true;
   document.querySelector("#reading-area").hidden = false;
   renderFiles();
@@ -168,6 +185,8 @@ async function openDocument(path, push = true, anchor = "") {
   if (revision !== navigation) return;
   await refresh();
   if (revision !== navigation) return;
+  if (path.toLowerCase().endsWith(".md")) await editMarkdown(null);
+  if (revision !== navigation) return;
   if (anchor) {
     try { document.getElementById(decodeURIComponent(anchor.slice(1)))?.scrollIntoView(); }
     catch { status.textContent = "Invalid heading anchor"; }
@@ -178,9 +197,66 @@ async function openDocument(path, push = true, anchor = "") {
   } else scrollReadingTo(0);
   restoring = false;
 }
+/** @param {string} source @returns {string} */
+function renderJSON(source) {
+  JSON.parse(source);
+  const tokens = source.match(/"(?:\\.|[^"\\])*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null|[{}\[\],:]/g) || [];
+  const pre = document.createElement("pre");
+  pre.className = "json-view";
+  const code = document.createElement("code");
+  pre.append(code);
+  let depth = 0;
+  const newline = () => code.append(document.createTextNode("\n" + "  ".repeat(depth)));
+  tokens.forEach((token, index) => {
+    const previous = tokens[index - 1];
+    const next = tokens[index + 1];
+    if (token === "{" || token === "[") {
+      code.append(document.createTextNode(token));
+      if (next !== "}" && next !== "]") { depth++; newline(); }
+    } else if (token === "}" || token === "]") {
+      if (previous !== "{" && previous !== "[") { depth--; newline(); }
+      code.append(document.createTextNode(token));
+    } else if (token === ",") {
+      code.append(document.createTextNode(token));
+      newline();
+    } else if (token === ":") {
+      code.append(document.createTextNode(": "));
+    } else {
+      const value = document.createElement("span");
+      value.className = token.startsWith('"') ? (next === ":" ? "json-key" : "json-string") : "json-value";
+      value.textContent = token;
+      code.append(value);
+    }
+  });
+  return pre.outerHTML;
+}
 /** @returns {Promise<void>} */
 async function refresh() {
-  if (!current || markdownEditing) return;
+  if (!current) return;
+  if (markdownEditing) {
+    if (markdownRefreshing || markdownSaving) return;
+    const draft = markdownDrafts.get(current);
+    if (!draft || !markdownEditor) return;
+    updateMarkdownDraft(draft, markdownEditor.getMarkdown());
+    if (draft.error || draft.source !== draft.original) return;
+    const path = current;
+    const revision = navigation;
+    const saveRevision = markdownSaveRevision;
+    markdownRefreshing = true;
+    try {
+      const response = await fetch("document?path=" + encodeURIComponent(path), { cache: "no-store" });
+      const data = response.ok ? await response.json() : null;
+      if (revision !== navigation || saveRevision !== markdownSaveRevision || !markdownEditor) return;
+      updateMarkdownDraft(draft, markdownEditor.getMarkdown());
+      if (draft.error || draft.source !== draft.original) return;
+      if (!data || data.html !== lastHtml || (data.frontmatter || "") !== lastMetadata) {
+        markdownDrafts.delete(path);
+        await openDocument(path, false);
+      }
+    } catch { /* Retry on the next refresh. */ }
+    finally { markdownRefreshing = false; }
+    return;
+  }
   const path = current;
   const revision = navigation;
   try {
@@ -191,6 +267,17 @@ async function refresh() {
     if (typeof documentData.code === "string") {
       await showScript(documentData, revision);
       return;
+    }
+    let documentMessage = "";
+    if (typeof documentData.json === "string") {
+      try { documentData.html = renderJSON(documentData.json); }
+      catch {
+        const pre = document.createElement("pre");
+        pre.className = "plain-text";
+        pre.textContent = documentData.json;
+        documentData.html = pre.outerHTML;
+        documentMessage = "Invalid JSON; showing the original text.";
+      }
     }
     document.querySelector("#code-panel").hidden = true;
     document.querySelector("#reading-area").hidden = false;
@@ -252,12 +339,8 @@ async function refresh() {
       document.querySelector("#title").textContent = current;
       const base = new URL(current.split("/").map(encodeURIComponent).join("/"), "https://workspace.invalid/");
       for (const image of article.querySelectorAll("img[src]")) {
-        try {
-          const target = new URL(image.getAttribute("src"), base);
-          if (target.origin === base.origin) image.src = "image?path=" + encodeURIComponent(decodeURIComponent(target.pathname.slice(1)));
-          else if (target.protocol === "https:" || target.protocol === "http:") image.src = target.href;
-          else image.removeAttribute("src");
-        } catch { image.removeAttribute("src"); }
+        const url = readerImageURL(current, image.getAttribute("src"));
+        if (url) image.src = url; else image.removeAttribute("src");
       }
       for (const link of article.querySelectorAll("a[href]")) {
         try {
@@ -299,7 +382,8 @@ async function refresh() {
       const restored = anchorId && document.getElementById(anchorId);
       scrollReadingTo(restored ? readingScrollTop() + restored.getBoundingClientRect().top - readingViewportTop() - offset : top);
     }
-    status.textContent = "";
+    status.textContent = documentMessage;
+    if (path.toLowerCase().endsWith(".md") && !markdownEditing && !markdownOpening) await editMarkdown(null);
   } catch (error) {
     if (revision !== navigation) return;
     lastHtml = "";
@@ -432,11 +516,13 @@ for (const [id, direction] of [["width-left", -1], ["width-right", 1]]) {
 }
 /** @returns {void} */
 function schedulePositionSave() {
+  followOutline();
   if (restoring) return;
   clearTimeout(scrollTimer);
   scrollTimer = setTimeout(savePosition, 500);
 }
 window.addEventListener("scroll", schedulePositionSave, { passive: true });
+document.addEventListener("scroll", schedulePositionSave, { capture: true, passive: true });
 document.querySelector("#panes > main").addEventListener("scroll", schedulePositionSave, { passive: true });
 window.addEventListener("pagehide", () => { clearTimeout(scrollTimer); savePosition(); });
 window.onpopstate = () => openDocument(new URL(location.href).searchParams.get("path") || "", false, location.hash);
@@ -464,12 +550,13 @@ setInterval(refreshTheme, 1000);
 
 /** @param {string} path @param {string} side @param {string} [anchor] @param {boolean} [external] @returns {void} */
 window.openReaderSplit = (path, side, anchor = "", external = false) => {
+  const frame = document.querySelector("#split-frame");
+  try { if (!document.querySelector("#split-pane").hidden && frame.contentWindow.confirmReaderNavigation?.() === false) return; } catch { /* External frames do not expose reader state. */ }
   const previousScroll = readingScrollTop();
   const panes = document.querySelector("#panes");
   panes.classList.remove("split-left", "split-right", "split-top", "split-bottom");
   panes.classList.add(`split-${side}`);
   document.querySelector("#split-title").textContent = path;
-  const frame = document.querySelector("#split-frame");
   if (external) frame.setAttribute("sandbox", ""); else frame.removeAttribute("sandbox");
   frame.src = external ? path : "?pane=1&path=" + encodeURIComponent(path) + anchor;
   document.querySelector("#split-pane").hidden = false;
@@ -520,8 +607,9 @@ document.addEventListener("keydown", event => {
     updateSearch();
     searchInput.focus();
   }
-});
+}, true);
 document.querySelector("#split-close").onclick = () => {
+  try { if (document.querySelector("#split-frame").contentWindow.confirmReaderNavigation?.() === false) return; } catch { /* External frames do not expose reader state. */ }
   const previousScroll = readingScrollTop();
   document.querySelector("#split-pane").hidden = true;
   document.querySelector("#split-frame").removeAttribute("src");
@@ -553,31 +641,156 @@ for (const [id, property, side] of [["library-resizer", "--library-width", 1], [
 
 let markdownEditor;
 let markdownEditing = false;
+let markdownOpening = false;
+let markdownRefreshing = false;
+let markdownSaving = false;
+let markdownSaveRevision = 0;
 let markdownRevision = 0;
+let markdownImageAnchor;
+let markdownOutlineSignature = "";
 const markdownDrafts = new Map();
+/** @returns {boolean} */
+function confirmReaderNavigation() {
+  const draft = markdownDrafts.get(current);
+  if (draft && markdownEditor) updateMarkdownDraft(draft, markdownEditor.getMarkdown());
+  return !draft || (!draft.error && draft.source === draft.original)
+    || window.confirm("This document has unsaved changes. Leave it and keep the draft?");
+}
+window.confirmReaderNavigation = confirmReaderNavigation;
+/** @returns {void} */
+function rebuildMarkdownOutline() {
+  if (!markdownEditing) return;
+  const headings = [...document.querySelectorAll("#markdown-edit h1,#markdown-edit h2,#markdown-edit h3,#markdown-edit h4,#markdown-edit h5,#markdown-edit h6")];
+  const signature = JSON.stringify(headings.map(heading => [heading.tagName, heading.textContent]));
+  if (signature === markdownOutlineSignature) { followOutline(); return; }
+  markdownOutlineSignature = signature;
+  const outline = document.querySelector("#outline nav");
+  outline.replaceChildren();
+  const ids = new Map();
+  for (const heading of headings) {
+    const slug = heading.textContent.trim().toLowerCase().replace(/[^\p{L}\p{N}_\- ]/gu, "").replace(/ /g, "-");
+    const count = ids.get(slug) || 0;
+    ids.set(slug, count + 1);
+    const id = count ? `${slug}-${count}` : slug;
+    const link = document.createElement("a");
+    link.href = "#" + id;
+    link.textContent = heading.textContent;
+    link.style.paddingLeft = `${0.5 + (Number(heading.tagName.slice(1)) - 1) * 0.85}rem`;
+    link.onclick = event => {
+      event.preventDefault();
+      const header = document.querySelector("#panes > main > header");
+      scrollReadingTo(readingScrollTop() + heading.getBoundingClientRect().top - readingViewportTop() - header.offsetHeight - 8);
+      followOutline();
+    };
+    outline.append(link);
+  }
+  followOutline();
+}
+/** @returns {void} */
+function followOutline() {
+  if (!markdownEditing) return;
+  const headings = [...document.querySelectorAll("#markdown-edit h1,#markdown-edit h2,#markdown-edit h3,#markdown-edit h4,#markdown-edit h5,#markdown-edit h6")];
+  const links = [...document.querySelectorAll("#outline nav a")];
+  if (!headings.length || headings.length !== links.length) return;
+  const threshold = readingViewportTop() + document.querySelector("#panes > main > header").offsetHeight + 16;
+  let index = 0;
+  headings.forEach((heading, currentIndex) => { if (heading.getBoundingClientRect().top <= threshold) index = currentIndex; });
+  const selected = links[index];
+  if (selected.getAttribute("aria-current") === "location") return;
+  links.forEach(link => link.removeAttribute("aria-current"));
+  selected.setAttribute("aria-current", "location");
+  const outline = document.querySelector("#outline");
+  if (outline.clientHeight) {
+    const offset = selected.getBoundingClientRect().top - outline.getBoundingClientRect().top + outline.scrollTop;
+    outline.scrollTo({ top: offset - outline.clientHeight * .75 });
+  }
+}
 /** @returns {void} */
 function closeMarkdownEditor() {
   markdownRevision++;
+  markdownImageAnchor?.abort();
+  markdownImageAnchor = null;
   const draft = markdownDrafts.get(current);
-  if (markdownEditor && draft) {
-    const markdown = markdownEditor.getMarkdown();
-    draft.source = markdown === draft.baseline ? draft.initialSource : draft.frontmatter + markdown;
-  }
+  if (markdownEditor && draft) updateMarkdownDraft(draft, markdownEditor.getMarkdown());
   markdownEditing = false;
+  markdownOutlineSignature = "";
   if (markdownEditor) { markdownEditor.destroy(); markdownEditor = null; }
   document.querySelector("#markdown-edit").replaceChildren();
   document.querySelector("#markdown-edit").hidden = true;
+  document.querySelector("#markdown-properties").replaceChildren();
+  document.querySelector("#markdown-properties").hidden = true;
   article.hidden = false;
-  document.querySelector("#save-markdown").hidden = true;
-  document.querySelector("#close-markdown").hidden = true;
-  document.querySelector("#edit-markdown").hidden = !current.toLowerCase().endsWith(".md");
 }
 /** @param {string} source @returns {[string, string]} */
 function splitMarkdownFrontmatter(source) {
   const match = source.match(/^(---\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*\r?\n)/);
   return match ? [match[1], source.slice(match[1].length)] : ["", source];
 }
-document.querySelector("#edit-markdown").onclick = async () => {
+/** @param {object} draft @returns {void} */
+function showMarkdownProperties(draft) {
+  const root = document.querySelector("#markdown-properties");
+  root.replaceChildren();
+  const match = draft.frontmatter.match(/^(---\r?\n)([\s\S]*?)(\r?\n(?:---|\.\.\.)[ \t]*\r?\n)$/);
+  if (!match) { root.hidden = true; return; }
+  const details = document.createElement("details");
+  details.className = "metadata";
+  details.open = true;
+  const title = document.createElement("summary");
+  title.textContent = "Properties";
+  const editor = document.createElement("textarea");
+  editor.setAttribute("aria-label", "Edit properties as YAML");
+  editor.spellcheck = false;
+  editor.value = match[2];
+  const resize = () => { editor.style.height = "auto"; editor.style.height = `${editor.scrollHeight}px`; };
+  editor.addEventListener("input", () => {
+    const newline = match[1].endsWith("\r\n") ? "\r\n" : "\n";
+    draft.frontmatter = match[1] + editor.value.replace(/\n/g, newline) + match[3];
+    if (markdownEditor) updateMarkdownDraft(draft, markdownEditor.getMarkdown());
+    document.querySelector("#markdown-status").textContent = draft.error || (draft.source === draft.original ? "" : "Unsaved changes");
+    resize();
+  });
+  details.append(title, editor);
+  root.append(details);
+  root.hidden = false;
+  resize();
+}
+/** @param {string} source @returns {{visual: string, tokens: {token: string, html: string}[]}} */
+function protectMarkdownHtml(source) {
+  let prefix = "⟦HTML";
+  while (source.includes(prefix)) prefix += "_";
+  const tokens = [];
+  // Keep fenced and inline code untouched while preserving literal HTML through Markdown serialization.
+  const parts = /(^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\2[ \t]*\r?$)|(`+[^`\n]*`+)|(<(?<rawTag>script|style|pre|textarea|table)\b(?:"[^"]*"|'[^']*'|[^'">])*?>[\s\S]*?<\/\k<rawTag>\s*>|<!--[\s\S]*?(?:-->|$)|<\?[\s\S]*?\?>|<![^>]*>|<\/?[a-zA-Z][\w:.-]*(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'">])*?>)/gim;
+  const visual = source.replace(parts, (match, fence, _marker, inlineCode, html) => {
+    if (fence || inlineCode || !html) return match;
+    const token = `${prefix}${tokens.length + 1}⟧`;
+    tokens.push({ token, html });
+    return token;
+  });
+  return { visual, tokens };
+}
+/** @param {object} draft @param {string} markdown @returns {boolean} */
+function updateMarkdownDraft(draft, markdown) {
+  draft.visual = markdown;
+  let restored = markdown;
+  let previous = -1;
+  for (const item of draft.tokens) {
+    const position = markdown.indexOf(item.token);
+    if (position <= previous || markdown.indexOf(item.token, position + 1) !== -1) {
+      draft.error = "Keep the HTML markers intact to save the document.";
+      return false;
+    }
+    previous = position;
+    restored = restored.replace(item.token, () => item.html);
+  }
+  draft.error = "";
+  draft.source = draft.frontmatter + (markdown === draft.baseline ? splitMarkdownFrontmatter(draft.initialSource)[1] : restored);
+  return true;
+}
+/** @param {{tag: string, text: string, occurrence: number, offset: number, top: number} | null} target @returns {Promise<void>} */
+async function editMarkdown(target) {
+  if (markdownOpening || markdownEditing || !current.toLowerCase().endsWith(".md")) return;
+  markdownOpening = true;
   const path = current;
   const revision = ++markdownRevision;
   const markdownStatus = document.querySelector("#markdown-status");
@@ -589,12 +802,30 @@ document.querySelector("#edit-markdown").onclick = async () => {
     const existing = markdownDrafts.get(path);
     const source = existing ? existing.source : original;
     const [frontmatter, body] = splitMarkdownFrontmatter(source);
-    // Raw HTML is not supported by the visual editor and must not be discarded.
-    const withoutFences = body.replace(/^ {0,3}([\x60]{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[ \t]*$/gm, "");
-    if (/<\/?[a-zA-Z][^>]*>|<!--[\s\S]*?-->/.test(withoutFences)) throw new Error("Visual editing is unavailable for Markdown containing HTML.");
+    const protectedHtml = existing?.error ? { visual: existing.visual, tokens: existing.tokens } : protectMarkdownHtml(body);
     const root = document.querySelector("#markdown-edit");
-    const editor = new FoxMarkdownEditor({ root, defaultValue: body });
+    const imageSizes = new Map([...article.querySelectorAll("img[src]")].map(image => [image.src, { width: image.naturalWidth, height: image.naturalHeight }]));
+    const resolveImage = source => {
+      const url = readerImageURL(path, source);
+      return { url, ...(url ? imageSizes.get(new URL(url, document.baseURI).href) : null) };
+    };
+    const htmlImages = protectedHtml.tokens.flatMap(item => {
+      if (!/<img(?:\s|\/?>)/i.test(item.html)) return [];
+      const template = document.createElement("template");
+      template.innerHTML = item.html;
+      return [...template.content.querySelectorAll("img[src]")].map((image, index) => ({
+        token: item.token, key: `${item.token}:${index}`, src: image.getAttribute("src"), alt: image.alt,
+        width: Number(image.getAttribute("width")) || 0, height: Number(image.getAttribute("height")) || 0,
+      }));
+    });
+    const editor = new FoxMarkdownEditor({ root, defaultValue: protectedHtml.visual, resolveImage, htmlImages, htmlTokens: protectedHtml.tokens });
     await editor.create();
+    if (revision !== markdownRevision || current !== path) { await editor.destroy(); return; }
+    const images = [...root.querySelectorAll("img[src]")];
+    await Promise.race([
+      Promise.allSettled(images.map(image => image.decode())),
+      new Promise(resolve => setTimeout(resolve, 1500)),
+    ]);
     if (revision !== markdownRevision || current !== path) { await editor.destroy(); return; }
     markdownEditor = editor;
     const baseline = editor.getMarkdown();
@@ -602,58 +833,144 @@ document.querySelector("#edit-markdown").onclick = async () => {
     draft.baseline = baseline;
     draft.frontmatter = frontmatter;
     draft.initialSource = source;
+    draft.tokens = protectedHtml.tokens;
     markdownDrafts.set(path, draft);
-    editor.on(listener => listener.markdownUpdated((_ctx, markdown) => {
-      draft.source = markdown === draft.baseline ? source : frontmatter + markdown;
-      markdownStatus.textContent = draft.source === draft.original ? "" : "Unsaved changes";
-    }));
+    editor.on(listener => listener.markdownUpdated(() => queueMicrotask(() => {
+      if (markdownEditor !== editor || current !== path) return;
+      updateMarkdownDraft(draft, editor.getMarkdown());
+      if (draft.error || draft.source !== draft.original) markdownStatus.textContent = draft.error || "Unsaved changes";
+      else if (markdownStatus.textContent !== "Saved") markdownStatus.textContent = "";
+      requestAnimationFrame(rebuildMarkdownOutline);
+    })));
     markdownEditing = true;
     article.hidden = true;
     root.hidden = false;
-    document.querySelector("#edit-markdown").hidden = true;
-    document.querySelector("#save-markdown").hidden = false;
-    document.querySelector("#close-markdown").hidden = false;
-    markdownStatus.textContent = draft.source === draft.original ? "" : "Unsaved changes";
-    root.querySelector('[contenteditable="true"]')?.focus();
-  } catch (error) { markdownStatus.textContent = String(error); }
-};
-document.querySelector("#save-markdown").onclick = async () => {
+    showMarkdownProperties(draft);
+    const oldHeadings = [...article.querySelectorAll("h1,h2,h3,h4,h5,h6")];
+    oldHeadings.forEach(heading => heading.removeAttribute("id"));
+    rebuildMarkdownOutline();
+    markdownStatus.textContent = draft.error || (draft.source === draft.original ? "" : "Unsaved changes");
+    const editable = root.querySelector('[contenteditable="true"]');
+    if (target) editable?.focus({ preventScroll: true });
+    if (target && editable) {
+      const visibleText = text => draft.tokens.reduce((value, item) => value.split(item.token).join("").split(item.html).join(""), text);
+      const blocks = [...editable.querySelectorAll(target.tag)].filter(block => visibleText(block.textContent) === visibleText(target.text));
+      const block = blocks[target.occurrence];
+      if (block) {
+        const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+        let remaining = visibleText(target.text.slice(0, target.offset)).length;
+        let node;
+        while ((node = walker.nextNode())) {
+          let position = 0;
+          while (position < node.length) {
+            const token = draft.tokens.find(item => node.data.startsWith(item.token, position));
+            if (token) { position += token.token.length; continue; }
+            if (remaining === 0) break;
+            remaining--;
+            position++;
+          }
+          if (remaining === 0) {
+            const range = document.createRange();
+            range.setStart(node, position);
+            range.collapse(true);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            break;
+          }
+        }
+        scrollReadingTo(readingScrollTop() + block.getBoundingClientRect().top - target.top);
+        const pendingImages = images.filter(image => !image.complete);
+        if (pendingImages.length) {
+          const anchor = new AbortController();
+          markdownImageAnchor = anchor;
+          const stop = () => anchor.abort();
+          for (const name of ["wheel", "pointerdown", "touchstart", "keydown", "resize"]) {
+            window.addEventListener(name, stop, { once: true, passive: true, signal: anchor.signal });
+          }
+          let pending = pendingImages.length;
+          const settle = () => {
+            if (block.isConnected) scrollReadingTo(readingScrollTop() + block.getBoundingClientRect().top - target.top);
+            if (--pending === 0) anchor.abort();
+          };
+          for (const image of pendingImages) {
+            image.addEventListener("load", settle, { once: true, signal: anchor.signal });
+            image.addEventListener("error", settle, { once: true, signal: anchor.signal });
+          }
+        }
+      }
+    }
+  } catch (error) { if (revision === markdownRevision) markdownStatus.textContent = String(error); }
+  finally { markdownOpening = false; }
+}
+article.addEventListener("click", event => {
+  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || !window.getSelection().isCollapsed) return;
+  if (event.target.closest("a,button,input,summary,video,audio,.metadata")) return;
+  const block = event.target.closest("h1,h2,h3,h4,h5,h6,p,li,td,th,pre");
+  if (!block || !article.contains(block)) { editMarkdown(null); return; }
+  const caret = document.caretRangeFromPoint(event.clientX, event.clientY);
+  let offset = block.textContent.length;
+  if (caret && block.contains(caret.startContainer)) {
+    const before = document.createRange();
+    before.selectNodeContents(block);
+    before.setEnd(caret.startContainer, caret.startOffset);
+    offset = before.toString().length;
+  }
+  const tag = block.tagName.toLowerCase();
+  const matches = [...article.querySelectorAll(tag)].filter(item => item.textContent === block.textContent);
+  editMarkdown({ tag, text: block.textContent, occurrence: matches.indexOf(block), offset, top: block.getBoundingClientRect().top });
+});
+article.addEventListener("keydown", event => {
+  if (event.target === article && event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+    event.preventDefault();
+    editMarkdown(null);
+  }
+});
+document.querySelector("#reading-area").addEventListener("click", event => {
+  if (event.target === event.currentTarget && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) editMarkdown(null);
+});
+document.querySelector("#markdown-edit").addEventListener("input", () => {
+  if (markdownEditing) document.querySelector("#markdown-status").textContent = "Unsaved changes";
+});
+async function saveMarkdown() {
+  if (markdownSaving) { document.querySelector("#markdown-status").textContent = "Saving; try again shortly."; return false; }
   const path = current;
   const draft = markdownDrafts.get(path);
-  if (draft && markdownEditor) {
-    const markdown = markdownEditor.getMarkdown();
-    draft.source = markdown === draft.baseline ? draft.initialSource : draft.frontmatter + markdown;
-  }
+  if (draft && markdownEditor) updateMarkdownDraft(draft, markdownEditor.getMarkdown());
+  if (draft?.error) { document.querySelector("#markdown-status").textContent = draft.error; return false; }
   if (!draft || draft.source === draft.original) return true;
   const source = draft.source;
+  markdownSaving = true;
+  markdownSaveRevision++;
+  document.querySelector("#markdown-status").textContent = "Saving...";
   try {
     const result = await postScript("save-markdown", { path, code: source, original: draft.original });
     if (!result.ok) throw new Error(await result.text());
     draft.original = source;
-    document.querySelector("#markdown-status").textContent = draft.source === source ? "Saved" : "Unsaved changes";
+    if (current === path) {
+      try {
+        const view = await fetch("document?path=" + encodeURIComponent(path), { cache: "no-store" });
+        if (view.ok) {
+          const data = await view.json();
+          if (current === path) { lastHtml = data.html; lastMetadata = data.frontmatter || ""; }
+        }
+      } catch { /* The save succeeded; the next refresh will retry the preview. */ }
+    }
+    if (current === path) document.querySelector("#markdown-status").textContent = draft.source === source ? "Saved" : "Unsaved changes";
     return true;
-  } catch (error) { document.querySelector("#markdown-status").textContent = String(error); return false; }
-};
-document.querySelector("#close-markdown").onclick = async () => {
-  if (!(await document.querySelector("#save-markdown").onclick())) return;
-  closeMarkdownEditor();
-  document.querySelector("#markdown-status").textContent = "";
-  lastHtml = "";
-  await refresh();
-};
+  } catch (error) { if (current === path) document.querySelector("#markdown-status").textContent = String(error); return false; }
+  finally { markdownSaving = false; }
+}
 document.addEventListener("keydown", event => {
   if (markdownEditing && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
     event.preventDefault();
-    document.querySelector("#save-markdown").click();
+    saveMarkdown();
   }
-});
+}, true);
 window.addEventListener("beforeunload", event => {
   const draft = markdownDrafts.get(current);
-  if (draft && markdownEditor) {
-    const markdown = markdownEditor.getMarkdown();
-    draft.source = markdown === draft.baseline ? draft.initialSource : draft.frontmatter + markdown;
-  }
-  if ([...markdownDrafts.values()].some(draft => draft.source !== draft.original)) event.preventDefault();
+  if (draft && markdownEditor) updateMarkdownDraft(draft, markdownEditor.getMarkdown());
+  if ([...markdownDrafts.values()].some(draft => draft.error || draft.source !== draft.original)) event.preventDefault();
 });
 
 let scriptEditor;
@@ -819,9 +1136,38 @@ let previewTimer;
 let previewRevision = 0;
 /** @returns {void} */
 function hideLinkPreview() { previewRevision++; linkPreview.hidden = true; linkPreview.replaceChildren(); }
-article.addEventListener("pointerover", event => {
-  const link = event.target.closest("a[data-preview-path]");
+/** @param {HTMLAnchorElement} link @returns {{path: string, local: boolean, anchor: string} | null} */
+function markdownLinkTarget(link) {
+  try {
+    const base = new URL(current.split("/").map(encodeURIComponent).join("/"), "https://workspace.invalid/");
+    const target = new URL(link.getAttribute("href"), base);
+    const local = target.origin === base.origin;
+    if (!local && !["http:", "https:"].includes(target.protocol)) return null;
+    return { path: local ? decodeURIComponent(target.pathname.slice(1)) : target.href, local, anchor: target.hash };
+  } catch { return null; }
+}
+document.querySelector("#markdown-edit").addEventListener("click", event => {
+  const link = event.target.closest("a[href]");
+  if (!link || event.button !== 0 || event.altKey || event.metaKey) return;
+  const target = markdownLinkTarget(link);
+  if (!target) return;
+  if (event.ctrlKey && event.shiftKey) {
+    event.preventDefault();
+    window.top.openReaderSplit(target.path, "right", target.local ? target.anchor : "", !target.local);
+  } else if (target.local && !event.ctrlKey && !event.shiftKey) {
+    event.preventDefault();
+    if (target.path === current && target.anchor) document.getElementById(decodeURIComponent(target.anchor.slice(1)))?.scrollIntoView();
+    else openDocument(target.path, true, target.anchor);
+  }
+});
+/** @param {PointerEvent} event @returns {void} */
+function previewLink(event) {
+  const link = event.target.closest("a[href]");
   if (!link || link.contains(event.relatedTarget)) return;
+  const target = link.dataset.previewPath
+    ? { path: link.dataset.previewPath, local: link.dataset.previewLocal === "true" }
+    : markdownLinkTarget(link);
+  if (!target) return;
   clearTimeout(previewTimer);
   const x = event.clientX;
   const y = event.clientY;
@@ -832,37 +1178,40 @@ article.addEventListener("pointerover", event => {
     linkPreview.hidden = false;
     linkPreview.style.left = `${Math.max(8, Math.min(x + 12, innerWidth - linkPreview.offsetWidth - 8))}px`;
     linkPreview.style.top = `${Math.max(8, Math.min(y + 12, innerHeight - linkPreview.offsetHeight - 8))}px`;
-    if (link.dataset.previewLocal !== "true") {
+    if (!target.local) {
       const frame = document.createElement("iframe");
       frame.title = "Link preview";
       frame.setAttribute("sandbox", "");
       frame.referrerPolicy = "no-referrer";
-      frame.src = link.dataset.previewPath;
+      frame.src = target.path;
       linkPreview.replaceChildren(frame);
       return;
     }
     try {
-      const result = await fetch("document?path=" + encodeURIComponent(link.dataset.previewPath), { cache: "no-store" });
+      const result = await fetch("document?path=" + encodeURIComponent(target.path), { cache: "no-store" });
       if (!result.ok) throw new Error("Preview unavailable");
       const data = await result.json();
       if (revision !== previewRevision) return;
-      if (typeof data.html !== "string") { linkPreview.textContent = data.code || ""; return; }
+      if (typeof data.html !== "string") { linkPreview.textContent = data.code || data.json || ""; return; }
       linkPreview.innerHTML = data.html;
-      const base = new URL(data.path.split("/").map(encodeURIComponent).join("/"), "https://workspace.invalid/");
       for (const image of linkPreview.querySelectorAll("img[src]")) {
-        const target = new URL(image.getAttribute("src"), base);
-        if (target.origin === base.origin) image.src = "image?path=" + encodeURIComponent(decodeURIComponent(target.pathname.slice(1)));
-        else if (!["https:", "http:"].includes(target.protocol)) image.removeAttribute("src");
+        const url = readerImageURL(data.path, image.getAttribute("src"));
+        if (url) image.src = url; else image.removeAttribute("src");
       }
       for (const item of linkPreview.querySelectorAll("a")) item.removeAttribute("href");
     } catch (error) { if (revision === previewRevision) linkPreview.textContent = String(error); }
   }, 350);
-});
-article.addEventListener("pointerout", event => {
-  const link = event.target.closest("a[data-preview-path]");
+}
+/** @param {PointerEvent} event @returns {void} */
+function leavePreviewLink(event) {
+  const link = event.target.closest("a[href]");
   if (!link || link.contains(event.relatedTarget)) return;
   clearTimeout(previewTimer);
   previewTimer = setTimeout(hideLinkPreview, 200);
-});
+}
+for (const content of [article, document.querySelector("#markdown-edit")]) {
+  content.addEventListener("pointerover", previewLink);
+  content.addEventListener("pointerout", leavePreviewLink);
+}
 linkPreview.addEventListener("pointerenter", () => clearTimeout(previewTimer));
 linkPreview.addEventListener("pointerleave", hideLinkPreview);

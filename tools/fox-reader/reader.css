@@ -14,6 +14,7 @@ nav a, #files summary { display: block; min-width: 0; overflow-wrap: anywhere; p
 nav a:hover, #files summary:hover { background: color-mix(in srgb, var(--ink), transparent 91%); }
 nav a:focus-visible, #files summary:focus-visible { outline: 2px solid var(--muted); outline-offset: -2px; }
 nav a[aria-current="page"] { background: color-mix(in srgb, var(--ink), transparent 85%); }
+#outline nav a[aria-current="location"] { background: color-mix(in srgb, var(--ink), transparent 85%); font-weight: bold; }
 #files details { padding-left: .7rem; }
 #files summary { cursor: pointer; list-style: none; }
 #files summary::-webkit-details-marker { display: none; }
@@ -100,7 +101,7 @@ body.focus .sidebar-resizer { display: none; }
 body.library-hidden #library, body.library-hidden #library-resizer { display: none; }
 
 #vim-motion[aria-pressed="true"] { background: color-mix(in srgb, var(--ink), transparent 80%); }
-#link-preview { position: fixed; z-index: 20; width: min(420px, calc(100vw - 16px)); height: min(300px, calc(100vh - 16px)); overflow: auto; padding: 1rem; border: 1px solid var(--muted); border-radius: 6px; background: var(--paper); color: var(--ink); box-shadow: 0 8px 28px #0008; font: 14px/1.5 var(--reading-font, sans-serif); text-align: left; }
+#link-preview { position: fixed; z-index: 20; width: min(840px, calc(100vw - 16px)); height: min(600px, calc(100vh - 16px)); overflow: auto; padding: 1rem; border: 1px solid var(--muted); border-radius: 6px; background: var(--paper); color: var(--ink); box-shadow: 0 8px 28px #0008; font: 14px/1.5 var(--reading-font, sans-serif); text-align: left; }
 #link-preview[hidden] { display: none; }
 #link-preview img { max-width: 100%; }
 #link-preview iframe { width: 100%; height: 100%; border: 0; background: white; }
@@ -110,8 +111,23 @@ body.library-hidden #library, body.library-hidden #library-resizer { display: no
 #panes.split-top #split-pane:not([hidden]), #panes.split-bottom #split-pane:not([hidden]) { flex: none; height: 50vh; position: relative; top: auto; border: 0; border-top: 1px solid var(--muted); }
 #panes.split-top #split-pane:not([hidden]) { order: -1; border-top: 0; border-bottom: 1px solid var(--muted); }
 
-#markdown-edit { margin: 0; padding: 0 2rem 6rem; font: var(--reading-size, 18px)/var(--reading-spacing, 1.8) var(--reading-font, "Trebuchet MS"), sans-serif; overflow-wrap: anywhere; }
+#markdown-edit { margin: 0; padding: 0 2rem 6rem; font: var(--reading-size, 18px)/var(--reading-spacing, 1.8) var(--reading-font, "Trebuchet MS"), sans-serif; text-align: var(--reading-alignment, justify); overflow-wrap: anywhere; }
+#markdown-properties { padding: 0 2rem; font: var(--reading-size, 18px)/var(--reading-spacing, 1.8) var(--reading-font, "Trebuchet MS"), sans-serif; }
+#markdown-properties textarea { display: block; width: 100%; min-height: 2rem; margin-top: .8rem; padding: 0; border: 0; resize: vertical; color: var(--ink); background: transparent; font: inherit; line-height: 1.5; }
+#markdown-properties textarea:focus-visible { outline: 1px solid var(--muted); outline-offset: 4px; }
 #markdown-edit .ProseMirror { min-height: 16rem; outline: none; }
-#markdown-edit img { max-width: 100%; }
+#markdown-edit .markdown-html-token { font-size: 0; }
+#markdown-edit img { max-width: 100%; height: auto; }
+#markdown-edit ul { list-style: disc outside; padding-inline-start: 40px; }
+#markdown-edit ul ul { list-style-type: circle; }
+#markdown-edit ol { list-style: decimal outside; padding-inline-start: 40px; }
+#markdown-edit li > p { margin: 0; }
+#markdown-edit li[data-item-type="task"]::marker { content: "☐  "; }
+#markdown-edit li[data-item-type="task"][data-checked="true"]::marker { content: "☑  "; }
 #markdown-edit table { display: table; }
 #markdown-status { color: var(--muted); font-size: .8rem; }
+article .plain-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+article .json-view { white-space: pre; line-height: 1.55; tab-size: 2; }
+article .json-key { color: color-mix(in srgb, var(--ink), #388bff 60%); }
+article .json-string { color: color-mix(in srgb, var(--ink), #d57935 65%); }
+article .json-value { color: color-mix(in srgb, var(--ink), #a573dc 65%); }

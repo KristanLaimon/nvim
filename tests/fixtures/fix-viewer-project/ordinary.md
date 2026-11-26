@@ -1,0 +1,4 @@
+---
+Normal text
+---
+# Regular document

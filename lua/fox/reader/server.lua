@@ -79,6 +79,14 @@ local function response(session, target)
 			end
 			return 200, vim.json.encode({ code = disk, path = path }), "application/json"
 		end
+		if path:lower():match("%.json$") then
+			return 200, vim.json.encode({ json = content, path = path }), "application/json"
+		end
+		if path:lower():match("%.txt$") then
+			return 200,
+				vim.json.encode({ html = '<pre class="plain-text">' .. renderer.escape(content) .. "</pre>", path = path }),
+				"application/json"
+		end
 		local html, frontmatter = document(content)
 		return 200, vim.json.encode({ html = html, frontmatter = frontmatter, path = path }), "application/json"
 	end

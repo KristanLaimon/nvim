@@ -19,6 +19,9 @@ local function write(path, content)
 	if old == content then
 		return
 	end
+	if old and path:sub(-5) == ".json" and vim.deep_equal(vim.json.decode(old), vim.json.decode(content)) then
+		return
+	end
 	vim.fn.mkdir(vim.fs.dirname(path), "p")
 	local function save(target, text)
 		local handle = assert(vim.uv.fs_open(target, "wx", 384))
@@ -98,7 +101,7 @@ end
 
 local function codex_features(content)
 	local lines = vim.split(content or "", "\n", { plain = true })
-	local section, features_index, hooks_index
+	local section, features_index, hooks_configured
 	for index, line in ipairs(lines) do
 		local header = line:match("^%s*%[([^%]]+)%]%s*#?.*$")
 		if header then
@@ -106,15 +109,15 @@ local function codex_features(content)
 			if section == "features" then
 				features_index = index
 			end
-		elseif section == "features" and line:match("^%s*hooks%s*=") then
-			hooks_index = index
+		elseif section == "features" and (line:match("^%s*hooks%s*=") or line:match("^%s*codex_hooks%s*=")) then
+			assert(
+				line:match("=%s*true%s*$") or line:match("=%s*true%s*#"),
+				"Codex hooks are explicitly disabled or unsupported; config.toml was preserved"
+			)
+			hooks_configured = true
 		end
 	end
-	if hooks_index then
-		assert(
-			lines[hooks_index]:match("=%s*true%s*$") or lines[hooks_index]:match("=%s*true%s*#"),
-			"Codex hooks are explicitly disabled or unsupported; config.toml was preserved"
-		)
+	if hooks_configured then
 		return content
 	elseif features_index then
 		table.insert(lines, features_index + 1, "hooks = true")
@@ -125,7 +128,7 @@ local function codex_features(content)
 	return table.concat(lines, "\n"):gsub("\n*$", "\n")
 end
 
---- Explicit installation only. options.home/dirs allow isolated installation/tests.
+--- options.home/dirs allow isolated installation and tests.
 --- Existing JSON values survive; malformed JSON/JSONC is refused before writing.
 function M.install(agent, options)
 	options = options or {}
@@ -201,7 +204,7 @@ function M.install(agent, options)
 			end
 		end
 		local toml_path = directory .. "/config.toml"
-		local toml = agent == "codex" and codex_features(read(toml_path)) or nil
+		local toml = agent == "codex" and not options.register_only and codex_features(read(toml_path)) or nil
 		save(path, vim.json.encode(config) .. "\n")
 		if toml then
 			save(toml_path, toml)

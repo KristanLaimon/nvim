@@ -68,10 +68,12 @@ describe("terminal session hooks", function()
 	it("preserves an explicit Codex hooks opt-out before any write", function()
 		isolated(function(home)
 			vim.fn.mkdir(home .. "/.codex", "p")
-			vim.fn.writefile({ "[features]", "hooks = false" }, home .. "/.codex/config.toml")
-			expect(pcall(installer.install, "codex", { home = home })).toBe(false)
-			expect(vim.fn.readfile(home .. "/.codex/config.toml")[2]).toBe("hooks = false")
-			expect(vim.fn.filereadable(home .. "/.codex/hooks.json")).toBe(0)
+			for _, option in ipairs({ "hooks = false", "codex_hooks = false" }) do
+				vim.fn.writefile({ "[features]", option }, home .. "/.codex/config.toml")
+				expect(pcall(installer.install, "codex", { home = home })).toBe(false)
+				expect(vim.fn.readfile(home .. "/.codex/config.toml")[2]).toBe(option)
+				expect(vim.fn.filereadable(home .. "/.codex/hooks.json")).toBe(0)
+			end
 		end)
 	end)
 

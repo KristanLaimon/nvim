@@ -99,6 +99,8 @@ local code_win = nil
 --- Current terminal split height, persisted across sessions.
 local terminal_height_cached = nil
 local agent_sessions = require("fox.terminal.agent_sessions")
+local supported_agents = { "codex", "claude", "opencode", "agy" }
+local agent_hook_attempted = {}
 local agent_terminals, agent_restored = {}, {}
 local agent_event_dir = vim.fn.stdpath("state")
 	.. "/fox/agent-events/"
@@ -116,6 +118,21 @@ local function agent_environment(token)
 		FOXVIM_AGENT_EVENT_DIR = agent_event_dir,
 		FOXVIM_TERMINAL_ID = token,
 	}
+end
+
+local function install_available_agent_hooks()
+	if #vim.api.nvim_list_uis() == 0 then
+		return
+	end
+	for _, agent in ipairs(supported_agents) do
+		if not agent_hook_attempted[agent] and vim.fn.executable(agent) == 1 then
+			agent_hook_attempted[agent] = true
+			local ok, err = pcall(require("fox.terminal.hook_installer").install, agent, { register_only = true })
+			if not ok then
+				vim.notify("Could not register the " .. agent .. " session hook: " .. tostring(err), vim.log.levels.WARN)
+			end
+		end
+	end
 end
 
 local function save_agent_terminals(root)
@@ -517,6 +534,7 @@ local function fill_window(t, n, win)
 		end
 	end
 
+	install_available_agent_hooks()
 	local token = agent_token()
 	local env, previous = agent_environment(token), {}
 	for key, value in pairs(env) do
@@ -1131,7 +1149,7 @@ function M.setup()
 	end
 
 	vim.api.nvim_create_user_command("TerminalAgentInstall", function(opts)
-		local agents = opts.args == "" and { "codex", "claude", "opencode", "agy" } or { opts.args }
+		local agents = opts.args == "" and supported_agents or { opts.args }
 		local failures = {}
 		for _, agent in ipairs(agents) do
 			local ok, result = pcall(require("fox.terminal.hook_installer").install, agent)
@@ -1147,7 +1165,7 @@ function M.setup()
 	end, {
 		nargs = "?",
 		complete = function()
-			return { "codex", "claude", "opencode", "agy" }
+			return supported_agents
 		end,
 		desc = "Install agent session integrations",
 	})

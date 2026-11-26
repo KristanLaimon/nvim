@@ -22,7 +22,7 @@ Clicking terminal content enters terminal input mode, including when the termina
 
 ## Agent session restoration
 
-Run `:TerminalAgentInstall` once to register integrations for Codex, Claude Code, OpenCode and Antigravity (`agy`). Pass an agent name to install only that integration, for example `:TerminalAgentInstall codex`. Restart any running agent after installation and approve the FoxVim hook in Codex if prompted. Antigravity reports its conversation ID after the first prompt.
+When you open a FoxVim terminal, FoxVim automatically registers session hooks for supported agents available on your PATH (Codex, Claude Code, OpenCode and Antigravity). When Codex prompts for hook review, approve the FoxVim hook with `/hooks` and reopen your conversation in Codex so its startup hook can report the session. Antigravity reports its conversation ID after the first prompt. To retry registration, use `:TerminalAgentInstall` or name one agent, for example `:TerminalAgentInstall codex`.
 
 Start each agent from a FoxVim terminal. FoxVim records its conversation ID and slot in Neovim's local state for that project. When you return, the agent terminals are placed in consecutive slots starting at 1, in their previous relative order. After restarting Neovim, it reopens the same conversations using the installed CLI's resume command. Restored terminals start in the background and can be opened with `Alt+1..9`.
 

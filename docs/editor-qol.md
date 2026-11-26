@@ -17,7 +17,17 @@ may be placed under `tools/fox-reader/fonts/` using the Windows filenames
 `trebuc.ttf`, `trebucbd.ttf`, `trebucit.ttf`, and `trebucbi.ttf`. These files
 are Git-ignored because [Microsoft generally does not permit redistribution of
 Windows-supplied fonts](https://learn.microsoft.com/en-us/typography/fonts/font-faq).
-Drag either handle at the edge of the reading area to change its width.
+Drag either handle at the edge of the reading area to change its width. Drag the
+sidebar borders to resize the library and outline. Ctrl+Shift+Space toggles the
+library. Ctrl+K searches workspace files; Ctrl+Shift+H/J/K/L searches for a document to open in a left, bottom,
+top or right split. Ctrl+W closes the active document or split when the browser
+allows the shortcut to be intercepted. Ctrl+Shift+click opens a link in the
+right split; Ctrl+Shift+click on a library file also opens it on the right. Hover over a link to preview it. External sites may block embedding. Use the V button to
+enable Vim navigation: j/k scroll and h/l focus the left/right split. Close the
+split with its close button. The library also lists `.js` and `.py` files. These open in a local Monaco editor. Save with the Save button or Ctrl+S; Run saves edits before starting. Type directly in the output panel and press Enter to send a line to a running script. EOF closes standard input; Stop terminates the
+process. Runs use the saved file, its directory as the working directory, and `node` or `python` from
+PATH. Install the corresponding runtime before running a script. Monaco 0.52.2
+is bundled locally under `tools/fox-reader/vs` with its MIT license.
 Preferences and per-document reading positions are stored in `fox-reader.json`
 under Neovim's state directory and restored across restarts and server ports.
 The reader reports corrupt or unwritable state while remaining usable.

@@ -8,6 +8,11 @@ local assets = vim.fn.stdpath("config") .. "/tools/fox-reader/"
 
 function M.stop()
 	for _, session in pairs(sessions) do
+		for _, job in pairs(session.jobs) do
+			if job.process and not job.done then
+				pcall(job.process.kill, job.process, 15)
+			end
+		end
 		session.http:stop()
 	end
 	sessions = {}
@@ -57,7 +62,7 @@ local function response(session, target)
 		return 404, "Not found", "text/plain"
 	end
 	local route = target:sub(#session.prefix + 1)
-	if route:match("^%?path=") then
+	if route:sub(1, 1) == "?" then
 		route = ""
 	end
 	local path = route:match("^document%?path=(.*)$")
@@ -66,6 +71,13 @@ local function response(session, target)
 		local content, err = workspace.read(session.root, path)
 		if not content then
 			return 404, err, "text/plain"
+		end
+		if path:lower():match("%.js$") or path:lower():match("%.py$") then
+			local disk = http.read_file(workspace.resolve(session.root, path))
+			if not disk then
+				return 404, "Script cannot be read", "text/plain"
+			end
+			return 200, vim.json.encode({ code = disk, path = path }), "application/json"
 		end
 		local html, frontmatter = document(content)
 		return 200, vim.json.encode({ html = html, frontmatter = frontmatter, path = path }), "application/json"
@@ -110,6 +122,21 @@ local function response(session, target)
 		end
 		return 404, "Image unavailable", "text/plain"
 	end
+	local job_id = route:match("^job%?id=([%da-f]+)$")
+	if job_id then
+		local job = session.jobs[job_id]
+		if not job then
+			return 404, "Run unavailable", "text/plain"
+		end
+		return 200, vim.json.encode({ output = job.output, done = job.done, code = job.code }), "application/json"
+	end
+	local monaco_path = route:match("^vs/([%w%._/%-]+)$")
+	if monaco_path and not monaco_path:find("..", 1, true) then
+		local extension = monaco_path:match("%.([%w]+)$")
+		local kind = ({ js = "text/javascript", css = "text/css", ttf = "font/ttf" })[extension]
+		local data = kind and http.read_file(assets .. "vs/" .. monaco_path)
+		return data and 200 or 404, data or "Resource missing", kind or "text/plain"
+	end
 	local asset = ({
 		[""] = { assets .. "index.html", "text/html" },
 		["reader.js"] = { assets .. "reader.js", "text/javascript" },
@@ -150,11 +177,11 @@ function M.start(root)
 	if sessions[root] then
 		return sessions[root].url
 	end
-	local session = { root = root, files = {}, scanning = true }
+	local session = { root = root, files = {}, scanning = true, jobs = {} }
 	local csp =
-		"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; font-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"
+		"default-src 'none'; script-src 'self' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; font-src 'self'; connect-src 'self'; frame-src 'self' https: http:; base-uri 'none'; frame-ancestors 'self'"
 	session.http = http.start({
-		max_request = 16384,
+		max_request = 2 * 1024 * 1024,
 		csp = csp,
 		error_message = "Reader request failed",
 		handle = function(service, method, target, headers, body, length)
@@ -163,16 +190,123 @@ function M.start(root)
 			end
 			if
 				method == "POST"
-				and target == service.prefix .. "state"
+				and (target == service.prefix .. "state" or target == service.prefix .. "run" or target == service.prefix .. "stop-run" or target == service.prefix .. "run-input" or target == service.prefix .. "save-script")
 				and headers:match("\r\norigin:%s*([^\r\n]+)") == "http://" .. service.origin
 				and headers:match("\r\ncontent%-type:%s*([^\r\n]+)") == "application/json"
 				and length
-				and length <= 8192
+				and length <= (target == service.prefix .. "save-script" and 2 * 1024 * 1024 - 4096 or 8192)
 				and #body == length
 			then
 				local decoded, value = pcall(vim.json.decode, body)
-				local saved, save_error = state.save(session.root, decoded and value or nil)
-				return saved and 200 or 400, saved and "Saved" or save_error, "text/plain"
+				if target == service.prefix .. "state" then
+					local saved, save_error = state.save(session.root, decoded and value or nil)
+					return saved and 200 or 400, saved and "Saved" or save_error, "text/plain"
+				end
+				if not decoded or type(value) ~= "table" then
+					return 400, "Invalid request", "text/plain"
+				end
+				if target == service.prefix .. "save-script" then
+					local path = type(value.path) == "string" and value.path or ""
+					local resolved = (path:lower():match("%.js$") or path:lower():match("%.py$"))
+						and workspace.resolve(session.root, path)
+					if not resolved or type(value.code) ~= "string" or type(value.original) ~= "string" then
+						return 400, "Invalid script", "text/plain"
+					end
+					if http.read_file(resolved) ~= value.original then
+						return 409, "Script changed on disk; reload before saving", "text/plain"
+					end
+					for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
+						local name = vim.api.nvim_buf_get_name(buffer)
+						if name ~= "" and vim.uv.fs_realpath(name) == vim.uv.fs_realpath(resolved) and vim.bo[buffer].modified then
+							return 409, "Script has unsaved changes in Neovim", "text/plain"
+						end
+					end
+					local file, err = io.open(resolved, "wb")
+					if not file then
+						return 500, "Could not save script: " .. tostring(err), "text/plain"
+					end
+					local written, write_err = file:write(value.code)
+					local closed, close_err = file:close()
+					if not written or not closed then
+						return 500, "Could not save script: " .. tostring(write_err or close_err), "text/plain"
+					end
+					return 200, "Saved", "text/plain"
+				end
+				if target == service.prefix .. "run-input" then
+					local job = type(value.id) == "string" and session.jobs[value.id]
+					if
+						not job
+						or job.done
+						or job.input_closed
+						or not job.process
+						or (not value.close and (type(value.input) ~= "string" or #value.input > 6000))
+					then
+						return 400, "Script input is unavailable", "text/plain"
+					end
+					local line = not value.close and value.input .. "\n" or nil
+					local ok, err = pcall(job.process.write, job.process, line)
+					if not ok then
+						return 400, "Could not send input: " .. tostring(err), "text/plain"
+					end
+					if line then
+						job.output = (job.output .. line):sub(-1024 * 1024)
+					else
+						job.input_closed = true
+					end
+					return 200, "Input sent", "text/plain"
+				end
+				if target == service.prefix .. "stop-run" then
+					local job = session.jobs[value.id]
+					if job and not job.done and job.process then
+						job.process:kill(15)
+					end
+					return 200, "Stopped", "text/plain"
+				end
+				local path = type(value.path) == "string" and value.path or ""
+				local extension = path:lower():match("%.([^.]+)$")
+				local executable = ({ js = "node", py = "python" })[extension]
+				if executable == "python" and vim.fn.executable(executable) ~= 1 and vim.fn.executable("python3") == 1 then
+					executable = "python3"
+				end
+				local resolved = executable and workspace.resolve(session.root, path)
+				local stat = resolved and vim.uv.fs_stat(resolved)
+				if not stat or stat.type ~= "file" then
+					return 400, "Script is unavailable", "text/plain"
+				end
+				if vim.fn.executable(executable) ~= 1 then
+					return 400, executable .. " is not available on PATH", "text/plain"
+				end
+				local id = vim.fn.sha256(assert(vim.uv.random(32))):sub(1, 32)
+				local job = { output = "", done = false }
+				session.jobs[id] = job
+				local function append(err, data)
+					vim.schedule(function()
+						local chunk = data or err or ""
+						job.output = (job.output .. chunk):sub(-1024 * 1024)
+					end)
+				end
+				local command = extension == "py" and { executable, "-u", resolved } or { executable, resolved }
+				local ok, process = pcall(vim.system, command, {
+					cwd = vim.fs.dirname(resolved),
+					stdin = true,
+					text = true,
+					stdout = append,
+					stderr = append,
+				}, function(result)
+					vim.schedule(function()
+						job.done = true
+						job.code = result.code
+						vim.defer_fn(function()
+							session.jobs[id] = nil
+						end, 300000)
+					end)
+				end)
+				if not ok then
+					session.jobs[id] = nil
+					return 500, "Could not start script: " .. tostring(process), "text/plain"
+				end
+				job.process = process
+				return 200, vim.json.encode({ id = id }), "application/json"
 			end
 			return 403, "Forbidden", "text/plain"
 		end,

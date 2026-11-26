@@ -60,3 +60,52 @@ body.focus aside { display: none; }
 @font-face { font-family: "Trebuchet MS"; src: local("Trebuchet MS Bold"), url("fonts/trebucbd.ttf") format("truetype"); font-weight: 700; font-style: normal; }
 @font-face { font-family: "Trebuchet MS"; src: local("Trebuchet MS Italic"), url("fonts/trebucit.ttf") format("truetype"); font-weight: 400; font-style: italic; }
 @font-face { font-family: "Trebuchet MS"; src: local("Trebuchet MS Bold Italic"), url("fonts/trebucbi.ttf") format("truetype"); font-weight: 700; font-style: italic; }
+
+/* File names stay on one line, as in a code editor's explorer. */
+#library { width: var(--library-width, 240px); padding: 1rem .5rem; }
+#outline { width: var(--outline-width, 240px); }
+#files { overflow-x: auto; }
+#files details { width: max-content; min-width: 100%; padding-left: .8rem; }
+#files summary, #files a { white-space: nowrap; overflow-wrap: normal; padding: .32rem .5rem; }
+.sidebar-resizer { width: 5px; flex: 0 0 5px; cursor: col-resize; touch-action: none; position: sticky; top: 0; height: 100vh; }
+.sidebar-resizer:hover, .sidebar-resizer:focus-visible { background: #3d8bda; }
+#panes { min-width: 0; flex: 1; display: flex; }
+#panes > main { flex: 1; }
+#split-pane { min-width: 0; flex: 1; border-left: 1px solid var(--muted); }
+#split-pane:not([hidden]) { display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; }
+#split-pane iframe { border: 0; width: 100%; flex: 1; min-height: 0; }
+#panes.split-left #split-pane { order: -1; border-left: 0; border-right: 1px solid var(--muted); }
+body.pane #library, body.pane #outline, body.pane .sidebar-resizer, body.pane #library-toggle { display: none; }
+body.focus .sidebar-resizer { display: none; }
+#file-search { width: min(650px, 90vw); max-height: 70vh; margin-top: 8vh; border: 1px solid var(--muted); background: var(--paper); color: var(--ink); box-shadow: 0 8px 35px #0008; }
+#file-search::backdrop { background: #0006; }
+#file-search label { display: block; margin-bottom: .5rem; }
+#file-search input { width: 100%; padding: .5rem; color: var(--ink); background: var(--paper); border: 1px solid var(--muted); }
+#file-search-results { overflow: auto; max-height: 50vh; }
+#file-search-results button { display: block; text-align: left; width: 100%; padding: .5rem; border: 0; color: var(--ink); background: transparent; cursor: pointer; overflow-wrap: anywhere; }
+#file-search-results button:hover, #file-search-results button:focus { background: color-mix(in srgb, var(--ink), transparent 85%); }
+@media (max-width: 850px) { #outline-resizer { display: none; } }
+@media (max-width: 600px) { #library-resizer { display: none; } }
+
+#code-panel { height: calc(100vh - 4rem); min-height: 25rem; padding: 1rem; }
+#code-panel:not([hidden]) { display: flex; flex-direction: column; }
+.code-toolbar { display: flex; gap: .75rem; align-items: center; padding: .4rem 0; }
+.code-toolbar span:first-child { flex: 1; }
+.code-toolbar button { color: var(--ink); background: var(--paper); border: 1px solid var(--muted); padding: .3rem .8rem; cursor: pointer; }
+#code-editor { flex: 2; min-height: 10rem; border: 1px solid var(--muted); }
+#code-output { flex: 1; min-height: 7rem; border: 1px solid var(--muted); }
+#files a[data-extension="js"]::before { content: "JS"; }
+#files a[data-extension="py"]::before { content: "PY"; }
+
+body.library-hidden #library, body.library-hidden #library-resizer { display: none; }
+
+#vim-motion[aria-pressed="true"] { background: color-mix(in srgb, var(--ink), transparent 80%); }
+#link-preview { position: fixed; z-index: 20; width: min(420px, calc(100vw - 16px)); height: min(300px, calc(100vh - 16px)); overflow: auto; padding: 1rem; border: 1px solid var(--muted); border-radius: 6px; background: var(--paper); color: var(--ink); box-shadow: 0 8px 28px #0008; font: 14px/1.5 var(--reading-font, sans-serif); text-align: left; }
+#link-preview[hidden] { display: none; }
+#link-preview img { max-width: 100%; }
+#link-preview iframe { width: 100%; height: 100%; border: 0; background: white; }
+
+#panes.split-top, #panes.split-bottom { flex-direction: column; height: 100vh; position: sticky; top: 0; }
+#panes.split-top > main, #panes.split-bottom > main { min-height: 0; overflow-y: auto; }
+#panes.split-top #split-pane:not([hidden]), #panes.split-bottom #split-pane:not([hidden]) { flex: none; height: 50vh; position: relative; top: auto; border: 0; border-top: 1px solid var(--muted); }
+#panes.split-top #split-pane:not([hidden]) { order: -1; border-top: 0; border-bottom: 1px solid var(--muted); }

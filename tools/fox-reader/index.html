@@ -6,13 +6,16 @@
   <title>Fox Reader</title>
   <link rel="stylesheet" href="reader.css">
   <script defer src="mermaid.min.js"></script>
+  <script defer src="vs/loader.js"></script>
   <script defer src="reader.js"></script>
 </head>
 <body>
   <aside id="library"><h1>Library</h1><input id="filter" type="search" placeholder="Filter files" aria-label="Filter files"><nav id="files"></nav></aside>
-  <main><header>
-    <button id="library-toggle" class="icon-button" type="button" title="Toggle library" aria-label="Toggle library">&#9776;</button>
+  <div class="sidebar-resizer" id="library-resizer" role="separator" aria-label="Resize library" aria-orientation="vertical" tabindex="0"></div>
+  <div id="panes"><main><header>
+    <button id="library-toggle" class="icon-button" type="button" title="Toggle library (Ctrl+Shift+Space)" aria-label="Toggle library">&#9776;</button>
     <strong id="title">Fox Reader</strong>
+    <button id="vim-motion" class="icon-button" type="button" title="Toggle Vim navigation" aria-label="Toggle Vim navigation" aria-pressed="false">V</button>
     <button id="focus" class="icon-button" type="button" title="Toggle focus mode" aria-label="Toggle focus mode" aria-pressed="false">&#9673;</button>
     <button id="theme" class="icon-button" type="button" title="Change color theme" aria-label="Change color theme">&#9680;</button>
     <div class="control"><button class="icon-button" type="button" title="Choose reading font" aria-label="Choose reading font" aria-expanded="false" aria-controls="font-panel">&#x1D400;</button><div class="control-panel" id="font-panel" hidden><label for="font">Font</label><select id="font"><option>Georgia</option><option>Arial</option><option>Verdana</option><option>Tahoma</option><option>Trebuchet MS</option><option>Times New Roman</option><option>Palatino Linotype</option><option>Garamond</option><option>Cambria</option><option>Consolas</option><option>Courier New</option><option>system-ui</option><option>serif</option><option>sans-serif</option><option>monospace</option></select></div></div>
@@ -20,7 +23,9 @@
     <div class="control"><button class="icon-button" type="button" title="Adjust line spacing" aria-label="Adjust line spacing" aria-expanded="false" aria-controls="spacing-panel">&#8597;</button><div class="control-panel" id="spacing-panel" hidden><label for="lineSpacing">Line spacing</label><input id="lineSpacing" type="range" min="1" max="2.5" step="0.1" value="1.8"></div></div>
     <div class="control"><button class="icon-button" type="button" title="Adjust content width" aria-label="Adjust content width" aria-expanded="false" aria-controls="width-panel">&#8596;</button><div class="control-panel" id="width-panel" hidden><label for="width">Content width</label><input id="width" type="range" min="400" max="1200" step="20" value="760"></div></div>
     <div class="control"><button class="icon-button" type="button" title="Adjust font size" aria-label="Adjust font size" aria-expanded="false" aria-controls="size-panel">A&#x1D00;</button><div class="control-panel" id="size-panel" hidden><label for="size">Font size</label><input id="size" type="range" min="14" max="28" value="18"></div></div>
-  </header><div id="reading-area"><button class="width-handle" id="width-left" aria-label="Drag to adjust reading width" title="Drag to adjust reading width"></button><article id="content"><p>Choose a document from the library.</p></article><button class="width-handle" id="width-right" aria-label="Drag to adjust reading width" title="Drag to adjust reading width"></button></div><p id="status" role="status"></p><p id="state-status" role="status"></p></main>
-  <aside id="outline"><h2>On this page</h2><nav></nav></aside>
+  </header><section id="code-panel" hidden><div class="code-toolbar"><span>Code</span><button type="button" id="save-script">Save</button><span id="save-status" role="status"></span><button type="button" id="run-script">Run</button><button type="button" id="stop-script" disabled>Stop</button></div><div id="code-editor" aria-label="Script code"></div><div class="code-toolbar"><span>Output (type and press Enter)</span><button type="button" id="close-input" title="Close standard input (EOF)" disabled>EOF</button><span id="run-status" role="status"></span></div><div id="code-output" aria-label="Script output"></div></section><div id="reading-area"><button class="width-handle" id="width-left" aria-label="Drag to adjust reading width" title="Drag to adjust reading width"></button><article id="content" tabindex="-1"><p>Choose a document from the library.</p></article><button class="width-handle" id="width-right" aria-label="Drag to adjust reading width" title="Drag to adjust reading width"></button></div><p id="status" role="status"></p><p id="state-status" role="status"></p></main><section id="split-pane" hidden><header><strong id="split-title"></strong><button id="split-close" class="icon-button" aria-label="Close split" title="Close split">&times;</button></header><iframe title="Second document" id="split-frame"></iframe></section></div>
+  <div class="sidebar-resizer" id="outline-resizer" role="separator" aria-label="Resize outline" aria-orientation="vertical" tabindex="0"></div><aside id="outline"><h2>On this page</h2><nav></nav></aside>
+<div id="link-preview" role="tooltip" hidden></div>
+<dialog id="file-search"><label for="file-search-input">Search files</label><input id="file-search-input" type="search" autocomplete="off" placeholder="Type a file name"><div id="file-search-results"></div></dialog>
 </body>
 </html>

@@ -75,6 +75,7 @@ local function valid_preferences(value)
 		and value.width >= 400
 		and value.width <= 1200
 		and type(value.focus) == "boolean"
+		and (value.vim == nil or type(value.vim) == "boolean")
 end
 
 function M.save(root, request)

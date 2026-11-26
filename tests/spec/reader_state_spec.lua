@@ -9,8 +9,16 @@ t.describe("Reader state", function()
 		vim.fn.mkdir(directory, "p")
 		state.path = directory .. "/state.json"
 		local root = assert(workspace.root(vim.fn.getcwd()))
-		local preferences =
-			{ theme = "dark", font = "Georgia", alignment = "left", size = 20, lineSpacing = 2, width = 900, focus = true }
+		local preferences = {
+			theme = "dark",
+			font = "Georgia",
+			alignment = "left",
+			size = 20,
+			lineSpacing = 2,
+			width = 900,
+			focus = true,
+			vim = true,
+		}
 		t.expect(state.save(root, { kind = "preferences", value = preferences })).toBe(true)
 		t.expect(
 			state.save(
@@ -20,6 +28,7 @@ t.describe("Reader state", function()
 		).toBe(true)
 		local saved = state.get(root, "README.md")
 		t.expect(saved.preferences.width).toBe(900)
+		t.expect(saved.preferences.vim).toBe(true)
 		t.expect(saved.position.heading).toBe("intro")
 		t.expect(state.get(root, "./README.md").position.heading).toBe("intro")
 		t.expect(state.get(root, "AGENTS.md").position).toBe(vim.NIL)

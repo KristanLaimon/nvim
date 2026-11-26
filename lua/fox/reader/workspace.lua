@@ -1,7 +1,7 @@
 local M = {}
 
 -- Extensions included in the reader's library.
-M.extensions = { ".md", ".txt" }
+M.extensions = { ".md", ".txt", ".js", ".py" }
 
 local function normalize(path)
 	path = vim.fs.normalize(path)

@@ -195,7 +195,7 @@ function M.executable(argv, cwd)
 			return vim.list_extend({ "wsl.exe", "-d", distro, "--cd", path, "--", "env" }, result), nil
 		end
 		local exe = vim.fn.exepath(result[1])
-		if exe:lower():match("%.cmd$") or exe:lower():match("%.ps1$") then
+		if exe:lower():match("%.cmd$") or exe:lower():match("%.ps1$") or uv.fs_stat(exe .. ".cmd") then
 			local dir = vim.fs.dirname(exe)
 			local candidates = {
 				npm = { dir .. "/node_modules/npm/bin/npm-cli.js" },

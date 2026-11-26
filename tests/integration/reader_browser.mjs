@@ -16,11 +16,17 @@ const stateFile = join(temporary, 'reader-state.json');
 const source = join(first, 'start.md');
 const target = join(first, 'nested', 'Guía uno.md');
 writeFileSync(source, '---\ntitle: A <safe> title\ntags:\n  - reading\n  - fox\ndescription: |\n  two lines\n  stay together\n---\n# Start\n\n[Go](nested/Gu%C3%ADa%20uno.md#destination)\n\n![Local](nested/pixel.png)\n\n![Vector](nested/shape.svg)\n\n| A | B |\n| --- | --- |\n| one | two |\n\n- [x] Task\n\n```mermaid\ngraph TD\nA[Reader] --> B[Diagram]\n```\n');
-writeFileSync(target, '# Destination\n\n' + Array.from({length: 80}, (_, i) => `${i === 40 ? "## Middle\n\n" : ""}Paragraph ${i}\n`).join('\n') + '\n## End\n');
+writeFileSync(target, '# Destination\n\n' + Array.from({length: 80}, (_, i) => `${i === 40 ? "## Middle\n\n" : ""}Paragraph ${i}\n`).join('\n') + '\n## End\n\n### Details\n\n#### More\n');
 writeFileSync(join(first, 'nested', 'pixel.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aWQAAAAASUVORK5CYII=', 'base64'));
 writeFileSync(join(first, 'nested', 'shape.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="red"/></svg>');
 writeFileSync(join(first, 'actual-readme.md'), readFileSync(join(root, 'README.md')));
 writeFileSync(join(first, 'notes.custom'), '# Custom extension\n');
+writeFileSync(join(first, 'hello.js'), 'console.log("hello node")\n');
+writeFileSync(join(first, 'hello.py'), 'print("hello python")\n');
+writeFileSync(join(first, 'fail.js'), 'console.error("script failed"); process.exit(7)\n');
+writeFileSync(join(first, 'wait.js'), 'console.log("started"); setInterval(() => {}, 1000)\n');
+writeFileSync(join(first, 'input.py'), 'name = input("Name: ")\nprint("Hello " + name)\ncolor = input("Color: ")\nprint("Color is " + color)\n');
+writeFileSync(join(first, 'input.js'), 'const rl = require("node:readline").createInterface({input: process.stdin, output: process.stdout}); rl.question("Name: ", name => { console.log("Hello " + name); rl.close(); });\n');
 writeFileSync(join(first, 'ordinary.md'), '---\nNormal text\n---\n# Regular document\n');
 writeFileSync(join(second, 'other.md'), '# Other workspace\n');
 const socket = process.platform === 'win32' ? `\\\\.\\pipe\\fox-reader-${process.pid}` : join(temporary, 'nvim.sock');
@@ -168,6 +174,112 @@ try {
   await until(() => evaluate('getComputedStyle(document.body).backgroundColor === "rgb(18, 52, 86)"'), 'editor theme');
   assert.equal(await evaluate('getComputedStyle(document.body).color'), 'rgb(238, 221, 204)');
   await until(() => evaluate('[...document.querySelectorAll("#files a")].some(a => a.textContent === "Guía uno.md")'), 'library');
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#files a")).whiteSpace'), 'nowrap');
+  await evaluate(`[...document.querySelectorAll('#files a')].find(a => a.textContent === 'ordinary.md').dispatchEvent(new MouseEvent('click', {bubbles: true, button: 0, ctrlKey: true, shiftKey: true}))`);
+  await until(() => evaluate('document.querySelector("#split-frame").contentDocument?.querySelector("#content")?.textContent.includes("Normal text")'), 'library right split');
+  assert.equal(await evaluate('document.querySelector("#content h1").textContent'), 'Start');
+  assert.equal(await evaluate('document.querySelector("#panes").classList.contains("split-right")'), true);
+  await evaluate('document.querySelector("#split-close").click()');
+  const libraryWidth = await evaluate('document.querySelector("#library").offsetWidth');
+  await evaluate(`document.querySelector('#library-resizer').dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight'}))`);
+  assert.ok(await evaluate('document.querySelector("#library").offsetWidth') > libraryWidth);
+  await evaluate(`document.querySelector('#content a').dispatchEvent(new PointerEvent('pointerover', {bubbles: true, clientX: 120, clientY: 120}))`);
+  await until(() => evaluate('!document.querySelector("#link-preview").hidden && document.querySelector("#link-preview").textContent.includes("Destination")'), 'local link preview');
+  assert.ok(await evaluate(`(() => { const r = document.querySelector('#link-preview').getBoundingClientRect(); return r.left >= 120 && r.top >= 120 && r.right <= innerWidth && r.bottom <= innerHeight; })()`));
+  await evaluate(`document.querySelector('#content a').dispatchEvent(new PointerEvent('pointerout', {bubbles: true})); document.querySelector('#content a').dispatchEvent(new MouseEvent('click', {bubbles: true, button: 0, ctrlKey: true, shiftKey: true}))`);
+  await until(() => evaluate('document.querySelector("#split-frame").contentDocument?.querySelector("#content h1")?.textContent === "Destination"'), 'Ctrl+Shift+click split');
+  await evaluate(`document.querySelector('#vim-motion').click(); document.dispatchEvent(new KeyboardEvent('keydown', {key: 'l', bubbles: true}))`);
+  await evaluate(`document.querySelector('#split-frame').contentWindow.scrollTo(0, 0); document.querySelector('#split-frame').contentDocument.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'j', bubbles: true, cancelable: true}))`);
+  assert.ok(await evaluate('document.querySelector("#split-frame").contentWindow.scrollY > 0'), 'Vim j scrolls the focused document');
+  assert.equal(await evaluate('document.activeElement.id'), 'split-frame');
+  await evaluate(`document.querySelector('#split-frame').contentDocument.dispatchEvent(new KeyboardEvent('keydown', {key: 'h', bubbles: true}))`);
+  assert.equal(await evaluate('document.activeElement.id'), 'content');
+  await evaluate(`document.querySelector('#vim-motion').click(); document.querySelector('#split-close').click()`);
+  await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', {key: 'k', ctrlKey: true}))`);
+  assert.equal(await evaluate('document.querySelector("#file-search").open'), true);
+  await evaluate(`document.querySelector('#file-search-input').value = 'ordinary.md'; document.querySelector('#file-search-input').dispatchEvent(new Event('input')); document.querySelector('#file-search-input').dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter'}))`);
+  await until(() => evaluate('document.querySelector("#content").textContent.includes("Normal text")'), 'file search navigation');
+  await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', {key: 'L', ctrlKey: true, shiftKey: true})); document.querySelector('#file-search-input').value = 'start.md'; document.querySelector('#file-search-input').dispatchEvent(new Event('input')); document.querySelector('#file-search-input').dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter'}))`);
+  await until(() => evaluate('document.querySelector("#split-frame").contentDocument?.querySelector("#content h1")?.textContent === "Start"'), 'right split');
+  await evaluate(`document.querySelector('#split-frame').contentDocument.dispatchEvent(new KeyboardEvent('keydown', {key: ' ', code: 'Space', ctrlKey: true, shiftKey: true, bubbles: true}))`);
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#library")).display'), 'none');
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#library-resizer")).display'), 'none');
+  await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', {key: ' ', code: 'Space', ctrlKey: true, shiftKey: true, bubbles: true}))`);
+  assert.notEqual(await evaluate('getComputedStyle(document.querySelector("#library")).display'), 'none');
+  await evaluate(`document.querySelector('#library-toggle').click()`);
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#library")).display'), 'none');
+  await evaluate(`document.querySelector('#library-toggle').click()`);
+  assert.notEqual(await evaluate('getComputedStyle(document.querySelector("#library")).display'), 'none');
+  await evaluate(`document.querySelector('#split-frame').contentDocument.dispatchEvent(new KeyboardEvent('keydown', {key: 'w', ctrlKey: true, bubbles: true, cancelable: true}))`);
+  assert.equal(await evaluate('document.querySelector("#split-pane").hidden'), true);
+  for (const [key, side] of [['J', 'bottom'], ['K', 'top']]) {
+    await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', {key: ${JSON.stringify(key)}, ctrlKey: true, shiftKey: true})); document.querySelector('#file-search-input').value = 'ordinary.md'; document.querySelector('#file-search-input').dispatchEvent(new Event('input')); document.querySelector('#file-search-input').dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter'}))`);
+    await until(() => evaluate(`document.querySelector('#panes').classList.contains(${JSON.stringify('split-' + side)}) && !document.querySelector('#split-pane').hidden`), `${side} split`);
+    const positions = await evaluate(`(() => { const a = document.querySelector('#panes > main').getBoundingClientRect(), b = document.querySelector('#split-pane').getBoundingClientRect(); return { main: a.top, split: b.top, mainHeight: a.height, splitHeight: b.height }; })()`);
+    assert.ok(side === 'top' ? positions.split < positions.main : positions.main < positions.split);
+    assert.ok(positions.mainHeight > 100 && positions.splitHeight > 100);
+    await evaluate(`document.querySelector('#split-close').click()`);
+  }
+  assert.equal(await evaluate(`(() => {const e = new KeyboardEvent('keydown', {key: 'w', ctrlKey: true, bubbles: true, cancelable: true}); document.dispatchEvent(e); return e.defaultPrevented; })()`), true);
+  await until(() => evaluate('document.querySelector("#title").textContent === "Fox Reader"'), 'close active document');
+  await evaluate(`document.querySelector('#split-close').click(); openDocument('start.md')`);
+  await until(() => evaluate('document.querySelector("#content h1")?.textContent === "Start"'), 'return after split');
+  assert.ok((await (await fetch(new URL('library', url))).json()).files.includes('hello.js'));
+  assert.equal((await fetch(new URL('vs/loader.js', url))).status, 200);
+  assert.equal((await fetch(new URL('vs/../../README.md', url))).status, 404);
+  assert.equal((await fetch(new URL('run', url), {method: 'POST', headers: {'Content-Type': 'application/json', Origin: 'http://evil.invalid'}, body: JSON.stringify({path: 'hello.js'})})).status, 403);
+  for (const [script, expected] of [['hello.js', 'hello node'], ['hello.py', 'hello python']]) {
+    await evaluate(`openDocument(${JSON.stringify(script)})`);
+    await until(() => evaluate('Boolean(document.querySelector("#code-editor .monaco-editor")) && !document.querySelector("#code-panel").hidden'), `${script} Monaco editor`);
+    if (script === 'hello.js') {
+      await evaluate('scriptEditor.setValue("console.log(\\\"edited node\\\")\\n")');
+      await evaluate('document.querySelector("#save-script").click()');
+      await until(() => readFileSync(join(first, script), 'utf8').includes('edited node'), 'saved script');
+      await evaluate('scriptEditor.setValue("console.log(\\\"hello node\\\")\\n")');
+    }
+    await evaluate(`document.querySelector('#run-script').click()`);
+    await until(() => evaluate('document.querySelector("#run-status").textContent.includes("Exit code:")'), `${script} execution`);
+    assert.equal(await evaluate('document.querySelector("#run-status").textContent'), 'Exit code: 0');
+    assert.ok(await evaluate(`outputEditor.getValue().includes(${JSON.stringify(expected)})`), await evaluate('outputEditor.getValue()'));
+  }
+  for (const script of ['input.js', 'input.py']) {
+    await evaluate(`openDocument(${JSON.stringify(script)})`);
+    await until(() => evaluate(`scriptPath === ${JSON.stringify(script)}`), `${script} editor`);
+    await evaluate(`document.querySelector('#run-script').click()`);
+    await until(() => evaluate('outputEditor.getValue().includes("Name: ") && inputOpen'), `${script} prompt`);
+    await evaluate(`outputEditor.focus(); outputEditor.trigger('test', 'type', {text: 'Ada'})`);
+    await cdp('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13});
+    await cdp('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13});
+    await until(() => evaluate('outputEditor.getValue().includes("Hello Ada")'), `${script} input response`);
+    if (script.endsWith('.js')) {
+      await until(() => evaluate('!document.querySelector("#close-input").disabled'), 'EOF available');
+      await evaluate(`document.querySelector('#close-input').click()`);
+    }
+    if (script.endsWith('.py')) {
+      await until(() => evaluate('outputEditor.getValue().includes("Color: ") && inputOpen'), 'second Python prompt');
+      await evaluate(`outputEditor.focus(); outputEditor.trigger('test', 'type', {text: 'blue'})`);
+      assert.equal(await evaluate('outputInput'), 'blue', await evaluate('outputEditor.getValue()'));
+      await cdp('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13});
+      await cdp('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13});
+      await until(() => evaluate('outputEditor.getValue().includes("Color is blue")'), 'second Python input response');
+    }
+    await until(() => evaluate('document.querySelector("#run-status").textContent === "Exit code: 0"'), `${script} interactive exit`);
+    assert.equal(await evaluate('!inputOpen'), true);
+  }
+  assert.equal((await fetch(new URL('run-input', url), {method: 'POST', headers: {'Content-Type': 'application/json', Origin: 'http://evil.invalid'}, body: JSON.stringify({id: 'bad', input: 'text'})})).status, 403);
+  await evaluate('openDocument("fail.js")');
+  await until(() => evaluate('scriptPath === "fail.js"'), 'failing script');
+  await evaluate(`document.querySelector('#run-script').click()`);
+  await until(() => evaluate('document.querySelector("#run-status").textContent === "Exit code: 7"'), 'script error exit');
+  assert.match(await evaluate('outputEditor.getValue()'), /script failed/);
+  await evaluate('openDocument("wait.js")');
+  await until(() => evaluate('scriptPath === "wait.js"'), 'long-running script');
+  await evaluate(`document.querySelector('#run-script').click()`);
+  await until(() => evaluate('outputEditor.getValue().includes("started")'), 'streamed script output');
+  await evaluate(`document.querySelector('#stop-script').click()`);
+  await until(() => evaluate('document.querySelector("#run-status").textContent.includes("Exit code:")'), 'stop script');
+  await evaluate('openDocument("start.md")');
+  await until(() => evaluate('document.querySelector("#content h1")?.textContent === "Start"'), 'return after scripts');
   const remoteRequests = [];
   connection.addEventListener('message', event => {
     const message = JSON.parse(event.data);
@@ -195,6 +307,7 @@ try {
   console.log('PASS: actual README remote images and badge, local SVG and image boundaries');
   await evaluate('document.querySelector("#content a").click()');
   await until(() => evaluate('document.querySelector("#content h1")?.textContent === "Destination" && location.hash === "#destination"'), 'relative Unicode link and anchor');
+  assert.ok(await evaluate(`(() => { const links = [...document.querySelectorAll('#outline nav a')]; const values = ['End', 'Details', 'More'].map(name => parseFloat(getComputedStyle(links.find(link => link.textContent === name)).paddingLeft)); return values[0] < values[1] && values[1] < values[2]; })()`), 'nested headings have greater indentation');
   await evaluate('history.back()');
   await until(() => evaluate('document.querySelector("#content h1")?.textContent === "Start"'), 'history back');
   await evaluate('history.forward()');
@@ -235,6 +348,10 @@ try {
   const beforeRestart = lua('_G.reader_url');
   await cdp('Page.navigate', { url: beforeRestart });
   await until(() => evaluate('document.querySelector("#middle") !== null'), 'document before restart');
+  await cdp('Page.bringToFront');
+  await evaluate('window.scrollTo(0, 0)');
+  await until(() => evaluate('window.scrollY === 0'), 'top before saving position');
+  await delay(100);
   await evaluate('document.querySelector("#middle").scrollIntoView(); window.scrollBy(0, 30)');
   await until(() => { try { return Object.values(JSON.parse(readFileSync(stateFile, 'utf8')).positions).some(position => position.heading === 'middle'); } catch { return false; } }, 'saved position');
   lua(`(function() vim.schedule(function() vim.cmd('qa!') end); return true end)()`);
@@ -256,6 +373,11 @@ try {
   await evaluate(`document.querySelector('#font').value = 'Arial'; document.querySelector('#font').dispatchEvent(new Event('change'))`);
   await until(() => evaluate('document.querySelector("#state-status").textContent.includes("could not be saved")'), 'unwritable state warning');
   assert.equal(await evaluate('document.querySelector("#font").value'), 'Arial');
+  await cdp('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Control', code: 'ControlLeft', windowsVirtualKeyCode: 17, modifiers: 2});
+  await cdp('Input.dispatchKeyEvent', {type: 'keyDown', key: 'w', code: 'KeyW', windowsVirtualKeyCode: 87, modifiers: 2});
+  await cdp('Input.dispatchKeyEvent', {type: 'keyUp', key: 'w', code: 'KeyW', windowsVirtualKeyCode: 87, modifiers: 2});
+  await cdp('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Control', code: 'ControlLeft', windowsVirtualKeyCode: 17, modifiers: 0});
+  await until(() => evaluate('document.querySelector("#title").textContent === "Fox Reader"'), 'Ctrl+W closes document');
   console.log('PASS: corrupt and unwritable state, origin checks, preferences and position across editor restarts and ports');
 } finally {
   connection?.close();

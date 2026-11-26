@@ -19,8 +19,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
-	"modernc.org/sqlite"
-	sqlite3 "modernc.org/sqlite/lib"
+	_ "modernc.org/sqlite"
 )
 
 type profile struct {
@@ -79,7 +78,7 @@ func (d *driver) connect(ctx context.Context, p profile, root string) (any, erro
 			path = "/" + path
 		}
 		u := url.URL{Scheme: "file", Path: path}
-		db, err = sql.Open("sqlite", u.String()+"?mode=ro&_pragma=query_only(1)")
+		db, err = sql.Open("sqlite", u.String()+"?mode=rw")
 	case "mysql":
 		cfg := mysql.NewConfig()
 		cfg.User = p.User
@@ -160,22 +159,15 @@ func (d *driver) connect(ctx context.Context, p profile, root string) (any, erro
 	version := ""
 	switch p.Engine {
 	case "sqlite":
-		_, err = sqlite.Limit(d.conn, sqlite3.SQLITE_LIMIT_ATTACHED, 0)
-		if err == nil {
-			err = d.conn.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&version)
-		}
+		err = d.conn.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&version)
 	case "mysql":
-		_, err = d.conn.ExecContext(ctx, "SET SESSION TRANSACTION READ ONLY")
-		if err == nil {
-			var mode string
-			err = d.conn.QueryRowContext(ctx, "SELECT VERSION(), @@SESSION.sql_mode").Scan(&version, &mode)
-			if strings.Contains(","+mode+",", ",NO_BACKSLASH_ESCAPES,") {
-				d.syntax = "mysql-no-backslash"
-			}
+		var mode string
+		err = d.conn.QueryRowContext(ctx, "SELECT VERSION(), @@SESSION.sql_mode").Scan(&version, &mode)
+		if strings.Contains(","+mode+",", ",NO_BACKSLASH_ESCAPES,") {
+			d.syntax = "mysql-no-backslash"
 		}
 	case "postgres":
-		_, err = d.conn.ExecContext(ctx, "SET default_transaction_read_only = on")
-		if err == nil {
+		{
 			schemas := p.Schemas
 			if len(schemas) == 0 {
 				schema := p.Schema
@@ -195,10 +187,10 @@ func (d *driver) connect(ctx context.Context, p profile, root string) (any, erro
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("Could not enforce a read-only session; verify server compatibility and restricted credentials")
+		return nil, fmt.Errorf("Could not initialize database session; verify server compatibility and permissions")
 	}
 	success = true
-	return map[string]any{"engine": p.Engine, "syntax": d.syntax, "version": version, "read_only": "engine-enforced read-only; use restricted credentials"}, nil
+	return map[string]any{"engine": p.Engine, "syntax": d.syntax, "version": version}, nil
 }
 func quote(s string) string { return `"` + strings.ReplaceAll(s, `"`, `""`) + `"` }
 func valueJSON(v any, typ string) (any, bool) {
@@ -272,6 +264,9 @@ func (d *driver) execute(ctx context.Context, s string, params []any, emit func(
 		}
 		set := resultSet{Rows: [][]any{}, Strings: [][]bool{}}
 		set.Columns, e = rows.Columns()
+		if set.Columns == nil {
+			set.Columns = []string{}
+		}
 		if e != nil {
 			rows.Close()
 			return nil, e

@@ -130,8 +130,9 @@ t.describe("Query SQL editor split", function()
 			local popup = view.result_popup
 			assert(environments.switch_environment(second))
 			t.expect(vim.api.nvim_win_get_config(popup).hide).toBe(true)
-			t.expect(vim.api.nvim_win_get_buf(owner) == sql).toBe(false)
+			t.expect(vim.api.nvim_win_is_valid(owner)).toBe(false)
 			assert(environments.switch_environment(first))
+			owner = view.sql_win
 			t.expect(not vim.api.nvim_win_get_config(popup).hide).toBe(true)
 			t.expect(vim.api.nvim_get_current_win()).toBe(popup)
 			t.expect(vim.api.nvim_win_get_buf(owner)).toBe(sql)
@@ -141,6 +142,7 @@ t.describe("Query SQL editor split", function()
 			assert(environments.switch_environment(second))
 			t.expect(vim.api.nvim_win_get_config(picker).hide).toBe(true)
 			assert(environments.switch_environment(first))
+			owner = view.sql_win
 			t.expect(vim.api.nvim_get_current_win()).toBe(picker)
 			key("q")
 
@@ -155,6 +157,7 @@ t.describe("Query SQL editor split", function()
 			t.expect(vim.api.nvim_get_current_win()).toBe(query_popup)
 			t.expect(state.mode).toBe("query")
 			query.hide()
+			owner = view.sql_win
 			vim.api.nvim_set_current_win(owner)
 			vim.cmd.FoxQ()
 			t.expect(vim.api.nvim_win_is_valid(owner)).toBe(false)

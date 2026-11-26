@@ -360,7 +360,7 @@ function M.draw_activity(state)
 	state.activity_text = "ACTIVITY | "
 		.. (active and active.status or "idle")
 		.. " | "
-		.. (active and (active.error_detail or active.executed_sql) or "Waiting for SELECT SQL")
+		.. (active and (active.error_detail or active.executed_sql) or "Waiting for SQL")
 	local buf = panel(state, "activity_buf")
 	set_lines(buf, { (state.activity_text:gsub("[\r\n]+", " | ")) })
 	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
@@ -782,7 +782,7 @@ function M.refresh_view(state)
 		.. " | "
 		.. (active and require("fox.langs.sql.dialect").read(state.active) or "SQL")
 		.. " | "
-		.. (connected and "READ ONLY" or "disconnected")
+		.. (connected and "CONNECTED" or "disconnected")
 		.. " | "
 		.. (active and active.status or "idle")
 		.. (state.autorun and " | Auto SELECT" or " | Manual")
@@ -2204,6 +2204,11 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 			end
 			return
 		end
+		if automatic and prepared.auto_safe == false then
+			connection.busy, item.status = false, "Automatic execution accepts read-only SELECT only"
+			M.refresh_view(state)
+			return
+		end
 		if automatic and prepared.parameters > 0 then
 			connection.busy, item.status = false, "Parameters needed: Ctrl+Enter / F5 runs with values"
 			M.refresh_view(state)
@@ -2212,7 +2217,7 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 		item.auto_sql, item.auto_connection = query, connection
 		local params = supplied_params or {}
 		local function execute()
-			if item.client ~= connection or not valid(buf, "buf") then
+			if item.client ~= connection or not valid(buf, "buf") or storage.root() ~= state.root then
 				connection.busy = false
 				return
 			end
@@ -2267,8 +2272,24 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 			vim.defer_fn(elapsed, 500)
 			M.refresh_view(state)
 		end
+		local function confirm_and_execute()
+			if not prepared.confirmation then
+				execute()
+				return
+			end
+			local words = { "fox", "river", "cedar", "cloud", "stone", "maple", "ocean", "tiger" }
+			local word = words[math.random(#words)]
+			vim.ui.input({ prompt = "Destructive SQL: type " .. word .. " to execute: " }, function(answer)
+				if answer == word then
+					execute()
+				else
+					connection.busy, item.status = false, "SQL canceled"
+					M.refresh_view(state)
+				end
+			end)
+		end
 		if supplied_params or prepared.parameters == 0 then
-			execute()
+			confirm_and_execute()
 			return
 		end
 		local engine = require("fox.langs.sql.dialect").read(buf) or item.syntax or profile.engine
@@ -2286,7 +2307,7 @@ function M.run(kind, supplied_sql, supplied_params, source_table, automatic, pop
 			return
 		end
 		params = bound
-		execute()
+		confirm_and_execute()
 	end)
 	M.refresh_view(state)
 end
@@ -2919,7 +2940,8 @@ function M.leave_environment()
 		root = root,
 		popups = {},
 		focus = current_win,
-		inline_focus = view and view.result_win == current_win and view or nil,
+		inline_focus = view and (view.result_win == current_win or view.sql_win == current_win) and view or nil,
+		inline_result_focus = view and view.result_win == current_win,
 	}
 	if state and valid(state.tab, "tab") then
 		if vim.api.nvim_get_current_tabpage() == state.tab then
@@ -2962,7 +2984,9 @@ function M.enter_environment(resume)
 	if resume.query and valid(resume.query.tab, "tab") then
 		M.show(resume.query.view)
 	end
-	local win = resume.inline_focus and resume.inline_focus.result_win or resume.focus
+	local win = resume.inline_focus
+			and (resume.inline_result_focus and resume.inline_focus.result_win or resume.inline_focus.sql_win)
+		or resume.focus
 	if valid(win, "win") and vim.api.nvim_win_get_tabpage(win) == vim.api.nvim_get_current_tabpage() then
 		vim.api.nvim_set_current_win(win)
 	end

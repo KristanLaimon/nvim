@@ -507,6 +507,7 @@ M.commands = {
 		end,
 		category = "Terminal",
 	},
+	{ name = "Install Agent Session Integrations", cmd = "TerminalAgentInstall", category = "Terminal" },
 	{ name = "Kill Current Terminal", cmd = "TerminalKillCurrent", category = "Terminal" },
 	{ name = "🖥️ Stretch Terminal Bigger (<Ctrl+Up>)", cmd = "TerminalIncreaseHeight", category = "Terminal" },
 	{ name = "🖥️ Shrink Terminal Smaller (<Ctrl+Down>)", cmd = "TerminalDecreaseHeight", category = "Terminal" },

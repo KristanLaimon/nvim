@@ -46,14 +46,12 @@ go test -mod=vendor ./...
 `tests/query/fixture.db` is a committed SQLite test fixture. To regenerate it
 after changing `fixture()` in `driver_test.go`, set `FOXQUERY_FIXTURE` to that
 file's absolute path and run `go test -mod=vendor -run TestExportLuaFixture`.
-Production code has no database creation or write operation.
+Manual SQL runs with the configured database permissions.
 
-The worker preserves the read-only guard, driver-bound `?` parameters, schema
+The worker supports manual writes, driver-bound `?` parameters, schema
 metadata, 30-second deadline, cancellation, 1,000-row/8-MiB result caps, and
-20,000-row metadata cap. SQLite also opens existing files read-only, enables
-query-only mode, and disables attachments. MySQL/PostgreSQL use read-only
-sessions. A capped MySQL stream is canceled and disconnected to avoid draining
-unbounded results. Use restricted server credentials as before.
+20,000-row metadata cap. SQLite opens existing database files. A capped MySQL stream is canceled and disconnected to avoid draining
+unbounded results. Use credentials appropriate for the intended operations.
 
 Profiles, saved queries, metadata caches, and local passwords keep their existing
 formats. No user databases or project-private files are migrated or deleted.

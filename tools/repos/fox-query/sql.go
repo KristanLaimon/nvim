@@ -12,8 +12,10 @@ type token struct {
 	start, end int
 }
 type statement struct {
-	sql       string
-	positions []int
+	sql          string
+	positions    []int
+	confirmation bool
+	autoSafe     bool
 }
 
 var word = regexp.MustCompile(`^[A-Za-z_][A-Za-z_0-9$]*|^[0-9]+(?:\.[0-9]+)?`)
@@ -122,12 +124,24 @@ func prepare(s, engine string) ([]statement, error) {
 	if err != nil {
 		return nil, err
 	}
-	forbidden := " INSERT UPDATE DELETE MERGE CREATE ALTER DROP TRUNCATE ATTACH DETACH PRAGMA COPY CALL DO SET RESET INTO LOCK UNLOCK GRANT REVOKE VACUUM ANALYZE ANALYSE LOAD "
 	pieces := []string{}
-	first, depth := 0, 0
+	first, depth, block := 0, 0, 0
+	create, trigger := false, false
 	for _, t := range tokens {
-		if t.kind == "word" && strings.Contains(forbidden, " "+strings.ToUpper(t.text)+" ") {
-			return nil, fmt.Errorf("Read-only querying only; unsupported operation: %s", strings.ToUpper(t.text))
+		if t.kind == "word" && depth == 0 {
+			w := strings.ToUpper(t.text)
+			if t.start == tokens[0].start || first > 0 && !create && w == "CREATE" {
+				create = w == "CREATE"
+			}
+			if create && w == "TRIGGER" {
+				trigger = true
+			}
+			if trigger && (w == "BEGIN" || block > 0 && w == "CASE") {
+				block++
+			}
+			if trigger && block > 0 && w == "END" {
+				block--
+			}
 		}
 		if t.kind != "symbol" {
 			continue
@@ -144,12 +158,14 @@ func prepare(s, engine string) ([]statement, error) {
 			if depth != 0 {
 				return nil, fmt.Errorf("Unsupported SQL statement body")
 			}
-			pieces = append(pieces, s[first:t.start])
-			first = t.end
+			if block == 0 {
+				pieces = append(pieces, s[first:t.start])
+				first, create, trigger = t.end, false, false
+			}
 		}
 	}
-	if depth != 0 {
-		return nil, fmt.Errorf("Unbalanced SQL parentheses")
+	if depth != 0 || block != 0 {
+		return nil, fmt.Errorf("Unbalanced SQL parentheses or trigger body")
 	}
 	pieces = append(pieces, s[first:])
 	out := []statement{}
@@ -158,10 +174,46 @@ func prepare(s, engine string) ([]statement, error) {
 		if len(ts) == 0 {
 			continue
 		}
-		if ts[0].kind != "word" || !strings.Contains(" SELECT WITH EXPLAIN ", " "+strings.ToUpper(ts[0].text)+" ") {
-			return nil, fmt.Errorf("Only SELECT, read-only WITH, and EXPLAIN are supported")
+		st := statement{sql: piece, autoSafe: ts[0].kind == "word" && strings.EqualFold(ts[0].text, "SELECT")}
+		// A nested WHERE does not limit the outer UPDATE or DELETE.
+		level, mutation, where := 0, false, false
+		triggerBody := false
+		for _, t := range ts {
+			if t.kind == "symbol" {
+				if t.text == "(" {
+					level++
+				}
+				if t.text == ")" {
+					level--
+				}
+			}
+			if t.kind != "word" {
+				continue
+			}
+			w := strings.ToUpper(t.text)
+			if w == "TRIGGER" {
+				triggerBody = true
+			}
+			if strings.Contains(" INSERT UPDATE DELETE MERGE CREATE ALTER DROP TRUNCATE ATTACH DETACH PRAGMA COPY CALL DO SET RESET INTO LOCK UNLOCK GRANT REVOKE VACUUM ANALYZE ANALYSE LOAD ", " "+w+" ") {
+				st.autoSafe = false
+			}
+			if strings.Contains(" DROP TRUNCATE ", " "+w+" ") {
+				st.confirmation = true
+			}
+			if w == "UPDATE" || w == "DELETE" {
+				if level != 0 || mutation || triggerBody {
+					st.confirmation = true
+				}
+				mutation = true
+				where = false
+			}
+			if mutation && w == "WHERE" && level == 0 {
+				where = true
+			}
 		}
-		st := statement{sql: piece}
+		if mutation && !where {
+			st.confirmation = true
+		}
 		for i, t := range ts {
 			if t.kind != "symbol" || t.text != "?" {
 				continue

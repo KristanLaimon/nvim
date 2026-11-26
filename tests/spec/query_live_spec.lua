@@ -1904,7 +1904,7 @@ describe("FoxQuerier live workflow", function()
 				return not item.client.busy
 			end, 10)).toBeTruthy()
 			expect(item.execution).toBe(4)
-			expect(item.status).toContain("Read-only")
+			expect(item.status).toContain("Automatic execution accepts read-only SELECT only")
 			vim.api.nvim_buf_set_lines(state.active, 0, -1, false, { "" })
 			local saved = storage.load(root, "private/session.json")
 			expect(saved.profile).toBe("local")
@@ -2178,6 +2178,28 @@ describe("FoxQuerier live workflow", function()
 			}
 			query.run("statement")
 			expect(executed).toEqual({ "42", "42" })
+			local prompts, executions = {}, 0
+			item.client.request = function(_, operation, _, callback)
+				if operation == "prepare" then
+					callback({ parameters = 0, statements = 1, confirmation = true })
+				else
+					executions = executions + 1
+					callback({ sets = {} })
+				end
+			end
+			local saved_input = vim.ui.input
+			local checked, check_err = pcall(function()
+				vim.ui.input = function(opts, callback)
+					prompts[#prompts + 1] = opts.prompt
+					callback(#prompts == 1 and "wrong" or opts.prompt:match("type (%a+) to execute"))
+				end
+				query.run("statement", "DELETE FROM t")
+				expect(executions).toBe(0)
+				query.run("statement", "DELETE FROM t")
+				expect(executions).toBe(1)
+			end)
+			vim.ui.input = saved_input
+			assert(checked, check_err)
 			vim.api.nvim_win_set_cursor(state.sql_win, { 2, 0 })
 			query.refresh_view(state)
 			expect(state.parameters_win).toBeNil()

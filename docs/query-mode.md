@@ -2,7 +2,7 @@
 
 [Back to wiki](index.md) · [SQL tooling](languages/sql.md) · [Design plan](../config/plans_notes_md/PLAN-FOXQUERYGRIP.md)
 
-FoxQuerier adds a read-only database workspace to the current project. The default layout has saved SQL files above connections on the far left, SQL in the center, the database explorer on the right, results beneath SQL, and a full-width activity bar at the bottom. **Shift+F3** toggles the live diagram: connections disappear and SQL/diagram use 30% / 70% of the width by default, with results still beneath SQL. A compact terminal uses panel toggles above the activity bar.
+FoxQuerier adds a database workspace to the current project. The default layout has saved SQL files above connections on the far left, SQL in the center, the database explorer on the right, results beneath SQL, and a full-width activity bar at the bottom. **Shift+F3** toggles the live diagram: connections disappear and SQL/diagram use 30% / 70% of the width by default, with results still beneath SQL. A compact terminal uses panel toggles above the activity bar.
 
 ## Start
 
@@ -25,7 +25,7 @@ In SQL, **Shift+K** (`K`) on a column such as `ca.nombre` shows its source table
 
 Query panes display connection/view/help hints. **Shift+F3** toggles the diagram in Normal/Insert/Visual mode; **gV** does the same in Normal mode. **gN** creates a query, **gE** focuses the explorer/diagram, **gR** opens results, and **F1** opens help. **Ctrl+h/j/k/l** navigate panes in Normal, Insert, and Visual modes; Ctrl+k does not invoke the file finder in Query panes. Completion uses the current statement's cached tables: unique columns are offered bare as well as qualified; ambiguous column names are offered qualified. Inside a subquery, completion prioritizes its own bare columns, then its qualified columns, then columns from outer queries. Bare names resolve in the nearest scope; outer aliases remain available for correlated references. Native and common CSI terminal sequences are mapped; F5 and Ctrl+X Ctrl+O avoid relying on modified Enter/Space delivery.
 
-Automatic execution is disabled by default. If explicitly enabled with `:FoxQueryAutoRun`, it considers only the statement at the cursor. It never submits UPDATE/DELETE/INSERT, WITH, or EXPLAIN automatically. The worker independently validates SQL and enforces read-only access; SELECT INTO is rejected. Unchanged SQL is not repeatedly submitted, requests are serialized, hidden projects do not auto-run, and bound parameters require a manual run. `:FoxQueryAutoRun` toggles automatic execution for the project in RAM. SELECT can still do expensive work or invoke server functions; use restricted credentials and disable auto-run when appropriate.
+Automatic execution is disabled by default. If explicitly enabled with `:FoxQueryAutoRun`, it considers only the statement at the cursor. It never submits UPDATE/DELETE/INSERT, WITH, or EXPLAIN automatically. The worker independently limits automatic execution to SELECT statements without write operations, including SELECT INTO. Unchanged SQL is not repeatedly submitted, requests are serialized, hidden projects do not auto-run, and bound parameters require a manual run. `:FoxQueryAutoRun` toggles automatic execution for the project in RAM. SELECT can still do expensive work or invoke server functions; use restricted credentials and disable auto-run when appropriate.
 
 ## SQL tabs in the editor
 
@@ -160,15 +160,15 @@ Fetching stops at 1,000 rows or 8 MiB for a run; table browsing requests 200 row
 
 The worker requests cancellation after 30 seconds. For MySQL, a truncated unbuffered result closes the session instead of draining arbitrary remaining rows; reconnect before another query. If cancellation cannot be verified, the UI disconnects the worker and requires reconnection. Metadata queries are bounded at 20,000 objects per catalog query and report an error rather than silently claiming complete coverage.
 
-Read-only behavior is enforced with SQLite read-only URI/query-only mode, MySQL session transaction read-only mode, and PostgreSQL read-only transactions. Use restricted database credentials too: SELECT functions and external server effects are not comprehensively controlled by statement classification. SQL writes, editable grids, transaction UI, routine execution, native placeholder formats, automatic recovery drafts, full SQL history, and virtual relationships remain outside this first implementation. Session settings/temporary objects cannot be created through the read-only SQL guard.
+SQL batches are split on semicolons, with SQLite trigger bodies kept together. MySQL compound routine bodies and executable comments are not supported. Manual SQL can modify databases using the permissions of the configured credentials. UPDATE and DELETE without an outer WHERE, and DROP and TRUNCATE statements, require typing a randomly chosen word before execution. A WHERE clause does not guarantee a safe operation; review SQL before running it. Automatic execution remains restricted to SELECT, but functions may still have side effects. Editable grids, transaction UI, native placeholder formats, automatic recovery drafts, full SQL history, and virtual relationships remain outside this implementation.
 
 ## Validation and remaining platform checks
 
 Latest focused Linux validation: Go backend tests passed, including the MariaDB primary-key regression, and **81 Query Mode tests passed**.
 
-Automated tests use disposable SQLite fixtures for binding, batches, metadata, read-only enforcement, row limits, cancellation, and actual Neovim-to-Go transport. Lua tests cover scopes, aliases, composite JOINs, diagram roles, project storage, view switching, and session exclusion.
+Automated tests use disposable SQLite fixtures for binding, batches, metadata, write execution, row limits, cancellation, and actual Neovim-to-Go transport. Lua tests cover scopes, aliases, composite JOINs, diagram roles, project storage, view switching, and session exclusion.
 
-Database execution uses the bundled Go worker. Backend tests use real disposable SQLite files and cover binding, Unicode, numeric precision, binary cells, SQL guards, metadata, engine-enforced read-only access, attachment rejection, missing-file handling, row/byte caps, cancellation, protocol recovery, and full error diagnostics. Lua tests exercise the bundled executable using a committed SQLite fixture.
+Database execution uses the bundled Go worker. Backend tests use real disposable SQLite files and cover binding, Unicode, numeric precision, binary cells, SQL guards, metadata, write execution, missing-file handling, row/byte caps, cancellation, protocol recovery, and full error diagnostics. Lua tests exercise the bundled executable using a committed SQLite fixture.
 
 Validation of the UI and environment update on Windows: **823 repository tests passed**, including **62 Query tests**. Changed Lua files pass StyLua/Luacheck, and all 787 Lua files parse. The backend and bundled executables are unchanged by this update.
 

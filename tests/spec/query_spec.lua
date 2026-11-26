@@ -243,6 +243,14 @@ ORDER BY carrera, semestre;]]
 		expect(sql.analyze(string.rep(" ", 128 * 1024 + 1), metadata).partial).toBeTruthy()
 	end)
 	it("does not split SQL at semicolons in quotes/comments", function()
+		local trigger =
+			"CREATE TRIGGER tr AFTER UPDATE ON things BEGIN INSERT INTO things VALUES (CASE WHEN 1 THEN 2 END); UPDATE things SET id=1; END; SELECT 42;"
+		local trigger_statements = sql.statements(trigger, "sqlite")
+		expect(#trigger_statements).toBe(2)
+		expect(trigger_statements[1].sql).toContain("UPDATE things SET id=1;")
+		expect(sql.scope(trigger, trigger:find("UPDATE things", 1, true), "statement", nil, "sqlite")).toContain(
+			"CREATE TRIGGER"
+		)
 		local statements = sql.statements("SELECT ';'; -- ;\n SELECT 'x';")
 		expect(#statements).toBe(2)
 		expect(statements[1].sql).toBe("SELECT ';'")

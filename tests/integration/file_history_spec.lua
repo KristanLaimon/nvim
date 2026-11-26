@@ -12,11 +12,11 @@ t.describe("file history entry points", function()
 		vim.wait(100)
 	end)
 
-	t.it("binds gH only in Neo-tree and ignores directory nodes", function()
+	t.it("binds F2 in Neo-tree and ignores directory nodes", function()
 		vim.cmd("Neotree show")
 		local state = require("neo-tree.sources.manager").get_state("filesystem")
 		vim.api.nvim_set_current_win(state.winid)
-		t.expect(vim.fn.maparg("gH", "n", false, true).buffer).toBe(1)
+		t.expect(vim.fn.maparg("<F2>", "n", false, true).buffer).toBe(1)
 		local command = require("neo-tree.setup").config.commands.file_history
 		local node = { type = "directory", path = vim.fn.getcwd() }
 		local selection = { tree = {

@@ -178,8 +178,11 @@ function M.buffers(win)
 	order = valid
 	return visible_buffers(order)
 end
-function M.start_group(win, buf)
-	window_groups[win] = { buf }
+function M.group(win)
+	return vim.list_extend({}, window_groups[win] or {})
+end
+function M.start_group(win, buf, buffers)
+	window_groups[win] = buffers and #buffers > 0 and buffers or { buf }
 	grouped_pages[vim.api.nvim_win_get_tabpage(win)] = true
 	M.refresh()
 end

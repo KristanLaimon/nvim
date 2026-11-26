@@ -13,15 +13,27 @@ Clicking terminal content enters terminal input mode, including when the termina
 1. **9 Independent Buffers**: Switch between terminals 1 through 9 instantly using `<Alt + 1..9>`.
 2. **Toggle Key**: Press `<Ctrl + ;>` to toggle open or hidden state for the currently selected terminal.
 3. **Floating & Docked Layouts**: Toggle between Docked Split (bottom, default on fresh install) and Floating Overlay ("on top", centered popup or bottom overlay) so the buffers and dashboard above do not resize or shift.
-4. **Height & Layout Persistence**: Remembers mouse-dragged split height (`terminal_height`) and layout selection (`terminal_layout`).
-5. **WSL Interop**: Automatically spawns terminal in WSL when working inside a WSL filesystem path.
-6. **Return Focus**: Hiding the terminal returns to the window used to enter it, including Git Center, even when the terminal was already visible.
+4. **Live Float Title**: Floating windows show the terminal title next to the slot number and update when the running application changes it.
+5. **Height & Layout Persistence**: Remembers mouse-dragged split height (`terminal_height`) and layout selection (`terminal_layout`).
+6. **WSL Interop**: Automatically spawns terminal in WSL when working inside a WSL filesystem path.
+7. **Return Focus**: Hiding the terminal returns to the window used to enter it, including Git Center, even when the terminal was already visible.
+
+---
+
+## Agent session restoration
+
+Run `:TerminalAgentInstall` once to register integrations for Codex, Claude Code, OpenCode and Antigravity (`agy`). Pass an agent name to install only that integration, for example `:TerminalAgentInstall codex`. Restart any running agent after installation and approve the FoxVim hook in Codex if prompted. Antigravity reports its conversation ID after the first prompt.
+
+Start each agent from a FoxVim terminal. FoxVim records its conversation ID and slot in Neovim's local state for that project. When you return, the agent terminals are placed in consecutive slots starting at 1, in their previous relative order. After restarting Neovim, it reopens the same conversations using the installed CLI's resume command. Restored terminals start in the background and can be opened with `Alt+1..9`.
+
+Closing a terminal with `:TerminalKillCurrent` removes its saved session. The agent's own history supplies the conversation after a restart.
 
 ---
 
 ## ⌨️ Terminal Shortcuts & Commands
 
 - `<Alt + 1..9>`: Select & switch to terminal #1..9 (Normal, Insert, and Terminal modes)
+- `<Ctrl + Shift + Alt + 1..9>` inside a terminal: move it to that slot, swapping with the existing terminal if occupied. The outer terminal must support these modified keys.
 - `<Ctrl + ;>`: Toggle show/hide for selected terminal
 - `<Ctrl + Up>`: Stretch terminal bigger (stretching upwards from top edge in bottom float / docked split; centered expansion in center float)
 - `<Ctrl + Down>`: Shrink terminal smaller (anchored at bottom edge in bottom float / docked split; centered shrink in center float)

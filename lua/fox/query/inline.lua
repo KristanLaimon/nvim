@@ -176,18 +176,49 @@ function M.leave_environment(root)
 	local resume = {}
 	for win, view in pairs(views) do
 		if view.root == root and shown(view) then
-			resume[#resume + 1] = view
 			hide(view)
-			local placeholder = vim.api.nvim_create_buf(false, false)
-			vim.bo[placeholder].bufhidden = "wipe"
-			vim.api.nvim_win_set_buf(win, placeholder)
+			local anchor
+			for _, candidate in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+				if candidate ~= win and vim.api.nvim_win_get_config(candidate).relative == "" then
+					anchor = anchor or candidate
+					if not views[candidate] then
+						anchor = candidate
+						break
+					end
+				end
+			end
+			if anchor then
+				local pos, other = vim.fn.win_screenpos(win), vim.fn.win_screenpos(anchor)
+				local split = pos[1] == other[1] and (pos[2] < other[2] and "left" or "right")
+					or (pos[1] < other[1] and "above" or "below")
+				resume[#resume + 1] = {
+					view = view,
+					anchor = anchor,
+					split = split,
+					buffers = require("fox.ui.tabline").group(win),
+				}
+				views[win] = nil
+				vim.api.nvim_win_close(win, true)
+			else
+				resume[#resume + 1] = { view = view }
+				local placeholder = vim.api.nvim_create_buf(false, false)
+				vim.bo[placeholder].bufhidden = "wipe"
+				vim.api.nvim_win_set_buf(win, placeholder)
+			end
 		end
 	end
 	return resume
 end
 
 function M.enter_environment(resume)
-	for _, view in ipairs(resume or {}) do
+	for _, entry in ipairs(resume or {}) do
+		local view = entry.view
+		if entry.anchor and vim.api.nvim_buf_is_valid(view.active) then
+			local anchor = vim.api.nvim_win_is_valid(entry.anchor) and entry.anchor or vim.api.nvim_get_current_win()
+			local win = vim.api.nvim_open_win(view.active, false, { win = anchor, split = entry.split })
+			view.sql_win, views[win] = win, view
+			require("fox.ui.tabline").start_group(win, view.active, entry.buffers)
+		end
 		if views[view.sql_win] == view and attached(view) then
 			vim.api.nvim_win_set_buf(view.sql_win, view.active)
 			M.refresh(view)

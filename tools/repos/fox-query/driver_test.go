@@ -64,14 +64,31 @@ func TestSQLite(t *testing.T) {
 	if execute(t, d, "SELECT total FROM orders")["sets"].([]resultSet)[0].Rows[0][0] != "12345678901234567890.12" {
 		t.Fatal("precision lost")
 	}
-	if _, e = d.conn.ExecContext(context.Background(), "DELETE FROM orders"); e == nil {
-		t.Fatal("database allowed writes")
+	execute(t, d, "UPDATE customers SET name = 'Grace' WHERE id = 1")
+	if execute(t, d, "SELECT name FROM customers WHERE id = 1")["sets"].([]resultSet)[0].Rows[0][0] != "Grace" {
+		t.Fatal("update was not persisted")
 	}
-	if _, e = d.conn.ExecContext(context.Background(), "ATTACH ':memory:' AS secret"); e == nil {
-		t.Fatal("database allowed attachments")
-	}
+	execute(t, d, "ATTACH ':memory:' AS extra")
+	execute(t, d, "CREATE TABLE extra.items (id INTEGER)")
+	execute(t, d, "DETACH extra")
 	if _, e = d.execute(context.Background(), "SELECT ?", nil, func(any) {}, 1); e == nil {
 		t.Fatal("missing parameter allowed")
+	}
+}
+func TestSQLiteTrigger(t *testing.T) {
+	d := connected(t)
+	script := `CREATE TRIGGER audit_name AFTER UPDATE ON customers BEGIN
+		INSERT INTO things(name) VALUES (CASE WHEN NEW.name = 'Grace' THEN 'updated' ELSE 'other' END);
+		UPDATE orders SET total = 'changed' WHERE id = 10;
+	END; UPDATE customers SET name='Grace' WHERE id=1;`
+	ss, err := prepare(script, "sqlite")
+	if err != nil || len(ss) != 2 || !ss[0].confirmation {
+		t.Fatalf("trigger split or guard failed: %+v %v", ss, err)
+	}
+	execute(t, d, script)
+	r := execute(t, d, "SELECT name FROM things WHERE name = 'updated'")["sets"].([]resultSet)[0]
+	if len(r.Rows) != 1 {
+		t.Fatal("trigger did not execute", r)
 	}
 }
 func TestMissingFile(t *testing.T) {
@@ -109,9 +126,26 @@ func TestSQL(t *testing.T) {
 	if _, err := prepare("SELECT 1 /* outer /* inner */ outer */", "postgres"); err != nil {
 		t.Fatal(err)
 	}
-	for _, s := range []string{"DELETE FROM customers", "WITH x AS (SELECT 1) DELETE FROM orders", "SELECT 1 INTO OUTFILE 'x'", "/*! SELECT 1 */", "ATTACH 'x' AS x", "PRAGMA query_only=OFF", "SELECT 'unfinished", "SELECT (1", "SELECT ?1"} {
+	for _, s := range []string{"/*! SELECT 1 */", "SELECT 'unfinished", "SELECT (1", "SELECT ?1"} {
 		if _, e := prepare(s, "mysql"); e == nil {
 			t.Fatal("accepted", s)
+		}
+	}
+	for _, tc := range []struct {
+		sql                    string
+		confirmation, autoSafe bool
+	}{
+		{"UPDATE customers SET name='x'", true, false},
+		{"UPDATE customers SET name=(SELECT name FROM customers WHERE id=1)", true, false},
+		{"DELETE FROM customers WHERE id=1", false, false},
+		{"WITH x AS (SELECT 1) DELETE FROM customers", true, false},
+		{"DROP TABLE customers", true, false},
+		{"SELECT 1 INTO new_table", false, false},
+		{"SELECT 'DELETE FROM customers'", false, true},
+	} {
+		statements, err := prepare(tc.sql, "sqlite")
+		if err != nil || statements[0].confirmation != tc.confirmation || statements[0].autoSafe != tc.autoSafe {
+			t.Fatalf("%s: %+v %v", tc.sql, statements, err)
 		}
 	}
 	ss, e := prepare("SELECT ';?' AS literal; -- ?\nSELECT ?", "sqlite")

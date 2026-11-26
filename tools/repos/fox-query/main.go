@@ -63,11 +63,13 @@ func serve(input io.Reader, output io.Writer) {
 			case r.Op == "prepare":
 				var ss []statement
 				ss, err = prepare(r.SQL, d.syntax)
-				n := 0
+				n, confirmation, autoSafe := 0, false, true
 				for _, s := range ss {
 					n += len(s.positions)
+					confirmation = confirmation || s.confirmation
+					autoSafe = autoSafe && s.autoSafe
 				}
-				result = object{"parameters": n, "statements": len(ss)}
+				result = object{"parameters": n, "statements": len(ss), "confirmation": confirmation, "auto_safe": autoSafe}
 			case r.Op == "execute":
 				result, err = d.execute(ctx, r.SQL, r.Params, emit, r.ID)
 			default:

@@ -98,23 +98,38 @@ function M.statements(text, engine)
 	if incomplete then
 		return nil, "SQL contains an unfinished quote or comment; select complete SQL explicitly"
 	end
-	local result, first, depth = {}, 1, 0
+	local result, first, depth, block = {}, 1, 0, 0
+	local create, trigger = false, false
 	for _, token in ipairs(tokens) do
+		if token.kind == "word" and depth == 0 then
+			if token == tokens[1] or first > 1 and not create and token.upper == "CREATE" then
+				create = token.upper == "CREATE"
+			end
+			if create and token.upper == "TRIGGER" then
+				trigger = true
+			end
+			if trigger and (token.upper == "BEGIN" or block > 0 and token.upper == "CASE") then
+				block = block + 1
+			end
+			if trigger and block > 0 and token.upper == "END" then
+				block = block - 1
+			end
+		end
 		if token.kind == "symbol" and token.value == "(" then
 			depth = depth + 1
 		end
 		if token.kind == "symbol" and token.value == ")" then
 			depth = depth - 1
 		end
-		if token.kind == "symbol" and token.value == ";" and depth == 0 then
+		if token.kind == "symbol" and token.value == ";" and depth == 0 and block == 0 then
 			local chunk = text:sub(first, token.first - 1)
 			if #M.tokens(chunk, engine) > 0 then
 				result[#result + 1] = { sql = chunk, first = first, last = token.last }
 			end
-			first = token.last + 1
+			first, create, trigger = token.last + 1, false, false
 		end
 	end
-	if depth ~= 0 then
+	if depth ~= 0 or block ~= 0 then
 		return nil, "Unbalanced SQL parentheses; select complete SQL explicitly"
 	end
 	local tail = text:sub(first)

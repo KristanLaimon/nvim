@@ -98,6 +98,84 @@ local code_win = nil
 
 --- Current terminal split height, persisted across sessions.
 local terminal_height_cached = nil
+local agent_sessions = require("fox.terminal.agent_sessions")
+local agent_terminals, agent_restored = {}, {}
+local agent_event_dir = vim.fn.stdpath("state")
+	.. "/fox/agent-events/"
+	.. vim.fn.getpid()
+	.. "-"
+	.. tostring((vim.uv or vim.loop).hrtime())
+local agent_shutdown = false
+
+local function agent_token()
+	return tostring(vim.fn.getpid()) .. "-" .. tostring((vim.uv or vim.loop).hrtime())
+end
+
+local function agent_environment(token)
+	return {
+		FOXVIM_AGENT_EVENT_DIR = agent_event_dir,
+		FOXVIM_TERMINAL_ID = token,
+	}
+end
+
+local function save_agent_terminals(root)
+	local saved = agent_sessions.load(root)
+	for _, tracked in pairs(agent_terminals) do
+		if tracked.root == root and tracked.saved_slot and vim.api.nvim_buf_is_valid(tracked.buf) then
+			for i = #saved, 1, -1 do
+				if saved[i].slot == tracked.saved_slot then
+					table.remove(saved, i)
+				end
+			end
+		end
+	end
+	for _, tracked in pairs(agent_terminals) do
+		if tracked.root == root and tracked.session and vim.api.nvim_buf_is_valid(tracked.buf) then
+			local slot = vim.b[tracked.buf].fox_term_num
+			for i = #saved, 1, -1 do
+				if saved[i].slot == slot then
+					table.remove(saved, i)
+				end
+			end
+			saved[#saved + 1] = { slot = slot, agent = tracked.session.agent, id = tracked.session.id }
+			tracked.saved_slot = slot
+		elseif tracked.root == root then
+			tracked.saved_slot = nil
+		end
+	end
+	local ok, err = agent_sessions.save(root, saved)
+	if not ok then
+		vim.notify("Could not save agent sessions: " .. tostring(err), vim.log.levels.ERROR)
+	end
+end
+
+local function poll_agent_events()
+	local changed = {}
+	local uv = vim.uv or vim.loop
+	for token, tracked in pairs(agent_terminals) do
+		local file = agent_event_dir .. "/" .. token .. ".json"
+		local claimed = file .. ".reading"
+		if uv.fs_rename(file, claimed) then
+			local event = store.load(claimed, {})
+			uv.fs_unlink(claimed)
+			if event.event == "end" then
+				if not agent_shutdown and vim.deep_equal(tracked.session, { agent = event.agent, id = event.id }) then
+					tracked.session = nil
+					changed[tracked.root] = true
+				end
+			elseif agent_sessions.command({ slot = 1, agent = event.agent, id = event.id }) then
+				tracked.session = { agent = event.agent, id = event.id }
+				changed[tracked.root] = true
+			end
+		end
+		if not vim.api.nvim_buf_is_valid(tracked.buf) then
+			agent_terminals[token] = nil
+		end
+	end
+	for root in pairs(changed) do
+		save_agent_terminals(root)
+	end
+end
 
 -- ============================================================================
 -- HEIGHT PERSISTENCE
@@ -439,8 +517,20 @@ local function fill_window(t, n, win)
 		end
 	end
 
-	vim.cmd(terminal_open_cmd())
+	local token = agent_token()
+	local env, previous = agent_environment(token), {}
+	for key, value in pairs(env) do
+		previous[key], vim.env[key] = vim.env[key] or false, value
+	end
+	local ok, err = pcall(vim.cmd, terminal_open_cmd())
+	for key, value in pairs(previous) do
+		vim.env[key] = value or nil
+	end
+	if not ok then
+		error(err)
+	end
 	t.buf = vim.api.nvim_get_current_buf()
+	agent_terminals[token] = { buf = t.buf, root = vim.fs.normalize(cwd) }
 	vim.bo[t.buf].buflisted = false
 	vim.b[t.buf].fox_term_num = n
 	vim.b[t.buf].fox_is_multi_term = true
@@ -527,10 +617,29 @@ end
 --- @param n integer Slot number.
 local function update_float_title(win, n)
 	if is_floating_win(win) then
+		local title = vim.b[vim.api.nvim_win_get_buf(win)].term_title
+		title = type(title) == "string" and vim.trim(title:gsub("[%c]", " ")) or ""
 		pcall(vim.api.nvim_win_set_config, win, {
-			title = " 🖥️ Terminal #" .. n .. " ",
+			title = " 🖥️ Terminal #" .. n .. (title ~= "" and " - " .. title or "") .. " ",
 			title_pos = "center",
 		})
+	end
+end
+
+local function swap_slots(source, target)
+	terminals[source], terminals[target] = terminals[target], terminals[source]
+	for _, slot in ipairs({ source, target }) do
+		local terminal = terminals[slot]
+		if terminal and is_valid_buf(terminal.buf) then
+			vim.b[terminal.buf].fox_term_num = slot
+			for _, win in ipairs(vim.fn.win_findbuf(terminal.buf)) do
+				update_float_title(win, slot)
+			end
+		end
+	end
+	local selected = _G._fox_selected_terminal or 1
+	if selected == source or selected == target then
+		_G._fox_selected_terminal = selected == source and target or source
 	end
 end
 
@@ -582,6 +691,28 @@ function M.select_terminal(n)
 	vim.notify("🖥️ Terminal #" .. n .. " active", vim.log.levels.INFO, { title = "Multi-Terminal" })
 end
 
+--- Moves the current terminal to a slot, exchanging existing buffers if needed.
+function M.move_terminal(target)
+	local buf = vim.api.nvim_get_current_buf()
+	local source = vim.b[buf].fox_term_num
+	if not vim.b[buf].fox_is_multi_term or not source or target == source or target < 1 or target > M.settings.count then
+		return
+	end
+	sync_terminals()
+	local other = terminals[target]
+	swap_slots(source, target)
+	_G._fox_selected_terminal = target
+	local roots = {}
+	for _, tracked in pairs(agent_terminals) do
+		if tracked.session and (tracked.buf == buf or (other and tracked.buf == other.buf)) then
+			roots[tracked.root] = true
+		end
+	end
+	for root in pairs(roots) do
+		save_agent_terminals(root)
+	end
+end
+
 --- Opens terminal `n`, creating the dock pane or floating window when there is none.
 --- @param n integer|nil Slot number. Defaults to the selected terminal.
 --- @param interactive boolean|nil Enter terminal mode and close Git Center unless false.
@@ -619,6 +750,7 @@ function M.open_terminal(n, interactive)
 		end
 	end
 	vim.api.nvim_set_current_win(t.win)
+	update_float_title(t.win, n)
 	if interactive ~= false then
 		vim.cmd("startinsert")
 	end
@@ -649,6 +781,13 @@ function M.kill_current_terminal()
 		return
 	end
 	local buf = vim.api.nvim_win_get_buf(win)
+	for token, tracked in pairs(agent_terminals) do
+		if tracked.buf == buf then
+			tracked.session = nil
+			save_agent_terminals(tracked.root)
+			agent_terminals[token] = nil
+		end
+	end
 	pcall(vim.cmd, "stopinsert")
 	vim.api.nvim_buf_delete(buf, { force = true })
 	if vim.api.nvim_win_is_valid(win) then
@@ -853,6 +992,81 @@ local function paste_clipboard()
 	end
 end
 
+local function restore_agent_terminals(root)
+	root = vim.fs.normalize(root)
+	poll_agent_events()
+	if agent_restored[root] then
+		local active = {}
+		for _, tracked in pairs(agent_terminals) do
+			if
+				tracked.root == root
+				and tracked.session
+				and vim.api.nvim_buf_is_valid(tracked.buf)
+				and vim.b[tracked.buf].fox_env_slot == (_G._fox_active_env_slot or 1)
+			then
+				active[#active + 1] = tracked
+			end
+		end
+		if #active > 0 then
+			sync_terminals()
+			table.sort(active, function(a, b)
+				return vim.b[a.buf].fox_term_num < vim.b[b.buf].fox_term_num
+			end)
+			for target, tracked in ipairs(active) do
+				local source = vim.b[tracked.buf].fox_term_num
+				if source ~= target then
+					swap_slots(source, target)
+				end
+			end
+			save_agent_terminals(root)
+			return
+		end
+	end
+	agent_restored[root] = true
+	local saved = agent_sessions.compact(agent_sessions.load(root))
+	if #saved == 0 then
+		return
+	end
+	sync_terminals()
+	for _, session in ipairs(saved) do
+		local free_slot = session.slot
+		while free_slot <= M.settings.count and is_valid_buf(get_term(free_slot).buf) do
+			free_slot = free_slot + 1
+		end
+		if free_slot <= M.settings.count then
+			local command = agent_sessions.command(session)
+			if vim.fn.executable(command[1]) == 1 then
+				local buf, token = vim.api.nvim_create_buf(false, true), agent_token()
+				vim.b[buf].fox_term_num, vim.b[buf].fox_is_multi_term = free_slot, true
+				vim.b[buf].fox_env_slot = _G._fox_active_env_slot or 1
+				local job
+				vim.api.nvim_buf_call(buf, function()
+					job = vim.fn.jobstart(command, { term = true, cwd = root, env = agent_environment(token) })
+				end)
+				if job > 0 then
+					get_term(free_slot).buf = buf
+					if free_slot ~= session.slot then
+						swap_slots(free_slot, session.slot)
+					end
+					agent_terminals[token] =
+						{ buf = buf, root = root, session = { agent = session.agent, id = session.id }, saved_slot = session.slot }
+				else
+					vim.api.nvim_buf_delete(buf, { force = true })
+					vim.notify("Could not resume " .. session.agent, vim.log.levels.ERROR)
+				end
+			else
+				vim.notify("Cannot resume " .. session.agent .. ": executable not found", vim.log.levels.WARN)
+			end
+		else
+			vim.notify("Cannot resume " .. session.agent .. ": no free terminal slot", vim.log.levels.WARN)
+		end
+	end
+	local ok, err = agent_sessions.save(root, saved)
+	if not ok then
+		vim.notify("Could not save agent sessions: " .. tostring(err), vim.log.levels.ERROR)
+	end
+end
+
 --- Binds selection, toggling, closing and clipboard keys, and starts the
 --- autocmd that remembers a resized terminal's height.
 function M.setup()
@@ -861,6 +1075,33 @@ function M.setup()
 	end
 	M._did_setup = true
 
+	local directory_ok = pcall(vim.fn.mkdir, agent_event_dir, "p", 448)
+	if not directory_ok then
+		vim.notify("Agent sessions cannot be saved: state directory is not writable", vim.log.levels.WARN)
+	end
+	local timer = (vim.uv or vim.loop).new_timer()
+	timer:start(250, 250, vim.schedule_wrap(poll_agent_events))
+	local agent_group = vim.api.nvim_create_augroup("FoxTerminalAgentSessions", { clear = true })
+	vim.api.nvim_create_autocmd("DirChanged", {
+		group = agent_group,
+		callback = function()
+			vim.schedule(function()
+				restore_agent_terminals(vim.fn.getcwd())
+			end)
+		end,
+	})
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		group = agent_group,
+		callback = function()
+			agent_shutdown = true
+			poll_agent_events()
+			timer:stop()
+			timer:close()
+		end,
+	})
+	vim.schedule(function()
+		restore_agent_terminals(vim.fn.getcwd())
+	end)
 	sync_terminals()
 
 	vim.api.nvim_create_autocmd("WinResized", {
@@ -888,6 +1129,28 @@ function M.setup()
 			})
 		end
 	end
+
+	vim.api.nvim_create_user_command("TerminalAgentInstall", function(opts)
+		local agents = opts.args == "" and { "codex", "claude", "opencode", "agy" } or { opts.args }
+		local failures = {}
+		for _, agent in ipairs(agents) do
+			local ok, result = pcall(require("fox.terminal.hook_installer").install, agent)
+			if not ok then
+				failures[#failures + 1] = agent .. ": " .. tostring(result)
+			end
+		end
+		if #failures > 0 then
+			vim.notify("Agent integrations: " .. table.concat(failures, "\n"), vim.log.levels.ERROR)
+		else
+			vim.notify("Agent session integrations installed. Restart running agents; Codex may ask you to trust the hook.")
+		end
+	end, {
+		nargs = "?",
+		complete = function()
+			return { "codex", "claude", "opencode", "agy" }
+		end,
+		desc = "Install agent session integrations",
+	})
 
 	vim.api.nvim_create_user_command("TerminalToggle", function()
 		M.toggle_selected_terminal()
@@ -980,6 +1243,11 @@ function M.setup()
 
 	local function setup_term_buffer(bufnr)
 		if is_term_buf(bufnr) then
+			for n = 1, M.settings.count do
+				vim.keymap.set({ "n", "t" }, "<C-S-A-" .. n .. ">", function()
+					M.move_terminal(n)
+				end, { buffer = bufnr, silent = true, desc = "Move terminal to slot " .. n })
+			end
 			vim.keymap.set("t", "<C-Space>", "<C-\\><C-n>", {
 				buffer = bufnr,
 				silent = true,
@@ -1035,6 +1303,22 @@ function M.setup()
 		end
 	end
 
+	vim.api.nvim_create_autocmd("TermRequest", {
+		group = auto_insert_group,
+		callback = function(args)
+			vim.schedule(function()
+				if vim.api.nvim_buf_is_valid(args.buf) then
+					local n = vim.b[args.buf].fox_term_num
+					for _, win in ipairs(vim.fn.win_findbuf(args.buf)) do
+						if n then
+							update_float_title(win, n)
+						end
+					end
+				end
+			end)
+		end,
+	})
+
 	vim.api.nvim_create_autocmd({ "TermOpen", "BufEnter", "WinEnter", "BufWinEnter" }, {
 		group = auto_insert_group,
 		callback = function(args)
@@ -1062,9 +1346,10 @@ package.loaded["plugins.fox.dev.terminal"] = M
 return setmetatable({
 	name = "fox_terminal",
 	dir = require("fox.core.lazyspec").for_module(),
-	event = { "TermOpen" },
+	event = { "VimEnter", "TermOpen" },
 	cmd = {
 		"TerminalToggle",
+		"TerminalAgentInstall",
 		"TerminalKillCurrent",
 		"TerminalSelect",
 		"TerminalToggleLayout",

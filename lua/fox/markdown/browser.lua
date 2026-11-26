@@ -17,7 +17,7 @@ function M.open(url)
 	if vim.g.mkdp_browser and vim.g.mkdp_browser ~= "" then
 		cmd = { vim.g.mkdp_browser, url }
 	elseif vim.fn.has("win32") == 1 then
-		cmd = { "explorer.exe", url }
+		cmd = { "rundll32.exe", "url.dll,FileProtocolHandler", url }
 	elseif vim.fn.has("mac") == 1 then
 		cmd = { "open", url }
 	elseif vim.fn.has("wsl") == 1 and vim.fn.executable("wslview") == 1 then
@@ -26,7 +26,7 @@ function M.open(url)
 		cmd = { "xdg-open", url }
 	end
 	local function on_exit(result)
-		if result.code ~= 0 and not (cmd[1] == "explorer.exe" and result.code == 1 and result.stderr == "") then
+		if result.code ~= 0 then
 			failed(
 				vim.trim(result.stderr or "") ~= "" and vim.trim(result.stderr) or ("browser exited with code " .. result.code)
 			)
@@ -36,7 +36,7 @@ function M.open(url)
 		if vim.fn.has("win32") == 1 then
 			-- vim.system hides Windows GUI processes; launch visibly without detached flags.
 			local handle, spawn_error
-			handle, spawn_error = vim.uv.spawn(cmd[1], { args = { cmd[2] }, hide = false }, function(code)
+			handle, spawn_error = vim.uv.spawn(cmd[1], { args = vim.list_slice(cmd, 2), hide = false }, function(code)
 				if handle and not handle:is_closing() then
 					handle:close()
 				end

@@ -18,7 +18,7 @@ t.describe("Markdown browser launcher", function()
 			cmd, opts, callback = args, options, cb
 		end
 		vim.uv.spawn = function(command, options, cb)
-			cmd, opts = { command, options.args[1] }, options
+			cmd, opts = vim.list_extend({ command }, options.args), options
 			callback = function(result)
 				cb(result.code)
 			end
@@ -37,14 +37,14 @@ t.describe("Markdown browser launcher", function()
 		vim.fn.has, vim.uv.spawn, vim.system = original_has, original_spawn, original_system
 		vim.notify, vim.g.mkdp_browserfunc, vim.g.mkdp_browser = original_notify, original_handler, original_browser
 	end)
-	t.it("launches Windows Explorer visibly without detached flags", function()
+	t.it("launches URLs with the Windows protocol handler", function()
 		platform = "win32"
 		local url = "http://127.0.0.1:8080/page/?a=1&b=2"
 		browser.open(url)
-		t.expect(cmd).toEqual({ "explorer.exe", url })
+		t.expect(cmd).toEqual({ "rundll32.exe", "url.dll,FileProtocolHandler", url })
 		t.expect(opts.hide).toBe(false)
 		t.expect(opts.detached).toBe(nil)
-		callback({ code = 1 })
+		callback({ code = 0 })
 		vim.wait(10)
 		t.expect(#messages).toBe(0)
 	end)

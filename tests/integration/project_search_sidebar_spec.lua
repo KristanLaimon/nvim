@@ -3,7 +3,7 @@ require("lazy").load({ plugins = { "fox_project_replace" } })
 local sidebar = require("plugins.fox.tools.project_replace")
 
 t.describe("project search keyboard and preview", function()
-	t.it("searches from its native field and opens files when moving through results", function()
+	t.it("searches from its native field and reuses a search tab when moving through results", function()
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
 		local original_tab = vim.api.nvim_get_current_tabpage()
 		vim.fn.mkdir(root, "p")
@@ -39,7 +39,7 @@ t.describe("project search keyboard and preview", function()
 				-- Scripted feedkeys postpones CursorMoved until the command returns.
 				vim.api.nvim_exec_autocmds("CursorMoved", { buffer = state.fields[4].buf })
 				vim.wait(20)
-				local current = vim.api.nvim_win_get_buf(state.editor)
+				local current = vim.api.nvim_win_get_buf(state.preview.win)
 				if current then
 					visited[vim.fn.fnamemodify(vim.api.nvim_buf_get_name(current), ":t")] = true
 				end
@@ -47,10 +47,17 @@ t.describe("project search keyboard and preview", function()
 			t.expect(visited["one.lua"]).toBe(true)
 			t.expect(visited["two.lua"]).toBe(true)
 			t.expect(vim.api.nvim_get_current_win()).toBe(state.fields[4].win)
-			local opened = vim.api.nvim_win_get_buf(state.editor)
+			local opened = vim.api.nvim_win_get_buf(state.preview.win)
+			local count = 0
+			for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+				if vim.b[buf].fox_preview_owner == "Search" and vim.bo[buf].buflisted then
+					count = count + 1
+				end
+			end
+			t.expect(count).toBe(1)
 			feed("q")
 			t.expect(sidebar.state).toBe(nil)
-			t.expect(vim.api.nvim_win_get_buf(state.editor)).toBe(opened)
+			t.expect(vim.api.nvim_win_get_buf(state.preview.win)).toBe(opened)
 			t.expect(vim.bo[opened].buflisted).toBe(true)
 			t.expect(vim.bo[opened].filetype).toBe("lua")
 			t.expect(vim.b[opened].fox_preview_owner).toBe(nil)

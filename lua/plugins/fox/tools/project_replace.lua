@@ -1,6 +1,7 @@
 local M = rawget(_G, "FOX_PROJECT_SEARCH") or {}
 rawset(_G, "FOX_PROJECT_SEARCH", M)
 local engine = require("fox.core.project_replace")
+local preview = require("fox.core.preview_tab")
 local ns = vim.api.nvim_create_namespace("fox_project_search")
 local match_ns = vim.api.nvim_create_namespace("fox_project_search_match")
 
@@ -30,6 +31,8 @@ function M.close()
 		pcall(state.process.kill, state.process, 15)
 	end
 	clear_match(state)
+	preview.keep(state.preview)
+	preview.close(state.preview)
 	vim.api.nvim_del_augroup_by_id(state.group)
 	local live = {}
 	for _, item in ipairs(state.fields) do
@@ -39,7 +42,8 @@ function M.close()
 	end
 	if #live > 0 and vim.api.nvim_tabpage_is_valid(state.tab) and #vim.api.nvim_tabpage_list_wins(state.tab) == #live then
 		-- If the editor was closed, turn the last sidebar pane back into an editor.
-		local buf = vim.api.nvim_buf_is_valid(state.original) and state.original or vim.api.nvim_create_buf(true, false)
+		local buf = vim.api.nvim_buf_is_valid(state.preview.original) and state.preview.original
+			or vim.api.nvim_create_buf(true, false)
 		vim.api.nvim_win_set_buf(live[1], buf)
 		vim.wo[live[1]].winbar = ""
 		vim.wo[live[1]].winfixwidth, vim.wo[live[1]].winfixheight = false, false
@@ -77,7 +81,7 @@ function M.preview_selected(focus)
 	if not row.match then
 		row = { file = row.file, match = row.file.matches[1], span = row.file.matches[1].spans[1] }
 	end
-	local editor = state.editor
+	local editor = state.preview.win
 	if not vim.api.nvim_win_is_valid(editor) then
 		editor = require("fox.core.dock").find_code_win()
 	end
@@ -85,17 +89,11 @@ function M.preview_selected(focus)
 		return
 	end
 	clear_match(state)
-	local ok, buf = pcall(vim.api.nvim_win_call, editor, function()
-		if vim.api.nvim_get_current_buf() ~= vim.fn.bufnr(row.file.filename) then
-			vim.cmd("hide edit " .. vim.fn.fnameescape(row.file.filename))
-		end
-		return vim.api.nvim_get_current_buf()
-	end)
+	local ok, buf = pcall(preview.show, state.preview, row.file.filename, editor)
 	if not ok then
 		notify(buf)
 		return
 	end
-	state.editor = editor
 	state.marked = buf
 	local line = math.min(row.match.line, vim.api.nvim_buf_line_count(buf))
 	local text = vim.api.nvim_buf_get_lines(buf, line - 1, line, false)[1] or ""
@@ -308,8 +306,7 @@ function M.open(replacing)
 	local state = {
 		root = vim.fn.getcwd(),
 		tab = vim.api.nvim_get_current_tabpage(),
-		editor = editor,
-		original = vim.api.nvim_win_get_buf(editor),
+		preview = preview.new("Search", editor),
 		fields = {},
 		rows = {},
 		collapsed = {},

@@ -434,8 +434,8 @@ focuses Results. File globs such as `*.lua` and `src/*` filter relative paths.
 | `r` in Results | Refresh the search |
 | `q` / `:ProjectSearchClose` | Close the sidebar; files opened with Enter remain open |
 
-Moving through results opens the actual file in the editor and places the cursor
-at the match. Files remain open when the sidebar closes.
+Moving through results reuses one Search tab with the actual file and places the
+cursor at the match. Closing the sidebar keeps the last file open.
 Search state lives only in RAM and closes on project-directory changes.
 
 The sidebar is local Lua code. When `rg` is available, an asynchronous ripgrep

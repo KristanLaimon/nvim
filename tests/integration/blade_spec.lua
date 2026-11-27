@@ -61,4 +61,18 @@ t.describe("Blade editor integration", function()
 		t.expect(directives.under_cursor("{{-- @csrf --}}", 5)).toBe(nil)
 		t.expect(directives.under_cursor("user@guest.example", 4)).toBe(nil)
 	end)
+
+	t.it("completes Alpine directives in Blade attributes", function()
+		local buf = vim.api.nvim_create_buf(true, false)
+		vim.bo[buf].filetype = "blade"
+		local result
+		require("fox.langs.php.blink")
+			.new()
+			:get_completions({ bufnr = buf, line = "<div x-show", cursor = { 1, 8 } }, function(value)
+				result = value
+			end)
+		t.expect(result.items[1].label).toBe("x-show")
+		t.expect(result.items[1].textEdit.range["end"].character).toBe(#"<div x-show")
+		vim.api.nvim_buf_delete(buf, { force = true })
+	end)
 end)

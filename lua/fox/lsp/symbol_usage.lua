@@ -119,6 +119,12 @@ function M.refresh(buf)
 					if type(chunks) == "string" then
 						chunks = { { chunks, "Comment" } }
 					end
+					local indent = vim.api.nvim_buf_call(buf, function()
+						return vim.fn.indent(row + 1)
+					end)
+					if indent > 0 then
+						chunks = vim.list_extend({ { string.rep(" ", indent) } }, chunks)
+					end
 					vim.api.nvim_buf_set_extmark(buf, M.namespace, row, 0, { virt_lines = { chunks }, virt_lines_above = true })
 				end
 			end

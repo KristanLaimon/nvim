@@ -12,7 +12,7 @@ Forgot a shortcut? Press `<F1>` to open the interactive **Help Menu & Cheatsheet
 
 | Shortcut | Mode | Action |
 | :--- | :---: | :--- |
-| `<C-s>` | n, i, v | Save file (`:w`) |
+| `<C-s>` | n, i, v | Save file (`:w!`) |
 | `<C-c>` | v | Copy selection to system clipboard |
 | `<C-v>` / `<C-S-v>` | n, i, v, t | Paste from system clipboard |
 | `<C-z>` | n, i, v | Undo |

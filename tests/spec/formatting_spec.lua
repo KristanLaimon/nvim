@@ -35,4 +35,33 @@ describe("FoxVim formatter installation", function()
 			end
 		end
 	end)
+
+	it("returns only formatter names from default fallback lists", function()
+		local spec = dofile(vim.fn.stdpath("config") .. "/lua/plugins/lsp/formatting.lua")[1]
+		local opts = spec.opts()
+		local old_conform = package.loaded.conform
+		package.loaded.conform = {
+			setup = function() end,
+			get_formatter_info = function()
+				return {}
+			end,
+		}
+		spec.config(nil, opts)
+		local list = opts.formatters_by_ft.astro(vim.api.nvim_get_current_buf())
+		for _, name in ipairs(list) do
+			expect(type(name)).toBe("string")
+		end
+		expect(list.stop_after_first).toBe(true)
+		package.loaded.conform = old_conform
+	end)
+
+	it("allows PHP formatters longer to finish on save", function()
+		local opts = dofile(vim.fn.stdpath("config") .. "/lua/plugins/lsp/formatting.lua")[1].opts()
+		local buf = vim.api.nvim_create_buf(false, true)
+		vim.bo[buf].filetype = "php"
+		expect(opts.format_on_save(buf).timeout_ms).toBe(10000)
+		vim.bo[buf].filetype = "lua"
+		expect(opts.format_on_save(buf).timeout_ms).toBe(1000)
+		vim.api.nvim_buf_delete(buf, { force = true })
+	end)
 end)

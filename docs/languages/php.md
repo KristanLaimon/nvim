@@ -54,7 +54,7 @@ Press `<F5>` (`:DapContinue`) to launch the Debug Adapter Protocol (DAP) launche
 
 ## ⚡ JavaScript in Blade Templates (`<script>` & `@script`)
 
-Blade templates frequently incorporate JavaScript blocks for frontend interactions and Livewire scripts:
+Blade templates frequently incorporate JavaScript blocks for frontend interactions and Livewire scripts. Install the PHP bundle's `blade-formatter` to format embedded JavaScript and CSS on save. Alpine.js `x-` directive names are available as offline completions in Blade and HTML files.
 
 1. **Syntax Highlighting & Treesitter Injections**:
    - Standard `<script>` and `<script type="module">` tags are automatically injected into `javascript`.

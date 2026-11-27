@@ -157,7 +157,7 @@ end
 
 local save_keys = type(M.settings.keys.save) == "table" and M.settings.keys.save or { M.settings.keys.save }
 for _, key in ipairs(save_keys) do
-	vim.keymap.set({ "n", "v", "i" }, key, "<Cmd>w<CR>", opts("Save file"))
+	vim.keymap.set({ "n", "v", "i" }, key, "<Cmd>w!<CR>", opts("Save file"))
 end
 
 for _, key in ipairs(M.settings.keys.pin_tab) do

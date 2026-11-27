@@ -25,6 +25,9 @@ function M.run(buf)
 		local spec = definitions[name]
 		local markers = toolchain.markers(state, "linters", name)
 		local config = toolchain.find_config(ctx, markers)
+		if spec and (not markers or #markers == 0 or config) then
+			toolchain.missing_tool("Linter", name, vim.fn.executable(spec.command or name) ~= 1)
+		end
 		if spec and (not markers or #markers == 0 or config) and vim.fn.executable(spec.command or name) == 1 then
 			local command = { spec.command or name }
 			vim.list_extend(command, spec.args or {})

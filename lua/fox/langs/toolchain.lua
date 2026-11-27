@@ -1,5 +1,21 @@
 local M = {}
 local managed_servers = {}
+local missing_notified = {}
+
+function M.missing_tool(category, name, missing)
+	local key = category .. ":" .. name
+	if not missing then
+		missing_notified[key] = nil
+	elseif not missing_notified[key] then
+		missing_notified[key] = true
+		vim.schedule(function()
+			vim.notify(
+				category .. " " .. name .. " not installed yet. Install it using Command Palette: Per Language Bundles.",
+				vim.log.levels.INFO
+			)
+		end)
+	end
+end
 
 function M.register_server(name)
 	managed_servers[name] = true
@@ -267,6 +283,26 @@ function M.wrap_root(name, config)
 		local markers = M.markers(state, category, name)
 		local detected = M.find_config(ctx, markers)
 		local function start(root)
+			local cmd = type(config.cmd) == "table" and config.cmd[1]
+			if type(config.cmd) == "function" then
+				local tool = require("fox.core.installer").tools[name]
+				cmd = tool and tool.cmd
+			end
+			if type(cmd) == "string" then
+				local missing = vim.fn.executable(cmd) ~= 1
+				if missing and root and type(config.cmd) == "function" then
+					for _, directory in ipairs({ "node_modules/.bin", "vendor/bin" }) do
+						if vim.fn.executable(vim.fs.joinpath(root, directory, cmd)) == 1 then
+							missing = false
+							break
+						end
+					end
+				end
+				M.missing_tool(category == "linters" and "Linter" or "LSP", name, missing)
+				if missing then
+					return
+				end
+			end
 			if vim.uv.fs_stat(M.settings_path(ctx.root, name)) and (not root or not vim.fs.relpath(ctx.root, root)) then
 				root = ctx.root
 			end

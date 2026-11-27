@@ -22,15 +22,6 @@ local M = {}
 -- CONFIGURATION
 -- ============================================================================
 
-local env_ok, env_mod = pcall(require, "fox.core.environment")
-local is_mobile
-if env_ok then
-	local env = env_mod.detect()
-	is_mobile = env.is_mobile or env.is_termux or env.is_proot
-else
-	is_mobile = vim.env.TERMUX_VERSION ~= nil or vim.fn.isdirectory("/data/data/com.termux") == 1
-end
-
 M.settings = {
 	keys = {
 		--- Stage every unstaged and untracked change. Many aliases because Alt and
@@ -55,7 +46,7 @@ M.settings = {
 			"<leader>gs",
 		},
 		conflict_resolver = { "<leader>gm", "<leader>gM" },
-		smart_launch = is_mobile and { "<C-S-s>", "<C-S-S>", "<C-S>", "<C-s>" } or { "<C-S-s>", "<C-S-S>" },
+		smart_launch = { "<C-S-s>", "<C-S-S>" },
 		launch_profiles = { "<C-S-q>", "<C-S-Q>", "<C-Q>" },
 		task_menu = { "<C-S-t>", "<C-S-T>" },
 		task_menu_leader = nil,

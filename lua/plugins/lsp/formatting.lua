@@ -62,9 +62,10 @@ return {
 			return {
 				formatters_by_ft = build_formatters_by_ft(),
 				formatters = build_conform_formatters(),
-				format_on_save = {
-					timeout_ms = 1000,
-				},
+				format_on_save = function(buf)
+					local ft = vim.bo[buf].filetype
+					return { timeout_ms = (ft == "php" or ft == "blade") and 10000 or 1000 }
+				end,
 				default_format_opts = {
 					lsp_format = "fallback",
 					-- Svelte keeps its language-server formatting fallback.
@@ -81,9 +82,17 @@ return {
 				opts.formatters_by_ft[ft] = function(buf)
 					local state = toolchain.read(toolchain.context(buf == 0 and vim.api.nvim_get_current_buf() or buf))
 					local selected = toolchain.selection(state, "formatters", defaults)
-					local result = vim.tbl_filter(function(name)
-						return vim.tbl_contains(defaults, name)
-					end, selected)
+					local result = {}
+					for _, name in ipairs(selected) do
+						if vim.tbl_contains(defaults, name) then
+							local info = require("conform").get_formatter_info(name, buf)
+							local missing = info.available_msg and info.available_msg:match("^Command '.+' not found$") ~= nil
+							toolchain.missing_tool("Formatter", name, missing)
+							if not missing then
+								result[#result + 1] = name
+							end
+						end
+					end
 					result.stop_after_first = state.formatter_mode ~= "pipeline"
 						and (state.formatter_mode == "fallback" or defaults.stop_after_first)
 					if #result == 0 then

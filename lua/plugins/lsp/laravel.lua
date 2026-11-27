@@ -34,7 +34,7 @@ return {
 				score_offset = 100,
 				enabled = function()
 					local ft = vim.bo.filetype
-					return ft == "blade" or ft == "php"
+					return ft == "blade" or ft == "php" or ft == "html"
 				end,
 			}
 			opts.sources.default = opts.sources.default or {}

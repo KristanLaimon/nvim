@@ -31,4 +31,24 @@ t.describe("current language toolchain", function()
 		vim.api.nvim_buf_delete(buf, { force = true })
 		vim.fn.delete(root, "rf")
 	end)
+
+	t.it("does not start an LSP whose executable is missing", function()
+		local buf = vim.api.nvim_create_buf(false, false)
+		local started = false
+		local old_notify = vim.notify
+		local message
+		vim.notify = function(text)
+			message = text
+		end
+		toolchain.wrap_root("fox_missing_test_lsp", { cmd = { "fox_missing_test_executable" } })(buf, function()
+			started = true
+		end)
+		vim.wait(1000, function()
+			return message ~= nil
+		end)
+		vim.notify = old_notify
+		t.expect(started).toBe(false)
+		t.expect(message).toContain("LSP fox_missing_test_lsp not installed yet")
+		vim.api.nvim_buf_delete(buf, { force = true })
+	end)
 end)

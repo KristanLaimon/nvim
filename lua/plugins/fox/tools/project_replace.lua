@@ -1,7 +1,6 @@
 local M = rawget(_G, "FOX_PROJECT_SEARCH") or {}
 rawset(_G, "FOX_PROJECT_SEARCH", M)
 local engine = require("fox.core.project_replace")
-local preview = require("fox.core.preview_tab")
 local ns = vim.api.nvim_create_namespace("fox_project_search")
 local match_ns = vim.api.nvim_create_namespace("fox_project_search_match")
 
@@ -31,7 +30,6 @@ function M.close()
 		pcall(state.process.kill, state.process, 15)
 	end
 	clear_match(state)
-	preview.close(state.preview)
 	vim.api.nvim_del_augroup_by_id(state.group)
 	local live = {}
 	for _, item in ipairs(state.fields) do
@@ -41,8 +39,7 @@ function M.close()
 	end
 	if #live > 0 and vim.api.nvim_tabpage_is_valid(state.tab) and #vim.api.nvim_tabpage_list_wins(state.tab) == #live then
 		-- If the editor was closed, turn the last sidebar pane back into an editor.
-		local buf = vim.api.nvim_buf_is_valid(state.preview.original) and state.preview.original
-			or vim.api.nvim_create_buf(true, false)
+		local buf = vim.api.nvim_buf_is_valid(state.original) and state.original or vim.api.nvim_create_buf(true, false)
 		vim.api.nvim_win_set_buf(live[1], buf)
 		vim.wo[live[1]].winbar = ""
 		vim.wo[live[1]].winfixwidth, vim.wo[live[1]].winfixheight = false, false
@@ -80,7 +77,7 @@ function M.preview_selected(focus)
 	if not row.match then
 		row = { file = row.file, match = row.file.matches[1], span = row.file.matches[1].spans[1] }
 	end
-	local editor = state.preview.win
+	local editor = state.editor
 	if not vim.api.nvim_win_is_valid(editor) then
 		editor = require("fox.core.dock").find_code_win()
 	end
@@ -88,11 +85,17 @@ function M.preview_selected(focus)
 		return
 	end
 	clear_match(state)
-	local ok, buf = pcall(preview.show, state.preview, row.file.filename, editor)
+	local ok, buf = pcall(vim.api.nvim_win_call, editor, function()
+		if vim.api.nvim_get_current_buf() ~= vim.fn.bufnr(row.file.filename) then
+			vim.cmd("hide edit " .. vim.fn.fnameescape(row.file.filename))
+		end
+		return vim.api.nvim_get_current_buf()
+	end)
 	if not ok then
 		notify(buf)
 		return
 	end
+	state.editor = editor
 	state.marked = buf
 	local line = math.min(row.match.line, vim.api.nvim_buf_line_count(buf))
 	local text = vim.api.nvim_buf_get_lines(buf, line - 1, line, false)[1] or ""
@@ -118,12 +121,11 @@ local function render(state)
 		return
 	end
 	local flags = string.format(
-		"[gc] Aa:%s  [gr] Regex:%s  [gw] Word:%s",
-		state.case_sensitive and "on" or "off",
-		state.regex and "on" or "off",
+		"[gm] Mode:%s  [gw] Word:%s",
+		state.regex and "regex" or (state.case_sensitive and "strict" or "loose"),
 		state.word and "on" or "off"
 	)
-	local lines = { flags, "[a] Apply  [gR] Replace on/off  [o] Keep file  [q] Close", "" }
+	local lines = { flags, "[a] Apply  [gR] Replace on/off  [q] Close", "" }
 	local marks = {}
 	state.rows = {}
 	if state.plan then
@@ -292,7 +294,7 @@ function M.open(replacing)
 	if M.state then
 		if M.state.tab == vim.api.nvim_get_current_tabpage() then
 			M.state.replacing = replacing == true or M.state.replacing
-			M.focus(replacing and 2 or 1)
+			M.focus(replacing and 2 or 1, true)
 			render(M.state)
 			return
 		end
@@ -306,7 +308,8 @@ function M.open(replacing)
 	local state = {
 		root = vim.fn.getcwd(),
 		tab = vim.api.nvim_get_current_tabpage(),
-		preview = preview.new("Search", editor),
+		editor = editor,
+		original = vim.api.nvim_win_get_buf(editor),
 		fields = {},
 		rows = {},
 		collapsed = {},
@@ -356,6 +359,16 @@ function M.open(replacing)
 			M.focus((index + 2) % 4 + 1, vim.fn.mode():sub(1, 1) == "i")
 		end, "Previous search section", { "n", "i" })
 		map("q", M.close, "Close project search")
+		map("gm", function()
+			if state.regex then
+				state.regex, state.case_sensitive = false, false
+			elseif state.case_sensitive then
+				state.regex, state.case_sensitive = true, false
+			else
+				state.case_sensitive = true
+			end
+			M.refresh(true)
+		end, "Cycle search mode")
 		map("gc", function()
 			state.case_sensitive = not state.case_sensitive
 			M.refresh(true)
@@ -446,15 +459,12 @@ function M.open(replacing)
 					notify(count)
 				end
 			end, "Apply selected replacements")
-			map("o", function()
-				M.preview_selected(true)
-				preview.keep(state.preview)
-			end, "Keep file as a normal editor tab")
 			map("r", function()
 				M.refresh(true)
 			end, "Refresh project search")
 			vim.api.nvim_create_autocmd("CursorMoved", {
 				group = state.group,
+				nested = true,
 				buffer = buf,
 				callback = function()
 					M.preview_selected(false)
@@ -475,7 +485,7 @@ function M.open(replacing)
 	end
 	vim.api.nvim_create_autocmd("DirChanged", { group = state.group, callback = M.close })
 	render(state)
-	M.focus(1)
+	M.focus(1, true)
 end
 
 local function open_shortcut()
@@ -490,19 +500,7 @@ return setmetatable({
 	keys = {
 		{ "<C-f>", "<Cmd>ProjectSearch<CR>", mode = { "n", "i", "x" }, desc = "Project Search Sidebar" },
 		{
-			"<C-S-m>",
-			open_shortcut,
-			mode = { "n", "i", "x", "t" },
-			desc = "Project-wide Replace Preview",
-		},
-		{
 			"<F9>",
-			open_shortcut,
-			mode = { "n", "i", "x", "t" },
-			desc = "Project-wide Replace Preview",
-		},
-		{
-			"\x1b[77;6u",
 			open_shortcut,
 			mode = { "n", "i", "x", "t" },
 			desc = "Project-wide Replace Preview",

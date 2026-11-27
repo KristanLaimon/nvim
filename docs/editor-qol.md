@@ -409,13 +409,12 @@ appear. See the [API documentation](https://wakatime.com/developers#summaries).
 
 ## Project search and replace sidebar
 
-Press **Ctrl+F** or run `:ProjectSearch` for the right sidebar. **Ctrl+Shift+M**,
-**F9**, and `:ProjectReplace` open the same sidebar with replacement previews enabled.
+Press **Ctrl+F** or run `:ProjectSearch` for the right sidebar. **F9** and `:ProjectReplace` open the same sidebar with replacement previews enabled.
 The Command Palette offers both actions. Ctrl+Alt+R remains a terminal alias;
-use Ctrl+Shift+M or F9 in Neovide to avoid keyboard-layout/AltGr translation.
+use F9 in Neovide to avoid keyboard-layout/AltGr translation.
 
 The sidebar has native editable fields and a results tree. In normal mode,
-`1` focuses Search, `2` Replace, `3` the file glob, and `4` Results. Use `i`/`a`
+`1` focuses Search, `2` Replace, `3` the file glob, and `4` Results. Search opens in insert mode. Use `i`/`a`
 and standard Vim editing in the fields; search updates as you type.
 `Tab`/`Shift+Tab` cycle sections; `Enter` in a field searches immediately and
 focuses Results. File globs such as `*.lua` and `src/*` filter relative paths.
@@ -425,21 +424,18 @@ focuses Results. File globs such as `*.lua` and `src/*` filter relative paths.
 | `j` / `k`, `gg` / `G` | Move through results; preview follows the cursor |
 | `Enter` | Focus the matching line, or fold/unfold a file header |
 | `h` / `l`, `za`, `zM` / `zR` | Collapse/expand files |
-| `gc` | Toggle case-sensitive matching (`Aa`); off by default |
+| `gm` | Cycle loose (default), strict (case-sensitive), and Vim regex search |
+| `gc` | Toggle case-sensitive matching |
 | `gr` | Toggle Vim regular expressions; off by default |
 | `gw` | Toggle whole-word matching |
 | `gR` | Toggle replacement preview, including empty-string deletion |
 | `Space` in Results | Include/exclude a file from replacement |
 | `a` in Results | Apply the selected previewed replacements to disk |
-| `o` in Results | Keep the selected file as a normal editor tab |
 | `r` in Results | Refresh the search |
-| `q` / `:ProjectSearchClose` | Close the sidebar and its temporary preview |
+| `q` / `:ProjectSearchClose` | Close the sidebar; files opened with Enter remain open |
 
-Selecting a result updates a single **[Search]** buffer tab and highlights its
-match in the editor while focus stays in the sidebar. Browsing replaces that
-preview instead of adding tabs. Files already open stay open. Editing or pinning
-a preview keeps it as a normal tab. Closing the sidebar removes its temporary
-tab and highlight, restoring the editor's original buffer when appropriate.
+Moving through results opens the actual file in the editor and places the cursor
+at the match. Files remain open when the sidebar closes.
 Search state lives only in RAM and closes on project-directory changes.
 
 The sidebar is local Lua code. When `rg` is available, an asynchronous ripgrep

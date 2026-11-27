@@ -3,12 +3,12 @@ require("lazy").load({ plugins = { "fox_project_replace" } })
 local sidebar = require("plugins.fox.tools.project_replace")
 
 t.describe("project search keyboard and preview", function()
-	t.it("searches from its native field and previews cursor movement without extra tabs", function()
+	t.it("searches from its native field and opens files when moving through results", function()
 		local root, cwd = vim.fn.tempname(), vim.fn.getcwd()
 		local original_tab = vim.api.nvim_get_current_tabpage()
 		vim.fn.mkdir(root, "p")
-		vim.fn.writefile({ "Docker one" }, root .. "/one.txt")
-		vim.fn.writefile({ "docker two" }, root .. "/two.txt")
+		vim.fn.writefile({ "Docker one" }, root .. "/one.lua")
+		vim.fn.writefile({ "docker two" }, root .. "/two.lua")
 		local test_tab
 		local function feed(keys)
 			vim.api.nvim_feedkeys(vim.keycode(keys), "xt", false)
@@ -20,7 +20,7 @@ t.describe("project search keyboard and preview", function()
 			vim.cmd("ProjectSearch")
 			local state = sidebar.state
 			t.expect(state ~= nil).toBe(true)
-			feed("idocker<Esc>")
+			feed("docker<Esc>")
 			assert(
 				vim.wait(3000, function()
 					return state.plan ~= nil
@@ -39,24 +39,21 @@ t.describe("project search keyboard and preview", function()
 				-- Scripted feedkeys postpones CursorMoved until the command returns.
 				vim.api.nvim_exec_autocmds("CursorMoved", { buffer = state.fields[4].buf })
 				vim.wait(20)
-				local current = state.preview.current
+				local current = vim.api.nvim_win_get_buf(state.editor)
 				if current then
 					visited[vim.fn.fnamemodify(vim.api.nvim_buf_get_name(current), ":t")] = true
 				end
 			end
-			t.expect(visited["one.txt"]).toBe(true)
-			t.expect(visited["two.txt"]).toBe(true)
+			t.expect(visited["one.lua"]).toBe(true)
+			t.expect(visited["two.lua"]).toBe(true)
 			t.expect(vim.api.nvim_get_current_win()).toBe(state.fields[4].win)
-			local temporary = {}
-			for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-				if vim.b[buf].fox_preview_owner == "Search" and vim.bo[buf].buflisted then
-					temporary[#temporary + 1] = buf
-				end
-			end
-			t.expect(#temporary).toBe(1)
+			local opened = vim.api.nvim_win_get_buf(state.editor)
 			feed("q")
 			t.expect(sidebar.state).toBe(nil)
-			t.expect(vim.bo[temporary[1]].buflisted).toBe(false)
+			t.expect(vim.api.nvim_win_get_buf(state.editor)).toBe(opened)
+			t.expect(vim.bo[opened].buflisted).toBe(true)
+			t.expect(vim.bo[opened].filetype).toBe("lua")
+			t.expect(vim.b[opened].fox_preview_owner).toBe(nil)
 		end)
 		sidebar.close()
 		if test_tab and vim.api.nvim_tabpage_is_valid(test_tab) then

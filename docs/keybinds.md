@@ -154,7 +154,7 @@ Each code split has its own file tabs. File search adds a tab to the active spli
 | `<C-/>` / `<C-_>` | n, i | Find files, respecting `.gitignore` |
 | `<C-A-k>` / `<C-S-/>` / `<C-?>` | n, i, v | Find files, ignoring `.gitignore` |
 | `<C-f>` | n, i, v | Project search right sidebar; sections 1 Search, 2 Replace, 3 Files, 4 Results; passed through in terminal mode |
-| `<C-S-m>` / `<F9>` / `<C-A-r>` | n, i, v, t | Preview and replace text across project files; prefer Ctrl+Shift+M or F9 in Neovide |
+| `<F9>` / `<C-A-r>` | n, i, v, t | Preview and replace text across project files; prefer F9 in Neovide |
 | `<C-S-f>` | n, i, v | Floating Desktop file explorer |
 | `<C-S-y>` | n, i | Browse folders and open one as the active project |
 | `<C-r>` | n | Recent projects modal |
